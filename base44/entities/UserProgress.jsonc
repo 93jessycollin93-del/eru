@@ -1,0 +1,39 @@
+{
+  "name": "UserProgress",
+  "type": "object",
+  "properties": {
+    "module_id": {
+      "type": "string",
+      "description": "ID of the study module"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "completed"
+      ],
+      "description": "Completion status"
+    },
+    "completion_percentage": {
+      "type": "number",
+      "description": "Percentage completed (0-100)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Personal notes for this module"
+    },
+    "completed_date": {
+      "type": "string",
+      "description": "Date when module was completed"
+    },
+    "time_spent_minutes": {
+      "type": "number",
+      "description": "Total time spent on this module"
+    }
+  },
+  "required": [
+    "module_id",
+    "status"
+  ]
+}

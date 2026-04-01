@@ -1,0 +1,61 @@
+{
+  "name": "Resource",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Resource title"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "tool",
+        "cheat_sheet",
+        "script",
+        "reference",
+        "tutorial"
+      ],
+      "description": "Type of resource"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description"
+    },
+    "url": {
+      "type": "string",
+      "description": "External URL if applicable"
+    },
+    "content": {
+      "type": "string",
+      "description": "Inline content (markdown)"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Searchable tags"
+    },
+    "related_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of related study modules"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "windows",
+        "linux",
+        "macos",
+        "cross_platform"
+      ],
+      "description": "Platform compatibility"
+    }
+  },
+  "required": [
+    "title",
+    "type"
+  ]
+}

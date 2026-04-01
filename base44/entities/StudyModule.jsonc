@@ -1,0 +1,95 @@
+{
+  "name": "StudyModule",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Module title"
+    },
+    "chapter_number": {
+      "type": "number",
+      "description": "Chapter/module number for ordering"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the module"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "foundations",
+        "static_analysis",
+        "dynamic_analysis",
+        "advanced",
+        "practical"
+      ],
+      "description": "Module category"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced",
+        "expert"
+      ],
+      "description": "Difficulty level"
+    },
+    "content_narrative": {
+      "type": "string",
+      "description": "Main instructional prose content (markdown)"
+    },
+    "code_specimens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "annotations": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Code blocks and hex dumps for the specimen pane"
+    },
+    "key_concepts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Key concepts covered in this module"
+    },
+    "tools_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tools referenced in this module"
+    },
+    "estimated_time_minutes": {
+      "type": "number",
+      "description": "Estimated time to complete in minutes"
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of prerequisite modules"
+    }
+  },
+  "required": [
+    "title",
+    "chapter_number",
+    "category",
+    "difficulty"
+  ]
+}
