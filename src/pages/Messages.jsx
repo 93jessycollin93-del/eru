@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Circle, Send, Paperclip, Palette } from 'lucide-react';
+import { Search, Plus, Send, Trash2 } from 'lucide-react';
 
 const THREADS = [
   { id: 1, from: 'TON Support', subject: 'Transaction Confirmed', preview: 'Your swap of 50 TON → USDT has been completed...', time: '2m ago', unread: true, color: '#00e676' },
@@ -19,6 +19,21 @@ export default function Messages() {
   const [color, setColor] = useState('#00e676');
   const [showPalette, setShowPalette] = useState(false);
   const [threads, setThreads] = useState(THREADS);
+  const [checkedIds, setCheckedIds] = useState(new Set());
+
+  const toggleCheck = (e, id) => {
+    e.stopPropagation();
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const deleteSelected = () => {
+    setThreads(prev => prev.filter(t => !checkedIds.has(t.id)));
+    setCheckedIds(new Set());
+  };
 
   if (compose) return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -79,10 +94,22 @@ export default function Messages() {
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Messages</h2>
-        <button onClick={() => setCompose(true)} className="bg-primary text-primary-foreground rounded-lg p-1.5">
-          <Plus className="w-4 h-4"/>
-        </button>
+        {checkedIds.size > 0 ? (
+          <>
+            <span className="text-sm text-muted-foreground">{checkedIds.size} selected</span>
+            <button onClick={deleteSelected} className="flex items-center gap-1.5 bg-destructive text-destructive-foreground rounded-lg px-3 py-1.5 text-sm">
+              <Trash2 className="w-3.5 h-3.5"/>
+              Delete
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className="text-lg font-semibold">Messages</h2>
+            <button onClick={() => setCompose(true)} className="bg-primary text-primary-foreground rounded-lg p-1.5">
+              <Plus className="w-4 h-4"/>
+            </button>
+          </>
+        )}
       </div>
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2">
@@ -92,7 +119,15 @@ export default function Messages() {
       </div>
       <div className="divide-y divide-border">
         {threads.map(t => (
-          <div key={t.id} onClick={() => setSelected(t)} className="flex items-center px-4 py-3 gap-3 cursor-pointer hover:bg-secondary/40 transition-colors">
+          <div key={t.id} className="flex items-center px-4 py-3 gap-3 hover:bg-secondary/40 transition-colors">
+            <input
+              type="checkbox"
+              checked={checkedIds.has(t.id)}
+              onChange={e => toggleCheck(e, t.id)}
+              onClick={e => e.stopPropagation()}
+              className="w-4 h-4 accent-primary flex-shrink-0 cursor-pointer"
+            />
+            <div className="flex items-center flex-1 min-w-0 gap-3 cursor-pointer" onClick={() => setSelected(t)}>
             <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
               style={{background:`${t.color}20`, color:t.color, border:`1px solid ${t.color}40`}}>
               {t.from.slice(0,1)}
@@ -105,7 +140,8 @@ export default function Messages() {
               <p className={`text-xs truncate ${t.unread ? 'text-foreground' : 'text-muted-foreground'}`}>{t.subject}</p>
               <p className="text-xs text-muted-foreground truncate">{t.preview}</p>
             </div>
-            {t.unread && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0"/>}
+              {t.unread && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0"/>}
+            </div>
           </div>
         ))}
       </div>
