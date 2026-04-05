@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from './context/ThemeContext';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -14,8 +15,8 @@ import Portfolio from './pages/Portfolio';
 import Collectables from './pages/Collectables';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
-import Studio from './pages/Studio';
-import Marketplace from './pages/Marketplace';
+import Workstation from './pages/Workstation';
+import CreatorHub from './pages/CreatorHub';
 import ThinkersClub from './pages/ThinkersClub';
 import AppReview from './pages/AppReview';
 
@@ -54,8 +55,8 @@ const AuthenticatedApp = () => {
         <Route path="/collectables" element={<Collectables />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/studio" element={<Studio />} />
-        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/workstation" element={<Workstation />} />
+        <Route path="/creator" element={<CreatorHub />} />
         <Route path="/thinkers" element={<ThinkersClub />} />
         <Route path="/review" element={<AppReview />} />
         <Route path="*" element={<PageNotFound />} />
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
+    <ThemeProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
@@ -76,6 +78,7 @@ function App() {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
+    </ThemeProvider>
   )
 }
 
