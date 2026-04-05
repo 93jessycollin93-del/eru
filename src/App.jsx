@@ -14,6 +14,10 @@ import Portfolio from './pages/Portfolio';
 import Collectables from './pages/Collectables';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
+import Studio from './pages/Studio';
+import Marketplace from './pages/Marketplace';
+import ThinkersClub from './pages/ThinkersClub';
+import AppReview from './pages/AppReview';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -50,6 +54,10 @@ const AuthenticatedApp = () => {
         <Route path="/collectables" element={<Collectables />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/studio" element={<Studio />} />
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/thinkers" element={<ThinkersClub />} />
+        <Route path="/review" element={<AppReview />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

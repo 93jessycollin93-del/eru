@@ -1,13 +1,14 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Sparkles, Brain, ShoppingCart, Shield } from 'lucide-react';
 
 const NAV = [
   { icon: Home, label: 'Home', to: '/' },
   { icon: BarChart2, label: 'Markets', to: '/markets' },
   { icon: ArrowUpDown, label: 'Trade', to: '/trade' },
-  { icon: ImageIcon, label: 'NFTs', to: '/nfts' },
-  { icon: Wallet, label: 'Portfolio', to: '/portfolio' },
-  { icon: ShoppingBag, label: 'Shop', to: '/collectables' },
+  { icon: ShoppingCart, label: 'Market', to: '/marketplace' },
+  { icon: Brain, label: 'Thinkers', to: '/thinkers' },
+  { icon: Sparkles, label: 'Studio', to: '/studio' },
+  { icon: Shield, label: 'Review', to: '/review' },
   { icon: Mail, label: 'Inbox', to: '/messages' },
   { icon: Settings, label: 'Settings', to: '/settings' },
 ];
