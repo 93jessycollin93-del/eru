@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Lightbulb, Package, Megaphone, Star, TrendingUp, Lock, CheckCircle, Clock, ArrowRight } from 'lucide-react';
+import CreatorAnalytics from '../components/CreatorAnalytics';
 
 const SAMPLE_IDEAS = [
   { id: 1, title: 'Decentralized Art Gallery', desc: 'A community-owned NFT gallery with voting-based curation', price: 0.5, category: 'concept', status: 'authorized', likes: 142, author: 'Visionary_X' },
@@ -39,7 +40,7 @@ export default function CreatorHub() {
       </div>
 
       <div className="flex border-b border-border overflow-x-auto">
-        {[{id:'browse',label:'Marketplace'},{id:'sell',label:'List Idea'},{id:'advertise',label:'Advertise'},{id:'my',label:'My Listings'}].map(t => (
+        {[{id:'browse',label:'Marketplace'},{id:'sell',label:'List Idea'},{id:'advertise',label:'Advertise'},{id:'my',label:'My Listings'},{id:'analytics',label:'Analytics'}].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-colors ${tab===t.id?'text-primary border-b-2 border-primary':'text-muted-foreground'}`}>
             {t.label}
@@ -165,6 +166,8 @@ export default function CreatorHub() {
             <button onClick={() => setTab('sell')} className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium">Create Listing</button>
           </div>
         )}
+
+        {tab === 'analytics' && <CreatorAnalytics />}
       </div>
     </div>
   );
