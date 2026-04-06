@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Brain, Users, Plus, MessageCircle, Flame, Star, ChevronRight, Hash, Send, ArrowLeft } from 'lucide-react';
+import { Brain, Users, Plus, MessageCircle, Flame, Star, ChevronRight, Hash, Send, ArrowLeft, BookOpen } from 'lucide-react';
+import CollabScratchpad from '../components/CollabScratchpad';
 
 const SERVERS = [
   { id: 1, name: 'Philosophy & Existence', desc: 'Big questions about consciousness, reality, and meaning', members: 1284, color: '#7c4dff', channels: ['#general', '#consciousness', '#free-will', '#simulation-theory'], hot: true },
@@ -20,6 +21,7 @@ export default function ThinkersClub() {
   const [tab, setTab] = useState('servers');
   const [activeServer, setActiveServer] = useState(null);
   const [activeChannel, setActiveChannel] = useState(null);
+  const [showScratchpad, setShowScratchpad] = useState(false);
   const [msg, setMsg] = useState('');
   const [messages, setMessages] = useState([
     { id: 1, author: 'Philosopher_K', text: 'The question of free will fundamentally changes once you consider determinism at the quantum level.', time: '2m ago' },
@@ -35,6 +37,17 @@ export default function ThinkersClub() {
 
   if (activeServer && activeChannel) return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      {showScratchpad && (
+        <CollabScratchpad
+          channel={activeChannel}
+          serverColor={activeServer.color}
+          onClose={() => setShowScratchpad(false)}
+          onSubmitReview={(content) => {
+            setShowScratchpad(false);
+            alert('Submitted for review! Check the App Review page.');
+          }}
+        />
+      )}
       <div className="px-4 py-3 border-b border-border flex items-center gap-3">
         <button onClick={() => setActiveChannel(null)} className="text-muted-foreground"><ArrowLeft className="w-4 h-4" /></button>
         <div className="w-2 h-2 rounded-full" style={{ background: activeServer.color }} />
@@ -42,8 +55,14 @@ export default function ThinkersClub() {
           <p className="font-medium text-sm">{activeChannel}</p>
           <p className="text-xs text-muted-foreground">{activeServer.name}</p>
         </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Users className="w-3 h-3" />{activeServer.members.toLocaleString()}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowScratchpad(true)}
+            className="flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 rounded-lg px-2 py-1 text-xs font-medium hover:bg-primary/20 transition-colors">
+            <BookOpen className="w-3 h-3" /> Scratchpad
+          </button>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="w-3 h-3" />{activeServer.members.toLocaleString()}
+          </div>
         </div>
       </div>
       <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto">
