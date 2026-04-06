@@ -19,6 +19,7 @@ import Workstation from './pages/Workstation';
 import CreatorHub from './pages/CreatorHub';
 import ThinkersClub from './pages/ThinkersClub';
 import AppReview from './pages/AppReview';
+import Reputation from './pages/Reputation';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -59,6 +60,7 @@ const AuthenticatedApp = () => {
         <Route path="/creator" element={<CreatorHub />} />
         <Route path="/thinkers" element={<ThinkersClub />} />
         <Route path="/review" element={<AppReview />} />
+        <Route path="/reputation" element={<Reputation />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

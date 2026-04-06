@@ -1,0 +1,53 @@
+{
+  "name": "Reputation",
+  "type": "object",
+  "properties": {
+    "xp": {
+      "type": "number",
+      "description": "Total experience points"
+    },
+    "level": {
+      "type": "number",
+      "description": "Current level"
+    },
+    "badges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Earned badge IDs"
+    },
+    "thinkers_actions": {
+      "type": "number",
+      "description": "Messages sent in Thinkers Club"
+    },
+    "marketplace_sales": {
+      "type": "number",
+      "description": "Successful marketplace sales"
+    },
+    "reviews_submitted": {
+      "type": "number",
+      "description": "App reviews submitted"
+    },
+    "ideas_listed": {
+      "type": "number",
+      "description": "Ideas listed in Creator Hub"
+    }
+  },
+  "required": [
+    "xp",
+    "level"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
