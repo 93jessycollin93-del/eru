@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus, X, GripVertical, Star, ExternalLink, ChevronRight, Zap } from 'lucide-react';
+import TelegramSettings from '../components/TelegramSettings';
 
 const ALL_APPS = [
   { id: 'wallet',    name: 'TON Wallet',       icon: '💎', category: 'Finance',   stars: 4.9, users: '2.1M', desc: 'Send & receive TON instantly',       color: '#0088cc', pinned: true  },
@@ -19,22 +20,21 @@ const ALL_APPS = [
 const CATEGORIES = ['All', 'Finance', 'Games', 'Trading', 'Social', 'News', 'Tools'];
 
 export default function TelegramApps() {
+  const [tab, setTab] = useState('integration');
   const [apps, setApps] = useState(ALL_APPS);
-  const [tab, setTab] = useState('home');
+  const [openApp, setOpenApp] = useState(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [dragId, setDragId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
-  const [openApp, setOpenApp] = useState(null);
 
   const pinned = apps.filter(a => a.pinned);
   const unpinned = apps.filter(a => !a.pinned);
 
   const togglePin = (id) => {
-    setApps(prev => prev.map(a => a.id === id ? { ...a, pinned: !a.pinned } : a));
+    setApps(apps.map(a => a.id === id ? { ...a, pinned: !a.pinned } : a));
   };
 
-  // Drag reorder for pinned grid
   const onDragStart = (id) => setDragId(id);
   const onDragOver = (e, id) => { e.preventDefault(); setDragOverId(id); };
   const onDrop = (targetId) => {
@@ -109,20 +109,27 @@ export default function TelegramApps() {
       {/* Header */}
       <div className="px-4 py-3 border-b border-border">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <span className="text-xl">✈️</span> Mini App Store
+          <span className="text-xl">✈️</span> Telegram Hub
         </h2>
-        <p className="text-xs text-muted-foreground">Telegram-native apps · Arrange your workspace</p>
+        <p className="text-xs text-muted-foreground">Integration & mini app store</p>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-border">
-        {[{ id: 'home', label: 'My Apps' }, { id: 'store', label: 'Discover' }, { id: 'arrange', label: 'Arrange' }].map(t => (
+        {[{ id: 'integration', label: 'Integration' }, { id: 'home', label: 'My Apps' }, { id: 'store', label: 'Discover' }, { id: 'arrange', label: 'Arrange' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-1 py-2.5 text-xs font-medium transition-colors ${tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
             {t.label}
           </button>
         ))}
       </div>
+
+      {/* INTEGRATION TAB */}
+      {tab === 'integration' && (
+        <div className="px-4 py-4">
+          <TelegramSettings />
+        </div>
+      )}
 
       {/* MY APPS */}
       {tab === 'home' && (

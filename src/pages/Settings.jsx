@@ -3,6 +3,7 @@ import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, Ex
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
+import TelegramSettings from '../components/TelegramSettings';
 
 const SECTIONS = [
   { icon: Shield, label: 'Security & 2FA', badge: 'Active' },
@@ -12,60 +13,78 @@ const SECTIONS = [
   { icon: Lock, label: 'Session Timeout', badge: '15 min' },
 ];
 
-function DisclaimersSheet({ onClose }) {
+function SettingsSheet({ type, onClose }) {
   const [tab, setTab] = useState('disclaimer');
-  return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <button onClick={onClose} className="text-muted-foreground text-sm">← Back</button>
-        <h3 className="font-medium text-sm">Legal Documents</h3>
-        <span/>
+
+  if (type === 'telegram') {
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+          <button onClick={onClose} className="text-muted-foreground text-sm">← Back</button>
+          <h3 className="font-medium text-sm">Telegram</h3>
+          <span/>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <TelegramSettings />
+        </div>
       </div>
-      <div className="flex border-b border-border overflow-x-auto">
-        {['disclaimer','terms','privacy','tax'].map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-3 py-2.5 text-xs font-medium capitalize whitespace-nowrap ${tab===t?'text-primary border-b-2 border-primary':'text-muted-foreground'}`}>
-            {t === 'disclaimer' ? 'Non-Liability' : t === 'tax' ? 'Tax Notice' : t.charAt(0).toUpperCase()+t.slice(1)}
-          </button>
-        ))}
+    );
+  }
+
+  if (type === 'disclaimer') {
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+          <button onClick={onClose} className="text-muted-foreground text-sm">← Back</button>
+          <h3 className="font-medium text-sm">Legal Documents</h3>
+          <span/>
+        </div>
+        <div className="flex border-b border-border overflow-x-auto">
+          {['disclaimer','terms','privacy','tax'].map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-3 py-2.5 text-xs font-medium capitalize whitespace-nowrap ${tab===t?'text-primary border-b-2 border-primary':'text-muted-foreground'}`}>
+              {t === 'disclaimer' ? 'Non-Liability' : t === 'tax' ? 'Tax Notice' : t.charAt(0).toUpperCase()+t.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-4 text-sm text-muted-foreground leading-relaxed space-y-4">
+          {tab === 'disclaimer' && <>
+            <h4 className="text-foreground font-semibold">Non-Liability Disclaimer</h4>
+            <p>This platform does not provide financial, investment, or legal advice. All trading and investment decisions are made solely by the user and at their own risk. Past performance of any asset does not guarantee future results.</p>
+            <p>The platform is not responsible for any losses, damages, or adverse outcomes resulting from the use of this service. Cryptocurrency markets are highly volatile and speculative. You may lose some or all of your invested capital.</p>
+            <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0"/>
+              <p className="text-xs">Trading involves significant risk. Only invest what you can afford to lose.</p>
+            </div>
+          </>}
+          {tab === 'terms' && <>
+            <h4 className="text-foreground font-semibold">Terms of Use</h4>
+            <p>By using this platform, you agree to comply with all applicable laws and regulations in your jurisdiction. Misuse of the platform, including fraudulent transactions or market manipulation, is strictly prohibited and may result in account suspension.</p>
+            <p>We reserve the right to update these terms at any time. Continued use of the platform following updates constitutes acceptance of the revised terms.</p>
+          </>}
+          {tab === 'privacy' && <>
+            <h4 className="text-foreground font-semibold">Privacy Policy</h4>
+            <p>We collect only the information necessary to provide our services. We do not sell your personal data to third parties. All data is encrypted in transit and at rest.</p>
+            <p>Transaction data is retained for regulatory compliance purposes. You may request export or deletion of your personal data at any time.</p>
+          </>}
+          {tab === 'tax' && <>
+            <h4 className="text-foreground font-semibold">Tax Disclaimer</h4>
+            <p>Users are solely responsible for reporting and paying any applicable taxes on gains from cryptocurrency trading, NFT sales, or other transactions conducted on this platform.</p>
+            <p>We provide transaction history export to assist with tax reporting, but this does not constitute tax advice. Consult a qualified tax professional in your jurisdiction.</p>
+          </>}
+          <p className="text-xs text-muted-foreground/50 border-t border-border pt-4">Last updated: April 2026 · All documents are tied to your account and timestamped.</p>
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4 text-sm text-muted-foreground leading-relaxed space-y-4">
-        {tab === 'disclaimer' && <>
-          <h4 className="text-foreground font-semibold">Non-Liability Disclaimer</h4>
-          <p>This platform does not provide financial, investment, or legal advice. All trading and investment decisions are made solely by the user and at their own risk. Past performance of any asset does not guarantee future results.</p>
-          <p>The platform is not responsible for any losses, damages, or adverse outcomes resulting from the use of this service. Cryptocurrency markets are highly volatile and speculative. You may lose some or all of your invested capital.</p>
-          <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0"/>
-            <p className="text-xs">Trading involves significant risk. Only invest what you can afford to lose.</p>
-          </div>
-        </>}
-        {tab === 'terms' && <>
-          <h4 className="text-foreground font-semibold">Terms of Use</h4>
-          <p>By using this platform, you agree to comply with all applicable laws and regulations in your jurisdiction. Misuse of the platform, including fraudulent transactions or market manipulation, is strictly prohibited and may result in account suspension.</p>
-          <p>We reserve the right to update these terms at any time. Continued use of the platform following updates constitutes acceptance of the revised terms.</p>
-        </>}
-        {tab === 'privacy' && <>
-          <h4 className="text-foreground font-semibold">Privacy Policy</h4>
-          <p>We collect only the information necessary to provide our services. We do not sell your personal data to third parties. All data is encrypted in transit and at rest.</p>
-          <p>Transaction data is retained for regulatory compliance purposes. You may request export or deletion of your personal data at any time.</p>
-        </>}
-        {tab === 'tax' && <>
-          <h4 className="text-foreground font-semibold">Tax Disclaimer</h4>
-          <p>Users are solely responsible for reporting and paying any applicable taxes on gains from cryptocurrency trading, NFT sales, or other transactions conducted on this platform.</p>
-          <p>We provide transaction history export to assist with tax reporting, but this does not constitute tax advice. Consult a qualified tax professional in your jurisdiction.</p>
-        </>}
-        <p className="text-xs text-muted-foreground/50 border-t border-border pt-4">Last updated: April 2026 · All documents are tied to your account and timestamped.</p>
-      </div>
-    </div>
-  );
+    );
+  }
 }
 
 export default function Settings() {
-  const [showDocs, setShowDocs] = useState(false);
+  const [showSheet, setShowSheet] = useState(null);
   const { currentUser } = useAuth();
   const { lang, setLang } = useLanguage();
 
-  if (showDocs) return <DisclaimersSheet onClose={() => setShowDocs(false)}/>;
+  if (showSheet) return <SettingsSheet type={showSheet} onClose={() => setShowSheet(null)} />;
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -103,7 +122,7 @@ export default function Settings() {
 
         <div className="bg-card border border-border rounded-xl divide-y divide-border">
           {SECTIONS.map((s, i) => (
-            <button key={i} onClick={s.label.includes('Documents') ? () => setShowDocs(true) : undefined}
+            <button key={i} onClick={s.label.includes('Documents') ? () => setShowSheet('disclaimer') : undefined}
               className="w-full flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
               <s.icon className="w-4 h-4 text-muted-foreground"/>
               <span className="flex-1 text-sm text-left">{s.label}</span>

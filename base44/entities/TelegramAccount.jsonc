@@ -1,0 +1,120 @@
+{
+  "name": "TelegramAccount",
+  "type": "object",
+  "properties": {
+    "telegram_user_id": {
+      "type": "string",
+      "description": "Unique Telegram user ID from Telegram Bot API"
+    },
+    "telegram_username": {
+      "type": "string",
+      "description": "Telegram @username (optional, for display)"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "Telegram first name"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Telegram last name (optional)"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Linked app user email"
+    },
+    "linking_token": {
+      "type": "string",
+      "description": "One-time linking verification token (hashed)"
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "True after bot handshake confirms identity"
+    },
+    "verified_at": {
+      "type": "string",
+      "description": "ISO timestamp of verification"
+    },
+    "notifications_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "User opted in to Telegram notifications"
+    },
+    "notification_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "trades",
+          "purchases",
+          "rewards",
+          "messages",
+          "alerts",
+          "system"
+        ]
+      },
+      "default": [
+        "alerts"
+      ],
+      "description": "Which event types to notify via Telegram"
+    },
+    "last_notified_at": {
+      "type": "string",
+      "description": "ISO timestamp of last notification sent"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_verification",
+        "active",
+        "inactive",
+        "revoked"
+      ],
+      "default": "pending_verification",
+      "description": "Account linking status"
+    }
+  },
+  "required": [
+    "telegram_user_id",
+    "user_email"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
