@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
+import { fetchUserGold, awardGold } from '@/lib/economyApi';
 import { STARTER_CARDS, ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
@@ -24,7 +25,8 @@ export default function CardArena() {
   const [tab, setTab] = useState('collection');
   const [cards, setCards] = useState([]);
   const [deck, setDeck] = useState([]);
-  const [gold, setGold] = useState(() => parseInt(localStorage.getItem('arena_gold') || '100'));
+  const [gold, setGold] = useState(0);
+  const [goldLoading, setGoldLoading] = useState(true);
   const [tournamentRound, setTournamentRound] = useState(0);
   const [battling, setBattling] = useState(false);
   const [currentRound, setCurrentRound] = useState(null);
@@ -34,7 +36,20 @@ export default function CardArena() {
 
   useEffect(() => {
     loadCards();
+    loadGold();
   }, []);
+
+  const loadGold = async () => {
+    try {
+      setGoldLoading(true);
+      const balance = await fetchUserGold();
+      setGold(balance);
+    } catch (err) {
+      console.error('Failed to load gold:', err);
+    } finally {
+      setGoldLoading(false);
+    }
+  };
 
   const loadCards = async () => {
     setLoading(true);
@@ -47,9 +62,9 @@ export default function CardArena() {
     setLoading(false);
   };
 
-  const saveGold = (amount) => {
+  const saveGold = async (amount) => {
     setGold(amount);
-    localStorage.setItem('arena_gold', String(amount));
+    // Backend handles persistence via awardGold/deductGold
   };
 
   const toggleDeckCard = (card) => {
@@ -74,9 +89,17 @@ export default function CardArena() {
     setRoundResults(newResults);
 
     if (won) {
-      // TODO: POST to backend to verify win and grant rewards
-      const newGold = gold + round.prize.gold;
-      saveGold(newGold);
+      // Award gold via secure backend endpoint
+      try {
+        const newGold = await awardGold(round.prize.gold, `Tournament round ${tournamentRound} win`, {
+          round: tournamentRound,
+          difficulty: round.difficulty
+        });
+        setGold(newGold);
+      } catch (err) {
+        console.error('Failed to award gold:', err);
+        return;
+      }
 
       const discoverChance = 0.4 + (tournamentRound - 1) * 0.1;
       if (Math.random() < discoverChance && round.prize.discover) {

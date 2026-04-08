@@ -1,0 +1,131 @@
+{
+  "name": "Escrow",
+  "type": "object",
+  "properties": {
+    "listing_id": {
+      "type": "string",
+      "description": "Reference to MarketplaceListing being traded"
+    },
+    "seller_email": {
+      "type": "string",
+      "description": "Email of asset seller"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Email of asset buyer"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "nft",
+        "jade",
+        "card",
+        "collectible"
+      ],
+      "description": "Type of asset being traded"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "ID of the asset"
+    },
+    "price": {
+      "type": "number",
+      "description": "Agreed transaction price"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "GOLD",
+        "CRYPTO",
+        "TON",
+        "TELEGRAM_STARS"
+      ],
+      "default": "GOLD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "funds_held",
+        "payment_confirmed",
+        "asset_transferred",
+        "completed",
+        "cancelled",
+        "disputed"
+      ],
+      "default": "pending",
+      "description": "Escrow state machine"
+    },
+    "funds_held_at": {
+      "type": "string",
+      "description": "ISO timestamp when funds locked in escrow"
+    },
+    "payment_verified_at": {
+      "type": "string",
+      "description": "ISO timestamp when payment confirmed"
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "ISO timestamp when trade finalized"
+    },
+    "payment_provider": {
+      "type": "string",
+      "enum": [
+        "stripe",
+        "crypto_gateway",
+        "ton_wallet",
+        "telegram_stars"
+      ],
+      "description": "Which payment system processed this"
+    },
+    "payment_reference": {
+      "type": "string",
+      "description": "External payment ID from provider"
+    },
+    "dispute_reason": {
+      "type": "string",
+      "description": "If disputed, why"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Admin resolution notes if disputed"
+    }
+  },
+  "required": [
+    "listing_id",
+    "seller_email",
+    "buyer_email",
+    "asset_type",
+    "asset_id",
+    "price",
+    "currency"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
