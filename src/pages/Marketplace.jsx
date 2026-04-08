@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Plus, Star, Tag, TrendingUp, Lightbulb, Package, Megaphone, Lock, CheckCircle } from 'lucide-react';
+import { Search, Plus, Star, Tag, TrendingUp, Lightbulb, Package, Megaphone, Lock, CheckCircle, Gavel } from 'lucide-react';
+import BiddingHistory from '../components/BiddingHistory';
 
 const LISTINGS = [
   { id: 1, type: 'idea', title: 'Decentralized Voting Protocol', author: 'CryptoMind', price: 120, stars: 48, tags: ['blockchain', 'governance'], status: 'authorized', preview: 'A trustless on-chain voting system using ZK proofs for privacy...', img: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=200&h=120&fit=crop' },
@@ -57,6 +58,7 @@ function ListingCard({ item, onClick }) {
 
 function DetailView({ item, onBack }) {
   const Icon = TYPE_ICON[item.type] || Tag;
+  const isHighTraction = item.status === 'authorized' && item.stars > 50;
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
       <div className="px-4 py-3 border-b border-border">
@@ -105,6 +107,18 @@ function DetailView({ item, onBack }) {
             <Megaphone className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Auction Section */}
+        {isHighTraction && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Gavel className="w-4 h-4 text-primary" />
+              <p className="text-sm font-semibold">Auction</p>
+              <span className="text-xs bg-orange-500/10 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full">High Traction</span>
+            </div>
+            <BiddingHistory basePrice={item.price} isOwner={false} />
+          </div>
+        )}
 
         {/* Advertise Section */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-2">
