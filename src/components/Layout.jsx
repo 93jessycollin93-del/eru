@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Lightbulb, Brain, Shield, Cpu, Award, Send, Bot, FlaskConical, KeyRound, Wand2 } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Lightbulb, Brain, Shield, Cpu, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers } from 'lucide-react';
 import AnimatedBackground from './AnimatedBackground';
 import { useTheme } from '../context/ThemeContext';
 import JackieFloat from './JackieFloat';
@@ -21,6 +21,7 @@ const NAV = [
   { icon: FlaskConical, label: 'AI Lab', to: '/ailab' },
   { icon: KeyRound, label: 'API Keys', to: '/apikeys' },
   { icon: Wand2, label: 'Builder', to: '/builder' },
+  { icon: Layers, label: 'Pipeline', to: '/pipeline' },
   { icon: Cpu, label: 'Station', to: '/workstation' },
   { icon: Settings, label: 'Settings', to: '/settings' },
 ];
