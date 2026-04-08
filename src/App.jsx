@@ -31,6 +31,7 @@ import JadeAtelier from './pages/JadeAtelier';
 import VisualEngine from './pages/VisualEngine';
 import CardArena from './pages/CardArena';
 import StorefrontHub from './pages/StorefrontHub';
+import StorefrontAnalytics from './pages/StorefrontAnalytics';
 import CreatureLab from './pages/CreatureLab';
 
 const AuthenticatedApp = () => {
@@ -85,6 +86,7 @@ const AuthenticatedApp = () => {
         <Route path="/arena" element={<CardArena />} />
         <Route path="/creatures" element={<CreatureLab />} />
         <Route path="/storefront" element={<StorefrontHub />} />
+        <Route path="/storefront-analytics" element={<StorefrontAnalytics />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

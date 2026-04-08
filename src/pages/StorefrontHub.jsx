@@ -5,8 +5,10 @@ import {
   Store, Plus, RefreshCw, Settings, Plug, AlertCircle, CheckCircle2,
   Clock, XCircle, Search, Filter, Gem, Image, Bot, Sword, Package,
   Globe, Lock, ChevronRight, Wifi, WifiOff, Loader2, ExternalLink,
-  ToggleLeft, ToggleRight, Edit2, Trash2, Shield, Activity
+  ToggleLeft, ToggleRight, Edit2, Trash2, Shield, Activity,
+  Square, CheckSquare, Send, BarChart2
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // ─── CONNECTOR PRESETS (templates for adding new connectors) ──────────────────
 const CONNECTOR_TEMPLATES = [
@@ -108,17 +110,26 @@ function ConnectorCard({ connector, onToggle, onEdit, onDelete, isAdmin }) {
   );
 }
 
-function ListingCard({ listing, connectors, onEdit }) {
+function ListingCard({ listing, connectors, onEdit, selected, onSelect }) {
   const AssetIcon = ASSET_ICONS[listing.asset_type] || Package;
   const syncs = listing.external_syndications || [];
   const syncedCount = syncs.filter(s => s.sync_status === 'synced').length;
   const failedCount = syncs.filter(s => s.sync_status === 'failed').length;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <div
+      className={`rounded-xl border bg-card p-4 space-y-3 transition-colors ${selected ? 'border-primary bg-primary/5' : 'border-border'}`}
+      onClick={() => onSelect && onSelect(listing.id)}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <AssetIcon className={`w-4 h-4 ${ASSET_COLORS[listing.asset_type]}`} />
+          {onSelect && (
+          <div className="mr-1 flex-shrink-0">
+            {selected
+              ? <CheckSquare className="w-4 h-4 text-primary" />
+              : <Square className="w-4 h-4 text-muted-foreground" />}
+          </div>
+        )}
+        <AssetIcon className={`w-4 h-4 ${ASSET_COLORS[listing.asset_type]}`} />
           <div>
             <p className="text-sm font-medium">{listing.title}</p>
             <p className="text-[10px] text-muted-foreground capitalize">{listing.asset_type}</p>
@@ -400,6 +411,9 @@ export default function StorefrontHub() {
   const [filterMarket, setFilterMarket] = useState('all');
   const [showAddConnector, setShowAddConnector] = useState(false);
   const [showCreateListing, setShowCreateListing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkPushing, setBulkPushing] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -445,6 +459,51 @@ export default function StorefrontHub() {
     load();
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === filteredListings.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredListings.map(l => l.id)));
+    }
+  };
+
+  const handleBulkPush = async () => {
+    if (!activeConnectors.length || !selectedIds.size) return;
+    setBulkPushing(true);
+    setBulkResult(null);
+    let pushed = 0;
+    let failed = 0;
+    for (const id of selectedIds) {
+      const listing = listings.find(l => l.id === id);
+      if (!listing) continue;
+      const existing = listing.external_syndications || [];
+      const updated = [...existing];
+      for (const c of activeConnectors) {
+        if (!updated.find(s => s.connector_id === c.id)) {
+          updated.push({ connector_id: c.id, connector_name: c.name, enabled: true, sync_status: 'pending', custom_price: null, external_listing_id: null });
+        }
+      }
+      try {
+        await base44.entities.StorefrontListing.update(id, { external_syndications: updated });
+        pushed++;
+      } catch {
+        failed++;
+      }
+    }
+    setBulkResult({ pushed, failed });
+    setBulkPushing(false);
+    setSelectedIds(new Set());
+    load();
+  };
+
   const activeConnectors = connectors.filter(c => c.is_enabled);
   const totalSynced = listings.reduce((sum, l) => sum + (l.external_syndications || []).filter(s => s.sync_status === 'synced').length, 0);
 
@@ -455,7 +514,9 @@ export default function StorefrontHub() {
         <div className="flex items-center gap-2">
           <Store className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">Storefront Network</h2>
-          <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">MULTI-MARKET</span>
+          <Link to="/storefront-analytics" className="ml-auto p-1.5 rounded-lg bg-secondary hover:bg-border transition-colors">
+          <BarChart2 className="w-3.5 h-3.5 text-muted-foreground" />
+        </Link>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">Unified listing hub with external marketplace connectors</p>
       </div>
@@ -487,6 +548,15 @@ export default function StorefrontHub() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 space-y-4">
+        {/* Bulk result toast */}
+        {bulkResult && (
+          <div className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 text-xs font-medium ${bulkResult.failed > 0 ? 'bg-yellow-500/10 text-yellow-400' : 'bg-green-500/10 text-green-400'}`}>
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Bulk push: {bulkResult.pushed} queued{bulkResult.failed > 0 ? `, ${bulkResult.failed} failed` : ''}
+            <button onClick={() => setBulkResult(null)} className="ml-auto"><XCircle className="w-3.5 h-3.5" /></button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -528,10 +598,34 @@ export default function StorefrontHub() {
                   ))}
                 </div>
 
-                <button onClick={() => setShowCreateListing(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border hover:border-primary/30 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  <Plus className="w-4 h-4" /> Create New Listing
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowCreateListing(true)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-border hover:border-primary/30 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Plus className="w-4 h-4" /> New Listing
+                  </button>
+                  {filteredListings.length > 0 && (
+                    <button onClick={selectAll}
+                      className="px-3 py-2.5 rounded-xl border border-border bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      {selectedIds.size === filteredListings.length ? 'None' : 'All'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Bulk action bar */}
+                {selectedIds.size > 0 && (
+                  <div className="sticky top-0 z-20 flex items-center gap-3 px-3 py-2.5 bg-primary/10 border border-primary/30 rounded-xl">
+                    <span className="text-xs font-medium text-primary">{selectedIds.size} selected</span>
+                    <button onClick={handleBulkPush}
+                      disabled={bulkPushing || !activeConnectors.length}
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50">
+                      {bulkPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      Push to {activeConnectors.length} connector{activeConnectors.length !== 1 ? 's' : ''}
+                    </button>
+                    <button onClick={() => setSelectedIds(new Set())} className="text-muted-foreground hover:text-foreground">
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
 
                 {filteredListings.length === 0 ? (
                   <div className="text-center py-10 space-y-2">
@@ -542,7 +636,9 @@ export default function StorefrontHub() {
                 ) : (
                   <div className="space-y-3">
                     {filteredListings.map(l => (
-                      <ListingCard key={l.id} listing={l} connectors={connectors} />
+                      <ListingCard key={l.id} listing={l} connectors={connectors}
+                        selected={selectedIds.has(l.id)}
+                        onSelect={toggleSelect} />
                     ))}
                   </div>
                 )}
