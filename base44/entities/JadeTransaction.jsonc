@@ -1,0 +1,60 @@
+{
+  "name": "JadeTransaction",
+  "type": "object",
+  "properties": {
+    "jade_asset_id": {
+      "type": "string"
+    },
+    "transaction_type": {
+      "type": "string",
+      "enum": [
+        "extraction",
+        "craft",
+        "fracture",
+        "socket",
+        "unsocket",
+        "trade",
+        "mint_coins",
+        "blueprint_reset"
+      ]
+    },
+    "from_owner": {
+      "type": "string"
+    },
+    "to_owner": {
+      "type": "string"
+    },
+    "price_usd": {
+      "type": "number"
+    },
+    "commission_usd": {
+      "type": "number"
+    },
+    "jade_coins_amount": {
+      "type": "number"
+    },
+    "precision_achieved": {
+      "type": "number"
+    },
+    "intent_snapshot": {
+      "type": "object"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "jade_asset_id",
+    "transaction_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {},
+    "delete": {}
+  }
+}

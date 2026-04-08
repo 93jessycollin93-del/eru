@@ -27,6 +27,7 @@ import APIKeys from './pages/APIKeys';
 import SystemBuilder from './pages/SystemBuilder';
 import Pipeline from './pages/Pipeline';
 import AdminBlockchain from './pages/AdminBlockchain';
+import JadeAtelier from './pages/JadeAtelier';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -75,6 +76,7 @@ const AuthenticatedApp = () => {
         <Route path="/builder" element={<SystemBuilder />} />
         <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/admin/blockchain" element={<AdminBlockchain />} />
+        <Route path="/jta" element={<JadeAtelier />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

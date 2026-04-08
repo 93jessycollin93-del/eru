@@ -1,0 +1,213 @@
+{
+  "name": "JadeAsset",
+  "type": "object",
+  "properties": {
+    "batch": {
+      "type": "string",
+      "default": "batch_1",
+      "description": "Origin batch \u2014 batch_1 is the Monolith"
+    },
+    "origin_sector": {
+      "type": "string",
+      "description": "Sector of the Monolith from which this was extracted"
+    },
+    "origin_depth": {
+      "type": "number",
+      "description": "Depth in the Monolith (0-100)"
+    },
+    "extraction_date": {
+      "type": "string",
+      "description": "ISO timestamp of extraction"
+    },
+    "volume_kg": {
+      "type": "number",
+      "description": "Physical mass in kg"
+    },
+    "color_type": {
+      "type": "string",
+      "enum": [
+        "imperial_green",
+        "lavender",
+        "ice",
+        "russet",
+        "black"
+      ],
+      "description": "Dominant hue"
+    },
+    "purity": {
+      "type": "number",
+      "description": "Clarity grade 5-100 (5% increments)"
+    },
+    "vividness": {
+      "type": "number",
+      "description": "Color saturation 5-100 (5% increments)"
+    },
+    "size_grade": {
+      "type": "number",
+      "description": "Mass grade 5-100 (5% increments)"
+    },
+    "texture": {
+      "type": "number",
+      "description": "Zhong/grain grade 5-100 (5% increments)"
+    },
+    "composite_score": {
+      "type": "number",
+      "description": "Weighted average of all 4 layers"
+    },
+    "lifecycle_state": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "in_workstation",
+        "crafted",
+        "shattered",
+        "socketed",
+        "listed"
+      ],
+      "default": "raw"
+    },
+    "crafted_form": {
+      "type": "string",
+      "enum": [
+        "raw_block",
+        "jewelry",
+        "sculpture",
+        "pendant",
+        "ring",
+        "titan",
+        "fragment",
+        "dust"
+      ],
+      "default": "raw_block"
+    },
+    "crafting_intent": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string"
+        },
+        "risk_level": {
+          "type": "string"
+        },
+        "output_type": {
+          "type": "string"
+        }
+      }
+    },
+    "precision_score": {
+      "type": "number",
+      "description": "Last workstation precision 0-100"
+    },
+    "is_masterwork": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if precision >= 90 on high-grade jade"
+    },
+    "masterwork_buff": {
+      "type": "string",
+      "description": "Buff description if masterwork"
+    },
+    "jade_coins_minted": {
+      "type": "number",
+      "default": 0,
+      "description": "$JADE coins minted from this asset"
+    },
+    "card_attachments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Card IDs this jade is socketed into"
+    },
+    "ownership_timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string"
+          },
+          "acquired_at": {
+            "type": "string"
+          },
+          "transferred_at": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resonance_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "description": "Full immutable event log"
+    },
+    "historical_resonance_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Computed from resonance depth and age"
+    },
+    "valuation": {
+      "type": "number",
+      "description": "Current unset until market signal available"
+    },
+    "fracture_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times this piece has been fractured"
+    },
+    "is_listed": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "batch",
+    "origin_sector",
+    "volume_kg",
+    "color_type",
+    "purity",
+    "vividness",
+    "size_grade",
+    "texture"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "is_listed": true
+        }
+      ]
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
