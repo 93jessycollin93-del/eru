@@ -24,6 +24,7 @@ import TelegramApps from './pages/TelegramApps';
 import JackieAI from './pages/JackieAI';
 import AILab from './pages/AILab';
 import APIKeys from './pages/APIKeys';
+import SystemBuilder from './pages/SystemBuilder';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -69,6 +70,7 @@ const AuthenticatedApp = () => {
         <Route path="/jackie" element={<JackieAI />} />
         <Route path="/ailab" element={<AILab />} />
         <Route path="/apikeys" element={<APIKeys />} />
+        <Route path="/builder" element={<SystemBuilder />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
