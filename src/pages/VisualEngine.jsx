@@ -11,6 +11,35 @@ const THEME_CATS = {
 };
 const BG_CATS = { off:'Off', digital:'Digital', space:'Space', nature:'Nature', energy:'Energy', mythic:'Mythic' };
 
+function ColorWheel({ colors, size = 44 }) {
+  const r = size / 2;
+  const segments = colors.length;
+  const slices = segments < 2 ? [...colors, ...colors, ...colors] : colors;
+  const count = slices.length;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
+      {slices.map((color, i) => {
+        const startAngle = (i / count) * 2 * Math.PI - Math.PI / 2;
+        const endAngle = ((i + 1) / count) * 2 * Math.PI - Math.PI / 2;
+        const x1 = r + r * 0.92 * Math.cos(startAngle);
+        const y1 = r + r * 0.92 * Math.sin(startAngle);
+        const x2 = r + r * 0.92 * Math.cos(endAngle);
+        const y2 = r + r * 0.92 * Math.sin(endAngle);
+        const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+        return (
+          <path key={i}
+            d={`M ${r} ${r} L ${x1} ${y1} A ${r * 0.92} ${r * 0.92} 0 ${largeArc} 1 ${x2} ${y2} Z`}
+            fill={color}
+            stroke="rgba(0,0,0,0.15)"
+            strokeWidth="0.5"
+          />
+        );
+      })}
+      <circle cx={r} cy={r} r={r * 0.3} fill="rgba(0,0,0,0.4)" />
+    </svg>
+  );
+}
+
 function SliderRow({ label, value, min=0, max=2, step=0.05, onChange, locked, suffix='' }) {
   return (
     <div className="space-y-1">
@@ -58,8 +87,14 @@ function ThemesTab() {
     ? Object.values(THEMES).map((t, i) => ({ key: Object.keys(THEMES)[i], ...t }))
     : (grouped[cat] || []);
 
-  // Build primary hsl for preview swatch
-  const getPrimary = (t) => `hsl(${t['--primary']})`;
+  const getWheelColors = (t) => [
+    `hsl(${t['--primary']})`,
+    `hsl(${t['--accent'] || t['--primary']})`,
+    `hsl(${t['--secondary']})`,
+    `hsl(${t['--card']})`,
+    `hsl(${t['--border']})`,
+    `hsl(${t['--background']})`,
+  ];
   const getBg = (t) => `hsl(${t['--background']})`;
 
   return (
@@ -71,7 +106,6 @@ function ThemesTab() {
           <span className="text-xs text-yellow-400">Theme locked by administrator</span>
         </div>
       )}
-      {/* Category filter */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         <button onClick={() => setCat('all')}
           className={`px-2.5 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${cat === 'all' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
@@ -84,7 +118,6 @@ function ThemesTab() {
           </button>
         ))}
       </div>
-      {/* Theme grid */}
       <div className="grid grid-cols-2 gap-2">
         {filtered.map(t => (
           <button key={t.key} onClick={() => setTheme(t.key)} disabled={locked}
@@ -93,13 +126,11 @@ function ThemesTab() {
             {theme === t.key && (
               <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />
             )}
-            <div className="flex gap-1.5 mb-2">
-              <div className="w-4 h-4 rounded-full" style={{ background: getPrimary(t) }} />
-              <div className="w-4 h-4 rounded-full" style={{ background: `hsl(${t['--card']})` }} />
-              <div className="w-4 h-4 rounded-full" style={{ background: `hsl(${t['--border']})` }} />
+            <div className="flex justify-center mb-2">
+              <ColorWheel colors={getWheelColors(t)} size={52} />
             </div>
-            <p className="text-[11px] font-medium text-foreground leading-tight">{t.label}</p>
-            <p className="text-[9px] text-muted-foreground capitalize">{t.cat}</p>
+            <p className="text-[11px] font-medium text-foreground leading-tight text-center">{t.label}</p>
+            <p className="text-[9px] text-muted-foreground capitalize text-center">{t.cat}</p>
           </button>
         ))}
       </div>
