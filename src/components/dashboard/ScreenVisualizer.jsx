@@ -27,16 +27,12 @@ export default function ScreenVisualizer() {
   const clear = () => { setActiveUrl(null); setUrl(''); };
 
   return (
-    <div className={`transition-all duration-300 ${expanded ? 'fixed inset-x-0 bottom-16 z-50 mx-2' : 'w-full'}`}>
+    <div className="w-full">
       <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-2xl">
         {/* Title bar */}
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-secondary/60">
           <Tv2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
           <p className="text-xs font-semibold text-primary flex-1">Screen</p>
-          <button onClick={() => setExpanded(p => !p)}
-            className="p-1 rounded hover:bg-border transition-colors">
-            <Maximize2 className="w-3 h-3 text-muted-foreground" />
-          </button>
           {activeUrl && (
             <button onClick={clear} className="p-1 rounded hover:bg-border transition-colors">
               <X className="w-3 h-3 text-muted-foreground" />
@@ -44,8 +40,8 @@ export default function ScreenVisualizer() {
           )}
         </div>
 
-        {/* URL bar */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+        {/* URL bar — centered */}
+        <div className="flex items-center justify-center gap-2 px-3 py-3 border-b border-border">
           <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
           <input
             ref={inputRef}
@@ -53,16 +49,29 @@ export default function ScreenVisualizer() {
             onChange={e => setUrl(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && load()}
             placeholder="Paste a URL, YouTube link, or website..."
-            className="flex-1 bg-transparent text-xs outline-none text-foreground placeholder:text-muted-foreground font-mono"
+            className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-xs outline-none text-foreground placeholder:text-muted-foreground font-mono"
           />
           <button onClick={() => load()}
-            className="bg-primary text-primary-foreground rounded-lg p-1 flex-shrink-0">
-            <ChevronRight className="w-3 h-3" />
+            className="bg-primary text-primary-foreground rounded-lg px-3 py-2 flex-shrink-0 text-xs font-semibold">
+            Go
           </button>
         </div>
 
-        {/* Screen area */}
-        <div className={`relative bg-black ${expanded ? 'h-64' : 'h-40'} transition-all duration-300`}>
+        {/* Quick links — centered */}
+        <div className="px-3 py-3 border-b border-border">
+          <div className="flex justify-center gap-2 flex-wrap">
+            {QUICK_LINKS.map(q => (
+              <button key={q.label} onClick={() => load(q.url)}
+                className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-secondary hover:bg-border border border-transparent hover:border-primary/40 transition-all">
+                <span className="text-lg leading-none">{q.icon}</span>
+                <span className="text-[9px] text-muted-foreground whitespace-nowrap">{q.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Screen area — below controls */}
+        <div className="relative bg-black h-52">
           {activeUrl ? (
             <iframe
               src={activeUrl}
@@ -79,23 +88,9 @@ export default function ScreenVisualizer() {
                 <Tv2 className="w-5 h-5 opacity-40" />
                 <Music className="w-5 h-5 opacity-40" />
               </div>
-              <p className="text-xs opacity-50">Enter a URL or pick a quick link below</p>
+              <p className="text-xs opacity-50">Pick a quick link or enter a URL above</p>
             </div>
           )}
-        </div>
-
-        {/* Quick links */}
-        <div className="px-3 py-2.5 border-t border-border">
-          <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-2">Quick Links</p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {QUICK_LINKS.map(q => (
-              <button key={q.label} onClick={() => load(q.url)}
-                className="flex-shrink-0 flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl bg-secondary hover:bg-border hover:border-primary/40 border border-transparent transition-all">
-                <span className="text-base leading-none">{q.icon}</span>
-                <span className="text-[9px] text-muted-foreground whitespace-nowrap">{q.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </div>
