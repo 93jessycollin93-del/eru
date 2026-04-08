@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { Link } from 'react-router-dom';
 
 const SECTIONS = [
   { icon: Shield, label: 'Security & 2FA', badge: 'Active' },
@@ -59,6 +61,7 @@ function DisclaimersSheet({ onClose }) {
 
 export default function Settings() {
   const [showDocs, setShowDocs] = useState(false);
+  const { currentUser } = useAuth();
 
   if (showDocs) return <DisclaimersSheet onClose={() => setShowDocs(false)}/>;
 
@@ -98,7 +101,14 @@ export default function Settings() {
           <p className="text-xs text-muted-foreground">Cryptocurrency trading carries significant risk. This platform does not provide financial advice. All trading is at your own risk.</p>
         </div>
 
-        <button className="w-full mt-4 py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
+        {currentUser?.role === 'admin' && (
+          <Link to="/admin/blockchain"
+            className="w-full mt-4 flex items-center gap-2 px-4 py-3 text-primary text-sm font-medium border border-primary/20 bg-primary/5 rounded-xl">
+            <Blocks className="w-4 h-4" /> Blockchain Admin Panel
+            <ChevronRight className="w-4 h-4 ml-auto" />
+          </Link>
+        )}
+        <button className="w-full mt-3 py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
           Sign Out
         </button>
       </div>

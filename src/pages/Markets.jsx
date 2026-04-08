@@ -1,17 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { useCryptoPrices } from '../hooks/useCryptoPrices';
+import { useRealPrices } from '../hooks/useRealPrices';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import TickerBar from '../components/dashboard/TickerBar';
+import { WifiOff, Loader2 } from 'lucide-react';
 
-function generateChart(base, points = 50) {
-  const data = [];
-  let v = base;
-  for (let i = 0; i < points; i++) {
-    v = v * (1 + (Math.random() - 0.5) * 0.02);
-    data.push({ t: i, p: parseFloat(v.toFixed(4)) });
-  }
-  return data;
-}
+// Chart shows price in relative terms — historical requires a paid API
+// We show a placeholder message instead of fake generated data
 
 function PriceRow({ asset, onClick, selected }) {
   const prevRef = useRef(asset.price);
@@ -42,16 +36,41 @@ function PriceRow({ asset, onClick, selected }) {
 }
 
 export default function Markets() {
-  const prices = useCryptoPrices();
-  const [selected, setSelected] = useState(prices[0]);
-  const [chartData] = useState(() => generateChart(selected?.base || 100));
-  const [interval, setIntervalLabel] = useState('1H');
+  const { prices, status } = useRealPrices();
+  const [selected, setSelected] = useState(null);
+  const [interval, setIntervalLabel] = useState('1D');
+
+  useEffect(() => {
+    if (prices.length > 0 && !selected) setSelected(prices[0]);
+  }, [prices]);
+
+  if (status === 'loading') return (
+    <div className="flex flex-col min-h-screen bg-background pb-20">
+      <TickerBar />
+      <div className="flex-1 flex items-center justify-center gap-2">
+        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+        <span className="text-sm text-muted-foreground">Fetching live market data…</span>
+      </div>
+    </div>
+  );
+
+  if (status === 'error') return (
+    <div className="flex flex-col min-h-screen bg-background pb-20">
+      <TickerBar />
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <WifiOff className="w-10 h-10 text-muted-foreground/30" />
+        <p className="font-semibold text-muted-foreground">No Market Data Available</p>
+        <p className="text-xs text-muted-foreground/60">Could not reach CoinGecko API. Check your connection.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <TickerBar />
-      <div className="px-4 py-3 border-b border-border">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-lg font-semibold">Markets</h2>
+        <span className="text-[10px] text-green-400 font-mono">● LIVE · CoinGecko</span>
       </div>
 
       {selected && (
@@ -71,24 +90,11 @@ export default function Markets() {
               </button>
             ))}
           </div>
-          <div className="h-40 mt-3">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(160 100% 45%)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(160 100% 45%)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="t" hide/>
-                <YAxis hide domain={['auto','auto']}/>
-                <Tooltip
-                  contentStyle={{background:'hsl(230 22% 9%)',border:'1px solid hsl(230 18% 16%)',borderRadius:8,fontSize:12}}
-                  formatter={v => [`$${v}`, 'Price']}
-                />
-                <Area type="monotone" dataKey="p" stroke="hsl(160 100% 45%)" fill="url(#cg)" strokeWidth={2} dot={false}/>
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-40 mt-3 flex items-center justify-center bg-secondary/40 rounded-xl border border-border">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">Historical chart requires a paid data API</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Current price shown above is live from CoinGecko</p>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Search, Filter, Grid, List, Heart, TrendingUp } from 'lucide-react';
+import { Search, Grid, List, Wallet, AlertTriangle, ExternalLink } from 'lucide-react';
+import { useWallet } from '../hooks/useWallet';
+import WalletConnectBar from '../components/WalletConnectBar';
 
 const COLLECTIONS = [
   { id: 1, name: 'TON Punks', floor: 12.5, volume: 4820, items: 10000, img: 'https://images.unsplash.com/photo-1635322966219-b75ed372eb01?w=100&h=100&fit=crop' },
@@ -21,6 +23,11 @@ export default function NFTs() {
   const [view, setView] = useState('grid');
   const [selected, setSelected] = useState(null);
   const [showBuy, setShowBuy] = useState(false);
+  const wallet = useWallet();
+
+  // Load blockchain config
+  const blockchainConfig = (() => { try { return JSON.parse(localStorage.getItem('blockchain_config') || '{}'); } catch { return {}; } })();
+  const mintingEnabled = blockchainConfig.nft_minting_enabled && blockchainConfig.contract_address;
 
   if (selected) return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -50,12 +57,28 @@ export default function NFTs() {
           <div className="flex justify-between border-b border-border pb-2"><span>Last Sale</span><span className="font-mono text-foreground">{(selected.price * 0.85).toFixed(1)} TON</span></div>
           <div className="flex justify-between"><span>Token ID</span><span className="font-mono text-foreground">#{Math.floor(Math.random()*9999)}</span></div>
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => setShowBuy(true)} className="flex-1 py-3.5 bg-primary text-primary-foreground rounded-xl font-semibold glow-green">
-            Buy Now — {selected.price} TON
-          </button>
-          <button className="px-4 py-3.5 bg-secondary border border-border rounded-xl text-sm">Offer</button>
-        </div>
+        {/* Wallet gate for purchasing */}
+        {wallet.status !== 'connected' ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-yellow-400/10 border border-yellow-400/20 rounded-xl">
+              <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
+              <span className="text-xs text-yellow-400">Connect a wallet to buy or make offers</span>
+            </div>
+            <WalletConnectBar />
+          </div>
+        ) : !mintingEnabled ? (
+          <div className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border rounded-xl">
+            <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Minting not configured — admin must enable blockchain integration</span>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <button onClick={() => setShowBuy(true)} className="flex-1 py-3.5 bg-primary text-primary-foreground rounded-xl font-semibold glow-green">
+              Buy Now — {selected.price} TON
+            </button>
+            <button className="px-4 py-3.5 bg-secondary border border-border rounded-xl text-sm">Offer</button>
+          </div>
+        )}
       </div>
       {showBuy && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end">
@@ -119,10 +142,17 @@ export default function NFTs() {
           ))}
         </div>
       ) : tab === 'my_nfts' ? (
-        <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-          <p className="text-4xl mb-3">🖼</p>
-          <p>No NFTs in wallet yet.</p>
-          <p className="text-xs mt-1">Buy or mint to get started.</p>
+        <div className="px-4 py-6 space-y-3">
+          <WalletConnectBar />
+          {wallet.status !== 'connected' ? (
+            <p className="text-xs text-muted-foreground text-center">Connect your wallet to view your NFTs</p>
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-4xl mb-3">🖼</p>
+              <p className="text-sm text-muted-foreground">No on-chain NFTs detected</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">NFTs held in your wallet will appear here once RPC integration is configured</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className={`px-4 ${view==='grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}`}>

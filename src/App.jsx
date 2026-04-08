@@ -26,6 +26,7 @@ import AILab from './pages/AILab';
 import APIKeys from './pages/APIKeys';
 import SystemBuilder from './pages/SystemBuilder';
 import Pipeline from './pages/Pipeline';
+import AdminBlockchain from './pages/AdminBlockchain';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
         <Route path="/apikeys" element={<APIKeys />} />
         <Route path="/builder" element={<SystemBuilder />} />
         <Route path="/pipeline" element={<Pipeline />} />
+        <Route path="/admin/blockchain" element={<AdminBlockchain />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
