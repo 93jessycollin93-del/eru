@@ -17,12 +17,12 @@ const MODE_PROMPTS = {
 };
 
 const THINK_MODES = [
-  { id: 'default',    label: 'Default',    emoji: '🧠', color: 'text-primary',       desc: 'Balanced intelligence',                     prompt: '' },
-  { id: 'builder',   label: 'Builder',    emoji: '🏗️', color: 'text-blue-400',     desc: 'Systems + architecture focus',              prompt: 'THINK MODE: BUILDER — Focus on systems design, architecture decisions, scalability, and step-by-step engineering. Structure your thinking in phases and components.' },
-  { id: 'hacker',    label: 'Hacker',     emoji: '💀', color: 'text-red-400',      desc: 'Deep logic + optimization',                 prompt: 'THINK MODE: HACKER — Go deep on logic, performance optimization, edge cases, and low-level reasoning. Be terse, technical, and ruthlessly efficient.' },
-  { id: 'designer',  label: 'Designer',   emoji: '🎨', color: 'text-pink-400',     desc: 'UI/UX + aesthetics focus',                  prompt: 'THINK MODE: DESIGNER — Think in user flows, visual hierarchy, accessibility, and interface patterns. Prioritize clarity, delight, and usability in all output.' },
-  { id: 'strategist',label: 'Strategist', emoji: '♟️', color: 'text-yellow-400',   desc: 'Game theory + economy balance',             prompt: 'THINK MODE: STRATEGIST — Reason like a game theorist and economist. Analyze incentives, balance mechanics, model player behavior, and optimize for long-term outcomes.' },
-  { id: 'explainer', label: 'Explainer',  emoji: '📖', color: 'text-green-400',    desc: 'Simple, clear breakdowns',                 prompt: 'THINK MODE: EXPLAINER — Break down every concept into the simplest possible terms. Use analogies, bullet points, and examples. Assume no prior knowledge.' },
+  { id: 'default',    label: 'Default',    emoji: '🧠', color: 'text-primary',     desc: 'Balanced intelligence',             prompt: '' },
+  { id: 'builder',   label: 'Builder',    emoji: '🏗️', color: 'text-blue-400',   desc: 'Systems + architecture focus',      prompt: 'THINK MODE: BUILDER — Focus on systems design, architecture decisions, scalability, and step-by-step engineering. Structure your thinking in phases and components.' },
+  { id: 'hacker',    label: 'Hacker',     emoji: '💀', color: 'text-red-400',    desc: 'Deep logic + optimization',         prompt: 'THINK MODE: HACKER — Go deep on logic, performance optimization, edge cases, and low-level reasoning. Be terse, technical, and ruthlessly efficient.' },
+  { id: 'designer',  label: 'Designer',   emoji: '🎨', color: 'text-pink-400',   desc: 'UI/UX + aesthetics focus',          prompt: 'THINK MODE: DESIGNER — Think in user flows, visual hierarchy, accessibility, and interface patterns. Prioritize clarity, delight, and usability in all output.' },
+  { id: 'strategist',label: 'Strategist', emoji: '♟️', color: 'text-yellow-400', desc: 'Game theory + economy balance',     prompt: 'THINK MODE: STRATEGIST — Reason like a game theorist and economist. Analyze incentives, balance mechanics, model player behavior, and optimize for long-term outcomes.' },
+  { id: 'explainer', label: 'Explainer',  emoji: '📖', color: 'text-green-400',  desc: 'Simple, clear breakdowns',         prompt: 'THINK MODE: EXPLAINER — Break down every concept into the simplest possible terms. Use analogies, bullet points, and examples. Assume no prior knowledge.' },
 ];
 
 export default function JackieAI() {
@@ -33,7 +33,6 @@ export default function JackieAI() {
   const [mode, setMode] = useState('chat');
   const [tab, setTab] = useState('main');
   const [showCommands, setShowCommands] = useState(false);
-  const [projectName, setProjectName] = useState('');
   const [workingContext, setWorkingContext] = useState('');
   const [voice, setVoice] = useState('default');
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -61,8 +60,7 @@ export default function JackieAI() {
 
     const fileUrls = files.map(f => f.url);
     const displayMsg = msg + (files.length > 0 ? `\n📎 ${files.map(f => f.name).join(', ')}` : '');
-    const userMsg = { role: 'user', content: displayMsg };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, { role: 'user', content: displayMsg }]);
     setLoading(true);
 
     const prompt = buildPrompt(msg || 'Analyze the attached files.');
@@ -71,8 +69,7 @@ export default function JackieAI() {
       ...(fileUrls.length > 0 ? { file_urls: fileUrls } : {}),
     });
 
-    const assistantMsg = { role: 'assistant', content: response };
-    setMessages(prev => [...prev, assistantMsg]);
+    setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     setWorkingContext(response);
     setLoading(false);
   };
@@ -89,8 +86,7 @@ export default function JackieAI() {
   };
 
   const handleQuickCommand = (cmd) => {
-    const target = workingContext ? cmd + ' this:\n' + workingContext.slice(0, 2000) : cmd + ' the last output';
-    setInput(target);
+    setInput(workingContext ? cmd + ' this:\n' + workingContext.slice(0, 2000) : cmd + ' the last output');
   };
 
   const handleSave = async (content) => {
@@ -106,11 +102,8 @@ export default function JackieAI() {
   const clearChat = () => {
     setMessages([]);
     setWorkingContext('');
-    setProjectName('');
     setPendingFiles([]);
   };
-
-  const activeThink = THINK_MODES.find(t => t.id === thinkMode);
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-36">
@@ -118,14 +111,13 @@ export default function JackieAI() {
         mode={mode} setMode={setMode}
         tab={tab} setTab={setTab}
         onClear={clearChat}
-        projectName={projectName}
       />
 
-      {/* Think Mode Selector */}
+      {tab === 'main' && (
         <>
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {messages.length === 0 ? (
-              <WelcomeScreen mode={mode} onSend={(s) => { setInput(s); }} />
+              <WelcomeScreen mode={mode} onSend={(s) => setInput(s)} />
             ) : (
               messages.map((m, i) => (
                 <MessageBubble

@@ -6,7 +6,6 @@ export default function PortfolioSummary() {
   const { map, status } = useRealPriceMap();
   const wallet = useWallet();
 
-  // Empty state: no wallet
   if (wallet.status === 'disconnected' || wallet.status === 'unavailable') {
     return (
       <div className="mx-4 mt-3 bg-card border border-border rounded-xl p-4 flex flex-col items-center gap-3">
@@ -42,7 +41,6 @@ export default function PortfolioSummary() {
     );
   }
 
-  // Wallet connected — show address, network, market status
   return (
     <div className="mx-4 mt-3 bg-card border border-border rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
@@ -59,7 +57,6 @@ export default function PortfolioSummary() {
         </button>
       </div>
 
-      {/* Balance — requires on-chain query; shown as empty until integrated */}
       <div className="bg-secondary/60 rounded-xl p-3 text-center">
         {status === 'loading' ? (
           <div className="flex items-center justify-center gap-1.5">
@@ -79,7 +76,6 @@ export default function PortfolioSummary() {
         )}
       </div>
 
-      {/* Live BTC / ETH prices from real API */}
       {status === 'live' && (
         <div className="flex gap-2 mt-3">
           {['BTC', 'ETH', 'SOL'].map(sym => {
@@ -88,9 +84,11 @@ export default function PortfolioSummary() {
             return (
               <div key={sym} className="flex-1 bg-secondary rounded-lg px-2 py-2 text-center">
                 <p className="text-[10px] text-muted-foreground">{sym}</p>
-                <p className="text-xs font-mono font-semibold text-foreground">${p.price.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                <p className="text-xs font-mono font-semibold text-foreground">
+                  ${(p.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
                 <p className={`text-[9px] ${p.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {p.change >= 0 ? '▲' : '▼'}{Math.abs(p.change).toFixed(2)}%
+                  {p.change >= 0 ? '▲' : '▼'}{Math.abs(p.change ?? 0).toFixed(2)}%
                 </p>
               </div>
             );

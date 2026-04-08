@@ -5,10 +5,7 @@ import FinanceModule from '../components/dashboard/FinanceModule';
 import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
 import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
-import { useAuth } from '@/lib/AuthContext';
-
 export default function Dashboard() {
-  const { currentUser } = useAuth();
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <TickerBar />
