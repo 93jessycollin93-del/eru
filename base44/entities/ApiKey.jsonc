@@ -1,0 +1,67 @@
+{
+  "name": "ApiKey",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Friendly name for the key"
+    },
+    "hashed_key": {
+      "type": "string",
+      "description": "SHA-256 hash of the raw key - never store raw"
+    },
+    "key_prefix": {
+      "type": "string",
+      "description": "First 8 chars of raw key for display (e.g. sk_live_ab12)"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "jackie:read",
+          "jackie:write",
+          "bots:read",
+          "bots:write",
+          "markets:read",
+          "portfolio:read",
+          "messages:read",
+          "admin:all"
+        ]
+      },
+      "description": "Allowed scopes for this key"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "revoked"
+      ],
+      "default": "active"
+    },
+    "last_used_at": {
+      "type": "string",
+      "description": "ISO timestamp of last use"
+    }
+  },
+  "required": [
+    "name",
+    "hashed_key",
+    "key_prefix",
+    "permissions"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

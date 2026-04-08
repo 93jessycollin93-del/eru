@@ -23,6 +23,7 @@ import Reputation from './pages/Reputation';
 import TelegramApps from './pages/TelegramApps';
 import JackieAI from './pages/JackieAI';
 import AILab from './pages/AILab';
+import APIKeys from './pages/APIKeys';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
         <Route path="/tgapps" element={<TelegramApps />} />
         <Route path="/jackie" element={<JackieAI />} />
         <Route path="/ailab" element={<AILab />} />
+        <Route path="/apikeys" element={<APIKeys />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
