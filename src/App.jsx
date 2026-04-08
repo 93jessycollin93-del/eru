@@ -34,6 +34,9 @@ import CardArena from './pages/CardArena';
 import StorefrontHub from './pages/StorefrontHub';
 import StorefrontAnalytics from './pages/StorefrontAnalytics';
 import CreatureLab from './pages/CreatureLab';
+// Payment verification system initialized on app load
+import '@/lib/paymentGuards';
+import '@/lib/assetGrant';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();

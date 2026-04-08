@@ -1,0 +1,123 @@
+{
+  "name": "Transaction",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "Reference to the order/purchase request"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "jade",
+        "nft",
+        "card",
+        "item",
+        "collectible",
+        "currency"
+      ],
+      "description": "What is being purchased"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "ID of the asset being purchased"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Buyer's email"
+    },
+    "seller_email": {
+      "type": "string",
+      "description": "Seller's email (null if system sale)"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Amount paid"
+    },
+    "currency": {
+      "type": "string",
+      "default": "GOLD",
+      "description": "Currency used"
+    },
+    "expected_amount": {
+      "type": "number",
+      "description": "Expected/listed price"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_payment",
+        "pending_verification",
+        "verified",
+        "failed",
+        "cancelled"
+      ],
+      "default": "pending_payment",
+      "description": "Payment status"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "wallet_balance",
+        "card",
+        "crypto",
+        "bank_transfer"
+      ],
+      "description": "How payment was made"
+    },
+    "verified_at": {
+      "type": "string",
+      "description": "ISO timestamp when payment was verified"
+    },
+    "verified_by": {
+      "type": "string",
+      "description": "System or admin who verified"
+    },
+    "failure_reason": {
+      "type": "string",
+      "description": "If failed, why"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional data (hash, proof, receipt)"
+    }
+  },
+  "required": [
+    "order_id",
+    "asset_type",
+    "asset_id",
+    "buyer_email",
+    "amount",
+    "expected_amount"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
