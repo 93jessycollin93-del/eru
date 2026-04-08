@@ -7,12 +7,13 @@ import WelcomeScreen from '../components/jackie/WelcomeScreen';
 import QuickCommands from '../components/jackie/QuickCommands';
 import AssetManager from '../components/jackie/AssetManager';
 import InputBar from '../components/jackie/InputBar';
+import { VOICES } from '../components/jackie/VoiceSelector';
 
-const SYSTEM_PROMPTS = {
-  chat: `You are Jackie, an elite AI assistant. Be helpful, concise, and intelligent. Use markdown formatting. Never invent financial data.`,
-  code: `You are Jackie Code Engine. Generate production-ready code. Always use markdown code blocks with language tags. When refining, show only the changed code. Be precise and clean. Prefer modern patterns.`,
-  visual: `You are Jackie Visual Studio. When asked about layouts/systems/flows, output structured visual descriptions using markdown headers, lists, and tables. Use clear hierarchy. Think in components and modules.`,
-  builder: `You are Jackie System Builder. Guide users step-by-step through building complex systems. Break work into phases. Output structured plans with clear milestones. Ask clarifying questions when needed.`,
+const MODE_PROMPTS = {
+  chat: `You are Jackie, an elite AI assistant. Be helpful, concise, and intelligent. Use markdown formatting.`,
+  code: `You are Jackie Code Engine. Generate production-ready code. Always use markdown code blocks with language tags. Be precise and clean.`,
+  visual: `You are Jackie Visual Studio. Output structured visual descriptions using markdown headers, lists, and tables. Think in components and modules.`,
+  builder: `You are Jackie System Builder. Guide users step-by-step through building complex systems. Break work into phases with clear milestones.`,
 };
 
 export default function JackieAI() {
@@ -24,29 +25,41 @@ export default function JackieAI() {
   const [showCommands, setShowCommands] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [workingContext, setWorkingContext] = useState('');
+  const [voice, setVoice] = useState('default');
+  const [pendingFiles, setPendingFiles] = useState([]);
   const bottomRef = useRef(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
   const buildPrompt = useCallback((userMessage) => {
-    const systemPrompt = SYSTEM_PROMPTS[mode];
+    const voiceStyle = VOICES.find(v => v.id === voice)?.style || '';
+    const systemPrompt = `${MODE_PROMPTS[mode]}\n\nVoice & Style: ${voiceStyle}`;
     const contextBlock = workingContext ? `\n[ACTIVE CONTEXT]\n${workingContext}\n[END CONTEXT]\n` : '';
     const history = messages.slice(-20).map(m => `${m.role === 'user' ? 'User' : 'Jackie'}: ${m.content}`).join('\n');
     return `${systemPrompt}${contextBlock}\n\nConversation:\n${history}\nUser: ${userMessage}\n\nJackie:`;
-  }, [mode, messages, workingContext]);
+  }, [mode, messages, workingContext, voice]);
 
-  const send = async (text) => {
-    const msg = text || input.trim();
-    if (!msg || loading) return;
+  const send = async (attachments = []) => {
+    const msg = input.trim();
+    const files = attachments.length > 0 ? attachments : pendingFiles;
+    if (!msg && files.length === 0) return;
+    if (loading) return;
     setInput('');
+    setPendingFiles([]);
     setShowCommands(false);
 
-    const userMsg = { role: 'user', content: msg };
+    const fileUrls = files.map(f => f.url);
+    const displayMsg = msg + (files.length > 0 ? `\n📎 ${files.map(f => f.name).join(', ')}` : '');
+    const userMsg = { role: 'user', content: displayMsg };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
-    const prompt = buildPrompt(msg);
-    const response = await base44.integrations.Core.InvokeLLM({ prompt });
+    const prompt = buildPrompt(msg || 'Analyze the attached files.');
+    const response = await base44.integrations.Core.InvokeLLM({
+      prompt,
+      ...(fileUrls.length > 0 ? { file_urls: fileUrls } : {}),
+    });
+
     const assistantMsg = { role: 'assistant', content: response };
     setMessages(prev => [...prev, assistantMsg]);
     setWorkingContext(response);
@@ -65,11 +78,8 @@ export default function JackieAI() {
   };
 
   const handleQuickCommand = (cmd) => {
-    if (!workingContext) {
-      send(cmd + ' the last output');
-    } else {
-      send(cmd + ' this:\n' + workingContext.slice(0, 2000));
-    }
+    const target = workingContext ? cmd + ' this:\n' + workingContext.slice(0, 2000) : cmd + ' the last output';
+    setInput(target);
   };
 
   const handleSave = async (content) => {
@@ -86,10 +96,11 @@ export default function JackieAI() {
     setMessages([]);
     setWorkingContext('');
     setProjectName('');
+    setPendingFiles([]);
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
+    <div className="flex flex-col min-h-screen bg-background pb-36">
       <JackieHeader
         mode={mode} setMode={setMode}
         tab={tab} setTab={setTab}
@@ -101,7 +112,7 @@ export default function JackieAI() {
         <>
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {messages.length === 0 ? (
-              <WelcomeScreen mode={mode} onSend={send} />
+              <WelcomeScreen mode={mode} onSend={(s) => { setInput(s); }} />
             ) : (
               messages.map((m, i) => (
                 <MessageBubble
@@ -132,10 +143,12 @@ export default function JackieAI() {
           <QuickCommands visible={showCommands} onCommand={handleQuickCommand} />
           <InputBar
             input={input} setInput={setInput}
-            onSend={() => send()} loading={loading}
+            onSend={send} loading={loading}
             mode={mode}
             showCommands={showCommands}
             onToggleCommands={() => setShowCommands(p => !p)}
+            voice={voice} setVoice={setVoice}
+            onFilesReady={setPendingFiles}
           />
         </>
       )}
