@@ -1,0 +1,131 @@
+{
+  "name": "MarketConnector",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name of the marketplace"
+    },
+    "connector_type": {
+      "type": "string",
+      "enum": [
+        "nft_marketplace",
+        "crypto_exchange",
+        "game_items",
+        "digital_goods",
+        "custom_api"
+      ],
+      "description": "Category of marketplace"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "error",
+        "pending_auth"
+      ],
+      "default": "inactive"
+    },
+    "api_endpoint": {
+      "type": "string",
+      "description": "Base API URL"
+    },
+    "api_key_ref": {
+      "type": "string",
+      "description": "Reference label for stored key (never store raw keys)"
+    },
+    "auth_type": {
+      "type": "string",
+      "enum": [
+        "api_key",
+        "oauth2",
+        "none"
+      ],
+      "default": "api_key"
+    },
+    "supported_asset_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "jade",
+          "nft",
+          "bot",
+          "card",
+          "item",
+          "collectible"
+        ]
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "list",
+          "update",
+          "remove",
+          "read",
+          "sync"
+        ]
+      }
+    },
+    "sync_frequency_minutes": {
+      "type": "number",
+      "default": 60
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "read_only_fallback": {
+      "type": "boolean",
+      "default": true
+    },
+    "last_sync_at": {
+      "type": "string"
+    },
+    "last_sync_status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "pending",
+        "never"
+      ],
+      "default": "never"
+    },
+    "total_listings_synced": {
+      "type": "number",
+      "default": 0
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "connector_type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

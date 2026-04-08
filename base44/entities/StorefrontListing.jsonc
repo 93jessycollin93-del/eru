@@ -1,0 +1,134 @@
+{
+  "name": "StorefrontListing",
+  "type": "object",
+  "properties": {
+    "asset_id": {
+      "type": "string",
+      "description": "ID of the source asset entity"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "jade",
+        "nft",
+        "bot",
+        "card",
+        "item",
+        "collectible"
+      ]
+    },
+    "asset_snapshot": {
+      "type": "object",
+      "description": "Snapshot of asset data at time of listing"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "base_price": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "default": "GOLD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "paused",
+        "sold",
+        "expired",
+        "error"
+      ],
+      "default": "draft"
+    },
+    "internal_listed": {
+      "type": "boolean",
+      "default": true
+    },
+    "external_syndications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "connector_id": {
+            "type": "string"
+          },
+          "connector_name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "custom_price": {
+            "type": "number"
+          },
+          "external_listing_id": {
+            "type": "string"
+          },
+          "sync_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "synced",
+              "failed",
+              "not_connected"
+            ]
+          },
+          "last_synced_at": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "region_availability": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "e.g. ['global', 'US', 'EU']",
+      "default": [
+        "global"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "view_count": {
+      "type": "number",
+      "default": 0
+    },
+    "expires_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "asset_id",
+    "asset_type",
+    "title",
+    "base_price"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
