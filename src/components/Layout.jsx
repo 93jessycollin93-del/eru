@@ -1,39 +1,41 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Lightbulb, Brain, Shield, Cpu, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store } from 'lucide-react';
 import AnimatedBackground from './AnimatedBackground';
 import { useTheme } from '../context/ThemeContext';
 import JackieFloat from './JackieFloat';
 
-const NAV = [
-  { icon: Home, label: 'Home', to: '/' },
-  { icon: BarChart2, label: 'Markets', to: '/markets' },
-  { icon: ArrowUpDown, label: 'Trade', to: '/trade' },
-  { icon: ImageIcon, label: 'NFTs', to: '/nfts' },
-  { icon: Wallet, label: 'Portfolio', to: '/portfolio' },
-  { icon: ShoppingBag, label: 'Shop', to: '/collectables' },
-  { icon: Mail, label: 'Inbox', to: '/messages' },
-  { icon: Lightbulb, label: 'Creator', to: '/creator' },
-  { icon: Brain, label: 'Thinkers', to: '/thinkers' },
-  { icon: Shield, label: 'Review', to: '/review' },
-  { icon: Award, label: 'Rank', to: '/reputation' },
-  { icon: Send, label: 'TG Apps', to: '/tgapps' },
-  { icon: Bot, label: 'Jackie', to: '/jackie' },
-  { icon: FlaskConical, label: 'AI Lab', to: '/ailab' },
-  { icon: KeyRound, label: 'API Keys', to: '/apikeys' },
-  { icon: Wand2, label: 'Builder', to: '/builder' },
-  { icon: Layers, label: 'Pipeline', to: '/pipeline' },
-  { icon: Gem, label: 'JTA', to: '/jta' },
-  { icon: Sword, label: 'Arena', to: '/arena' },
-  { icon: Dna, label: 'Lab', to: '/creatures' },
-  { icon: Store, label: 'Hub', to: '/storefront' },
-  { icon: Sparkles, label: 'Visual', to: '/visual' },
-  { icon: Cpu, label: 'Station', to: '/workstation' },
-  { icon: Settings, label: 'Settings', to: '/settings' },
+const getNav = (t) => [
+  { icon: Home, label: t('nav.home'), to: '/' },
+  { icon: BarChart2, label: t('nav.markets'), to: '/markets' },
+  { icon: ArrowUpDown, label: t('nav.trade'), to: '/trade' },
+  { icon: ImageIcon, label: t('nav.nfts'), to: '/nfts' },
+  { icon: Wallet, label: t('nav.portfolio'), to: '/portfolio' },
+  { icon: ShoppingBag, label: t('nav.shop'), to: '/collectables' },
+  { icon: Mail, label: t('nav.inbox'), to: '/messages' },
+  { icon: Lightbulb, label: t('nav.creator'), to: '/creator' },
+  { icon: Brain, label: t('nav.thinkers'), to: '/thinkers' },
+  { icon: Shield, label: t('nav.review'), to: '/review' },
+  { icon: Award, label: t('nav.rank'), to: '/reputation' },
+  { icon: Send, label: t('nav.tgapps'), to: '/tgapps' },
+  { icon: Bot, label: t('nav.jackie'), to: '/jackie' },
+  { icon: FlaskConical, label: t('nav.ailab'), to: '/ailab' },
+  { icon: KeyRound, label: t('nav.apikeys'), to: '/apikeys' },
+  { icon: Wand2, label: t('nav.builder'), to: '/builder' },
+  { icon: Layers, label: t('nav.pipeline'), to: '/pipeline' },
+  { icon: Gem, label: t('nav.jta'), to: '/jta' },
+  { icon: Sword, label: t('nav.arena'), to: '/arena' },
+  { icon: Dna, label: t('nav.lab'), to: '/creatures' },
+  { icon: Store, label: t('nav.hub'), to: '/storefront' },
+  { icon: Sparkles, label: t('nav.visual'), to: '/visual' },
+  { icon: Cpu, label: t('nav.station'), to: '/workstation' },
+  { icon: Settings, label: t('nav.settings'), to: '/settings' },
 ];
 
 export default function Layout() {
   const { pathname } = useLocation();
   const themeCtx = useTheme();
+  const { t } = useLanguage();
   const bg = themeCtx?.bg || 'none';
   const bgOpacity = themeCtx?.bgOpacity || 0.4;
   return (
@@ -45,7 +47,7 @@ export default function Layout() {
       <JackieFloat />
       <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-40 overflow-x-auto">
         <div className="max-w-md mx-auto flex min-w-max px-1">
-          {NAV.map(({ icon: Icon, label, to }) => {
+          {getNav(t).map(({ icon: Icon, label, to }) => {
             const active = pathname === to || (to !== '/' && pathname.startsWith(to));
             return (
               <Link key={to} to={to} className={`flex flex-col items-center py-1.5 px-1 min-w-0 flex-1 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}>

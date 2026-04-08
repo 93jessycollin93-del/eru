@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 
 const SECTIONS = [
@@ -62,6 +63,7 @@ function DisclaimersSheet({ onClose }) {
 export default function Settings() {
   const [showDocs, setShowDocs] = useState(false);
   const { currentUser } = useAuth();
+  const { lang, setLang } = useLanguage();
 
   if (showDocs) return <DisclaimersSheet onClose={() => setShowDocs(false)}/>;
 
@@ -79,6 +81,24 @@ export default function Settings() {
             <p className="text-xs text-muted-foreground">Premium Account</p>
           </div>
           <div className="ml-auto bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">PRO</div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Language</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(LANGUAGES).map(([code, name]) => (
+              <button
+                key={code}
+                onClick={() => setLang(code)}
+                className={`px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                  lang === code
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card hover:border-primary/30'
+                }`}>
+                {name}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded-xl divide-y divide-border">
