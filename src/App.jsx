@@ -20,6 +20,7 @@ import CreatorHub from './pages/CreatorHub';
 import ThinkersClub from './pages/ThinkersClub';
 import AppReview from './pages/AppReview';
 import Reputation from './pages/Reputation';
+import TelegramApps from './pages/TelegramApps';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
         <Route path="/thinkers" element={<ThinkersClub />} />
         <Route path="/review" element={<AppReview />} />
         <Route path="/reputation" element={<Reputation />} />
+        <Route path="/tgapps" element={<TelegramApps />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

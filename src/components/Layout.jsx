@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Lightbulb, Brain, Shield, Cpu, Award } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Lightbulb, Brain, Shield, Cpu, Award, Send } from 'lucide-react';
 import AnimatedBackground from './AnimatedBackground';
 import { useTheme } from '../context/ThemeContext';
 
@@ -15,6 +15,7 @@ const NAV = [
   { icon: Brain, label: 'Thinkers', to: '/thinkers' },
   { icon: Shield, label: 'Review', to: '/review' },
   { icon: Award, label: 'Rank', to: '/reputation' },
+  { icon: Send, label: 'TG Apps', to: '/tgapps' },
   { icon: Cpu, label: 'Station', to: '/workstation' },
   { icon: Settings, label: 'Settings', to: '/settings' },
 ];
