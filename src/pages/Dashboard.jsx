@@ -1,6 +1,7 @@
 import TickerBar from '../components/dashboard/TickerBar';
 import DataVisualizer from '../components/dashboard/DataVisualizer';
 import AppDock from '../components/dashboard/AppDock';
+import FinanceModule from '../components/dashboard/FinanceModule';
 import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
 import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
@@ -17,6 +18,7 @@ export default function Dashboard() {
         <AppDock />
         <ScreenVisualizer />
         <DataVisualizer />
+        <FinanceModule />
       </div>
     </div>
   );
