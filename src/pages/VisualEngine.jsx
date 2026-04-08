@@ -308,29 +308,31 @@ export default function VisualEngine() {
   const [tab, setTab] = useState('themes');
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
+    <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-card/80 backdrop-blur-sm">
+      <div className="px-4 py-3 border-b border-border bg-card/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">Visual Engine</h2>
           <span className="ml-auto text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">SYSTEM LAYER</span>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">Full aesthetic, motion & interaction control</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Themes, backgrounds & animation control</p>
       </div>
 
       {/* Tab bar */}
-      <div className="flex overflow-x-auto border-b border-border bg-card/50">
-        {TABS.map(({ id, label, Icon }) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-4 py-2 text-[10px] font-medium transition-colors ${tab === id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
+      <div className="flex-shrink-0 overflow-x-auto border-b border-border bg-card/50">
+        <div className="flex min-w-max">
+          {TABS.map(({ id, label, Icon }) => (
+            <button key={id} onClick={() => setTab(id)}
+              className={`flex flex-col items-center gap-0.5 px-5 py-2.5 text-[10px] font-medium transition-colors whitespace-nowrap ${tab === id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
         {tab === 'themes'  && <ThemesTab />}
         {tab === 'bg'      && <BackgroundsTab />}
         {tab === 'motion'  && <MotionTab />}
