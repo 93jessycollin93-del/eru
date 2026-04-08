@@ -21,6 +21,8 @@ import ThinkersClub from './pages/ThinkersClub';
 import AppReview from './pages/AppReview';
 import Reputation from './pages/Reputation';
 import TelegramApps from './pages/TelegramApps';
+import JackieAI from './pages/JackieAI';
+import AILab from './pages/AILab';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -63,6 +65,8 @@ const AuthenticatedApp = () => {
         <Route path="/review" element={<AppReview />} />
         <Route path="/reputation" element={<Reputation />} />
         <Route path="/tgapps" element={<TelegramApps />} />
+        <Route path="/jackie" element={<JackieAI />} />
+        <Route path="/ailab" element={<AILab />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

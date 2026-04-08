@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Lightbulb, Brain, Shield, Cpu, Award, Send } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, Settings, ShoppingBag, Mail, Lightbulb, Brain, Shield, Cpu, Award, Send, Bot, FlaskConical } from 'lucide-react';
 import AnimatedBackground from './AnimatedBackground';
 import { useTheme } from '../context/ThemeContext';
+import JackieFloat from './JackieFloat';
 
 const NAV = [
   { icon: Home, label: 'Home', to: '/' },
@@ -16,6 +17,8 @@ const NAV = [
   { icon: Shield, label: 'Review', to: '/review' },
   { icon: Award, label: 'Rank', to: '/reputation' },
   { icon: Send, label: 'TG Apps', to: '/tgapps' },
+  { icon: Bot, label: 'Jackie', to: '/jackie' },
+  { icon: FlaskConical, label: 'AI Lab', to: '/ailab' },
   { icon: Cpu, label: 'Station', to: '/workstation' },
   { icon: Settings, label: 'Settings', to: '/settings' },
 ];
@@ -31,6 +34,7 @@ export default function Layout() {
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
+      <JackieFloat />
       <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-40 overflow-x-auto">
         <div className="max-w-md mx-auto flex min-w-max px-1">
           {NAV.map(({ icon: Icon, label, to }) => {
