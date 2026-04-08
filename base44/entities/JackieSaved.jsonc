@@ -9,7 +9,36 @@
       "type": "string"
     },
     "tag": {
+      "type": "string",
+      "enum": [
+        "code",
+        "ui",
+        "system",
+        "bot",
+        "strategy",
+        "prompt",
+        "general"
+      ]
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "code",
+        "visual",
+        "text",
+        "system"
+      ],
+      "default": "text"
+    },
+    "language": {
       "type": "string"
+    },
+    "folder": {
+      "type": "string"
+    },
+    "pinned": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [
