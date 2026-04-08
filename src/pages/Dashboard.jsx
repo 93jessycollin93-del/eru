@@ -1,7 +1,7 @@
-import MotherboardMap from '../components/dashboard/MotherboardMap';
 import TickerBar from '../components/dashboard/TickerBar';
 import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
+import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function Dashboard() {
@@ -15,9 +15,8 @@ export default function Dashboard() {
       </div>
       <PortfolioSummary />
       <QuickActions />
-      <div className="px-4 mt-4">
-        <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-2">Learning Progress Map</p>
-        <MotherboardMap />
+      <div className="px-4 mt-4 pb-4">
+        <ScreenVisualizer />
       </div>
     </div>
   );

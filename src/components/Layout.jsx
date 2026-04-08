@@ -36,7 +36,7 @@ export default function Layout() {
           {NAV.map(({ icon: Icon, label, to }) => {
             const active = pathname === to || (to !== '/' && pathname.startsWith(to));
             return (
-              <Link key={to} to={to} className={`flex flex-col items-center py-2 px-1 min-w-0 flex-1 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}>
+              <Link key={to} to={to} className={`flex flex-col items-center py-1.5 px-1 min-w-0 flex-1 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}>
                 <Icon className="w-5 h-5 flex-shrink-0"/>
                 <span className="text-[9px] mt-0.5 truncate">{label}</span>
               </Link>
