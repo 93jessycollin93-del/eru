@@ -408,11 +408,23 @@ export default function AnimatedBackground({ type, opacity: opacityProp }) {
   const effectiveType = lowPower ? 'none' : resolvedType;
 
   useEffect(() => {
-    if (effectiveType === 'none' || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // Clear canvas before starting new engine
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (effectiveType === 'none') return;
     const fn = ENGINES[effectiveType];
     if (!fn) return;
-    const interval = fn(canvasRef.current, density);
-    return () => { if (interval) clearInterval(interval); };
+    const interval = fn(canvas, density);
+    return () => {
+      if (interval) clearInterval(interval);
+      // Clear canvas on unmount / engine swap
+      const c = canvasRef.current;
+      if (c) c.getContext('2d')?.clearRect(0, 0, c.width, c.height);
+    };
   }, [effectiveType, density]);
 
   if (effectiveType === 'none') return null;
