@@ -34,30 +34,14 @@ export default function CenteredBottomNav() {
   const { t } = useLanguage();
 
   return (
-    <nav 
-      className="fixed bottom-0 z-50 flex items-center justify-between pointer-events-none"
-      style={{
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'min(95vw, 420px)',
-        padding: '10px 12px',
-        paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-        borderRadius: '18px',
-        gap: '6px',
-      }}
-    >
-      <div className="pointer-events-auto w-full bg-card/95 backdrop-blur-sm border border-border rounded-lg flex items-center justify-between gap-1.5 px-2 py-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-40 overflow-x-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="max-w-md mx-auto flex min-w-max px-1">
         {getNav(t).map(({ icon: Icon, label, to }) => {
           const active = pathname === to || (to !== '/' && pathname.startsWith(to));
           return (
-            <Link
-              key={to}
-              to={to}
-              className={`flex flex-col items-center justify-center flex-1 min-w-0 text-center transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
-              title={label}
-            >
-              <Icon className="w-[18px] h-[18px] flex-shrink-0" style={{ marginBottom: '2px' }} />
-              <span className="text-[10px] whitespace-nowrap overflow-hidden text-ellipsis w-full">{label}</span>
+            <Link key={to} to={to} className={`flex flex-col items-center py-1.5 px-1 min-w-0 flex-1 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`} title={label}>
+              <Icon className="w-5 h-5 flex-shrink-0"/>
+              <span className="text-[9px] mt-0.5 truncate">{label}</span>
             </Link>
           );
         })}
