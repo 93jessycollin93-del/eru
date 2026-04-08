@@ -47,6 +47,32 @@
     "is_public": {
       "type": "boolean",
       "default": false
+    },
+    "usage_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Total number of times this bot has been used"
+    },
+    "xp": {
+      "type": "number",
+      "default": 0,
+      "description": "Experience points earned by the bot"
+    },
+    "level": {
+      "type": "number",
+      "default": 1,
+      "description": "Current evolution level (1-10)"
+    },
+    "unlocked_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Capabilities unlocked through leveling"
+    },
+    "last_interaction": {
+      "type": "string",
+      "description": "ISO timestamp of last use"
     }
   },
   "required": [

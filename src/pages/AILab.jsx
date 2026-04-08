@@ -60,12 +60,30 @@ export default function AILab() {
     loadBots();
   };
 
+  const awardXP = async (bot, amount) => {
+    const newXp = (bot.xp || 0) + amount;
+    const newUsage = (bot.usage_count || 0) + 1;
+    const newLevel = Math.min(10, Math.floor(newXp / 100) + 1);
+    const caps = bot.unlocked_capabilities || [];
+    const newCaps = [...caps];
+    if (newLevel >= 3 && !caps.includes('memory_boost')) newCaps.push('memory_boost');
+    if (newLevel >= 5 && !caps.includes('web_search')) newCaps.push('web_search');
+    if (newLevel >= 7 && !caps.includes('code_execution')) newCaps.push('code_execution');
+    if (newLevel >= 10 && !caps.includes('auto_schedule')) newCaps.push('auto_schedule');
+    await base44.entities.UserBot.update(bot.id, {
+      xp: newXp, level: newLevel, usage_count: newUsage,
+      unlocked_capabilities: newCaps, last_interaction: new Date().toISOString()
+    });
+    loadBots();
+  };
+
   const runTest = async () => {
     if (!testInput.trim() || !testBot) return;
     setTesting(true);
     const prompt = `You are ${testBot.name}. ${testBot.instructions || ''}\nPersonality: ${testBot.personality || 'helpful'}\nResponse style: ${testBot.response_style || 'detailed'}\n\nUser: ${testInput}\n\n${testBot.name}:`;
     const res = await base44.integrations.Core.InvokeLLM({ prompt });
     setTestResponse(res);
+    await awardXP(testBot, 10);
     setTesting(false);
   };
 
@@ -121,6 +139,20 @@ export default function AILab() {
                       {bot.is_public ? <Globe className="w-3 h-3 text-muted-foreground" /> : <Lock className="w-3 h-3 text-muted-foreground" />}
                     </div>
                     <p className="text-xs text-muted-foreground">{role?.label} · {bot.response_style}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] text-primary font-bold">Lv.{bot.level || 1}</span>
+                      <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${((bot.xp || 0) % 100)}%` }} />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground">{bot.xp || 0} XP</span>
+                    </div>
+                    {(bot.unlocked_capabilities || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(bot.unlocked_capabilities || []).map(c => (
+                          <span key={c} className="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded-full">⚡ {c.replace('_', ' ')}</span>
+                        ))}
+                      </div>
+                    )}
                     {bot.description && <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">{bot.description}</p>}
                   </div>
                 </div>
