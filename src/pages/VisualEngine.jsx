@@ -308,7 +308,7 @@ export default function VisualEngine() {
   const [tab, setTab] = useState('themes');
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen relative z-10" style={{ background: 'hsl(var(--background))' }}>
       {/* Header */}
       <div className="px-4 py-3 border-b border-border bg-card/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-2">
