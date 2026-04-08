@@ -1,0 +1,111 @@
+{
+  "name": "EconomyAuditLog",
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "order_created",
+        "payment_submitted",
+        "payment_verified",
+        "payment_rejected",
+        "asset_granted",
+        "asset_failed",
+        "order_refunded",
+        "verification_check",
+        "webhook_received",
+        "webhook_validated",
+        "webhook_rejected",
+        "admin_override",
+        "inconsistency_detected",
+        "state_transition"
+      ],
+      "description": "Type of economy action"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Related Order ID"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Who this action affects"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "jade",
+        "nft",
+        "card",
+        "item",
+        "collectible",
+        "currency"
+      ]
+    },
+    "asset_id": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Amount involved in transaction"
+    },
+    "state_from": {
+      "type": "string",
+      "description": "Previous order state"
+    },
+    "state_to": {
+      "type": "string",
+      "description": "New order state"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "blocked",
+        "manual_review_required"
+      ],
+      "description": "Did the action succeed"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why this action occurred or failed"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional context (payment provider, webhook id, etc)"
+    },
+    "triggered_by": {
+      "type": "string",
+      "enum": [
+        "system",
+        "webhook",
+        "admin",
+        "user_action"
+      ],
+      "description": "What triggered this action"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP of request (if user-triggered)"
+    },
+    "signature": {
+      "type": "string",
+      "description": "Immutable hash of this log entry (append-only guarantee)"
+    }
+  },
+  "required": [
+    "action",
+    "user_email",
+    "status"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {},
+    "delete": {}
+  }
+}

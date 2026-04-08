@@ -1,0 +1,160 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string",
+      "description": "Unique public order ID"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Who is buying"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "jade",
+        "nft",
+        "card",
+        "item",
+        "collectible",
+        "currency"
+      ],
+      "description": "What is being purchased"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "ID of the asset"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1
+    },
+    "base_price": {
+      "type": "number",
+      "description": "Price at time of order creation (locked)"
+    },
+    "currency": {
+      "type": "string",
+      "default": "GOLD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "pending_payment",
+        "pending_verification",
+        "paid",
+        "failed",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "Strict state machine \u2014 no invalid transitions"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "wallet",
+        "stripe",
+        "crypto",
+        "bank_transfer",
+        "system_grant"
+      ],
+      "description": "How payment is made"
+    },
+    "payment_provider": {
+      "type": "string",
+      "description": "e.g. stripe, metamask, paypal"
+    },
+    "payment_id": {
+      "type": "string",
+      "description": "External payment provider transaction ID"
+    },
+    "payment_webhook_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "True only after webhook signature validated"
+    },
+    "payment_webhook_timestamp": {
+      "type": "string",
+      "description": "ISO timestamp from payment provider"
+    },
+    "amount_paid": {
+      "type": "number",
+      "description": "Actual amount received"
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": [
+        "unverified",
+        "verified",
+        "failed"
+      ],
+      "default": "unverified"
+    },
+    "verification_timestamp": {
+      "type": "string",
+      "description": "When payment was verified"
+    },
+    "verification_notes": {
+      "type": "string",
+      "description": "Verification result details"
+    },
+    "asset_granted_at": {
+      "type": "string",
+      "description": "ISO timestamp when asset was actually delivered"
+    },
+    "asset_grant_reference": {
+      "type": "string",
+      "description": "Reference to the asset delivery transaction"
+    },
+    "failure_reason": {
+      "type": "string",
+      "description": "If status=failed, why"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Admin review notes for failed/suspicious orders"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional data (shipping, promo code, etc)"
+    }
+  },
+  "required": [
+    "order_number",
+    "buyer_email",
+    "asset_type",
+    "asset_id",
+    "base_price",
+    "currency",
+    "payment_method"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

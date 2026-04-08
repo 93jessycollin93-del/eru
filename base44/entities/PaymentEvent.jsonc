@@ -1,0 +1,102 @@
+{
+  "name": "PaymentEvent",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "Reference to Order"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "payment_initiated",
+        "payment_succeeded",
+        "payment_failed",
+        "payment_refunded",
+        "webhook_received",
+        "webhook_verified",
+        "webhook_rejected",
+        "verification_passed",
+        "verification_failed"
+      ],
+      "description": "Type of payment event"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Payment provider (stripe, crypto_gateway, wallet, etc)"
+    },
+    "provider_transaction_id": {
+      "type": "string",
+      "description": "Transaction ID from provider"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Amount in transaction"
+    },
+    "currency": {
+      "type": "string",
+      "default": "GOLD"
+    },
+    "webhook_signature": {
+      "type": "string",
+      "description": "Signature from webhook (hashed)"
+    },
+    "signature_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "True only if signature validation passed"
+    },
+    "webhook_timestamp": {
+      "type": "string",
+      "description": "Timestamp from webhook payload"
+    },
+    "timestamp_valid": {
+      "type": "boolean",
+      "description": "True if timestamp within acceptable window"
+    },
+    "is_replay_safe": {
+      "type": "boolean",
+      "description": "True if replay attack detection passed"
+    },
+    "raw_webhook_data": {
+      "type": "object",
+      "description": "Sanitized webhook payload for audit"
+    },
+    "validation_error": {
+      "type": "string",
+      "description": "If validation failed, why"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "order_id",
+    "event_type",
+    "provider"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
