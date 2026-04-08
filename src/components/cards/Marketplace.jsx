@@ -1,0 +1,310 @@
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { base44 } from '@/api/base44Client';
+import CardDisplay from './CardDisplay';
+import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
+import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter } from 'lucide-react';
+
+const LISTING_FEE_PCT = 0.05; // 5% listing fee
+
+export default function Marketplace({ gold, onGoldChange }) {
+  const [listings, setListings] = useState([]);
+  const [myCards, setMyCards] = useState([]);
+  const [myListings, setMyListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('browse'); // browse | my_listings | sell
+  const [filterRarity, setFilterRarity] = useState('all');
+  const [filterElement, setFilterElement] = useState('all');
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [listPrice, setListPrice] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [buying, setBuying] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    loadAll();
+    base44.auth.me().then(u => setUser(u)).catch(() => {});
+  }, []);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const loadAll = async () => {
+    setLoading(true);
+    const [all, mine, cards] = await Promise.all([
+      base44.entities.CardListing.filter({ status: 'active' }, '-created_date', 50),
+      base44.entities.CardListing.list('-created_date', 30),
+      base44.entities.Card.list('-created_date', 100),
+    ]);
+    const me = (await base44.auth.me().catch(() => null))?.email;
+    setListings(all.filter(l => l.seller_email !== me));
+    setMyListings(all.filter(l => l.seller_email === me));
+    setMyCards(cards);
+    setLoading(false);
+  };
+
+  const listCard = async () => {
+    const price = parseInt(listPrice);
+    if (!selectedCard || !price || price < 1) return;
+    const fee = Math.ceil(price * LISTING_FEE_PCT);
+    const totalCost = fee;
+    if (gold < totalCost) { showToast(`Need ${totalCost}g listing fee`, 'error'); return; }
+
+    setPosting(true);
+    const me = await base44.auth.me().catch(() => null);
+    await base44.entities.CardListing.create({
+      card_name: selectedCard.name,
+      card_data: selectedCard,
+      price_gold: price,
+      seller_email: me?.email || 'unknown',
+      seller_display: me?.email ? me.email.split('@')[0] : 'seller',
+      status: 'active',
+      card_entity_id: selectedCard.id || '',
+    });
+    onGoldChange(gold - fee);
+    showToast(`Listed for ${price}g (−${fee}g fee)`);
+    setSelectedCard(null);
+    setListPrice('');
+    setPosting(false);
+    await loadAll();
+    setTab('my_listings');
+  };
+
+  const buyCard = async (listing) => {
+    if (gold < listing.price_gold) { showToast('Not enough gold!', 'error'); return; }
+    setBuying(listing.id);
+    // Save card to buyer's collection
+    await base44.entities.Card.create({ ...listing.card_data, id: undefined, quantity: 1 });
+    // Mark listing sold
+    await base44.entities.CardListing.update(listing.id, { status: 'sold' });
+    onGoldChange(gold - listing.price_gold);
+    showToast(`Bought ${listing.card_name} for ${listing.price_gold}g!`);
+    setBuying(null);
+    await loadAll();
+  };
+
+  const cancelListing = async (listing) => {
+    await base44.entities.CardListing.update(listing.id, { status: 'cancelled' });
+    showToast('Listing cancelled');
+    await loadAll();
+  };
+
+  const filtered = listings.filter(l => {
+    const card = l.card_data;
+    if (filterRarity !== 'all' && card?.rarity !== filterRarity) return false;
+    if (filterElement !== 'all' && card?.element !== filterElement) return false;
+    return true;
+  });
+
+  const fee = listPrice ? Math.ceil(parseInt(listPrice || 0) * LISTING_FEE_PCT) : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium shadow-xl
+              ${toast.type === 'error' ? 'bg-red-900/80 border-red-500/40 text-red-300' : 'bg-green-900/80 border-green-500/40 text-green-300'}`}>
+            {toast.type === 'error' ? <AlertTriangle className="w-4 h-4 flex-shrink-0" /> : <CheckCircle2 className="w-4 h-4 flex-shrink-0" />}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-secondary rounded-xl p-1">
+        {[
+          { id: 'browse',      label: 'Browse' },
+          { id: 'sell',        label: 'Sell Card' },
+          { id: 'my_listings', label: 'My Listings' },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors
+              ${tab === t.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>
+      ) : (
+        <>
+          {/* BROWSE */}
+          {tab === 'browse' && (
+            <div className="space-y-3">
+              {/* Filters */}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <select value={filterRarity} onChange={e => setFilterRarity(e.target.value)}
+                  className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs outline-none flex-shrink-0">
+                  <option value="all">All Rarities</option>
+                  {['common','rare','epic','legendary','mythic'].map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <select value={filterElement} onChange={e => setFilterElement(e.target.value)}
+                  className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs outline-none flex-shrink-0">
+                  <option value="all">All Elements</option>
+                  {['fire','water','earth','wind','shadow','light'].map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <ShoppingCart className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No active listings yet</p>
+                  <p className="text-[10px] mt-1 opacity-60">Be the first to list a card!</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filtered.map(l => {
+                    const card = l.card_data;
+                    const el = ELEMENT_COLORS[card?.element] || ELEMENT_COLORS.fire;
+                    const rar = RARITY_STYLES[card?.rarity] || RARITY_STYLES.common;
+                    const canAfford = gold >= l.price_gold;
+                    return (
+                      <motion.div key={l.id} layout
+                        className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          {card && <CardDisplay card={card} size="sm" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{l.card_name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-[10px] ${rar.color}`}>{rar.label}</span>
+                            <span className={`text-[10px] ${el.text}`}>{el.icon} {card?.element}</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">by @{l.seller_display}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
+                            <Coins className="w-3 h-3" />{l.price_gold}g
+                          </p>
+                          <button
+                            onClick={() => buyCard(l)}
+                            disabled={!canAfford || buying === l.id}
+                            className={`mt-1 px-3 py-1 rounded-lg text-xs font-semibold transition-colors
+                              ${canAfford ? 'bg-primary text-primary-foreground hover:opacity-90' : 'bg-secondary text-muted-foreground cursor-not-allowed'}`}>
+                            {buying === l.id ? <Loader2 className="w-3 h-3 animate-spin" /> : canAfford ? 'Buy' : 'No gold'}
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SELL */}
+          {tab === 'sell' && (
+            <div className="space-y-4">
+              <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-xl px-3 py-2 text-xs text-yellow-400 flex items-center gap-2">
+                <Tag className="w-3.5 h-3.5 flex-shrink-0" />
+                Listing fee: 5% of asking price, charged upfront
+              </div>
+
+              {/* Pick card */}
+              <div>
+                <p className="text-xs font-semibold mb-2">Select a card to list</p>
+                {myCards.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No cards in your collection yet.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {myCards.map(card => (
+                      <CardDisplay key={card.id} card={card} size="sm"
+                        selected={selectedCard?.id === card.id}
+                        onClick={c => setSelectedCard(prev => prev?.id === c.id ? null : c)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedCard && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                  <div className="bg-card border border-primary/30 rounded-xl p-3 flex items-center gap-3">
+                    <CardDisplay card={selectedCard} size="sm" glowing />
+                    <div>
+                      <p className="text-sm font-semibold">{selectedCard.name}</p>
+                      <p className={`text-xs ${RARITY_STYLES[selectedCard.rarity]?.color}`}>
+                        {RARITY_STYLES[selectedCard.rarity]?.label}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">Asking Price (Gold)</label>
+                    <input
+                      type="number" min="1" value={listPrice}
+                      onChange={e => setListPrice(e.target.value)}
+                      placeholder="e.g. 150"
+                      className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none font-mono" />
+                  </div>
+
+                  {listPrice && parseInt(listPrice) > 0 && (
+                    <div className="bg-secondary/60 rounded-xl p-3 space-y-1 text-xs">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Asking price</span><span className="font-mono text-yellow-400">{listPrice}g</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Listing fee (5%)</span><span className="font-mono text-red-400">−{fee}g</span></div>
+                      <div className="flex justify-between font-semibold border-t border-border pt-1 mt-1">
+                        <span>You pay now</span><span className="text-foreground font-mono">{fee}g</span>
+                      </div>
+                      {gold < fee && (
+                        <p className="text-red-400 flex items-center gap-1 mt-1">
+                          <AlertTriangle className="w-3 h-3" /> Not enough gold ({gold}g available)
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <button onClick={listCard} disabled={!listPrice || parseInt(listPrice) < 1 || gold < fee || posting}
+                    className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-sm disabled:opacity-40 flex items-center justify-center gap-2">
+                    {posting ? <><Loader2 className="w-4 h-4 animate-spin" /> Listing...</> : <><Plus className="w-4 h-4" /> List for Sale</>}
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          )}
+
+          {/* MY LISTINGS */}
+          {tab === 'my_listings' && (
+            <div className="space-y-2">
+              {myListings.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <Tag className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No active listings</p>
+                  <button onClick={() => setTab('sell')} className="text-xs text-primary mt-2">List a card →</button>
+                </div>
+              ) : (
+                myListings.map(l => {
+                  const card = l.card_data;
+                  const rar = RARITY_STYLES[card?.rarity] || RARITY_STYLES.common;
+                  return (
+                    <div key={l.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
+                      {card && <CardDisplay card={card} size="sm" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{l.card_name}</p>
+                        <p className={`text-[10px] ${rar.color}`}>{rar.label}</p>
+                        <p className="text-[10px] text-green-400 mt-0.5">● Active</p>
+                      </div>
+                      <div className="text-right flex-shrink-0 space-y-1">
+                        <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
+                          <Coins className="w-3 h-3" />{l.price_gold}g
+                        </p>
+                        <button onClick={() => cancelListing(l)}
+                          className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors">
+                          <X className="w-3 h-3" /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

@@ -4,7 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { STARTER_CARDS, ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart } from 'lucide-react';
+import Marketplace from '../components/cards/Marketplace';
 
 const TOURNAMENT_ROUNDS = [
   { id: 1, name: 'Novice Challenger', difficulty: 1, faction: 'Ember Clan',    prize: { gold: 50,  discover: true } },
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'collection', label: 'Collection', icon: Package },
   { id: 'deck',       label: 'Deck',       icon: Layers },
   { id: 'tournament', label: 'Tournament', icon: Trophy },
+  { id: 'market',     label: 'Market',     icon: ShoppingCart },
 ];
 
 export default function CardArena() {
@@ -327,6 +329,11 @@ export default function CardArena() {
               </motion.div>
             )}
           </div>
+        )}
+
+        {/* MARKET TAB */}
+        {tab === 'market' && (
+          <Marketplace gold={gold} onGoldChange={saveGold} />
         )}
       </div>
     </div>

@@ -1,0 +1,55 @@
+{
+  "name": "CardListing",
+  "type": "object",
+  "properties": {
+    "card_name": {
+      "type": "string"
+    },
+    "card_data": {
+      "type": "object",
+      "description": "Full card snapshot"
+    },
+    "price_gold": {
+      "type": "number",
+      "description": "Asking price in gold"
+    },
+    "seller_email": {
+      "type": "string"
+    },
+    "seller_display": {
+      "type": "string",
+      "description": "Truncated seller identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "sold",
+        "cancelled"
+      ],
+      "default": "active"
+    },
+    "card_entity_id": {
+      "type": "string",
+      "description": "ID of the Card entity being sold"
+    }
+  },
+  "required": [
+    "card_name",
+    "card_data",
+    "price_gold",
+    "seller_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
