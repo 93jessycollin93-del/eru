@@ -1,11 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRealPrices } from '../hooks/useRealPrices';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import TickerBar from '../components/dashboard/TickerBar';
 import { WifiOff, Loader2 } from 'lucide-react';
-
-// Chart shows price in relative terms — historical requires a paid API
-// We show a placeholder message instead of fake generated data
 
 function PriceRow({ asset, onClick, selected }) {
   const prevRef = useRef(asset.price);
@@ -19,16 +15,21 @@ function PriceRow({ asset, onClick, selected }) {
     }
   }, [asset.price]);
 
+  const price = asset.price ?? 0;
+  const change = asset.change ?? 0;
+
   return (
     <div onClick={() => onClick(asset)}
       className={`flex items-center px-4 py-3 border-b border-border cursor-pointer transition-colors ${selected ? 'bg-secondary' : 'hover:bg-secondary/50'} ${flash}`}>
       <div className="flex-1">
         <p className="text-sm font-medium text-foreground">{asset.symbol}</p>
-        <p className="text-xs text-muted-foreground font-mono">${asset.price.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4})}</p>
+        <p className="text-xs text-muted-foreground font-mono">
+          ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+        </p>
       </div>
       <div className="text-right">
-        <span className={`text-sm font-mono font-medium ${asset.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
+        <span className={`text-sm font-mono font-medium ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
         </span>
       </div>
     </div>
@@ -65,6 +66,9 @@ export default function Markets() {
     </div>
   );
 
+  const selPrice = selected?.price ?? 0;
+  const selChange = selected?.change ?? 0;
+
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <TickerBar />
@@ -77,9 +81,11 @@ export default function Markets() {
         <div className="bg-card border-b border-border px-4 py-3">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-mono font-semibold">{selected.symbol}</span>
-            <span className="text-xl font-mono">${selected.price.toLocaleString(undefined,{minimumFractionDigits:2})}</span>
-            <span className={`text-sm ${selected.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {selected.change >= 0 ? '+' : ''}{selected.change.toFixed(2)}%
+            <span className="text-xl font-mono">
+              ${selPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <span className={`text-sm ${selChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {selChange >= 0 ? '+' : ''}{selChange.toFixed(2)}%
             </span>
           </div>
           <div className="flex gap-2 mt-2">
@@ -103,21 +109,25 @@ export default function Markets() {
       <div className="px-4 py-3">
         <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-2">Top Movers</p>
         <div className="grid grid-cols-3 gap-1.5 mb-4">
-          {prices.slice(0,6).map(p => (
-            <div key={p.symbol} onClick={() => setSelected(p)} className="rounded-lg p-2 cursor-pointer transition-opacity hover:opacity-80"
-              style={{background: p.change >= 0 ? `hsl(160 100% ${Math.min(45, 25 + Math.abs(p.change)*3)}% / 0.25)` : `hsl(350 100% ${Math.min(60, 25 + Math.abs(p.change)*3)}% / 0.25)`}}>
-              <p className="text-xs font-mono font-medium text-foreground">{p.symbol}</p>
-              <p className={`text-xs font-mono ${p.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {p.change >= 0 ? '+' : ''}{p.change.toFixed(2)}%
-              </p>
-            </div>
-          ))}
+          {prices.slice(0, 6).map(p => {
+            const ch = p.change ?? 0;
+            return (
+              <div key={p.symbol} onClick={() => setSelected(p)}
+                className="rounded-lg p-2 cursor-pointer transition-opacity hover:opacity-80"
+                style={{ background: ch >= 0 ? `hsl(160 100% ${Math.min(45, 25 + Math.abs(ch) * 3)}% / 0.25)` : `hsl(350 100% ${Math.min(60, 25 + Math.abs(ch) * 3)}% / 0.25)` }}>
+                <p className="text-xs font-mono font-medium text-foreground">{p.symbol}</p>
+                <p className={`text-xs font-mono ${ch >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {ch >= 0 ? '+' : ''}{ch.toFixed(2)}%
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="border-t border-border">
         {prices.map(p => (
-          <PriceRow key={p.symbol} asset={p} onClick={setSelected} selected={selected?.symbol === p.symbol}/>
+          <PriceRow key={p.symbol} asset={p} onClick={setSelected} selected={selected?.symbol === p.symbol} />
         ))}
       </div>
     </div>
