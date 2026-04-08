@@ -70,21 +70,14 @@ export const BG_ENVS = {
   // Digital
   matrix:          { label: 'Matrix Rain',    cat: 'digital'  },
   neural_mesh:     { label: 'Neural Mesh',    cat: 'digital'  },
-  code_streams:    { label: 'Code Streams',   cat: 'digital'  },
-  wire_grid:       { label: 'Wire Grid',      cat: 'digital'  },
   // Space
   stars:           { label: 'Star Field',     cat: 'space'    },
   nebula:          { label: 'Nebula',         cat: 'space'    },
-  galaxy:          { label: 'Galaxy Spin',    cat: 'space'    },
   aurora_sky:      { label: 'Aurora Sky',     cat: 'space'    },
   // Nature
-  rain:            { label: 'Rain',           cat: 'nature'   },
-  snow:            { label: 'Snow',           cat: 'nature'   },
   particles:       { label: 'Floating Dust',  cat: 'nature'   },
   // Energy
   fire:            { label: 'Embers',         cat: 'energy'   },
-  magma_flow:      { label: 'Magma Flow',     cat: 'energy'   },
-  lightning_storm: { label: 'Lightning',      cat: 'energy'   },
   // Mythic
   sacred_geometry: { label: 'Sacred Geometry',cat: 'mythic'   },
   crystal_lattice: { label: 'Crystal Lattice',cat: 'mythic'   },
