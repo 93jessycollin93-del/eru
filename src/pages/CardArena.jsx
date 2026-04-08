@@ -25,7 +25,7 @@ export default function CardArena() {
   const [cards, setCards] = useState([]);
   const [deck, setDeck] = useState([]);
   const [gold, setGold] = useState(() => parseInt(localStorage.getItem('arena_gold') || '100'));
-  const [tournamentRound, setTournamentRound] = useState(0); // 0=lobby, 1/2/3=round, 4=champion
+  const [tournamentRound, setTournamentRound] = useState(0);
   const [battling, setBattling] = useState(false);
   const [currentRound, setCurrentRound] = useState(null);
   const [roundResults, setRoundResults] = useState([]);
@@ -39,11 +39,9 @@ export default function CardArena() {
   const loadCards = async () => {
     setLoading(true);
     const owned = await base44.entities.Card.list('-created_date', 100);
-    // Merge starter cards (those not already owned)
     const ownedIds = new Set(owned.map(c => c.name));
     const starters = STARTER_CARDS.filter(c => !ownedIds.has(c.name));
     setCards([...owned, ...starters]);
-    // Auto-build deck from first 5 starters if empty
     if (owned.length === 0) setDeck(STARTER_CARDS.slice(0, 5));
     else setDeck(owned.slice(0, 5));
     setLoading(false);
@@ -76,16 +74,15 @@ export default function CardArena() {
     setRoundResults(newResults);
 
     if (won) {
+      // TODO: POST to backend to verify win and grant rewards
       const newGold = gold + round.prize.gold;
       saveGold(newGold);
 
-      // 40% chance to discover a card from losing faction
       const discoverChance = 0.4 + (tournamentRound - 1) * 0.1;
       if (Math.random() < discoverChance && round.prize.discover) {
         const factionPool = STARTER_CARDS.filter(c => c.faction === round.faction);
         const discovered = factionPool[Math.floor(Math.random() * factionPool.length)];
         if (discovered) {
-          // Save discovered card to collection
           const saved = await base44.entities.Card.create({
             ...discovered,
             id: undefined,
@@ -98,9 +95,8 @@ export default function CardArena() {
 
       if (tournamentRound >= 3) {
         setBattling(false);
-        setTournamentRound(4); // champion
+        setTournamentRound(4);
       } else {
-        // Advance to next round after showing result
         setTimeout(() => {
           const nextRound = tournamentRound + 1;
           setTournamentRound(nextRound);
@@ -123,10 +119,8 @@ export default function CardArena() {
     setDiscoveredCard(null);
   };
 
-  // --- RENDER ---
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      {/* Header */}
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
@@ -140,7 +134,6 @@ export default function CardArena() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-border">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -152,7 +145,6 @@ export default function CardArena() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {/* COLLECTION TAB */}
         {tab === 'collection' && (
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3">{cards.length} Cards Owned</p>
@@ -170,7 +162,6 @@ export default function CardArena() {
           </div>
         )}
 
-        {/* DECK TAB */}
         {tab === 'deck' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -192,7 +183,6 @@ export default function CardArena() {
               </div>
             )}
 
-            {/* Deck stats */}
             {deck.length > 0 && (
               <div className="bg-card border border-border rounded-xl p-3">
                 <p className="text-xs font-semibold mb-2">Deck Stats</p>
@@ -222,10 +212,8 @@ export default function CardArena() {
           </div>
         )}
 
-        {/* TOURNAMENT TAB */}
         {tab === 'tournament' && (
           <div className="space-y-4">
-            {/* Lobby */}
             {tournamentRound === 0 && (
               <>
                 <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/20 border border-yellow-500/30 rounded-2xl p-4 text-center">
@@ -234,7 +222,6 @@ export default function CardArena() {
                   <p className="text-xs text-muted-foreground mt-1">Defeat 3 AI opponents in sequence. Difficulty escalates. Prizes await.</p>
                 </div>
 
-                {/* Bracket preview */}
                 <div className="space-y-2">
                   {TOURNAMENT_ROUNDS.map((r, i) => (
                     <div key={r.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
@@ -261,7 +248,6 @@ export default function CardArena() {
               </>
             )}
 
-            {/* Active battle */}
             {battling && currentRound && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -277,7 +263,6 @@ export default function CardArena() {
               </div>
             )}
 
-            {/* Discovered card overlay */}
             <AnimatePresence>
               {discoveredCard && (
                 <motion.div
@@ -298,7 +283,6 @@ export default function CardArena() {
               )}
             </AnimatePresence>
 
-            {/* Champion screen */}
             {tournamentRound === 4 && !battling && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 className="text-center space-y-4">
@@ -314,7 +298,6 @@ export default function CardArena() {
               </motion.div>
             )}
 
-            {/* Defeat screen */}
             {tournamentRound === 0 && roundResults.length > 0 && roundResults[roundResults.length - 1]?.won === false && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="text-center space-y-4">
@@ -331,7 +314,6 @@ export default function CardArena() {
           </div>
         )}
 
-        {/* MARKET TAB */}
         {tab === 'market' && (
           <Marketplace gold={gold} onGoldChange={saveGold} />
         )}
