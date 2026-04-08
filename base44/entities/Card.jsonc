@@ -1,0 +1,99 @@
+{
+  "name": "Card",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "cost": {
+      "type": "number",
+      "description": "Energy cost 1-7"
+    },
+    "power": {
+      "type": "number",
+      "description": "Board power contribution"
+    },
+    "guard": {
+      "type": "number",
+      "description": "Damage absorption"
+    },
+    "element": {
+      "type": "string",
+      "enum": [
+        "fire",
+        "water",
+        "earth",
+        "wind",
+        "shadow",
+        "light"
+      ]
+    },
+    "faction": {
+      "type": "string"
+    },
+    "card_type": {
+      "type": "string",
+      "enum": [
+        "unit",
+        "spell",
+        "relic"
+      ]
+    },
+    "rarity": {
+      "type": "string",
+      "enum": [
+        "common",
+        "rare",
+        "epic",
+        "legendary",
+        "mythic"
+      ]
+    },
+    "ability": {
+      "type": "string",
+      "description": "Ability keyword: burn, frost, poison, shield, combo, clash, summon, draw, heal"
+    },
+    "ability_value": {
+      "type": "number",
+      "description": "Ability effect magnitude"
+    },
+    "flavor_text": {
+      "type": "string"
+    },
+    "creature_id": {
+      "type": "string",
+      "description": "Set if bred from Creature Lab"
+    },
+    "is_animated": {
+      "type": "boolean",
+      "default": false
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Copies owned"
+    }
+  },
+  "required": [
+    "name",
+    "cost",
+    "power",
+    "element",
+    "card_type",
+    "rarity"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

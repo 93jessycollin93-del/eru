@@ -1,0 +1,80 @@
+{
+  "name": "Creature",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "element": {
+      "type": "string",
+      "enum": [
+        "fire",
+        "water",
+        "earth",
+        "wind",
+        "shadow",
+        "light"
+      ]
+    },
+    "power_base": {
+      "type": "number",
+      "description": "Base power stat 1-10"
+    },
+    "guard_base": {
+      "type": "number",
+      "description": "Base guard stat 1-10"
+    },
+    "rarity": {
+      "type": "string",
+      "enum": [
+        "common",
+        "rare",
+        "epic",
+        "legendary"
+      ]
+    },
+    "faction": {
+      "type": "string"
+    },
+    "ability": {
+      "type": "string"
+    },
+    "bred_card_id": {
+      "type": "string",
+      "description": "Card generated from this creature"
+    },
+    "breed_count": {
+      "type": "number",
+      "default": 0
+    },
+    "level": {
+      "type": "number",
+      "default": 1
+    },
+    "xp": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "element",
+    "power_base",
+    "guard_base",
+    "rarity"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

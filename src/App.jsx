@@ -29,6 +29,8 @@ import Pipeline from './pages/Pipeline';
 import AdminBlockchain from './pages/AdminBlockchain';
 import JadeAtelier from './pages/JadeAtelier';
 import VisualEngine from './pages/VisualEngine';
+import CardArena from './pages/CardArena';
+import CreatureLab from './pages/CreatureLab';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -79,6 +81,8 @@ const AuthenticatedApp = () => {
         <Route path="/admin/blockchain" element={<AdminBlockchain />} />
         <Route path="/jta" element={<JadeAtelier />} />
         <Route path="/visual" element={<VisualEngine />} />
+        <Route path="/arena" element={<CardArena />} />
+        <Route path="/creatures" element={<CreatureLab />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

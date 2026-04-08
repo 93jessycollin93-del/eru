@@ -1,0 +1,45 @@
+{
+  "name": "PlayerDeck",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "card_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of Card IDs in this deck"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false
+    },
+    "wins": {
+      "type": "number",
+      "default": 0
+    },
+    "losses": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
