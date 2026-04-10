@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Star, Download, MessageSquare, Search, Send, X, Sparkles, Briefcase, Blocks, Bot, ArrowUpDown, TrendingUp } from 'lucide-react';
+import { Star, Download, MessageSquare, Search, Send, X, Sparkles, Briefcase, Blocks, Bot, ArrowUpDown, TrendingUp, Globe, Lock, Upload } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -130,6 +130,7 @@ function BotCard({ bot, ratings, onInstall, onRate }) {
 export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
   const { currentUser } = useAuth();
   const [bots, setBots] = useState([]);
+  const [myBots, setMyBots] = useState([]);
   const [ratings, setRatings] = useState([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
@@ -140,20 +141,24 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
 
   const load = async () => {
     setLoading(true);
-    const [b, r] = await Promise.all([
-      base44.entities.UserBot.filter({ is_public: true }, '-usage_count', 50),
-      base44.entities.BotRating.list('-created_date', 200),
+    const [b, r, mine] = await Promise.all([
+      base44.entities.UserBot.filter({ is_public: true }, '-usage_count', 100),
+      base44.entities.BotRating.list('-created_date', 300),
+      currentUser?.email ? base44.entities.UserBot.filter({ created_by: currentUser.email }, '-created_date', 50) : Promise.resolve([]),
     ]);
-    setBots(b);
-    setRatings(r);
+    setBots(b || []);
+    setRatings(r || []);
+    setMyBots(mine || []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [currentUser?.email]);
 
   const install = async (bot) => {
+    const existingNames = new Set(myBots.map((item) => item.name));
+    const clonedName = existingNames.has(`${bot.name} (Clone)`) ? `${bot.name} (Clone ${Date.now().toString().slice(-4)})` : `${bot.name} (Clone)`;
     await base44.entities.UserBot.create({
-      name: `${bot.name} (Clone)`,
+      name: clonedName,
       description: bot.description,
       role: bot.role,
       personality: bot.personality,
@@ -161,19 +166,35 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
       response_style: bot.response_style,
       handoff_instructions: bot.handoff_instructions,
       memory_enabled: bot.memory_enabled,
+      page_assignments: bot.page_assignments || [],
+      connected_bot_ids: [],
       status: 'active',
       is_public: false,
       usage_count: 0,
       xp: 0,
       level: 1,
     });
-    setToast(`✅ "${bot.name}" cloned to your AI Lab!`);
+    await base44.entities.UserBot.update(bot.id, { usage_count: (bot.usage_count || 0) + 1 });
+    setToast(`✅ "${bot.name}" installed to your AI Lab.`);
     setTimeout(() => setToast(''), 3000);
     onInstalled?.();
+    load();
   };
 
   const rate = async (bot, rating, comment) => {
-    await base44.entities.BotRating.create({ bot_id: bot.id, bot_name: bot.name, rating, comment, user_email: currentUser?.email });
+    const existing = ratings.find((item) => item.bot_id === bot.id && item.created_by === currentUser?.email);
+    if (existing) {
+      await base44.entities.BotRating.update(existing.id, { rating, comment, user_email: currentUser?.email, bot_name: bot.name });
+    } else {
+      await base44.entities.BotRating.create({ bot_id: bot.id, bot_name: bot.name, rating, comment, user_email: currentUser?.email });
+    }
+    load();
+  };
+
+  const togglePublish = async (bot) => {
+    await base44.entities.UserBot.update(bot.id, { is_public: !bot.is_public });
+    setToast(bot.is_public ? `🔒 "${bot.name}" removed from marketplace.` : `🌍 "${bot.name}" published to marketplace.`);
+    setTimeout(() => setToast(''), 3000);
     load();
   };
 
@@ -235,11 +256,16 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground"><Bot className="h-4 w-4" /><span className="text-xs uppercase">Templates</span></div>
           <p className="mt-2 text-2xl font-semibold">{bots.length}</p>
           <p className="text-xs text-muted-foreground">Public bots available to install</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground"><Globe className="h-4 w-4" /><span className="text-xs uppercase">Published</span></div>
+          <p className="mt-2 text-2xl font-semibold">{myBots.filter((bot) => bot.is_public).length}</p>
+          <p className="text-xs text-muted-foreground">Your bots live in marketplace</p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground"><Star className="h-4 w-4" /><span className="text-xs uppercase">Avg rating</span></div>
@@ -251,6 +277,40 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
           <p className="mt-2 text-2xl font-semibold">{marketplaceStats.totalReviews}</p>
           <p className="text-xs text-muted-foreground">Community feedback across bots</p>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm font-medium"><Upload className="h-4 w-4 text-primary" /> Publish your bots</div>
+          <p className="text-[11px] text-muted-foreground">Bots marked public are discoverable and installable by other users.</p>
+        </div>
+        {myBots.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Create a bot in AI Lab first, then publish it here.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {myBots.map((bot) => (
+              <div key={bot.id} className="rounded-xl border border-border bg-secondary/30 p-3 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{bot.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{getCategory(bot)} · {getIndustry(bot)}</p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium border ${bot.is_public ? 'bg-primary/10 text-primary border-primary/20' : 'bg-secondary text-muted-foreground border-border'}`}>
+                    {bot.is_public ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                    {bot.is_public ? 'Public' : 'Private'}
+                  </span>
+                </div>
+                {bot.description && <p className="text-[10px] text-muted-foreground line-clamp-2">{bot.description}</p>}
+                <button
+                  onClick={() => togglePublish(bot)}
+                  className={`w-full rounded-xl py-2 text-xs font-semibold ${bot.is_public ? 'bg-secondary border border-border text-muted-foreground' : 'bg-primary text-primary-foreground'}`}
+                >
+                  {bot.is_public ? 'Unpublish from marketplace' : 'Publish to marketplace'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -319,8 +379,8 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
         <div className="flex justify-center py-10"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-sm">No public bots yet</p>
-          <p className="text-xs mt-1">Mark your bots as public in the Build tab to share them</p>
+          <p className="text-sm">No public bots match your filters</p>
+          <p className="text-xs mt-1">Publish your bots above to share them with the marketplace</p>
         </div>
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
