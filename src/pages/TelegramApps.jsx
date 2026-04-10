@@ -142,19 +142,13 @@ export default function TelegramApps() {
         </div>
       )}
 
-      {tab === 'builder' && (
+      {/* AI BOTS */}
+      {tab === 'bots' && (
         <div className="px-4 py-4 space-y-4">
           <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
             <p className="text-sm font-semibold mb-1">AI Telegram Bot Builder</p>
             <p className="text-xs text-muted-foreground">Create Telegram bots, configure AI behavior, enable webhooks, and monitor live conversations.</p>
           </div>
-          <TelegramBotDashboard />
-        </div>
-      )}
-
-      {/* AI BOTS */}
-      {tab === 'bots' && (
-        <div className="px-4 py-4">
           <TelegramBotDashboard />
         </div>
       )}
