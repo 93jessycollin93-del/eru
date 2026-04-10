@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import BiometricAuth from '../components/BiometricAuth';
 import { useAuth } from '@/lib/AuthContext';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList } from 'lucide-react';
+import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2 } from 'lucide-react';
+import SoundSettings from '../components/SoundSettings';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
@@ -86,6 +87,7 @@ export default function Settings() {
   const [showSheet, setShowSheet] = useState(null);
   const [biometricOpen, setBiometricOpen] = useState(false);
   const [biometricAction, setBiometricAction] = useState('');
+  const [showSoundSettings, setShowSoundSettings] = useState(false);
 
   const requireBiometric = (action, fn) => {
     setBiometricAction(action);
@@ -168,6 +170,31 @@ export default function Settings() {
             <span className="flex-1 text-sm">Performance Monitor</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
+        </div>
+
+        {/* Sound & Haptics */}
+        <div className="mt-4 space-y-2">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Sound & Haptics</p>
+          {showSoundSettings ? (
+            <div className="bg-card border border-border rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Sound Settings</span>
+                </div>
+                <button onClick={() => setShowSoundSettings(false)} className="text-xs text-muted-foreground">Done</button>
+              </div>
+              <SoundSettings />
+            </div>
+          ) : (
+            <button onClick={() => setShowSoundSettings(true)}
+              className="w-full flex items-center px-4 py-3.5 gap-3 bg-card border border-border rounded-xl hover:bg-secondary/40 transition-colors">
+              <Volume2 className="w-4 h-4 text-muted-foreground" />
+              <span className="flex-1 text-sm text-left">Sound & Haptics</span>
+              <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">3 Packs</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
         </div>
 
         {currentUser?.role === 'admin' && (
