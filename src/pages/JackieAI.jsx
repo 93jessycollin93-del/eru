@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, FlaskConical, Key, ArrowRight } from 'lucide-react';
+import { Bot, FlaskConical, Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { logger } from '@/lib/logger';
 import JackieHeader from '../components/jackie/JackieHeader';
 import MessageBubble from '../components/jackie/MessageBubble';
 import WelcomeScreen from '../components/jackie/WelcomeScreen';
@@ -63,15 +64,19 @@ export default function JackieAI() {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
   useEffect(() => {
-    base44.entities.UserBot.list('-created_date', 20).then(b => setUserBots(b)).catch(() => {});
-    base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).then(keys => {
-      setApiKeyCount(keys.length);
-      // Check if any key has web search or code capabilities
-      const hasBotWeb = keys.some(k => (k.permissions || []).includes('bot:websearch'));
-      const hasBotCode = keys.some(k => (k.permissions || []).includes('bot:code'));
-      const hasBotSquad = keys.some(k => (k.permissions || []).includes('bot:squad'));
-      setApiKeyCapabilities({ webSearch: hasBotWeb, code: hasBotCode, squad: hasBotSquad });
-    }).catch(() => {});
+    base44.entities.UserBot.list('-created_date', 20)
+      .then(b => setUserBots(b))
+      .catch(err => logger.error('Failed to load user bots:', err));
+    base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50)
+      .then(keys => {
+        setApiKeyCount(keys.length);
+        // Check if any key has web search or code capabilities
+        const hasBotWeb = keys.some(k => (k.permissions || []).includes('bot:websearch'));
+        const hasBotCode = keys.some(k => (k.permissions || []).includes('bot:code'));
+        const hasBotSquad = keys.some(k => (k.permissions || []).includes('bot:squad'));
+        setApiKeyCapabilities({ webSearch: hasBotWeb, code: hasBotCode, squad: hasBotSquad });
+      })
+      .catch(err => logger.error('Failed to load API keys:', err));
   }, []);
 
   const buildPrompt = useCallback((userMessage) => {

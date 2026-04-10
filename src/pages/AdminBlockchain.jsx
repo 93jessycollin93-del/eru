@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Shield, Zap, Database, Globe, Settings, CheckCircle2, XCircle, AlertTriangle, Save } from 'lucide-react';
+import { Shield, Database, Globe, CheckCircle2, XCircle, AlertTriangle, Save } from 'lucide-react';
 
 const PROVIDERS = [
   { id: 'ethereum', label: 'Ethereum Mainnet', rpc: 'https://mainnet.infura.io/v3/YOUR_KEY', chainId: '0x1' },

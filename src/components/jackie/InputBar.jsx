@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { Send, Zap, Mic, MicOff, ImagePlus, Video, FileCode, X, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import VoiceSelector from './VoiceSelector';

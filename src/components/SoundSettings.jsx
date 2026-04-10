@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Volume2, VolumeX, Vibrate, Play, Zap } from 'lucide-react';
 import { getSoundPrefs, saveSoundPrefs, playSound, SOUND_TYPES, SOUND_PACKS, VIBRATE } from '../lib/soundEngine';
 

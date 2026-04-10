@@ -7,15 +7,23 @@ import pluginUnusedImports from "eslint-plugin-unused-imports";
 export default [
   {
     files: [
-      "src/components/**/*.{js,mjs,cjs,jsx}",
-      "src/pages/**/*.{js,mjs,cjs,jsx}",
-      "src/Layout.jsx",
+      "src/**/*.{js,mjs,cjs,jsx}",
     ],
-    ignores: ["src/lib/**/*", "src/components/ui/**/*"],
+    // Generated UI primitives and local tooling should stay out of the lint
+    // graph. Everything else in src/ is linted.
+    ignores: [
+      "src/components/ui/**/*",
+      "src/vite-plugins/**/*",
+      "dist/**/*",
+      "node_modules/**/*",
+    ],
     ...pluginJs.configs.recommended,
     ...pluginReact.configs.flat.recommended,
     languageOptions: {
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: "module",

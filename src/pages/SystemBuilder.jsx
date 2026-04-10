@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Wand2, Bot, Send, Loader2, CheckCircle2, Code2, Layout, Settings2, Rocket, ChevronDown, ChevronUp, Copy, Check, Zap } from 'lucide-react';
+import { Wand2, Bot, Loader2, CheckCircle2, Code2, Layout, Settings2, Rocket, ChevronDown, ChevronUp, Copy, Check, Zap } from 'lucide-react';
 
 const EXAMPLES = [
   'Make me a trading bot for BTC/USDT',

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  AreaChart, Area, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend, Cell
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell
 } from 'recharts';
-import { DollarSign, TrendingDown, AlertTriangle, Zap, Bot, ChevronDown, ChevronUp } from 'lucide-react';
+import { DollarSign, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const NOW = new Date().getMonth();

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Plus, Play, Pause, Trash2, Zap, AlertCircle, CheckCircle, Send, Bot, Edit3 } from 'lucide-react';
+import { Clock, Plus, Play, Pause, Trash2, Zap, Bot, Edit3 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 

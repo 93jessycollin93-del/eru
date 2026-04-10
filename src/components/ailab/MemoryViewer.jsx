@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Trash2, MessageSquare, User, Bot } from 'lucide-react';
+import { Brain, Trash2, User, Bot } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bot, Send, ChevronDown, Zap, Globe } from 'lucide-react';
+import { Send, ChevronDown, Zap, Globe } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const ROLE_ICONS = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚡' };

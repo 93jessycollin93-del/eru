@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
+import { logger } from '@/lib/logger';
 import { fetchUserGold, awardGold } from '@/lib/economyApi';
-import { STARTER_CARDS, ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
+import { STARTER_CARDS, ELEMENT_COLORS } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, Coins, ShoppingCart } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
 
 const TOURNAMENT_ROUNDS = [
@@ -45,21 +47,31 @@ export default function CardArena() {
       const balance = await fetchUserGold();
       setGold(balance);
     } catch (err) {
-      console.error('Failed to load gold:', err);
+      logger.error('Failed to load gold:', err);
+      toast.error('Unable to load gold balance');
     } finally {
       setGoldLoading(false);
     }
   };
 
   const loadCards = async () => {
-    setLoading(true);
-    const owned = await base44.entities.Card.list('-created_date', 100);
-    const ownedIds = new Set(owned.map(c => c.name));
-    const starters = STARTER_CARDS.filter(c => !ownedIds.has(c.name));
-    setCards([...owned, ...starters]);
-    if (owned.length === 0) setDeck(STARTER_CARDS.slice(0, 5));
-    else setDeck(owned.slice(0, 5));
-    setLoading(false);
+    try {
+      setLoading(true);
+      const owned = await base44.entities.Card.list('-created_date', 100);
+      const ownedIds = new Set(owned.map(c => c.name));
+      const starters = STARTER_CARDS.filter(c => !ownedIds.has(c.name));
+      setCards([...owned, ...starters]);
+      if (owned.length === 0) setDeck(STARTER_CARDS.slice(0, 5));
+      else setDeck(owned.slice(0, 5));
+    } catch (err) {
+      logger.error('Failed to load cards:', err);
+      toast.error('Unable to load your card collection');
+      // Fall back to starter cards so the UI is still usable.
+      setCards([...STARTER_CARDS]);
+      setDeck(STARTER_CARDS.slice(0, 5));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveGold = async (amount) => {
@@ -97,7 +109,8 @@ export default function CardArena() {
         });
         setGold(newGold);
       } catch (err) {
-        console.error('Failed to award gold:', err);
+        logger.error('Failed to award gold:', err);
+        toast.error('Unable to award tournament prize');
         return;
       }
 

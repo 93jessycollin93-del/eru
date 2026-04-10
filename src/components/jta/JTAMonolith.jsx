@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gem, Package, Loader2, AlertTriangle } from 'lucide-react';
+import { Gem, Package, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const MONOLITH_TOTAL_KG = 3_000_000; // 3,000 tonnes

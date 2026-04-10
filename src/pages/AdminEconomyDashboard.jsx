@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { logger } from '@/lib/logger';
 import { TrendingUp, Gem, Package, Zap, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import AdminMetricCard from '../components/AdminMetricCard';
 import AdminEconomyCharts from '../components/AdminEconomyCharts';
@@ -12,20 +13,15 @@ export default function AdminEconomyDashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Admin-only check
-  if (user && user.role !== 'admin') {
-    return (
-      <div className="p-4 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-foreground font-semibold">Access Denied</p>
-          <p className="text-muted-foreground text-sm mt-1">Only admins can view economy dashboard.</p>
-        </div>
-      </div>
-    );
-  }
+  const isAdmin = !user || user.role === 'admin';
 
   useEffect(() => {
+    // Hooks must always run in the same order, so we gate the fetch instead
+    // of conditionally skipping the effect.
+    if (!isAdmin) {
+      setLoading(false);
+      return;
+    }
     const fetchEconomyData = async () => {
       try {
         setLoading(true);
@@ -67,7 +63,7 @@ export default function AdminEconomyDashboard() {
         );
         setOrders(activeOrders || []);
       } catch (err) {
-        console.error('Failed to fetch economy data:', err);
+        logger.error('Failed to fetch economy data:', err);
       } finally {
         setLoading(false);
       }
@@ -76,7 +72,20 @@ export default function AdminEconomyDashboard() {
     fetchEconomyData();
     const interval = setInterval(fetchEconomyData, 30000); // Refresh every 30s
     return () => clearInterval(interval);
-  }, []);
+  }, [isAdmin]);
+
+  // Admin-only gate (must come AFTER all hooks so hook order stays stable)
+  if (!isAdmin) {
+    return (
+      <div className="p-4 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-foreground font-semibold">Access Denied</p>
+          <p className="text-muted-foreground text-sm mt-1">Only admins can view economy dashboard.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

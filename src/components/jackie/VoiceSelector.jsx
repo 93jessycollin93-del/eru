@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Mic } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 export const VOICES = [
   { id: 'default',  name: 'Jackie',   emoji: '🤖', desc: 'Balanced & smart',         style: 'Be clear, helpful, and direct.' },

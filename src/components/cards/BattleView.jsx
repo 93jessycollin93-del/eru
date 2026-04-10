@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CardDisplay from './CardDisplay';
 import { getElementMultiplier, generateAIDeck } from './StarterCards';
-import { Sword, Shield, Heart, Zap, SkipForward } from 'lucide-react';
 
 function calcCardEffect(card, comboCount, opponentEl) {
   const comboMult = Math.min(2.0, 1 + 0.25 * comboCount);

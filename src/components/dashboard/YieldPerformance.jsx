@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp } from 'lucide-react';
 
 // Mock historical data - replace with real data fetch
 const MOCK_HISTORY = [

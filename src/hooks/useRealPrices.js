@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 // CoinGecko free API - no key required
 const COINGECKO_URL =
@@ -24,7 +25,7 @@ export function useRealPrices() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const timerRef = useRef(null);
 
-  const fetch_ = async () => {
+  const fetchPrices = useCallback(async () => {
     try {
       const res = await fetch(COINGECKO_URL);
       if (!res.ok) throw new Error('API error');
@@ -37,23 +38,30 @@ export function useRealPrices() {
       setPrices(mapped);
       setStatus('live');
       setLastUpdated(new Date());
-    } catch {
+    } catch (err) {
+      logger.warn('useRealPrices: price fetch failed', err);
       setStatus('error');
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetch_();
-    timerRef.current = setInterval(fetch_, 60_000); // refresh every 60s
+    fetchPrices();
+    timerRef.current = setInterval(fetchPrices, 60_000); // refresh every 60s
     return () => clearInterval(timerRef.current);
-  }, []);
+  }, [fetchPrices]);
 
   return { prices, status, lastUpdated };
 }
 
 export function useRealPriceMap() {
   const { prices, status, lastUpdated } = useRealPrices();
-  const map = {};
-  prices.forEach(p => { map[p.symbol] = p; });
+  // Memoize the derived map so consumers receive a stable reference when the
+  // underlying prices array hasn't changed. Without this, every render produced
+  // a fresh object and forced child components to re-render unnecessarily.
+  const map = useMemo(() => {
+    const m = {};
+    prices.forEach(p => { m[p.symbol] = p; });
+    return m;
+  }, [prices]);
   return { map, status, lastUpdated };
 }

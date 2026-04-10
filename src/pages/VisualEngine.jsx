@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, Battery, Sparkles, LayoutDashboard } from 'lucide-react';
-import { useTheme, BG_ENVS, MOTION_PRESETS, TYPOGRAPHY_PACKS } from '../context/ThemeContext';
-import AnimatedBackground from '../components/AnimatedBackground';
+import { useTheme, BG_ENVS, TYPOGRAPHY_PACKS } from '../context/ThemeContext';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const THEME_CATS = {

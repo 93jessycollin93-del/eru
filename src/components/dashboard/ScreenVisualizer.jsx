@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Tv2, Link, X, Play, Maximize2, Music, Film, Globe, ChevronRight } from 'lucide-react';
+import { Tv2, X, Music, Film, Globe } from 'lucide-react';
 
 const QUICK_LINKS = [
   { label: 'YouTube', url: 'https://www.youtube.com/embed/jfKfPfyJRdk', icon: '▶️', category: 'Video' },

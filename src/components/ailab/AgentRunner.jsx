@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Zap, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Play, Square, Clock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const PRESET_TASKS = [

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Network, Play, ChevronRight, TrendingUp, Loader2, Star } from 'lucide-react';
+import { Network, ChevronRight, Loader2, Star } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 

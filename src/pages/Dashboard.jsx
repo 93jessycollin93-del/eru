@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import TickerBar from '../components/dashboard/TickerBar';
 import DataVisualizer from '../components/dashboard/DataVisualizer';
 import LanguageSwitcher from '../components/LanguageSwitcher';

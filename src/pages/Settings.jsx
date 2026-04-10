@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import BiometricAuth from '../components/BiometricAuth';
 import { useAuth } from '@/lib/AuthContext';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send } from 'lucide-react';
+import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send } from 'lucide-react';
 import SoundSettings from '../components/SoundSettings';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';

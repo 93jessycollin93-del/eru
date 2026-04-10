@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 import { generatePortfolioPDF } from '@/lib/pdfExporter';
 import { toast } from 'sonner';
 

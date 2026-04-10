@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, ArrowRight, Play, Save, Zap, Network, X, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, ArrowRight, Play, Save, Zap, Network, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚙️' };

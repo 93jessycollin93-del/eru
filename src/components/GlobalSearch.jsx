@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Search, X, Loader2, FileText, CheckSquare, User, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 

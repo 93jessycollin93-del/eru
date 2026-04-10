@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Search, Star, ShoppingCart, Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
+import { logger } from '@/lib/logger';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ListingManager from '../components/storefront/ListingManager';
 
@@ -23,6 +25,10 @@ export default function Collectables() {
   const [selected, setSelected] = useState(null);
   const [cart, setCart] = useState([]);
   const [showListingForm, setShowListingForm] = useState(false);
+  // `publishing` is declared at the top of the component (before any early
+  // return) to satisfy the Rules of Hooks.
+   
+  const [publishing, setPublishing] = useState(false);
 
   const items = tab === 'pokemon' ? POKEMON : NOSTALGIC;
 
@@ -31,7 +37,7 @@ export default function Collectables() {
       <div className="px-4 py-3 border-b border-border">
         <button onClick={() => setSelected(null)} className="text-muted-foreground text-sm">← Back</button>
       </div>
-      <img src={selected.img} className="w-full max-h-72 object-contain bg-card"/>
+      <img src={selected.img} alt={selected.name} className="w-full max-h-72 object-contain bg-card"/>
       <div className="px-4 py-4 space-y-4">
         <div>
           <p className="text-xs text-muted-foreground">{selected.set || selected.type}</p>
@@ -62,26 +68,35 @@ export default function Collectables() {
   );
 
   const createCollectableListing = async (values) => {
-    await base44.entities.StorefrontListing.create({
-      title: values.title,
-      description: values.description,
-      asset_type: 'collectible',
-      asset_id: 'collectable_' + Date.now(),
-      base_price: values.base_price,
-      currency: values.crypto_currency,
-      ask_price_fiat: values.ask_price_fiat,
-      fiat_currency: values.fiat_currency,
-      crypto_currency: values.crypto_currency,
-      crypto_value: values.crypto_value,
-      sale_mode: values.sale_mode,
-      trade_preferences: values.trade_preferences,
-      condition_score: values.condition_score,
-      media_urls: values.media_urls,
-      internal_listed: true,
-      status: 'active',
-      tags: values.tags,
-    });
-    setShowListingForm(false);
+    try {
+      setPublishing(true);
+      await base44.entities.StorefrontListing.create({
+        title: values.title,
+        description: values.description,
+        asset_type: 'collectible',
+        asset_id: 'collectable_' + Date.now(),
+        base_price: values.base_price,
+        currency: values.crypto_currency,
+        ask_price_fiat: values.ask_price_fiat,
+        fiat_currency: values.fiat_currency,
+        crypto_currency: values.crypto_currency,
+        crypto_value: values.crypto_value,
+        sale_mode: values.sale_mode,
+        trade_preferences: values.trade_preferences,
+        condition_score: values.condition_score,
+        media_urls: values.media_urls,
+        internal_listed: true,
+        status: 'active',
+        tags: values.tags,
+      });
+      setShowListingForm(false);
+      toast.success('Collectable listing published');
+    } catch (err) {
+      logger.error('Failed to create collectable listing:', err);
+      toast.error(err?.message || 'Failed to create collectable listing');
+    } finally {
+      setPublishing(false);
+    }
   };
 
   return (
@@ -120,7 +135,7 @@ export default function Collectables() {
       <div className="px-4 grid grid-cols-2 gap-3">
         {items.map(item => (
           <div key={item.id} onClick={() => setSelected(item)} className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer hover:border-primary/40 transition-colors">
-            <img src={item.img} className="w-full aspect-[3/4] object-cover"/>
+            <img src={item.img} alt={item.name} className="w-full aspect-[3/4] object-cover"/>
             <div className="p-2">
               <p className="text-xs text-muted-foreground">{item.set || item.type}</p>
               <p className="text-sm font-medium truncate">{item.name}</p>

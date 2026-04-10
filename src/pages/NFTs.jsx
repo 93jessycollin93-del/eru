@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Search, Grid, List, Wallet, AlertTriangle, Plus, X, Tag } from 'lucide-react';
+import { Search, Grid, List, AlertTriangle, Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { logger } from '@/lib/logger';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectBar from '../components/WalletConnectBar';
 import ListingEditor from '../components/storefront/ListingEditor';
@@ -37,32 +39,39 @@ export default function NFTs() {
   const wallet = useWallet();
 
   const submitListing = async (values) => {
-    setListing(true);
-    await base44.entities.StorefrontListing.create({
-      title: values.title,
-      description: values.description,
-      asset_type: 'nft',
-      base_price: values.base_price,
-      currency: values.crypto_currency,
-      ask_price_fiat: values.ask_price_fiat,
-      fiat_currency: values.fiat_currency,
-      crypto_currency: values.crypto_currency,
-      crypto_value: values.crypto_value,
-      sale_mode: values.sale_mode,
-      trade_preferences: values.trade_preferences,
-      condition_score: values.condition_score,
-      media_urls: values.media_urls,
-      asset_id: 'user_nft_' + Date.now(),
-      internal_listed: true,
-      status: 'active',
-      tags: values.tags,
-      asset_snapshot: { title: values.title, rarity: listForm.rarity, image_url: values.media_urls?.[0] || '' },
-    });
-    setListForm(BLANK_LIST);
-    setListing(false);
-    setListSuccess(true);
-    setShowListForm(false);
-    setTimeout(() => setListSuccess(false), 3000);
+    try {
+      setListing(true);
+      await base44.entities.StorefrontListing.create({
+        title: values.title,
+        description: values.description,
+        asset_type: 'nft',
+        base_price: values.base_price,
+        currency: values.crypto_currency,
+        ask_price_fiat: values.ask_price_fiat,
+        fiat_currency: values.fiat_currency,
+        crypto_currency: values.crypto_currency,
+        crypto_value: values.crypto_value,
+        sale_mode: values.sale_mode,
+        trade_preferences: values.trade_preferences,
+        condition_score: values.condition_score,
+        media_urls: values.media_urls,
+        asset_id: 'user_nft_' + Date.now(),
+        internal_listed: true,
+        status: 'active',
+        tags: values.tags,
+        asset_snapshot: { title: values.title, rarity: listForm.rarity, image_url: values.media_urls?.[0] || '' },
+      });
+      setListForm(BLANK_LIST);
+      setListSuccess(true);
+      setShowListForm(false);
+      toast.success('NFT listing published');
+      setTimeout(() => setListSuccess(false), 3000);
+    } catch (err) {
+      logger.error('Failed to create NFT listing:', err);
+      toast.error(err?.message || 'Failed to create NFT listing');
+    } finally {
+      setListing(false);
+    }
   };
 
   // Load blockchain config
@@ -169,7 +178,7 @@ export default function NFTs() {
         <div className="px-4 space-y-3">
           {COLLECTIONS.map(c => (
             <div key={c.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-              <img src={c.img} className="w-12 h-12 rounded-lg object-cover"/>
+              <img src={c.img} alt={`${c.name} collection`} className="w-12 h-12 rounded-lg object-cover"/>
               <div className="flex-1">
                 <p className="font-medium text-sm">{c.name}</p>
                 <p className="text-xs text-muted-foreground">{c.items.toLocaleString()} items</p>
@@ -229,7 +238,7 @@ export default function NFTs() {
             </div>
           ) : (
             <div key={nft.id} onClick={() => setSelected(nft)} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 cursor-pointer">
-              <img src={nft.img} className="w-12 h-12 rounded-lg object-cover"/>
+              <img src={nft.img} alt={nft.name} className="w-12 h-12 rounded-lg object-cover"/>
               <div className="flex-1">
                 <p className="text-sm font-medium">{nft.name}</p>
                 <p className="text-xs text-muted-foreground">{nft.collection}</p>

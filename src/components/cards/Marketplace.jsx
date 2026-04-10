@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
-import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter } from 'lucide-react';
+import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 const LISTING_FEE_PCT = 0.05; // 5% listing fee
 
