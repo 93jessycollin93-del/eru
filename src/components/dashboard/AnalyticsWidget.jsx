@@ -17,6 +17,8 @@ export default function AnalyticsWidget() {
 
   useEffect(() => {
     fetchAnalytics();
+    const unsubscribe = base44.entities.FeatureAnalytics.subscribe(() => fetchAnalytics());
+    return unsubscribe;
   }, []);
 
   useEffect(() => {

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRealPriceMap } from '../../hooks/useRealPrices';
 import { useWallet } from '../../hooks/useWallet';
-import { Wallet, WifiOff, Loader2, ExternalLink } from 'lucide-react';
+import { Wallet, WifiOff, Loader2, ExternalLink, TrendingUp } from 'lucide-react';
 import { useDashboardEvents } from '@/context/DashboardEventsContext';
 
 export default function PortfolioSummary() {
-  const { map, status } = useRealPriceMap();
+  const { map, status, lastUpdated } = useRealPriceMap();
   const wallet = useWallet();
   const { subscribe, rules } = useDashboardEvents();
   const [pulse, setPulse] = useState(false);
@@ -63,9 +63,14 @@ export default function PortfolioSummary() {
         <div>
           <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Connected Wallet</p>
           <p className="text-sm font-mono font-semibold text-foreground mt-0.5">{wallet.shortAddress}</p>
-          {wallet.networkName && (
-            <p className="text-[10px] text-primary mt-0.5">● {wallet.networkName}</p>
-          )}
+          <div className="flex items-center gap-2 mt-0.5">
+            {wallet.networkName && (
+              <p className="text-[10px] text-primary">● {wallet.networkName}</p>
+            )}
+            {lastUpdated && (
+              <p className="text-[10px] text-muted-foreground">Live {lastUpdated.toLocaleTimeString()}</p>
+            )}
+          </div>
         </div>
         <button onClick={wallet.disconnect}
           className="text-[10px] text-muted-foreground border border-border rounded-lg px-2 py-1">
@@ -86,8 +91,12 @@ export default function PortfolioSummary() {
           </div>
         ) : (
           <div>
-            <p className="text-xs text-muted-foreground">On-chain balance requires RPC integration</p>
-            <p className="text-xs text-muted-foreground/60 mt-0.5">Configure a blockchain provider to read balances</p>
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <TrendingUp className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs text-primary">Live market sync active</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Portfolio pricing updates automatically from live market data</p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">Connect RPC later to add live on-chain balances</p>
           </div>
         )}
       </div>

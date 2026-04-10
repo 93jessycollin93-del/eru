@@ -16,6 +16,8 @@ export default function AlertManager() {
 
   useEffect(() => {
     fetchAlerts();
+    const unsubscribe = base44.entities.PriceAlert.subscribe(() => fetchAlerts());
+    return unsubscribe;
   }, []);
 
   useEffect(() => {

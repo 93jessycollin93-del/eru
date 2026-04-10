@@ -27,15 +27,32 @@ function SectionHeader({ icon: HeaderIcon, title, action }) {
 function BotStatusWidget() {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const loadBots = async () => {
     setLoading(true);
     const data = await base44.entities.UserBot.list('-updated_date', 8);
     setBots(data || []);
+    setLastUpdated(new Date());
     setLoading(false);
   };
 
-  useEffect(() => { loadBots(); }, []);
+  useEffect(() => {
+    loadBots();
+    const unsubscribe = base44.entities.UserBot.subscribe((event) => {
+      if (event.type === 'create') {
+        setBots((prev) => [event.data, ...prev].slice(0, 8));
+      }
+      if (event.type === 'update') {
+        setBots((prev) => prev.map((item) => item.id === event.id ? event.data : item));
+      }
+      if (event.type === 'delete') {
+        setBots((prev) => prev.filter((item) => item.id !== event.id));
+      }
+      setLastUpdated(new Date());
+    });
+    return unsubscribe;
+  }, []);
 
   const toggleStatus = async (bot) => {
     const nextStatus = bot.status === 'active' ? 'inactive' : 'active';
@@ -50,6 +67,7 @@ function BotStatusWidget() {
         title="Bot Status"
         action={<button onClick={loadBots} className="p-1 rounded hover:bg-secondary"><RefreshCw className={`w-3.5 h-3.5 text-muted-foreground ${loading ? 'animate-spin' : ''}`} /></button>}
       />
+      {lastUpdated && <p className="text-[10px] text-muted-foreground mb-3">Live · Updated {lastUpdated.toLocaleTimeString()}</p>}
       <div className="space-y-2">
         {bots.length === 0 ? (
           <p className="text-xs text-muted-foreground">No bots found.</p>
