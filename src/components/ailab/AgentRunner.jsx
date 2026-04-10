@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Zap, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Play, Square, Zap, Clock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useRealtimeAgentStatus } from '@/hooks/useLiveSync';
 
 const PRESET_TASKS = [
   { id: 'market_watch', label: 'Market Watcher', interval: 60, description: 'Monitor crypto prices and log significant movements' },
@@ -13,6 +14,7 @@ export default function AgentRunner({ bots, globalPolicy = null }) {
   const [logs, setLogs] = useState([]);
   const [selectedTask, setSelectedTask] = useState(PRESET_TASKS[0]);
   const [selectedBot, setSelectedBot] = useState(null);
+  const agentStatus = useRealtimeAgentStatus(bots);
   const intervals = useRef({});
   const logBottom = useRef(null);
 
@@ -107,10 +109,15 @@ export default function AgentRunner({ bots, globalPolicy = null }) {
             <div key={task.id} className={`rounded-xl border p-3 transition-all ${running ? 'border-green-400/30 bg-green-400/5' : 'border-border bg-card'}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${running ? 'bg-green-400 animate-pulse' : 'bg-secondary'}`} />
                     <p className="text-xs font-semibold">{task.label}</p>
                     <span className="text-[9px] text-muted-foreground flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" />{task.interval}s</span>
+                    {selectedBot && agentStatus[selectedBot.id] && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${agentStatus[selectedBot.id].status === 'active' ? 'border-green-400/30 bg-green-400/10 text-green-400' : 'border-border bg-secondary text-muted-foreground'}`}>
+                        {agentStatus[selectedBot.id].status}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[10px] text-muted-foreground ml-4">{task.description}</p>
                 </div>

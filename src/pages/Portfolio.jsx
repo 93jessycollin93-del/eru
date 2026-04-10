@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Zap, Trophy, Flame, TrendingUp, Star, Heart, Share2, Lock, Calendar, Download } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import ScenarioAnalysisPanel from '../components/portfolio/ScenarioAnalysisPanel';
 import DiversificationToolsPanel from '../components/portfolio/DiversificationToolsPanel';
 import PerformanceBenchmarkPanel from '../components/portfolio/PerformanceBenchmarkPanel';
@@ -10,37 +10,16 @@ import InvestmentJournalPanel from '../components/portfolio/InvestmentJournalPan
 
 export default function Portfolio() {
   const [tab, setTab] = useState('inventory');
-  const [jadeAssets, setJadeAssets] = useState([]);
-  const [cards, setCards] = useState([]);
-  const [listings, setListings] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [reputation, setReputation] = useState(null);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [jade, cardList, list, trans, rep] = await Promise.all([
-          base44.entities.JadeAsset.filter({ created_by: user?.email }, '-updated_date', 100),
-          base44.entities.Card.filter({ created_by: user?.email }, '-updated_date', 100),
-          base44.entities.StorefrontListing.filter({ created_by: user?.email }, '-updated_date', 100),
-          base44.entities.Transaction.filter({ buyer_email: user?.email }, '-created_date', 50),
-          base44.entities.Reputation.filter({ created_by: user?.email })
-        ]);
-        setJadeAssets(jade);
-        setCards(cardList);
-        setListings(list);
-        setTransactions(trans);
-        setReputation(rep?.[0] || null);
-      } catch (err) {
-        console.error('Failed to load portfolio data', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (user?.email) loadData();
-  }, [user?.email]);
+  const jadeQuery = useMemo(() => user?.email ? { created_by: user.email } : {}, [user?.email]);
+  const buyerQuery = useMemo(() => user?.email ? { buyer_email: user.email } : {}, [user?.email]);
+  const { data: jadeAssets, loading: jadeLoading } = useRealtimeEntityList('JadeAsset', { query: jadeQuery, sort: '-updated_date', limit: 100, enabled: !!user?.email });
+  const { data: cards, loading: cardsLoading } = useRealtimeEntityList('Card', { query: jadeQuery, sort: '-updated_date', limit: 100, enabled: !!user?.email });
+  const { data: listings, loading: listingsLoading } = useRealtimeEntityList('StorefrontListing', { query: jadeQuery, sort: '-updated_date', limit: 100, enabled: !!user?.email });
+  const { data: transactions, loading: transactionsLoading } = useRealtimeEntityList('Transaction', { query: buyerQuery, sort: '-created_date', limit: 50, enabled: !!user?.email });
+  const { data: reputationRows, loading: reputationLoading } = useRealtimeEntityList('Reputation', { query: jadeQuery, sort: '-updated_date', limit: 1, enabled: !!user?.email });
+  const reputation = reputationRows?.[0] || null;
+  const loading = jadeLoading || cardsLoading || listingsLoading || transactionsLoading || reputationLoading;
 
   if (loading) return (
     <div className="flex flex-col min-h-screen bg-background pb-20">

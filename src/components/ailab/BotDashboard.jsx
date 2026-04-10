@@ -1,30 +1,14 @@
-import { useState, useEffect } from 'react';
 import { BarChart2, Zap, Star, Clock, TrendingUp } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const COLORS = ['hsl(160 100% 45%)', 'hsl(210 100% 60%)', 'hsl(50 100% 55%)', 'hsl(280 80% 65%)', 'hsl(350 100% 60%)'];
 
 export default function BotDashboard({ bots }) {
-  const [automations, setAutomations] = useState([]);
-  const [memories, setMemories] = useState([]);
-  const [improvements, setImprovements] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      const [a, m, imp] = await Promise.all([
-        base44.entities.BotAutomation.list('-created_date', 50),
-        base44.entities.BotMemory.list('-created_date', 200),
-        base44.entities.BotImprovement.list('-created_date', 50),
-      ]);
-      setAutomations(a);
-      setMemories(m);
-      setImprovements(imp);
-      setLoading(false);
-    };
-    load();
-  }, []);
+  const { data: automations, loading: automationsLoading } = useRealtimeEntityList('BotAutomation', { sort: '-created_date', limit: 50 });
+  const { data: memories, loading: memoriesLoading } = useRealtimeEntityList('BotMemory', { sort: '-created_date', limit: 200 });
+  const { data: improvements, loading: improvementsLoading } = useRealtimeEntityList('BotImprovement', { sort: '-created_date', limit: 50 });
+  const loading = automationsLoading || memoriesLoading || improvementsLoading;
 
   // XP per bot
   const xpData = [...bots].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 8).map(b => ({
@@ -71,9 +55,9 @@ export default function BotDashboard({ bots }) {
           { label: 'Interactions', val: memories.length, icon: TrendingUp, color: 'text-primary' },
           { label: 'Auto Runs', val: totalRuns, icon: Zap, color: 'text-blue-400' },
           { label: 'Avg Score', val: avgScore, icon: BarChart2, color: 'text-purple-400' },
-        ].map(({ label, val, icon: Icon, color }) => (
-          <div key={label} className="bg-card border border-border rounded-xl p-2 text-center">
-            <Icon className={`w-3.5 h-3.5 ${color} mx-auto mb-1`} />
+        ].map((item) => (
+          <div key={item.label} className="bg-card border border-border rounded-xl p-2 text-center">
+            <item.icon className={`w-3.5 h-3.5 ${item.color} mx-auto mb-1`} />
             <p className={`text-base font-bold ${color}`}>{val}</p>
             <p className="text-[9px] text-muted-foreground">{label}</p>
           </div>

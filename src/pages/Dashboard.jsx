@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import TickerBar from '../components/dashboard/TickerBar';
 import WidgetRulesPanel from '../components/dashboard/WidgetRulesPanel';
 import { DashboardEventsProvider } from '../context/DashboardEventsContext';
@@ -17,23 +17,19 @@ import NotificationCenter from '../components/notifications/NotificationCenter';
 import TelegramFirstBanner from '../components/telegram/TelegramFirstBanner';
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
-import { base44 } from '@/api/base44Client';
+import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
   const { prices } = useRealPrices();
-  const [portfolioData] = useState({
+  const { data: alerts } = useRealtimeEntityList('PriceAlert', { sort: '-created_date', limit: 50 });
+  const { data: notifications } = useRealtimeEntityList('AppNotification', { sort: '-created_date', limit: 50 });
+
+  const portfolioData = useMemo(() => ({
     totalBalance: 15250.50,
     totalInvested: 12000,
     netGainLoss: 3250.50,
     roi: 27.09,
-  });
-  const [alerts, setAlerts] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-
-  useEffect(() => {
-    base44.entities.PriceAlert.list('-created_date', 50).then(setAlerts).catch(() => {});
-    base44.entities.AppNotification.list('-created_date', 50).then(setNotifications).catch(() => {});
-  }, []);
+  }), []);
 
   const appData = {
     portfolioData,
