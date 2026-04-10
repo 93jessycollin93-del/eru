@@ -15,28 +15,23 @@ export default function CenteredBottomNav() {
   const { t } = useLanguage();
 
   return (
-    <div
-      className="fixed bottom-4 left-0 right-0 z-40 flex justify-center"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      <nav className="flex items-center gap-1 bg-card/95 backdrop-blur-md border border-border rounded-2xl px-3 py-2 shadow-2xl">
-        {PRIMARY_NAV(t).map(({ icon: Icon, label, to }) => {
-          const active = pathname === to || (to !== '/' && pathname.startsWith(to));
-          return (
-            <Link
-              key={to}
-              to={to}
-              title={label}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
-                active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              <span className="text-[9px] font-medium">{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+    <nav className="flex items-center gap-1 bg-card/95 backdrop-blur-md border border-border rounded-2xl px-3 py-2 shadow-2xl">
+      {PRIMARY_NAV(t).map(({ icon: Icon, label, to }) => {
+        const active = pathname === to || (to !== '/' && pathname.startsWith(to));
+        return (
+          <Link
+            key={to}
+            to={to}
+            title={label}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
+              active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            <span className="text-[9px] font-medium">{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
