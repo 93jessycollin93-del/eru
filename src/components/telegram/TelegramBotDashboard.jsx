@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Bot, Loader2, Plus, RefreshCw, Radio, Save, Settings2, TerminalSquare } from 'lucide-react';
+import BotFlowBuilder from './BotFlowBuilder';
 
 const DEFAULT_FORM = {
   name: '',
   bot_username: '',
   system_prompt: 'You are a helpful Telegram AI assistant.',
   greeting_message: 'Welcome. Ask me anything.',
+  flow_blocks: [],
 };
 
 function BotCard({ bot, onSelect, active }) {
@@ -63,6 +65,7 @@ export default function TelegramBotDashboard() {
         bot_username: selectedBot.bot_username || '',
         system_prompt: selectedBot.system_prompt || DEFAULT_FORM.system_prompt,
         greeting_message: selectedBot.greeting_message || DEFAULT_FORM.greeting_message,
+        flow_blocks: selectedBot.flow_blocks || [],
       });
     } else {
       setForm(DEFAULT_FORM);
@@ -88,6 +91,10 @@ export default function TelegramBotDashboard() {
     setSaving(true);
     const created = await base44.entities.TelegramBot.create({
       ...form,
+      system_prompt: [
+        form.system_prompt,
+        ...(form.flow_blocks || []).map((block) => block.value),
+      ].filter(Boolean).join('\n\n'),
       status: 'draft',
       commands: [
         { command: '/start', description: 'Start the bot' },
@@ -103,7 +110,13 @@ export default function TelegramBotDashboard() {
   const updateBot = async () => {
     if (!selectedBot) return;
     setSaving(true);
-    await base44.entities.TelegramBot.update(selectedBot.id, form);
+    await base44.entities.TelegramBot.update(selectedBot.id, {
+      ...form,
+      system_prompt: [
+        form.system_prompt,
+        ...(form.flow_blocks || []).map((block) => block.value),
+      ].filter(Boolean).join('\n\n'),
+    });
     await load();
     setSaving(false);
   };
@@ -163,6 +176,7 @@ export default function TelegramBotDashboard() {
         <input value={form.bot_username} onChange={(e) => setForm((prev) => ({ ...prev, bot_username: e.target.value }))} placeholder="Telegram username" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
         <textarea value={form.system_prompt} onChange={(e) => setForm((prev) => ({ ...prev, system_prompt: e.target.value }))} placeholder="System prompt" className="w-full min-h-[120px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
         <textarea value={form.greeting_message} onChange={(e) => setForm((prev) => ({ ...prev, greeting_message: e.target.value }))} placeholder="Greeting message" className="w-full min-h-[80px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
+        <BotFlowBuilder value={form.flow_blocks} onChange={(flow_blocks) => setForm((prev) => ({ ...prev, flow_blocks }))} />
         <div className="flex gap-2">
           <button onClick={updateBot} disabled={!selectedBot || saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">
             <Save className="w-4 h-4" /> Save
