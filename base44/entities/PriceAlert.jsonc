@@ -1,0 +1,58 @@
+{
+  "name": "PriceAlert",
+  "type": "object",
+  "properties": {
+    "asset_symbol": {
+      "type": "string",
+      "description": "e.g., BTC, ETH, DOGE"
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "above",
+        "below"
+      ],
+      "description": "Alert when price goes above or below threshold"
+    },
+    "threshold_price": {
+      "type": "number",
+      "description": "Price threshold in USD"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "triggered_at": {
+      "type": "string",
+      "description": "ISO timestamp when alert was last triggered"
+    },
+    "notification_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether user has been notified for this alert"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User's email"
+    }
+  },
+  "required": [
+    "asset_symbol",
+    "alert_type",
+    "threshold_price"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

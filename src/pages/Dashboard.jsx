@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import TickerBar from '../components/dashboard/TickerBar';
 import DataVisualizer from '../components/dashboard/DataVisualizer';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -7,12 +8,26 @@ import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
 import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
 import AnalyticsWidget from '../components/dashboard/AnalyticsWidget';
+import AlertManager from '../components/AlertManager';
+import ExportButton from '../components/dashboard/ExportButton';
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
+import { useRealPrices } from '../hooks/useRealPrices';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
+  const { prices } = useRealPrices();
+  const [portfolioData, setPortfolioData] = useState({
+    totalBalance: 15250.50,
+    totalInvested: 12000,
+    netGainLoss: 3250.50,
+    roi: 27.09,
+  });
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Dashboard</h2>
+        <ExportButton portfolioData={portfolioData} marketData={prices} />
+      </div>
       <div className="px-4 py-2 flex justify-end">
         <LanguageSwitcher />
       </div>
@@ -21,6 +36,7 @@ export default function Dashboard() {
       <QuickActions />
       <div className="px-4 mt-4 space-y-4 pb-4">
         <AppDock />
+        <AlertManager />
         <AnalyticsWidget />
         <ScreenVisualizer />
         <DataVisualizer />
