@@ -1,0 +1,53 @@
+{
+  "name": "PinnedCard",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "card_type": {
+      "type": "string",
+      "enum": [
+        "insight",
+        "summary",
+        "alert",
+        "report"
+      ],
+      "default": "insight"
+    },
+    "color": {
+      "type": "string",
+      "default": "green"
+    },
+    "user_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "content"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

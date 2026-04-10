@@ -1,0 +1,39 @@
+{
+  "name": "BotRating",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number",
+      "description": "1-5 stars"
+    },
+    "comment": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name",
+    "rating"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

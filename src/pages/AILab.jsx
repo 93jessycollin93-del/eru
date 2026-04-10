@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
+import DiscoverMarketplace from '../components/ailab/DiscoverMarketplace';
+import BotDashboard from '../components/ailab/BotDashboard';
+import PinnedCards from '../components/ailab/PinnedCards';
+import SquadBoard from '../components/ailab/SquadBoard';
 import { base44 } from '@/api/base44Client';
 
 const ROLES = [
@@ -118,6 +122,9 @@ export default function AILab() {
     { id: 'orchestrator', label: 'Orchestra', icon: Network },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'versions', label: 'Versions', icon: History },
+    { id: 'dashboard', label: 'Stats', icon: LayoutDashboard },
+    { id: 'pinned', label: 'Cards', icon: Pin },
+    { id: 'squad', label: 'Squad', icon: Network },
     { id: 'discover', label: 'Discover', icon: Sparkles },
   ];
 
@@ -404,34 +411,17 @@ export default function AILab() {
       {/* VERSIONS */}
       {tab === 'versions' && <BotVersionHistory bots={bots} onRollback={loadBots} />}
 
+      {/* DASHBOARD */}
+      {tab === 'dashboard' && <BotDashboard bots={bots} />}
+
+      {/* PINNED CARDS */}
+      {tab === 'pinned' && <PinnedCards bots={bots} />}
+
+      {/* SQUAD */}
+      {tab === 'squad' && <SquadBoard bots={bots} />}
+
       {/* DISCOVER */}
-      {tab === 'discover' && (
-        <div className="px-4 py-4 space-y-3">
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center">
-            <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
-            <p className="font-semibold text-sm">Bot Discovery</p>
-            <p className="text-xs text-muted-foreground mt-1">Public bots from the community coming soon. Make your bot public to appear here.</p>
-          </div>
-          {bots.filter(b => b.is_public).length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Public Bots</p>
-              {bots.filter(b => b.is_public).map(bot => {
-                const role = ROLES.find(r => r.id === bot.role);
-                return (
-                  <div key={bot.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-                    <span className="text-2xl">{role?.icon || '🤖'}</span>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{bot.name}</p>
-                      <p className="text-xs text-muted-foreground">{bot.description || role?.label}</p>
-                    </div>
-                    <button onClick={() => duplicate(bot)} className="text-xs text-primary px-2 py-1 rounded-lg bg-primary/10 border border-primary/20">Clone</button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+      {tab === 'discover' && <DiscoverMarketplace onInstalled={loadBots} />}
     </div>
   );
 }
