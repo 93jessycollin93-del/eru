@@ -22,28 +22,6 @@ const STATUS_CONFIG = {
   blocked: { icon: AlertTriangle, color: 'text-orange-400', label: 'Blocked' },
 };
 
-// Rich seed data for demo
-const DEMO_LOGS = [
-  { id:'d1',  action_type:'biometric', action:'Face ID Verified',           detail:'Biometric authentication completed for wallet access',           source_app:null,         severity:'info',     status:'success', platform:'ios',      created_date: new Date(Date.now()-1*60000).toISOString(),    amount:null },
-  { id:'d2',  action_type:'payment',   action:'Outbound Transfer',          detail:'Sent 0.5 TON to wallet 0x4F3a...via TON Bridge',                 source_app:'TON Wallet', severity:'info',     status:'success', platform:'telegram', created_date: new Date(Date.now()-4*60000).toISOString(),    amount:0.5 },
-  { id:'d3',  action_type:'security',  action:'2FA Challenge Failed',       detail:'Incorrect OTP entered 3 consecutive times — account locked 15m', source_app:null,         severity:'critical', status:'blocked', platform:'web',      created_date: new Date(Date.now()-12*60000).toISOString(),   amount:null },
-  { id:'d4',  action_type:'integration',action:'Google Drive Connected',    detail:'OAuth scope granted: drive.readonly — via app user connector',   source_app:'Google Drive',severity:'info',    status:'success', platform:'web',      created_date: new Date(Date.now()-35*60000).toISOString(),   amount:null },
-  { id:'d5',  action_type:'trade',     action:'NFT Purchase',               detail:'Bought "Cosmic Ape #4412" for 320 GOLD from Marketplace',        source_app:'Marketplace',severity:'info',     status:'success', platform:'web',      created_date: new Date(Date.now()-1.2*3600000).toISOString(),amount:320 },
-  { id:'d6',  action_type:'payment',   action:'Stripe Payment',             detail:'USD $49.99 charged for Premium subscription — card ending 4242', source_app:'Stripe',     severity:'info',     status:'success', platform:'ios',      created_date: new Date(Date.now()-2*3600000).toISOString(),   amount:49.99 },
-  { id:'d7',  action_type:'security',  action:'API Key Generated',          detail:'New API key created: sk_live_ab12... with scopes [markets:read, bots:write]', source_app:null, severity:'warning', status:'success', platform:'web', created_date: new Date(Date.now()-3*3600000).toISOString(),  amount:null },
-  { id:'d8',  action_type:'integration',action:'ClickUp Sync',              detail:'Task list synced — 14 tasks imported from "Marketing" workspace', source_app:'ClickUp',    severity:'info',     status:'success', platform:'web',      created_date: new Date(Date.now()-5*3600000).toISOString(),   amount:null },
-  { id:'d9',  action_type:'wallet',    action:'Private Key Export Attempt', detail:'User attempted to export private key — biometric gate triggered', source_app:null,         severity:'critical', status:'blocked', platform:'android',  created_date: new Date(Date.now()-6*3600000).toISOString(),   amount:null },
-  { id:'d10', action_type:'login',     action:'Session Login',              detail:'New session from iPhone 15 Pro — Toronto, Canada',              source_app:null,         severity:'info',     status:'success', platform:'ios',      created_date: new Date(Date.now()-8*3600000).toISOString(),   amount:null },
-  { id:'d11', action_type:'trade',     action:'Jade Purchase Failed',       detail:'Insufficient GOLD balance to purchase Jade block — 1,200 required', source_app:'JTA',    severity:'warning',  status:'failed',  platform:'web',      created_date: new Date(Date.now()-10*3600000).toISOString(),  amount:null },
-  { id:'d12', action_type:'integration',action:'Salesforce Data Pull',      detail:'Contact list fetched: 42 records synced to portfolio module',    source_app:'Salesforce', severity:'info',     status:'success', platform:'web',      created_date: new Date(Date.now()-12*3600000).toISOString(),  amount:null },
-  { id:'d13', action_type:'settings',  action:'Notification Settings',      detail:'Telegram notifications enabled for: trades, alerts, messages',   source_app:'Telegram',   severity:'info',     status:'success', platform:'telegram', created_date: new Date(Date.now()-14*3600000).toISOString(),  amount:null },
-  { id:'d14', action_type:'biometric', action:'Fingerprint Registered',     detail:'TouchID fingerprint registered on this device for the first time',source_app:null,         severity:'info',     status:'success', platform:'android',  created_date: new Date(Date.now()-18*3600000).toISOString(),  amount:null },
-  { id:'d15', action_type:'payment',   action:'Escrow Created',             detail:'Trade escrow opened: Card #AX-441 — Buyer 0xe3f... — 850 GOLD',  source_app:'Marketplace',severity:'info',     status:'success', platform:'web',      created_date: new Date(Date.now()-22*3600000).toISOString(),  amount:850 },
-  { id:'d16', action_type:'security',  action:'Password Changed',           detail:'Account password updated — previous session revoked',            source_app:null,         severity:'warning',  status:'success', platform:'web',      created_date: new Date(Date.now()-26*3600000).toISOString(),  amount:null },
-  { id:'d17', action_type:'data_access',action:'Export Trade History',      detail:'Full trade history CSV exported — 234 records — last 90 days',  source_app:null,         severity:'info',     status:'success', platform:'web',      created_date: new Date(Date.now()-30*3600000).toISOString(),  amount:null },
-  { id:'d18', action_type:'integration',action:'GitHub Disconnect',         detail:'GitHub connector revoked — OAuth tokens invalidated',            source_app:'GitHub',     severity:'warning',  status:'success', platform:'web',      created_date: new Date(Date.now()-36*3600000).toISOString(),  amount:null },
-];
-
 const ALL_TYPES = ['all', ...Object.keys(TYPE_CONFIG)];
 const ALL_STATUS = ['all', 'success', 'failed', 'blocked'];
 
@@ -111,15 +89,9 @@ export default function ActivityAuditLog() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      try {
-        const dbLogs = await base44.entities.AuditLog.list('-created_date', 100);
-        const combined = [...dbLogs, ...DEMO_LOGS].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-        setLogs(combined);
-      } catch {
-        setLogs(DEMO_LOGS);
-      } finally {
-        setLoading(false);
-      }
+      const dbLogs = await base44.entities.AuditLog.list('-created_date', 100);
+      setLogs(dbLogs);
+      setLoading(false);
     };
     load();
   }, []);
