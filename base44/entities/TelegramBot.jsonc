@@ -98,9 +98,18 @@
       "type": "boolean",
       "default": true
     },
-    "max_memory_messages": {
+    "memory_retention": {
+      "type": "string",
+      "enum": [
+        "short",
+        "medium",
+        "long"
+      ],
+      "default": "medium"
+    },
+    "memory_message_limit": {
       "type": "number",
-      "default": 12
+      "default": 20
     },
     "tool_modules": {
       "type": "array",
@@ -108,6 +117,14 @@
         "type": "string"
       },
       "default": []
+    },
+    "agent_notes": {
+      "type": "string",
+      "description": "Internal builder notes for the bot agent"
+    },
+    "source_bot_id": {
+      "type": "string",
+      "description": "Original bot id if cloned"
     }
   },
   "required": [

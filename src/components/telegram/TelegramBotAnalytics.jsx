@@ -1,36 +1,42 @@
-import { MessageSquare, Activity, Users, AlertTriangle } from 'lucide-react';
+import { Activity, AlertTriangle, Clock3, MessageSquare } from 'lucide-react';
 
 export default function TelegramBotAnalytics({ bot, messages = [], logs = [], sessions = [] }) {
-  const outgoing = messages.filter((item) => item.direction === 'outgoing').length;
-  const incoming = messages.filter((item) => item.direction === 'incoming').length;
-  const errors = logs.filter((item) => item.level === 'error').length;
-  const avgLatency = messages.length ? Math.round(messages.reduce((sum, item) => sum + (item.latency_ms || 0), 0) / messages.length) : 0;
+  if (!bot) return null;
+
+  const incoming = messages.filter((message) => message.direction === 'incoming').length;
+  const outgoing = messages.filter((message) => message.direction === 'outgoing').length;
+  const errors = logs.filter((log) => log.level === 'error').length;
+  const latencyValues = messages.filter((message) => typeof message.latency_ms === 'number').map((message) => message.latency_ms);
+  const avgLatency = latencyValues.length ? Math.round(latencyValues.reduce((sum, value) => sum + value, 0) / latencyValues.length) : 0;
 
   const stats = [
-    { label: 'Incoming', value: incoming, icon: MessageSquare, color: 'text-blue-400' },
-    { label: 'Replies', value: outgoing, icon: Activity, color: 'text-primary' },
-    { label: 'Sessions', value: sessions.length, icon: Users, color: 'text-yellow-400' },
-    { label: 'Errors', value: errors, icon: AlertTriangle, color: 'text-red-400' },
+    { label: 'Messages', value: messages.length, Icon: MessageSquare },
+    { label: 'Sessions', value: sessions.length, Icon: Activity },
+    { label: 'Errors', value: errors, Icon: AlertTriangle },
+    { label: 'Avg Latency', value: `${avgLatency}ms`, Icon: Clock3 },
   ];
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold">Bot Analytics</p>
-          <p className="text-[11px] text-muted-foreground">Detailed activity for {bot?.name || 'this bot'}</p>
+          <p className="text-sm font-semibold">{bot.name} analytics</p>
+          <p className="text-[11px] text-muted-foreground">Detailed activity snapshot for this bot</p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">Avg latency</p>
-          <p className="text-sm font-semibold">{avgLatency} ms</p>
+        <div className="text-right text-[11px] text-muted-foreground">
+          <p>In {incoming}</p>
+          <p>Out {outgoing}</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-border bg-secondary/40 p-3">
-            <stat.icon className={`w-4 h-4 ${stat.color} mb-2`} />
-            <p className="text-lg font-semibold">{stat.value}</p>
-            <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {stats.map(({ label, value, Icon }) => (
+          <div key={label} className="rounded-lg bg-secondary/60 border border-border p-3">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Icon className="w-3.5 h-3.5" />
+              <span className="text-[10px] uppercase">{label}</span>
+            </div>
+            <p className="text-lg font-semibold">{value}</p>
           </div>
         ))}
       </div>

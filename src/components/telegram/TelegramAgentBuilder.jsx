@@ -1,91 +1,117 @@
-import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Bot, Loader2, Save } from 'lucide-react';
-import ToolModulePicker from './ToolModulePicker';
+import { Brain, Settings2, Wrench } from 'lucide-react';
 
-const DEFAULTS = {
-  name: '',
-  systemPrompt: 'You are a helpful Telegram AI assistant.',
-  memoryEnabled: true,
-  memoryRetention: 12,
-  toolModules: ['faq'],
-};
+const MEMORY_PRESETS = [
+  { id: 'short', label: 'Short', hint: 'Recent context only' },
+  { id: 'medium', label: 'Medium', hint: 'Balanced memory' },
+  { id: 'long', label: 'Long', hint: 'Extended context' },
+];
 
-export default function TelegramAgentBuilder({ onCreated }) {
-  const [form, setForm] = useState(DEFAULTS);
-  const [saving, setSaving] = useState(false);
+const TOOL_MODULES = [
+  { id: 'faq', label: 'FAQ replies' },
+  { id: 'lead_capture', label: 'Lead capture' },
+  { id: 'product_guidance', label: 'Product guidance' },
+  { id: 'support_triage', label: 'Support triage' },
+  { id: 'scheduling', label: 'Scheduling' },
+  { id: 'upsell', label: 'Upsell prompts' },
+];
 
-  const handleCreate = async () => {
-    setSaving(true);
-    await base44.entities.TelegramBot.create({
-      name: form.name,
-      system_prompt: form.systemPrompt,
-      greeting_message: 'Welcome. Ask me anything.',
-      status: 'draft',
-      flow_blocks: [],
-      memory_enabled: form.memoryEnabled,
-      max_memory_messages: Number(form.memoryRetention || 12),
-      tool_modules: form.toolModules,
-      commands: [
-        { command: '/start', description: 'Start the bot' },
-        { command: '/help', description: 'See bot help' },
-        { command: '/reset', description: 'Reset memory' }
-      ]
-    });
-    setForm(DEFAULTS);
-    setSaving(false);
-    onCreated?.();
+export default function TelegramAgentBuilder({ form, setForm }) {
+  const toggleModule = (moduleId) => {
+    const active = (form.tool_modules || []).includes(moduleId);
+    setForm((prev) => ({
+      ...prev,
+      tool_modules: active
+        ? (prev.tool_modules || []).filter((id) => id !== moduleId)
+        : [...(prev.tool_modules || []), moduleId]
+    }));
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 space-y-4">
       <div className="flex items-center gap-2">
-        <Bot className="w-4 h-4 text-primary" />
+        <Brain className="w-4 h-4 text-primary" />
         <p className="text-sm font-semibold">AI Agent Builder</p>
       </div>
-      <input
-        value={form.name}
-        onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-        placeholder="Bot name"
-        className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none"
-      />
-      <textarea
-        value={form.systemPrompt}
-        onChange={(e) => setForm((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-        placeholder="Define the core system prompt"
-        className="w-full min-h-[120px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none"
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <label className="rounded-xl border border-border bg-secondary/40 px-3 py-3 text-sm">
-          <span className="block text-xs text-muted-foreground mb-2">Memory enabled</span>
-          <input
-            type="checkbox"
-            checked={form.memoryEnabled}
-            onChange={(e) => setForm((prev) => ({ ...prev, memoryEnabled: e.target.checked }))}
-            className="accent-primary"
-          />
-        </label>
-        <label className="rounded-xl border border-border bg-secondary/40 px-3 py-3 text-sm">
-          <span className="block text-xs text-muted-foreground mb-2">Memory retention</span>
+
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">System prompt</label>
+        <textarea
+          value={form.system_prompt}
+          onChange={(e) => setForm((prev) => ({ ...prev, system_prompt: e.target.value }))}
+          placeholder="Define the bot's role, tone, rules, and goals"
+          className="w-full min-h-[120px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Settings2 className="w-4 h-4 text-primary" />
+          <p className="text-sm font-medium">Memory settings</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {MEMORY_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => setForm((prev) => ({ ...prev, memory_retention: preset.id }))}
+              className={`rounded-xl border p-3 text-left ${form.memory_retention === preset.id ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}
+            >
+              <p className="text-xs font-medium">{preset.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{preset.hint}</p>
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex items-center gap-2 px-3 py-2.5 bg-secondary border border-border rounded-xl cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.memory_enabled}
+              onChange={(e) => setForm((prev) => ({ ...prev, memory_enabled: e.target.checked }))}
+              className="accent-primary"
+            />
+            <span className="text-xs">Enable memory</span>
+          </label>
           <input
             type="number"
-            min="1"
+            min="5"
             max="100"
-            value={form.memoryRetention}
-            onChange={(e) => setForm((prev) => ({ ...prev, memoryRetention: e.target.value }))}
-            className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none"
+            value={form.memory_message_limit}
+            onChange={(e) => setForm((prev) => ({ ...prev, memory_message_limit: Number(e.target.value || 20) }))}
+            placeholder="Message limit"
+            className="bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none"
           />
-        </label>
+        </div>
       </div>
-      <ToolModulePicker value={form.toolModules} onChange={(toolModules) => setForm((prev) => ({ ...prev, toolModules }))} />
-      <button
-        onClick={handleCreate}
-        disabled={!form.name || saving}
-        className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-      >
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        {saving ? 'Creating…' : 'Create AI Agent Bot'}
-      </button>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Wrench className="w-4 h-4 text-primary" />
+          <p className="text-sm font-medium">Tool modules</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {TOOL_MODULES.map((module) => {
+            const active = (form.tool_modules || []).includes(module.id);
+            return (
+              <button
+                key={module.id}
+                onClick={() => toggleModule(module.id)}
+                className={`rounded-xl border px-3 py-2 text-xs text-left ${active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}
+              >
+                {module.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">Agent notes</label>
+        <textarea
+          value={form.agent_notes || ''}
+          onChange={(e) => setForm((prev) => ({ ...prev, agent_notes: e.target.value }))}
+          placeholder="Optional notes about brand voice, escalation rules, or constraints"
+          className="w-full min-h-[80px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none"
+        />
+      </div>
     </div>
   );
 }
