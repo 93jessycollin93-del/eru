@@ -50,29 +50,44 @@
     },
     "usage_count": {
       "type": "number",
-      "default": 0,
-      "description": "Total number of times this bot has been used"
+      "default": 0
     },
     "xp": {
       "type": "number",
-      "default": 0,
-      "description": "Experience points earned by the bot"
+      "default": 0
     },
     "level": {
       "type": "number",
-      "default": 1,
-      "description": "Current evolution level (1-10)"
+      "default": 1
     },
     "unlocked_capabilities": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Capabilities unlocked through leveling"
+      }
     },
     "last_interaction": {
+      "type": "string"
+    },
+    "page_assignments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of app page routes where this bot is deployed (e.g. '/markets', '/trade')",
+      "default": []
+    },
+    "connected_bot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of other bots this bot can delegate tasks to",
+      "default": []
+    },
+    "handoff_instructions": {
       "type": "string",
-      "description": "ISO timestamp of last use"
+      "description": "Instructions for when and how to hand off to connected bots"
     }
   },
   "required": [

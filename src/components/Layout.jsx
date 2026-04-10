@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import JackieFloat from './JackieFloat';
 import CenteredBottomNav from './CenteredBottomNav';
 import GlobalSearch from './GlobalSearch';
+import BotWidget from './BotWidget';
 
 
 
@@ -23,6 +24,7 @@ export default function Layout() {
       </main>
       <JackieFloat />
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <BotWidget />
     </div>
   );
 }

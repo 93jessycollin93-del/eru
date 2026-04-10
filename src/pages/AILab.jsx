@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const ROLES = [
@@ -12,7 +12,23 @@ const ROLES = [
 
 const STYLES = ['short', 'detailed', 'strategic', 'creative'];
 
-const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: '', response_style: 'detailed', memory_enabled: false, is_public: false, status: 'active' };
+const PAGE_OPTIONS = [
+  { route: '/', label: 'Dashboard' },
+  { route: '/markets', label: 'Markets' },
+  { route: '/trade', label: 'Trade' },
+  { route: '/nfts', label: 'NFTs' },
+  { route: '/portfolio', label: 'Portfolio' },
+  { route: '/collectables', label: 'Collectables' },
+  { route: '/jackie', label: 'Jackie AI' },
+  { route: '/ailab', label: 'AI Lab' },
+  { route: '/arena', label: 'Card Arena' },
+  { route: '/jta', label: 'Jade Atelier' },
+  { route: '/storefront', label: 'Storefront' },
+  { route: '/creator', label: 'Creator Hub' },
+  { route: '/thinkers', label: 'Thinkers Club' },
+];
+
+const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: '', response_style: 'detailed', memory_enabled: false, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '' };
 
 export default function AILab() {
   const [tab, setTab] = useState('my');
@@ -255,6 +271,65 @@ export default function AILab() {
               </div>
             </label>
           </div>
+
+          {/* Page Assignments */}
+          <div className="space-y-2">
+            <label className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" /> Deploy to Pages</label>
+            <p className="text-[9px] text-muted-foreground">Bot will appear as a floating assistant on selected pages.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PAGE_OPTIONS.map(p => {
+                const active = (form.page_assignments || []).includes(p.route);
+                return (
+                  <button key={p.route} onClick={() => setForm(prev => ({
+                    ...prev,
+                    page_assignments: active
+                      ? prev.page_assignments.filter(r => r !== p.route)
+                      : [...(prev.page_assignments || []), p.route]
+                  }))}
+                    className={`text-[10px] px-2 py-1 rounded-lg border font-medium transition-all ${active ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary text-muted-foreground border-border'}`}>
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bot Connections */}
+          {bots.filter(b => b.id !== editId).length > 0 && (
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground flex items-center gap-1"><Link2 className="w-3 h-3" /> Connect Bots (delegation network)</label>
+              <p className="text-[9px] text-muted-foreground">Selected bots will be consulted when this bot decides to delegate a task.</p>
+              <div className="space-y-1.5">
+                {bots.filter(b => b.id !== editId).map(b => {
+                  const linked = (form.connected_bot_ids || []).includes(b.id);
+                  return (
+                    <button key={b.id} onClick={() => setForm(prev => ({
+                      ...prev,
+                      connected_bot_ids: linked
+                        ? prev.connected_bot_ids.filter(id => id !== b.id)
+                        : [...(prev.connected_bot_ids || []), b.id]
+                    }))}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${linked ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}>
+                      <span>{ROLES.find(r => r.id === b.role)?.icon || '🤖'}</span>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium">{b.name}</p>
+                        <p className="text-[9px] text-muted-foreground">{b.role} · {b.response_style}</p>
+                      </div>
+                      {linked && <Zap className="w-3 h-3 text-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
+              {(form.connected_bot_ids || []).length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Handoff Instructions</label>
+                  <textarea value={form.handoff_instructions} onChange={e => setForm(p => ({ ...p, handoff_instructions: e.target.value }))}
+                    placeholder="e.g. Delegate market analysis to TraderBot. Delegate game questions to GameGuide."
+                    className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none resize-none min-h-[70px] text-foreground" />
+                </div>
+              )}
+            </div>
+          )}
 
           <button onClick={save} disabled={!form.name}
             className="w-full bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm disabled:opacity-40">
