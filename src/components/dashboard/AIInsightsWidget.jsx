@@ -13,7 +13,7 @@ export default function AIInsightsWidget() {
         <Sparkles className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-semibold">AI-driven Insights</h3>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 sm:space-y-3">
         {INSIGHTS.map((insight) => (
           <div key={insight} className="rounded-xl bg-primary/5 border border-primary/20 px-3 py-3">
             <p className="text-xs text-foreground leading-relaxed">{insight}</p>

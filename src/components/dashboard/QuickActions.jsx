@@ -86,7 +86,7 @@ export default function QuickActions() {
       {editing && (
         <div className="mt-2 bg-card border border-border rounded-2xl p-3">
           <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-2">Tap to add / remove (max 4)</p>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {ALL_ACTIONS.map(a => {
               const active = pinned.includes(a.label);
               return (

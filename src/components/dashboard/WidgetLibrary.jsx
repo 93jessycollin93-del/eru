@@ -74,7 +74,7 @@ function BotStatusWidget() {
         {bots.length === 0 ? (
           <p className="text-xs text-muted-foreground">No bots found.</p>
         ) : bots.map((bot) => (
-          <div key={bot.id} className="flex items-center gap-3 rounded-xl bg-secondary/50 border border-border px-3 py-2.5">
+          <div key={bot.id} className="flex items-center gap-2 sm:gap-3 rounded-xl bg-secondary/50 border border-border px-3 py-2.5">
             <div className={`w-2 h-2 rounded-full ${bot.status === 'active' ? 'bg-green-400' : 'bg-muted-foreground'}`} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{bot.name}</p>
@@ -82,7 +82,7 @@ function BotStatusWidget() {
             </div>
             <button
               onClick={() => toggleStatus(bot)}
-              className={`text-[10px] px-2.5 py-1 rounded-lg border ${bot.status === 'active' ? 'border-green-400/20 bg-green-400/10 text-green-400' : 'border-border bg-card text-muted-foreground'}`}
+              className={`text-[10px] px-2 py-1 rounded-lg border whitespace-nowrap ${bot.status === 'active' ? 'border-green-400/20 bg-green-400/10 text-green-400' : 'border-border bg-card text-muted-foreground'}`}
             >
               {bot.status === 'active' ? 'Disable' : 'Enable'}
             </button>
@@ -136,7 +136,7 @@ function MarketPinsWidget({ prices }) {
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5 sm:gap-2">
         {available.slice(0, 8).map((item) => {
           const active = pinnedMetrics.includes(item.symbol);
           return (

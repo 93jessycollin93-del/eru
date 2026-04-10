@@ -24,7 +24,7 @@ const NEWS_ITEMS = [
 export default function NewsFeedWidget() {
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-start gap-2 mb-3">
         <Newspaper className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-semibold">Financial News Feed</h3>
       </div>
@@ -41,7 +41,7 @@ export default function NewsFeedWidget() {
               <div className="min-w-0">
                 <p className="text-xs font-semibold leading-relaxed">{item.title}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">{item.source}</p>
-                <p className="text-[10px] text-primary mt-2">{item.impact}</p>
+                <p className="text-[10px] text-primary mt-2 leading-relaxed">{item.impact}</p>
               </div>
               <ExternalLink className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
             </div>
