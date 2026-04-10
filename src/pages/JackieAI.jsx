@@ -238,7 +238,7 @@ export default function JackieAI() {
     const linkedBot = userBots[0] || null;
     const draftBot = wantsBot ? {
       name: extractedName || 'New Jackie Bot',
-      role: /trader/.test(lower) ? 'trader' : /social/.test(lower) ? 'social' : /game/.test(lower) ? 'game_helper' : 'assistant',
+      role: /security|scan|analy[sz]e\s+the\s+app|audit/.test(lower) ? 'security' : /trader/.test(lower) ? 'trader' : /social/.test(lower) ? 'social' : /game/.test(lower) ? 'game_helper' : 'assistant',
       response_style: /short/.test(lower) ? 'short' : /creative/.test(lower) ? 'creative' : /strategic/.test(lower) ? 'strategic' : 'detailed',
       description: message.slice(0, 140),
       instructions: `Created from Jackie request: ${message}`,

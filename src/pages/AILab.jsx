@@ -17,6 +17,7 @@ const ROLES = [
   { id: 'trader',      label: 'Trader',       icon: '📈', desc: 'Market & trading guidance' },
   { id: 'game_helper', label: 'Game Guide',   icon: '🎮', desc: 'Game strategy & tips' },
   { id: 'social',      label: 'Social',       icon: '💬', desc: 'Community & conversation' },
+  { id: 'security',    label: 'Security',     icon: '🛡️', desc: 'Scan and analyze the app' },
   { id: 'custom',      label: 'Custom',       icon: '⚡', desc: 'Fully custom role' },
 ];
 
@@ -437,7 +438,7 @@ export default function AILab() {
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Description</label>
             <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="What does this bot do?"
+              placeholder={form.role === 'security' ? 'Scans the app for risks, gaps, and security issues' : 'What does this bot do?'}
               className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none text-foreground" />
           </div>
 
@@ -460,14 +461,14 @@ export default function AILab() {
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Personality / Tone</label>
             <input value={form.personality} onChange={e => setForm(p => ({ ...p, personality: e.target.value }))}
-              placeholder="e.g. Calm, direct, motivating, technical..."
+              placeholder={form.role === 'security' ? 'e.g. Careful, analytical, technical, risk-aware...' : 'e.g. Calm, direct, motivating, technical...'}
               className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none text-foreground" />
           </div>
 
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Core Instructions</label>
             <textarea value={form.instructions} onChange={e => setForm(p => ({ ...p, instructions: e.target.value }))}
-              placeholder="Tell your bot who it is, what it knows, and how it should behave..."
+              placeholder={form.role === 'security' ? 'Tell this bot to scan the app, review flows, find weak points, and explain risks clearly...' : 'Tell your bot who it is, what it knows, and how it should behave...'}
               className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none resize-none min-h-[90px] text-foreground" />
           </div>
 
