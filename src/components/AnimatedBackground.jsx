@@ -269,13 +269,16 @@ export default function AnimatedBackground({ type, opacity: opacityProp }) {
   if (isStill && stillUrl) {
     return (
       <div
-        className="fixed inset-0 pointer-events-none z-0"
+        className="fixed inset-0 pointer-events-none"
         style={{
+          zIndex: 0,
           backgroundImage: `url(${stillUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           opacity: resolvedOpacity,
+          width: '100vw',
+          height: '100vh',
         }}
       />
     );
@@ -284,8 +287,8 @@ export default function AnimatedBackground({ type, opacity: opacityProp }) {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: resolvedOpacity, width: '100%', height: '100%' }}
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: 0, opacity: resolvedOpacity, width: '100vw', height: '100vh' }}
     />
   );
 }

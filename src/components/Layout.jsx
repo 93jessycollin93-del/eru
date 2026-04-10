@@ -12,19 +12,24 @@ import BotWidget from './BotWidget';
 export default function Layout() {
   const themeCtx = useTheme();
   const bg = themeCtx?.bg || 'none';
-  const bgOpacity = themeCtx?.bgOpacity || 0.4;
+  const bgOpacity = themeCtx?.bgOpacity ?? 0.4;
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
+    <>
+      {/* Full-screen background — rendered first, behind everything */}
       <AnimatedBackground type={bg} opacity={bgOpacity} />
-      <CenteredBottomNav onSearchOpen={() => setSearchOpen(true)} />
-      <main className="flex-1 overflow-y-auto">
-        <Outlet />
-      </main>
-      <JackieFloat />
-      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <BotWidget />
-    </div>
+
+      {/* App shell — transparent so background shows through */}
+      <div className="max-w-md mx-auto min-h-screen flex flex-col relative z-10">
+        <CenteredBottomNav onSearchOpen={() => setSearchOpen(true)} />
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
+        <JackieFloat />
+        <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+        <BotWidget />
+      </div>
+    </>
   );
 }
