@@ -1,21 +1,11 @@
-import BotMarketplace from '../components/ailab/BotMarketplace';
-import { Bot } from 'lucide-react';
+import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 
-export default function BotMarketplacePage() {
+export default function BotMarketplace() {
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="px-4 py-4 border-b border-border bg-card/50">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <Bot className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold">Bot Marketplace</h1>
-            <p className="text-xs text-muted-foreground">Discover, install, rate, review, and share AI bot templates and custom flows.</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-background px-4 py-4 md:px-6 md:py-6">
+      <div className="mx-auto max-w-7xl">
+        <BotMarketplaceShell embedded={false} />
       </div>
-      <BotMarketplace />
     </div>
   );
 }

@@ -25,7 +25,6 @@ import TelegramApps from './pages/TelegramApps';
 import TelegramBotManagement from './pages/TelegramBotManagement';
 import JackieAI from './pages/JackieAI';
 import AILab from './pages/AILab';
-import BotMarketplacePage from './pages/BotMarketplace';
 import APIKeys from './pages/APIKeys';
 import SystemBuilder from './pages/SystemBuilder';
 import Pipeline from './pages/Pipeline';
@@ -47,6 +46,7 @@ import RoleManagement from './pages/RoleManagement';
 import BlockchainAnalytics from './pages/BlockchainAnalytics';
 import WalletManager from './pages/WalletManager';
 import TransactionHistory from './pages/TransactionHistory';
+import BotMarketplace from './pages/BotMarketplace';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -95,7 +95,6 @@ const AuthenticatedApp = () => {
         <Route path="/telegram-bots" element={<TelegramBotManagement />} />
         <Route path="/jackie" element={<JackieAI />} />
         <Route path="/ailab" element={<AILab />} />
-        <Route path="/bot-marketplace" element={<BotMarketplacePage />} />
         <Route path="/apikeys" element={<APIKeys />} />
         <Route path="/builder" element={<SystemBuilder />} />
         <Route path="/pipeline" element={<Pipeline />} />
@@ -117,6 +116,7 @@ const AuthenticatedApp = () => {
         <Route path="/blockchain-analytics" element={<BlockchainAnalytics />} />
         <Route path="/wallet-manager" element={<WalletManager />} />
         <Route path="/transactions" element={<TransactionHistory />} />
+        <Route path="/bot-marketplace" element={<BotMarketplace />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

@@ -6,7 +6,7 @@ import MemoryViewer from '../components/ailab/MemoryViewer';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
-import DiscoverMarketplace from '../components/ailab/DiscoverMarketplace';
+import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
 import PinnedCards from '../components/ailab/PinnedCards';
 import SquadBoard from '../components/ailab/SquadBoard';
@@ -421,7 +421,7 @@ export default function AILab() {
       {tab === 'squad' && <SquadBoard bots={bots} />}
 
       {/* DISCOVER */}
-      {tab === 'discover' && <DiscoverMarketplace onInstalled={loadBots} />}
+      {tab === 'discover' && <div className="px-4 py-4"><BotMarketplaceShell onInstalled={loadBots} embedded /></div>}
     </div>
   );
 }
