@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -60,6 +60,8 @@ export default function AILab() {
   const [testInput, setTestInput] = useState('');
   const [testResponse, setTestResponse] = useState('');
   const [testing, setTesting] = useState(false);
+  const [selectedBotIds, setSelectedBotIds] = useState([]);
+  const [bulkAction, setBulkAction] = useState('publish');
 
   useEffect(() => { loadBots(); }, []);
 
@@ -82,6 +84,34 @@ export default function AILab() {
 
   const del = async (id) => {
     await base44.entities.UserBot.delete(id);
+    loadBots();
+  };
+
+  const toggleSelectedBot = (id) => {
+    setSelectedBotIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAllBots = () => {
+    setSelectedBotIds((prev) => prev.length === bots.length ? [] : bots.map((bot) => bot.id));
+  };
+
+  const applyBulkAction = async () => {
+    const selectedBots = bots.filter((bot) => selectedBotIds.includes(bot.id));
+    if (selectedBots.length === 0) return;
+
+    if (bulkAction === 'delete') {
+      await Promise.all(selectedBots.map((bot) => base44.entities.UserBot.delete(bot.id)));
+    } else {
+      const updates = {
+        publish: { is_public: true },
+        unpublish: { is_public: false },
+        activate: { status: 'active' },
+        pause: { status: 'paused' },
+      };
+      await Promise.all(selectedBots.map((bot) => base44.entities.UserBot.update(bot.id, updates[bulkAction])));
+    }
+
+    setSelectedBotIds([]);
     loadBots();
   };
 
@@ -182,6 +212,41 @@ export default function AILab() {
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm">
             <Plus className="w-4 h-4" /> Create New Bot
           </button>
+
+          {bots.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-3 space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <button
+                  onClick={toggleSelectAllBots}
+                  className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground"
+                >
+                  {selectedBotIds.length === bots.length && bots.length > 0 ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+                  {selectedBotIds.length === bots.length && bots.length > 0 ? 'Clear selection' : 'Select all'}
+                </button>
+                <span className="text-[11px] text-muted-foreground">{selectedBotIds.length} selected</span>
+              </div>
+              <div className="flex gap-2 flex-col sm:flex-row">
+                <select
+                  value={bulkAction}
+                  onChange={(e) => setBulkAction(e.target.value)}
+                  className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs outline-none text-foreground"
+                >
+                  <option value="publish">Publish selected</option>
+                  <option value="unpublish">Unpublish selected</option>
+                  <option value="activate">Set active</option>
+                  <option value="pause">Set paused</option>
+                  <option value="delete">Delete selected</option>
+                </select>
+                <button
+                  onClick={applyBulkAction}
+                  disabled={selectedBotIds.length === 0}
+                  className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+                >
+                  Apply bulk action
+                </button>
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
           ) : bots.length === 0 ? (
@@ -195,6 +260,12 @@ export default function AILab() {
             return (
               <div key={bot.id} className="bg-card border border-border rounded-xl p-4">
                 <div className="flex items-start gap-3">
+                  <button
+                    onClick={() => toggleSelectedBot(bot.id)}
+                    className="mt-1 text-muted-foreground hover:text-primary"
+                  >
+                    {selectedBotIds.includes(bot.id) ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+                  </button>
                   <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl flex-shrink-0">
                     {role?.icon || '🤖'}
                   </div>
