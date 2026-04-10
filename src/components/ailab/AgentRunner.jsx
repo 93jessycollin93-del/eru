@@ -8,7 +8,7 @@ const PRESET_TASKS = [
   { id: 'news_digest', label: 'News Digester', interval: 120, description: 'Summarize latest market and crypto news' },
 ];
 
-export default function AgentRunner({ bots }) {
+export default function AgentRunner({ bots, globalPolicy = null }) {
   const [runningAgents, setRunningAgents] = useState({});
   const [logs, setLogs] = useState([]);
   const [selectedTask, setSelectedTask] = useState(PRESET_TASKS[0]);
@@ -43,8 +43,9 @@ export default function AgentRunner({ bots }) {
     if (!bot) return;
     addLog(task.id, `Running: ${task.description}`, 'running');
 
+    const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}\nSafety guardrails: ${globalPolicy.safety_guardrails || 'None'}\nDefault max response length: ${globalPolicy.max_response_length || 1200} characters\n${globalPolicy.require_caution_for_security ? 'Apply extra caution on security-sensitive topics.\n' : ''}${globalPolicy.require_human_review ? 'Advise human review before risky or irreversible actions.\n' : ''}` : '';
     const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are ${bot.name} agent. ${bot.instructions || ''}\n\nAutonomous task: ${task.description}\n\nExecute this task and provide a brief status report (2-3 sentences max). Be direct and factual.`,
+      prompt: `You are ${bot.name} agent. ${bot.instructions || ''}${policyBlock}\n\nAutonomous task: ${task.description}\n\nExecute this task and provide a brief status report (2-3 sentences max). Be direct and factual.`,
     });
 
     addLog(task.id, res, 'success');

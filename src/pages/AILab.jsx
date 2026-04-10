@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -10,6 +10,7 @@ import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
 import PinnedCards from '../components/ailab/PinnedCards';
 import SquadBoard from '../components/ailab/SquadBoard';
+import BotGlobalPolicyPanel from '../components/ailab/BotGlobalPolicyPanel';
 import { base44 } from '@/api/base44Client';
 
 const ROLES = [
@@ -74,8 +75,12 @@ export default function AILab() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  const [globalPolicy, setGlobalPolicy] = useState(null);
 
-  useEffect(() => { loadBots(); }, []);
+  useEffect(() => {
+    loadBots();
+    base44.entities.BotGlobalPolicy.list('-created_date', 1).then((rows) => setGlobalPolicy(rows?.[0] || null)).catch(() => {});
+  }, []);
 
   const loadBots = async () => {
     setLoading(true);
@@ -198,7 +203,8 @@ export default function AILab() {
   const runTest = async () => {
     if (!testInput.trim() || !testBot) return;
     setTesting(true);
-    const prompt = `You are ${testBot.name}. ${testBot.instructions || ''}\nPersonality: ${testBot.personality || 'helpful'}\nResponse style: ${testBot.response_style || 'detailed'}\n\nUser: ${testInput}\n\n${testBot.name}:`;
+    const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}\nSafety guardrails: ${globalPolicy.safety_guardrails || 'None'}\nDefault max response length: ${globalPolicy.max_response_length || 1200} characters\n${globalPolicy.require_caution_for_security ? 'Apply extra caution on security-sensitive topics.\n' : ''}${globalPolicy.require_human_review ? 'Advise human review before risky or irreversible actions.\n' : ''}` : '';
+    const prompt = `You are ${testBot.name}. ${testBot.instructions || ''}\nPersonality: ${testBot.personality || 'helpful'}\nResponse style: ${testBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testInput}\n\n${testBot.name}:`;
     const res = await base44.integrations.Core.InvokeLLM({ prompt });
     setTestResponse(res);
     await awardXP(testBot, 10);
@@ -217,6 +223,7 @@ export default function AILab() {
     { id: 'dashboard', label: 'Stats', icon: LayoutDashboard },
     { id: 'pinned', label: 'Cards', icon: Pin },
     { id: 'squad', label: 'Squad', icon: Network },
+    { id: 'policy', label: 'Policy', icon: ShieldCheck },
     { id: 'discover', label: 'Discover', icon: Sparkles },
   ];
 
@@ -560,6 +567,13 @@ export default function AILab() {
             </div>
           )}
 
+          {globalPolicy?.is_active && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <p className="text-xs font-semibold text-primary">Global policy active</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">This bot will automatically inherit shared instructions and safety guardrails from the Policy tab.</p>
+            </div>
+          )}
+
           <button onClick={save} disabled={!form.name}
             className="w-full bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm disabled:opacity-40">
             {editId ? 'Save Changes' : 'Create Bot'}
@@ -601,7 +615,7 @@ export default function AILab() {
       {tab === 'factory' && <BotFactory onSaveBot={loadBots} />}
 
       {/* AGENTS */}
-      {tab === 'agents' && <AgentRunner bots={bots} />}
+      {tab === 'agents' && <AgentRunner bots={bots} globalPolicy={globalPolicy} />}
 
       {/* MEMORY */}
       {tab === 'memory' && <MemoryViewer bots={bots} />}
@@ -623,6 +637,9 @@ export default function AILab() {
 
       {/* SQUAD */}
       {tab === 'squad' && <SquadBoard bots={bots} />}
+
+      {/* POLICY */}
+      {tab === 'policy' && <BotGlobalPolicyPanel />}
 
       {/* DISCOVER */}
       {tab === 'discover' && <div className="px-4 py-4"><BotMarketplaceShell onInstalled={loadBots} embedded /></div>}
