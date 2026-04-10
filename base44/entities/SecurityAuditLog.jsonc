@@ -1,0 +1,76 @@
+{
+  "name": "SecurityAuditLog",
+  "type": "object",
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "login",
+        "logout",
+        "login_failed",
+        "payment_attempt",
+        "data_export",
+        "data_deleted",
+        "admin_action",
+        "access_denied",
+        "session_expired",
+        "password_changed"
+      ],
+      "description": "Type of security event"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of user involved"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP address of request"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User agent string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "blocked"
+      ],
+      "description": "Result of the event"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "default": "info"
+    },
+    "details": {
+      "type": "object",
+      "description": "Additional event details"
+    },
+    "immutable": {
+      "type": "boolean",
+      "default": true,
+      "description": "This log is immutable"
+    }
+  },
+  "required": [
+    "event_type",
+    "user_email",
+    "status"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {},
+    "delete": {}
+  }
+}

@@ -38,6 +38,9 @@ import AdminEconomyDashboard from './pages/AdminEconomyDashboard';
 import PerformanceDashboard from './pages/PerformanceDashboard';
 import ActivityAuditLog from './pages/ActivityAuditLog';
 import BotAutomations from './pages/BotAutomations';
+import ComplianceCenter from './pages/ComplianceCenter';
+import SecurityDashboard from './pages/SecurityDashboard';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -99,6 +102,9 @@ const AuthenticatedApp = () => {
         <Route path="/performance" element={<PerformanceDashboard />} />
         <Route path="/audit" element={<ActivityAuditLog />} />
         <Route path="/bot-automations" element={<BotAutomations />} />
+        <Route path="/compliance" element={<ComplianceCenter />} />
+        <Route path="/security-dashboard" element={<SecurityDashboard />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

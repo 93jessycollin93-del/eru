@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
@@ -128,6 +128,47 @@ export const AuthProvider = ({ children }) => {
     base44.auth.redirectToLogin(window.location.href);
   };
 
+  // Session timeout: 30 minutes of inactivity
+  const sessionTimeoutRef = useRef(null);
+  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+  const resetSessionTimeout = useCallback(() => {
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
+    }
+
+    if (!isAuthenticated) return;
+
+    sessionTimeoutRef.current = setTimeout(() => {
+      logout(false);
+      console.log('Session expired due to inactivity');
+    }, SESSION_TIMEOUT);
+  }, [isAuthenticated]);
+
+  // Reset timeout on user activity
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleActivity = () => {
+      resetSessionTimeout();
+    };
+
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+
+    resetSessionTimeout();
+
+    return () => {
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
+    };
+  }, [isAuthenticated, resetSessionTimeout]);
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -138,7 +179,8 @@ export const AuthProvider = ({ children }) => {
       appPublicSettings,
       logout,
       navigateToLogin,
-      checkAppState
+      checkAppState,
+      currentUser: user
     }}>
       {children}
     </AuthContext.Provider>

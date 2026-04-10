@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import BiometricAuth from '../components/BiometricAuth';
 import { useAuth } from '@/lib/AuthContext';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2 } from 'lucide-react';
+import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale } from 'lucide-react';
 import SoundSettings from '../components/SoundSettings';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
@@ -170,6 +170,11 @@ export default function Settings() {
             <span className="flex-1 text-sm">Performance Monitor</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
+          <Link to="/compliance" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
+            <Scale className="w-4 h-4 text-muted-foreground" />
+            <span className="flex-1 text-sm">Compliance & Privacy</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
         </div>
 
         {/* Sound & Haptics */}
@@ -198,11 +203,18 @@ export default function Settings() {
         </div>
 
         {currentUser?.role === 'admin' && (
-          <Link to="/admin/blockchain"
-            className="w-full mt-4 flex items-center gap-2 px-4 py-3 text-primary text-sm font-medium border border-primary/20 bg-primary/5 rounded-xl">
-            <Blocks className="w-4 h-4" /> Blockchain Admin Panel
-            <ChevronRight className="w-4 h-4 ml-auto" />
-          </Link>
+          <div className="space-y-2 mt-4">
+            <Link to="/admin/blockchain"
+              className="w-full flex items-center gap-2 px-4 py-3 text-primary text-sm font-medium border border-primary/20 bg-primary/5 rounded-xl">
+              <Blocks className="w-4 h-4" /> Blockchain Admin Panel
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            </Link>
+            <Link to="/security-dashboard"
+              className="w-full flex items-center gap-2 px-4 py-3 text-orange-500 text-sm font-medium border border-orange-500/20 bg-orange-500/5 rounded-xl">
+              <Activity className="w-4 h-4" /> Security Audit Log
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            </Link>
+          </div>
         )}
         <button className="w-full mt-3 py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
           Sign Out
