@@ -14,17 +14,26 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const payload = await req.json();
-    const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
+    const url = new URL(req.url);
+    const botId = url.searchParams.get('botId');
 
     const incomingMessage = payload.message || payload.edited_message;
     if (!incomingMessage?.chat?.id) {
       return Response.json({ success: true, ignored: true });
     }
 
-    const bots = await base44.asServiceRole.entities.TelegramBot.list('-created_date', 1);
-    const bot = bots?.[0];
+    if (!botId) {
+      return Response.json({ success: false, error: 'Missing botId' }, { status: 400 });
+    }
+
+    const bot = await base44.asServiceRole.entities.TelegramBot.get(botId);
     if (!bot) {
       return Response.json({ success: false, error: 'No Telegram bot configured' }, { status: 404 });
+    }
+
+    const token = bot.bot_token || Deno.env.get('TELEGRAM_BOT_TOKEN');
+    if (!token) {
+      return Response.json({ success: false, error: 'Missing bot token' }, { status: 400 });
     }
 
     const chatId = String(incomingMessage.chat.id);

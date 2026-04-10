@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Telegram bot username without @"
     },
+    "bot_token": {
+      "type": "string",
+      "description": "Telegram bot token entered for this bot"
+    },
     "token_label": {
       "type": "string",
       "description": "Reference label for the configured bot token"
@@ -35,6 +39,33 @@
     "greeting_message": {
       "type": "string",
       "description": "Welcome message for /start"
+    },
+    "flow_blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
     },
     "commands": {
       "type": "array",
