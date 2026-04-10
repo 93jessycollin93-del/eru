@@ -233,6 +233,8 @@ export default function JackieAI() {
     setInput(workingContext ? cmd + ' this:\n' + workingContext.slice(0, 2000) : cmd + ' the last output');
   };
 
+  const BUILT_IN_PROGRAMMING_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, debugging, refactoring, language comparison, and systems design.";
+
   const buildFoundryPreview = (message) => {
     const lower = message.toLowerCase();
     const wantsBot = /bot|agent|assistant/.test(lower);
@@ -246,7 +248,7 @@ export default function JackieAI() {
       role: /security|scan|analy[sz]e\s+the\s+app|audit/.test(lower) ? 'security' : /trader/.test(lower) ? 'trader' : /social/.test(lower) ? 'social' : /game/.test(lower) ? 'game_helper' : 'assistant',
       response_style: /short/.test(lower) ? 'short' : /creative/.test(lower) ? 'creative' : /strategic/.test(lower) ? 'strategic' : 'detailed',
       description: message.slice(0, 140),
-      instructions: `Created from Jackie request: ${message}`,
+      instructions: `${BUILT_IN_PROGRAMMING_PROMPT}\n\nCreated from Jackie request: ${message}`,
       memory_enabled: true,
       is_public: /public/.test(lower),
       status: 'active',

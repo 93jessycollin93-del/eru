@@ -48,7 +48,7 @@ const PAGE_OPTIONS = [
   { route: '/thinkers', label: 'Thinkers Club' },
 ];
 
-const PROGRAMMING_MEMORY_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default when teaching, comparing, coding, debugging, or designing systems.";
+const PROGRAMMING_MEMORY_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, teaching, comparing languages, debugging, refactoring, architecture decisions, and multi-step technical problem solving. When a request involves software or systems work, proactively apply this knowledge instead of waiting to be asked.";
 
 const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '' };
 
@@ -208,7 +208,7 @@ export default function AILab() {
     if (!testInput.trim() || !testBot) return;
     setTesting(true);
     const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}\nSafety guardrails: ${globalPolicy.safety_guardrails || 'None'}\nDefault max response length: ${globalPolicy.max_response_length || 1200} characters\n${globalPolicy.require_caution_for_security ? 'Apply extra caution on security-sensitive topics.\n' : ''}${globalPolicy.require_human_review ? 'Advise human review before risky or irreversible actions.\n' : ''}` : '';
-    const prompt = `You are ${testBot.name}. ${testBot.instructions || ''}\nPersonality: ${testBot.personality || 'helpful'}\nResponse style: ${testBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testInput}\n\n${testBot.name}:`;
+    const prompt = `You are ${testBot.name}. ${PROGRAMMING_MEMORY_PROMPT}\n${testBot.instructions || ''}\nPersonality: ${testBot.personality || 'helpful'}\nResponse style: ${testBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testInput}\n\n${testBot.name}:`;
     const res = await base44.integrations.Core.InvokeLLM({ prompt });
     setTestResponse(res);
     await awardXP(testBot, 10);

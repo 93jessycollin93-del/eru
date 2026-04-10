@@ -25,7 +25,7 @@ export default function ProgrammingMemoryPanel() {
           <BrainCircuit className="w-4 h-4 text-primary" />
           <p className="text-sm font-semibold">Programming Memory Core</p>
         </div>
-        <p className="text-xs text-muted-foreground">Jackie now carries a permanent coding memory pack with a master knowledge layer plus per-language references for fast recall across chat, AI Lab, and bots.</p>
+        <p className="text-xs text-muted-foreground">Jackie now carries a permanent coding memory pack with a master knowledge layer plus per-language references for fast recall and active use across chat, AI Lab, and all bots for coding and complex technical work.</p>
       </div>
 
       <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
