@@ -10,6 +10,8 @@ import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
 import AnalyticsWidget from '../components/dashboard/AnalyticsWidget';
 import AlertManager from '../components/AlertManager';
 import ExportButton from '../components/dashboard/ExportButton';
+import NotificationCenter from '../components/notifications/NotificationCenter';
+import TelegramFirstBanner from '../components/telegram/TelegramFirstBanner';
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
 export default function Dashboard() {
@@ -35,7 +37,9 @@ export default function Dashboard() {
       <PortfolioSummary />
       <QuickActions />
       <div className="px-4 mt-4 space-y-4 pb-4">
+        <TelegramFirstBanner />
         <AppDock />
+        <NotificationCenter />
         <AlertManager />
         <AnalyticsWidget />
         <ScreenVisualizer />

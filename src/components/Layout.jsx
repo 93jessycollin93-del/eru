@@ -41,7 +41,10 @@ export default function Layout() {
       <AnimatedBackground type={bg} opacity={bgOpacity} />
 
       {/* App shell — transparent so background shows through */}
-      <div className="max-w-md mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
+      <div className="max-w-md mx-auto flex flex-col relative z-10 w-full" style={{ minHeight: '100dvh' }}>
+        <div className="sticky top-0 z-30 backdrop-blur-sm bg-background/80 border-b border-border px-4 py-2 text-[11px] text-muted-foreground text-center">
+          Telegram-first commercial build • mobile-optimized shell
+        </div>
         <CenteredBottomNav onSearchOpen={() => setSearchOpen(true)} />
         <main className="flex-1 overflow-y-auto">
           <Outlet />

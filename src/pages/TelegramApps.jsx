@@ -112,7 +112,7 @@ export default function TelegramApps() {
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <span className="text-xl">✈️</span> Telegram Hub
         </h2>
-        <p className="text-xs text-muted-foreground">Integration & mini app store</p>
+        <p className="text-xs text-muted-foreground">Integration, mini app store, and Telegram-first deployment hub</p>
       </div>
 
       {/* Tabs */}
@@ -127,7 +127,16 @@ export default function TelegramApps() {
 
       {/* INTEGRATION TAB */}
       {tab === 'integration' && (
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 space-y-4">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+            <p className="text-sm font-semibold mb-1">Commercial deployment readiness</p>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li>• Telegram-first mobile web app layout enabled</li>
+              <li>• In-app notification center ready for tasks and projects</li>
+              <li>• Email alerts supported for task and project events</li>
+              <li>• Suitable baseline for iOS, Android, and Telegram environments</li>
+            </ul>
+          </div>
           <TelegramSettings />
         </div>
       )}

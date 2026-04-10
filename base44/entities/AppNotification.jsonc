@@ -1,0 +1,98 @@
+{
+  "name": "AppNotification",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Recipient email"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "task_due_soon",
+        "project_status_changed",
+        "task_assigned"
+      ],
+      "description": "Notification type"
+    },
+    "title": {
+      "type": "string",
+      "description": "Notification title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Notification message"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "Task",
+        "Project"
+      ],
+      "description": "Related entity type"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "Related entity id"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Read state"
+    },
+    "email_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether email was sent"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extra notification data"
+    }
+  },
+  "required": [
+    "user_email",
+    "type",
+    "title",
+    "message"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

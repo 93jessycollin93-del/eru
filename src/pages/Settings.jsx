@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import BiometricAuth from '../components/BiometricAuth';
 import { useAuth } from '@/lib/AuthContext';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale } from 'lucide-react';
+import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send } from 'lucide-react';
 import SoundSettings from '../components/SoundSettings';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
@@ -173,6 +173,11 @@ export default function Settings() {
           <Link to="/compliance" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
             <Scale className="w-4 h-4 text-muted-foreground" />
             <span className="flex-1 text-sm">Compliance & Privacy</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+          <Link to="/tgapps" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
+            <Send className="w-4 h-4 text-muted-foreground" />
+            <span className="flex-1 text-sm">Telegram Deployment Hub</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
         </div>
