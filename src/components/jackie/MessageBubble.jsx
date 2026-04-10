@@ -99,7 +99,7 @@ export default function MessageBubble({ message, onSave, onRefine, onInject }) {
                   {busy && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
                 </div>
                 {showEditBar && (
-                  <AIEditBar instruction={instruction} onInstructionChange={setInstruction} onAction={handleAIEdit} busy={busy} />
+                  <AIEditBar instruction={instruction} onInstructionChange={setInstruction} onAction={handleAIEdit} busy={busy} compact />
                 )}
                 {(editedCode || extractedCode) && <CodePreviewPanel code={editedCode || extractedCode} />}
                 {editedCode && <CodeDiffPanel originalCode={extractedCode} updatedCode={editedCode} />}
