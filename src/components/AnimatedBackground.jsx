@@ -6,11 +6,16 @@ const ENGINES = {
   matrix: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    // Clear to solid bg first to prevent ghosting on remount
+    ctx.fillStyle = 'rgba(10,12,20,1)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     const cols = Math.floor(canvas.width / 16 * Math.min(density, 2));
     const drops = Array(cols).fill(1);
     let frame = 0;
     let raf;
+    let cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 3 === 0) {
         ctx.fillStyle = 'rgba(10,12,20,0.05)';
@@ -27,7 +32,11 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
   },
 
   neural_mesh: (canvas, density = 1) => {
@@ -205,44 +214,6 @@ const ENGINES = {
     return () => cancelAnimationFrame(raf);
   },
 
-  sacred_geometry: (canvas) => {
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-    const cx = canvas.width / 2, cy = canvas.height / 2;
-    let t = 0, frame = 0, raf;
-    const drawPoly = (x, y, r, sides, rot, alpha) => {
-      ctx.beginPath();
-      for (let i = 0; i <= sides; i++) {
-        const a = (i / sides) * Math.PI * 2 + rot;
-        i === 0 ? ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r)
-                : ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
-      }
-      ctx.strokeStyle = `rgba(200,180,100,${alpha})`; ctx.lineWidth = 0.5; ctx.stroke();
-    };
-    const draw = () => {
-      frame++;
-      if (frame % 3 === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        t += 0.005;
-        [3,4,5,6,7,8].forEach((sides, i) => {
-          drawPoly(cx, cy, 30 + i * 22, sides, t * (i % 2 === 0 ? 1 : -1), 0.25 - i * 0.02);
-        });
-        for (let ring = 0; ring < 3; ring++) {
-          for (let a = 0; a < 6; a++) {
-            const angle = (a / 6) * Math.PI * 2 + t * 0.2;
-            const r = ring * 35;
-            const x = cx + Math.cos(angle) * r, y = cy + Math.sin(angle) * r;
-            ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(180,160,80,${0.08 - ring * 0.02})`; ctx.stroke();
-          }
-        }
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  },
-
   crystal_lattice: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
@@ -270,32 +241,6 @@ const ENGINES = {
             ctx.fillStyle = 'rgba(150,230,255,0.6)'; ctx.fill();
           }
         }));
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  },
-
-  jade_void_bg: (canvas) => {
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-    const cx = canvas.width / 2, cy = canvas.height / 2;
-    let t = 0, frame = 0, raf;
-    const draw = () => {
-      frame++;
-      if (frame % 3 === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        t += 0.006;
-        for (let i = 0; i < 6; i++) {
-          const r = 40 + i * 30 + Math.sin(t + i) * 10;
-          const x = cx + Math.cos(t * 0.3 + i * 1.05) * 60;
-          const y = cy + Math.sin(t * 0.2 + i * 0.9) * 40;
-          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-          g.addColorStop(0, `rgba(0,200,100,${0.06 + Math.sin(t + i) * 0.02})`);
-          g.addColorStop(1, 'transparent');
-          ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
       }
       raf = requestAnimationFrame(draw);
     };

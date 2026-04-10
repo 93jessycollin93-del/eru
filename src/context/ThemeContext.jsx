@@ -15,9 +15,7 @@ export const BG_ENVS = {
   // Energy
   fire:            { label: 'Embers',         cat: 'energy'   },
   // Mythic
-  sacred_geometry: { label: 'Sacred Geometry',cat: 'mythic'   },
   crystal_lattice: { label: 'Crystal Lattice',cat: 'mythic'   },
-  jade_void_bg:    { label: 'Jade Void',      cat: 'mythic'   },
 };
 
 // ─── MOTION PRESETS ──────────────────────────────────────────────────────────
