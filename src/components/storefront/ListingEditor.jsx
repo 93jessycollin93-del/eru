@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ImagePlus, Video, Save } from 'lucide-react';
 import CurrencyConverter from './CurrencyConverter';
+import ListingAIAssistant from './ListingAIAssistant';
 
 const DEFAULT_FORM = {
   title: '',
@@ -28,6 +29,9 @@ export default function ListingEditor({ initialValue = {}, onSave, submitLabel =
     setField('media_urls', next);
   };
   const addMedia = () => setField('media_urls', [...form.media_urls, '']);
+  const applyAICopy = (values) => {
+    setForm((prev) => ({ ...prev, ...values }));
+  };
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -45,6 +49,7 @@ export default function ListingEditor({ initialValue = {}, onSave, submitLabel =
 
   return (
     <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+      <ListingAIAssistant form={form} onApply={applyAICopy} />
       <input value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="Listing title" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
       <textarea value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Description for buyers" className="w-full min-h-[90px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
 
