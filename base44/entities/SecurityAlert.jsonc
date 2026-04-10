@@ -1,0 +1,95 @@
+{
+  "name": "SecurityAlert",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User email"
+    },
+    "wallet_id": {
+      "type": "string",
+      "description": "Related ConnectedWallet ID"
+    },
+    "wallet_address": {
+      "type": "string",
+      "description": "Wallet address"
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "unusual_balance_change",
+        "unexpected_transaction",
+        "failed_connection",
+        "new_chain_detected",
+        "excessive_sync_requests",
+        "possible_compromised"
+      ],
+      "description": "Type of security alert"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium",
+      "description": "Alert severity level"
+    },
+    "title": {
+      "type": "string",
+      "description": "Alert title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional data (balance change %, timestamp, etc)"
+    },
+    "is_resolved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether user has reviewed/dismissed"
+    },
+    "resolved_at": {
+      "type": "string",
+      "description": "ISO timestamp when resolved"
+    },
+    "requires_action": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether user action required"
+    }
+  },
+  "required": [
+    "user_email",
+    "alert_type",
+    "title"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

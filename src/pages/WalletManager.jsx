@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 import WalletConnector from '@/components/WalletConnector';
-import { Wallet, Trash2, RefreshCw, TrendingUp } from 'lucide-react';
+import MFAVerification from '@/components/MFAVerification';
+import { Wallet, Trash2, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
 
 export default function WalletManager() {
   const { currentUser } = useAuth();
   const [wallets, setWallets] = useState([]);
   const [holdings, setHoldings] = useState({});
+  const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(null);
+  const [mfaRequired, setMfaRequired] = useState(null);
+  const [mfaPendingAction, setMfaPendingAction] = useState(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -36,6 +40,14 @@ export default function WalletManager() {
         );
         setHoldings((prev) => ({ ...prev, [wallet.id]: h || [] }));
       }
+
+      // Fetch security alerts
+      const a = await base44.entities.SecurityAlert.filter(
+        { user_email: currentUser.email, is_resolved: false },
+        '-created_date',
+        100
+      );
+      setAlerts(a || []);
     } catch (err) {
       console.error('Error fetching wallets:', err);
     } finally {
@@ -63,6 +75,12 @@ export default function WalletManager() {
         walletId,
       });
 
+      // Detect suspicious activity
+      await base44.functions.invoke('detectWalletSuspiciousActivity', {
+        walletId,
+        userEmail: currentUser.email,
+      });
+
       await fetchWallets();
     } catch (err) {
       alert('Sync failed: ' + err.message);
@@ -71,13 +89,34 @@ export default function WalletManager() {
     }
   };
 
-  const disconnectWallet = async (walletId) => {
-    if (!confirm('Disconnect this wallet?')) return;
+  const initiateDisconnect = (walletId) => {
+    setMfaPendingAction({ action: 'disconnect', walletId });
+    setMfaRequired(true);
+  };
+
+  const handleMFAVerify = async (code) => {
+    if (!mfaPendingAction) return;
+
     try {
-      await base44.entities.ConnectedWallet.delete(walletId);
-      setWallets(wallets.filter((w) => w.id !== walletId));
+      if (mfaPendingAction.action === 'disconnect') {
+        await base44.entities.ConnectedWallet.delete(mfaPendingAction.walletId);
+        setWallets(wallets.filter((w) => w.id !== mfaPendingAction.walletId));
+      } else if (mfaPendingAction.action === 'setPrimary') {
+        // Update primary wallet
+        const updated = await base44.entities.ConnectedWallet.update(
+          mfaPendingAction.walletId,
+          { is_primary: true }
+        );
+        setWallets(wallets.map((w) => ({
+          ...w,
+          is_primary: w.id === mfaPendingAction.walletId,
+        })));
+      }
+
+      setMfaRequired(false);
+      setMfaPendingAction(null);
     } catch (err) {
-      alert('Error: ' + err.message);
+      alert('Action failed: ' + err.message);
     }
   };
 
@@ -92,6 +131,29 @@ export default function WalletManager() {
       </div>
 
       <div className="flex-1 px-4 py-4 space-y-4 overflow-y-auto">
+        {/* Security Alerts */}
+        {alerts.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-yellow-500" /> Security Alerts ({alerts.length})
+            </h3>
+            {alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`rounded-lg p-3 space-y-1 border ${
+                  alert.severity === 'critical'
+                    ? 'bg-red-500/10 border-red-500/30'
+                    : alert.severity === 'high'
+                      ? 'bg-orange-500/10 border-orange-500/30'
+                      : 'bg-yellow-500/10 border-yellow-500/30'
+                }`}>
+                <p className="text-xs font-semibold text-foreground">{alert.title}</p>
+                <p className="text-xs text-muted-foreground">{alert.description}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Connect Section */}
         <div className="bg-card border border-border rounded-xl p-4">
           <h3 className="font-semibold text-sm mb-3">Add Wallet</h3>
@@ -162,7 +224,7 @@ export default function WalletManager() {
                       )}
                     </button>
                     <button
-                      onClick={() => disconnectWallet(wallet.id)}
+                      onClick={() => initiateDisconnect(wallet.id)}
                       className="flex-1 flex items-center justify-center gap-1 py-2 bg-red-500/10 text-red-600 rounded-lg text-xs font-medium hover:opacity-80 transition-opacity">
                       <Trash2 className="w-3 h-3" /> Disconnect
                     </button>
@@ -182,6 +244,15 @@ export default function WalletManager() {
           </div>
         </div>
       </div>
+
+      {/* MFA Modal */}
+      {mfaRequired && (
+        <MFAVerification
+          onVerify={handleMFAVerify}
+          onCancel={() => setMfaRequired(false)}
+          action={mfaPendingAction?.action === 'disconnect' ? 'Disconnect Wallet' : 'Set Primary'}
+        />
+      )}
     </div>
   );
 }
