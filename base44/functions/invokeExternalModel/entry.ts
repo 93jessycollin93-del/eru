@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 async function callOpenAI(prompt, model) {
+  const safeModel = !model || model === 'automatic' || model === 'gpt-5-mini' ? 'gpt-4o-mini' : model;
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -8,15 +9,16 @@ async function callOpenAI(prompt, model) {
       'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
     },
     body: JSON.stringify({
-      model: model || 'gpt-4o-mini',
+      model: safeModel,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  return data.choices?.[0]?.message?.content || data.error?.message || '';
 }
 
 async function callAnthropic(prompt, model) {
+  const safeModel = !model || model === 'automatic' ? 'claude-3-5-sonnet' : model;
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -25,17 +27,18 @@ async function callAnthropic(prompt, model) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: model || 'claude-3-5-sonnet',
+      model: safeModel,
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
   const data = await response.json();
-  return data.content?.[0]?.text || '';
+  return data.content?.[0]?.text || data.error?.message || '';
 }
 
 async function callHuggingFace(prompt, model, token) {
-  const response = await fetch(`https://api-inference.huggingface.co/models/${model || 'mistralai/Mistral-7B-Instruct-v0.3'}`, {
+  const safeModel = !model || model === 'automatic' ? 'mistralai/Mistral-7B-Instruct-v0.3' : model;
+  const response = await fetch(`https://api-inference.huggingface.co/models/${safeModel}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -86,7 +89,8 @@ Deno.serve(async (req) => {
       return Response.json({ output });
     }
 
-    const output = await base44.integrations.Core.InvokeLLM({ prompt, model: model === 'automatic' ? undefined : model });
+    const safeModel = !model || model === 'automatic' ? undefined : model;
+    const output = await base44.integrations.Core.InvokeLLM({ prompt, model: safeModel });
     return Response.json({ output });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

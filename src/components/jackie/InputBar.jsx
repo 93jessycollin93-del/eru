@@ -48,8 +48,11 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setUploadingFiles(prev => prev.filter(f => f.id !== tempId));
     const attachment = { name: file.name, url: file_url, type: file.type };
-    setAttachments(prev => [...prev, attachment]);
-    onFilesReady([...attachments, attachment]);
+    setAttachments(prev => {
+      const next = [...prev, attachment];
+      onFilesReady(next);
+      return next;
+    });
   };
 
   const handleFiles = (files) => {
@@ -69,8 +72,10 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
   };
 
   const handleSend = () => {
+    if (uploadingFiles.length > 0) return;
     onSend(attachments);
     setAttachments([]);
+    onFilesReady([]);
   };
 
   return (
@@ -159,7 +164,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
               className={`p-2 rounded-xl border transition-all ${listening ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse' : 'bg-secondary border-border text-muted-foreground hover:text-primary'}`}>
               {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
-            <button onClick={handleSend} disabled={(!input?.trim() && attachments.length === 0) || loading}
+            <button onClick={handleSend} disabled={(!input?.trim() && attachments.length === 0) || loading || uploadingFiles.length > 0}
               className="bg-primary text-primary-foreground rounded-xl p-2 disabled:opacity-40 transition-opacity">
               <Send className="w-4 h-4" />
             </button>

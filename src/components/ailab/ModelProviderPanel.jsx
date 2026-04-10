@@ -3,6 +3,7 @@ import { Link2, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const HUGGING_FACE_CONNECTOR_ID = '69d912f9261810057ced4675';
+const HUGGING_FACE_DEFAULT_MODEL = 'mistralai/Mistral-7B-Instruct-v0.3';
 
 const PROVIDERS = [
   { value: 'base44', label: 'Base44 AI', models: ['automatic'] },
@@ -17,7 +18,7 @@ export default function ModelProviderPanel({ value, onChange }) {
 
   const checkConnection = async () => {
     try {
-      await base44.functions.invoke('invokeExternalModel', { provider: 'huggingface_user', model: 'mistralai/Mistral-7B-Instruct-v0.3', prompt: 'Hello' });
+      await base44.functions.invoke('invokeExternalModel', { provider: 'huggingface_user', model: HUGGING_FACE_DEFAULT_MODEL, prompt: 'Hello' });
       setAuthed(true);
     } catch {
       setAuthed(false);

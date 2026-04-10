@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Bot, Send, ChevronDown, Zap, Globe, GripVertical } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-const ROLE_ICONS = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚡' };
+const ROLE_ICONS = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚡' };
 
 export default function BotWidget({ prefs, updateWidget }) {
   const { pathname } = useLocation();
@@ -23,19 +23,19 @@ export default function BotWidget({ prefs, updateWidget }) {
     const fetchBot = async () => {
       const allBots = await base44.entities.UserBot.list('-created_date', 100);
       const assigned = allBots.find(b => b.status === 'active' && (b.page_assignments || []).includes(pathname));
-      if (!assigned) { setBot(null); return; }
+      if (!assigned) {
+        setBot(null);
+        setConnectedBots([]);
+        setMessages([]);
+        return;
+      }
       setBot(assigned);
       setMessages([{ role: 'bot', text: `Hi! I'm ${assigned.name}. ${assigned.description || 'How can I help?'}` }]);
-      // Load connected bots
       const cids = assigned.connected_bot_ids || [];
-      if (cids.length > 0) {
-        const connected = allBots.filter(b => cids.includes(b.id));
-        setConnectedBots(connected);
-      }
+      setConnectedBots(cids.length > 0 ? allBots.filter(b => cids.includes(b.id)) : []);
     };
-    fetchBot();
     setOpen(false);
-    setMessages([]);
+    fetchBot();
   }, [pathname]);
 
   useEffect(() => {
