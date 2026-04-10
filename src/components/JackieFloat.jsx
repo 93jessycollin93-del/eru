@@ -1,63 +1,82 @@
-import { useState } from 'react';
-import { Bot, Cpu } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Bot, Cpu, GripVertical } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-export default function JackieFloat() {
+export default function JackieFloat({ prefs, updateWidget }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [pos, setPos] = useState({ x: 16, y: 100 });
-  const [dragging, setDragging] = useState(false);
+  const [draggingId, setDraggingId] = useState(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
-  if (pathname === '/jackie') return null;
+  const jackiePrefs = prefs?.jackie;
+  const marketPrefs = prefs?.botMarket;
 
-  const handleMouseDown = (e) => {
-    setDragging(true);
+  const widgets = useMemo(() => ([
+    {
+      id: 'jackie',
+      hidden: pathname === '/jackie' || !jackiePrefs?.visible,
+      x: jackiePrefs?.x ?? 16,
+      y: jackiePrefs?.y ?? 100,
+      title: 'Open Jackie',
+      icon: Bot,
+      className: 'bg-primary glow-green border-primary',
+      iconClass: 'text-primary-foreground',
+      onClick: () => navigate('/jackie'),
+    },
+    {
+      id: 'botMarket',
+      hidden: pathname === '/bot-marketplace' || !marketPrefs?.visible,
+      x: marketPrefs?.x ?? 16,
+      y: marketPrefs?.y ?? 156,
+      title: 'Open Bot Marketplace',
+      icon: Cpu,
+      className: 'bg-card border-primary/30',
+      iconClass: 'text-primary',
+      onClick: () => navigate('/bot-marketplace'),
+    },
+  ]), [pathname, jackiePrefs, marketPrefs, navigate]);
+
+  const handleMouseDown = (id) => (e) => {
+    setDraggingId(id);
     const rect = e.currentTarget.getBoundingClientRect();
-    setOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
+    setOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  const handleMouseMove = (e) => {
-    if (!dragging) return;
-    const newX = Math.max(0, Math.min(e.clientX - offset.x, window.innerWidth - 48));
-    const newY = Math.max(0, Math.min(e.clientY - offset.y, window.innerHeight - 48));
-    setPos({ x: newX, y: newY });
+  const handleMouseMove = (id) => (e) => {
+    if (draggingId !== id) return;
+    const newX = Math.max(0, Math.min(e.clientX - offset.x, window.innerWidth - 56));
+    const newY = Math.max(0, Math.min(e.clientY - offset.y, window.innerHeight - 56));
+    updateWidget(id, { x: newX, y: newY });
   };
 
   const handleMouseUp = () => {
-    setDragging(false);
+    setDraggingId(null);
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        left: `${pos.x}px`,
-        top: `${pos.y}px`,
-      }}
-      className="z-50 flex flex-col gap-2"
-    >
-      <button
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onClick={() => !dragging && navigate('/jackie')}
-        className="w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center glow-green transition-transform hover:scale-110 active:scale-95 cursor-move"
-        title="Drag to move · Click to open Jackie"
-      >
-        <Bot className="w-5 h-5 text-primary-foreground pointer-events-none" />
-      </button>
-      <button
-        onClick={() => navigate('/bot-marketplace')}
-        className="w-12 h-12 rounded-full bg-card border border-primary/30 shadow-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
-        title="Open Bot Marketplace"
-      >
-        <Cpu className="w-5 h-5 text-primary pointer-events-none" />
-      </button>
-    </div>
+    <>
+      {widgets.filter((widget) => !widget.hidden).map(({ id, x, y, icon: Icon, title, className, iconClass, onClick }) => (
+        <div
+          key={id}
+          style={{ position: 'fixed', left: `${x}px`, top: `${y}px` }}
+          className="z-50"
+        >
+          <button
+            onMouseDown={handleMouseDown(id)}
+            onMouseMove={handleMouseMove(id)}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onClick={() => draggingId !== id && onClick()}
+            className={`group relative w-12 h-12 rounded-full border shadow-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-move ${className}`}
+            title={title}
+          >
+            <Icon className={`w-5 h-5 pointer-events-none ${iconClass}`} />
+            <span className="absolute -right-1 -top-1 w-4 h-4 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <GripVertical className="w-2.5 h-2.5 text-muted-foreground" />
+            </span>
+          </button>
+        </div>
+      ))}
+    </>
   );
 }

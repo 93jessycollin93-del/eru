@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bot, Send, ChevronDown, Zap, Globe } from 'lucide-react';
+import { Bot, Send, ChevronDown, Zap, Globe, GripVertical } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const ROLE_ICONS = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚡' };
 
-export default function BotWidget() {
+export default function BotWidget({ prefs, updateWidget }) {
   const { pathname } = useLocation();
   const [bot, setBot] = useState(null);
   const [connectedBots, setConnectedBots] = useState([]);
@@ -15,6 +15,8 @@ export default function BotWidget() {
   const [loading, setLoading] = useState(false);
   const [consulting, setConsulting] = useState(null);
   const [webSearch, setWebSearch] = useState(false); // which connected bot is being consulted
+  const [dragging, setDragging] = useState(false);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -88,15 +90,39 @@ export default function BotWidget() {
     setLoading(false);
   };
 
-  if (!bot) return null;
+  const botChatPrefs = prefs?.botChat;
+
+  const handleMouseDown = (e) => {
+    setDragging(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!dragging) return;
+    const newX = Math.max(0, Math.min(e.clientX - offset.x, window.innerWidth - 220));
+    const newY = Math.max(0, Math.min(e.clientY - offset.y, window.innerHeight - 64));
+    updateWidget('botChat', { x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    setDragging(false);
+  };
+
+  if (!bot || botChatPrefs?.visible === false) return null;
 
   return (
     <>
       {/* Floating trigger */}
       {!open && (
         <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-card border border-primary/30 shadow-lg rounded-2xl px-3 py-2.5 text-sm font-medium hover:border-primary transition-all"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onClick={() => !dragging && setOpen(true)}
+          style={botChatPrefs?.x !== null && botChatPrefs?.y !== null ? { left: `${botChatPrefs.x}px`, top: `${botChatPrefs.y}px`, right: 'auto', bottom: 'auto' } : undefined}
+          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-card border border-primary/30 shadow-lg rounded-2xl px-3 py-2.5 text-sm font-medium hover:border-primary transition-all cursor-move"
         >
           <span className="text-base">{ROLE_ICONS[bot.role] || '🤖'}</span>
           <span className="text-xs text-foreground">{bot.name}</span>
@@ -105,6 +131,7 @@ export default function BotWidget() {
               +{connectedBots.length} linked
             </span>
           )}
+          <GripVertical className="w-3 h-3 text-muted-foreground" />
         </button>
       )}
 
