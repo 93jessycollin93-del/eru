@@ -8,7 +8,7 @@ export default function AlertManager() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ asset_symbol: '', alert_type: 'above', threshold_price: '' });
+  const [formData, setFormData] = useState({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '' });
   const [creating, setCreating] = useState(false);
   const [pulse, setPulse] = useState(false);
   const { subscribe, emit, rules } = useDashboardEvents();
@@ -31,7 +31,12 @@ export default function AlertManager() {
       if (dashboardEvent.source === 'market' && dashboardEvent.event === 'priceChange') {
         const matchedAlerts = alerts.filter((alert) => {
           const marketItem = (dashboardEvent.payload?.prices || []).find((price) => price.symbol === alert.asset_symbol);
-          if (!marketItem) return false;
+          if (!marketItem || alert.is_active === false) return false;
+          if (alert.trigger_basis === 'percent_change') {
+            return alert.alert_type === 'above'
+              ? marketItem.change >= alert.percent_change
+              : marketItem.change <= alert.percent_change;
+          }
           return alert.alert_type === 'above'
             ? marketItem.price >= alert.threshold_price
             : marketItem.price <= alert.threshold_price;
@@ -71,11 +76,14 @@ export default function AlertManager() {
       await base44.entities.PriceAlert.create({
         asset_symbol: formData.asset_symbol.toUpperCase(),
         alert_type: formData.alert_type,
-        threshold_price: parseFloat(formData.threshold_price),
+        threshold_price: formData.threshold_price ? parseFloat(formData.threshold_price) : null,
+        trigger_basis: formData.trigger_basis,
+        percent_change: formData.percent_change ? parseFloat(formData.percent_change) : null,
+        note: formData.note,
         is_active: true,
         user_email: user.email,
       });
-      setFormData({ asset_symbol: '', alert_type: 'above', threshold_price: '' });
+      setFormData({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '' });
       setShowForm(false);
       toast.success('Price alert created');
       fetchAlerts();
@@ -139,21 +147,46 @@ export default function AlertManager() {
             onChange={e => setFormData({ ...formData, asset_symbol: e.target.value })}
             className="w-full px-3 py-2 bg-card border border-border rounded text-xs text-foreground placeholder-muted-foreground"
           />
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <select
+              value={formData.trigger_basis}
+              onChange={e => setFormData({ ...formData, trigger_basis: e.target.value })}
+              className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground"
+            >
+              <option value="price">Price level</option>
+              <option value="percent_change">24h % change</option>
+            </select>
             <select
               value={formData.alert_type}
               onChange={e => setFormData({ ...formData, alert_type: e.target.value })}
-              className="flex-1 px-3 py-2 bg-card border border-border rounded text-xs text-foreground"
+              className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground"
             >
-              <option value="above">Price Above</option>
-              <option value="below">Price Below</option>
+              <option value="above">Above</option>
+              <option value="below">Below</option>
             </select>
+            {formData.trigger_basis === 'price' ? (
+              <input
+                type="number"
+                placeholder="Threshold ($)"
+                value={formData.threshold_price}
+                onChange={e => setFormData({ ...formData, threshold_price: e.target.value })}
+                className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground placeholder-muted-foreground sm:col-span-2"
+              />
+            ) : (
+              <input
+                type="number"
+                placeholder="24h change (%)"
+                value={formData.percent_change}
+                onChange={e => setFormData({ ...formData, percent_change: e.target.value })}
+                className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground placeholder-muted-foreground sm:col-span-2"
+              />
+            )}
             <input
-              type="number"
-              placeholder="Threshold ($)"
-              value={formData.threshold_price}
-              onChange={e => setFormData({ ...formData, threshold_price: e.target.value })}
-              className="flex-1 px-3 py-2 bg-card border border-border rounded text-xs text-foreground placeholder-muted-foreground"
+              type="text"
+              placeholder="Optional note"
+              value={formData.note}
+              onChange={e => setFormData({ ...formData, note: e.target.value })}
+              className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground placeholder-muted-foreground sm:col-span-2"
             />
           </div>
           <div className="flex gap-2">
@@ -184,7 +217,12 @@ export default function AlertManager() {
                 <p className="text-xs font-medium text-foreground">
                   {alert.asset_symbol} <span className="text-muted-foreground text-[9px]">{alert.alert_type === 'above' ? '↑' : '↓'}</span>
                 </p>
-                <p className="text-[10px] text-muted-foreground">${alert.threshold_price.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {alert.trigger_basis === 'percent_change'
+                    ? `${alert.percent_change}% 24h change`
+                    : `$${Number(alert.threshold_price || 0).toFixed(2)}`}
+                </p>
+                {alert.note && <p className="text-[10px] text-muted-foreground/70 mt-0.5">{alert.note}</p>}
               </div>
               <div className="flex items-center gap-1.5">
                 {alert.notification_sent && <Check className="w-3.5 h-3.5 text-green-400" />}

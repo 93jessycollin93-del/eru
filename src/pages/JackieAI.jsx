@@ -7,6 +7,9 @@ import MessageBubble from '../components/jackie/MessageBubble';
 import WelcomeScreen from '../components/jackie/WelcomeScreen';
 import QuickCommands from '../components/jackie/QuickCommands';
 import AssetManager from '../components/jackie/AssetManager';
+import EducationPanel from '../components/jackie/EducationPanel';
+import FeedbackPanel from '../components/jackie/FeedbackPanel';
+import IntegrationsPanel from '../components/jackie/IntegrationsPanel';
 import InputBar from '../components/jackie/InputBar';
 import { VOICES } from '../components/jackie/VoiceSelector';
 
@@ -103,7 +106,8 @@ export default function JackieAI() {
   const buildPrompt = useCallback((userMessage) => {
     const voiceStyle = VOICES.find(v => v.id === voice)?.style || '';
     const thinkModePrompt = THINK_MODES.find(t => t.id === thinkMode)?.prompt || '';
-    const systemPrompt = `${MODE_PROMPTS[mode]}\n\nVoice & Style: ${voiceStyle}${thinkModePrompt ? '\n\n' + thinkModePrompt : ''}`;
+    const enhancementContext = `\n[ENABLED FEATURES]\n- Educational content suggestions: recommend articles, videos, and webinars when users ask to learn a topic.\n- Feedback awareness: encourage users to submit product feedback and improvement ideas when relevant.\n- API integration awareness: mention that connected data platforms can be used for broader financial analysis.\n- Advanced alerts: discuss price and percentage-change triggers for alert customization.\n[END FEATURES]`;
+    const systemPrompt = `${MODE_PROMPTS[mode]}\n\nVoice & Style: ${voiceStyle}${thinkModePrompt ? '\n\n' + thinkModePrompt : ''}${enhancementContext}`;
     const botContext = userBots.length > 0
       ? `\n[USER'S AI BOTS]\n${userBots.map(b => `- ${b.name} (${b.role}, Lv${b.level || 1}, ${b.xp || 0}XP): ${b.description || b.instructions?.slice(0, 80) || 'no description'}`).join('\n')}\n[END BOTS]`
       : '';
@@ -254,7 +258,12 @@ export default function JackieAI() {
       )}
 
       {tab === 'assets' && (
-        <AssetManager onInject={handleInjectAsset} />
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <EducationPanel />
+          <FeedbackPanel />
+          <IntegrationsPanel />
+          <AssetManager onInject={handleInjectAsset} />
+        </div>
       )}
     </div>
   );

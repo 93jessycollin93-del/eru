@@ -9,6 +9,8 @@ const COMMANDS = [
   { cmd: 'add animations', icon: Wind, label: 'Animate' },
   { cmd: 'fix errors', icon: Bug, label: 'Fix' },
   { cmd: 'rewrite for English, Ukrainian, and Simplified Chinese', icon: Zap, label: '3-Lang Copy' },
+  { cmd: 'recommend educational investing resources for this topic', icon: Sparkles, label: 'Learn More' },
+  { cmd: 'analyze this using connected financial platforms and external data sources', icon: Layers, label: 'Integrate Data' },
 ];
 
 export default function QuickCommands({ onCommand, visible }) {

@@ -91,6 +91,12 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
             >
               Multilingual CTA
             </button>
+            <button
+              onClick={() => setInput('Recommend educational resources to help me understand this investment topic better:\n')}
+              className="px-2.5 py-1.5 rounded-xl border bg-secondary text-muted-foreground border-border text-xs font-medium"
+            >
+              Learn
+            </button>
             <button onClick={onToggleCommands}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs transition-all ${showCommands ? 'bg-primary/10 text-primary border-primary/30' : 'bg-secondary text-muted-foreground border-border'}`}>
               <Zap className="w-3 h-3" /> Commands
