@@ -19,7 +19,7 @@ import { useRealPrices } from '../hooks/useRealPrices';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
   const { prices } = useRealPrices();
-  const [portfolioData, setPortfolioData] = useState({
+  const [portfolioData] = useState({
     totalBalance: 15250.50,
     totalInvested: 12000,
     netGainLoss: 3250.50,

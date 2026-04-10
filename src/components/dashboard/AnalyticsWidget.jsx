@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Zap, TrendingUp, Lightbulb, Loader2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, Lightbulb, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useDashboardEvents } from '@/context/DashboardEventsContext';
 

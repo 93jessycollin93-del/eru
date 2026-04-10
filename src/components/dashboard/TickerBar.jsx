@@ -8,15 +8,6 @@ export default function TickerBar() {
   const { emit } = useDashboardEvents();
   const previousRef = useRef('');
 
-  if (status === 'loading') {
-    return (
-      <div className="bg-card border-b border-border flex items-center gap-2 px-4 py-2 sticky top-0 z-50">
-        <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
-        <span className="text-xs text-muted-foreground font-mono">Fetching live prices…</span>
-      </div>
-    );
-  }
-
   useEffect(() => {
     if (status !== 'live' || prices.length === 0) return;
     const signature = JSON.stringify(prices.map((item) => ({ symbol: item.symbol, price: item.price, change: item.change })));
@@ -25,6 +16,15 @@ export default function TickerBar() {
       emit('market', 'priceChange', { prices });
     }
   }, [prices, status, emit]);
+
+  if (status === 'loading') {
+    return (
+      <div className="bg-card border-b border-border flex items-center gap-2 px-4 py-2 sticky top-0 z-50">
+        <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
+        <span className="text-xs text-muted-foreground font-mono">Fetching live prices…</span>
+      </div>
+    );
+  }
 
   if (status === 'error' || prices.length === 0) {
     return (
