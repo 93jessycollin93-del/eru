@@ -34,6 +34,8 @@ export default function BotVersionHistory({ bots, onRollback }) {
       personality: bot.personality || '',
       response_style: bot.response_style || '',
       handoff_instructions: bot.handoff_instructions || '',
+      prompt_template_id: bot.prompt_template_id || '',
+      prompt_template_values: bot.prompt_template_values || {},
       notes: saveNotes,
       user_email: currentUser?.email,
     });
@@ -52,6 +54,8 @@ export default function BotVersionHistory({ bots, onRollback }) {
       personality: version.personality,
       response_style: version.response_style,
       handoff_instructions: version.handoff_instructions,
+      prompt_template_id: version.prompt_template_id || '',
+      prompt_template_values: version.prompt_template_values || {},
     });
     onRollback?.();
     load();

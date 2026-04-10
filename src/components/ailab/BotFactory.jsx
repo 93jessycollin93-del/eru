@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Wand2, Copy, Save, ChevronRight, Loader2, Download } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import ExternalAISettingsPanel from './ExternalAISettingsPanel';
+import ModelProviderPanel from './ModelProviderPanel';
 import { invokeSelectedModel } from './modelRouting';
 
 const TEMPLATES = [
@@ -99,7 +99,7 @@ Return ONLY a JSON object with these fields:
         </div>
       </div>
 
-      <ExternalAISettingsPanel value={modelConfig} onChange={setModelConfig} />
+      <ModelProviderPanel value={{ model_provider: modelConfig.provider, model_name: modelConfig.model }} onChange={(value) => setModelConfig({ provider: value.model_provider, model: value.model_name, api_label: value.api_label || '' })} />
 
       {/* Input */}
       <div className="space-y-2">
