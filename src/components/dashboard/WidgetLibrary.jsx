@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Bot, Pin, Zap, Plus, Check, Activity, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import NewsFeedWidget from './NewsFeedWidget';
+import AIInsightsWidget from './AIInsightsWidget';
 
 const QUICK_ACTIONS = [
   { label: 'AI Lab', to: '/ailab' },
@@ -180,6 +182,8 @@ export default function WidgetLibrary({ prices = [] }) {
     <div className="space-y-4">
       <BotStatusWidget />
       <MarketPinsWidget prices={prices} />
+      <NewsFeedWidget />
+      <AIInsightsWidget />
       <DashboardActionsWidget />
     </div>
   );

@@ -52,7 +52,7 @@ export default function QuickActions() {
   return (
     <div className="mx-4 mt-3">
       {/* Pinned row */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {pinnedActions.map(a => (
           <div key={a.label}
             draggable={editing}

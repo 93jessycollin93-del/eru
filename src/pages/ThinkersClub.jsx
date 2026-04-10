@@ -132,7 +132,7 @@ export default function ThinkersClub() {
         ))}
       </div>
 
-      <div className="px-4 py-4 space-y-3">
+      <div className="px-4 py-4 space-y-3 max-w-full overflow-x-hidden">
         {tab === 'servers' && SERVERS.map(s => (
           <button key={s.id} onClick={() => setActiveServer(s)}
             className="w-full bg-card border border-border rounded-xl p-4 text-left hover:bg-secondary/30 transition-colors">
