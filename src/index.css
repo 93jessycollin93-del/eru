@@ -49,6 +49,10 @@
 
 @layer base {
   * { @apply border-border outline-ring/50; }
+  html, body, #root {
+    min-height: 100%;
+    height: 100%;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;

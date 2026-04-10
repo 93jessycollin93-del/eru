@@ -21,7 +21,7 @@ export default function Layout() {
       <AnimatedBackground type={bg} opacity={bgOpacity} />
 
       {/* App shell — transparent so background shows through */}
-      <div className="max-w-md mx-auto min-h-screen flex flex-col relative z-10">
+      <div className="max-w-md mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
         <CenteredBottomNav onSearchOpen={() => setSearchOpen(true)} />
         <main className="flex-1 overflow-y-auto">
           <Outlet />
