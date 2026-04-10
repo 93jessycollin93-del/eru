@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Bell, Plus, Trash2, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Bell, Plus, Trash2, Check, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { useDashboardEvents } from './dashboard/DashboardEventContext';
+import { useDashboardEvents } from '@/context/DashboardEventsContext';
 
 export default function AlertManager() {
   const [alerts, setAlerts] = useState([]);
@@ -11,22 +11,38 @@ export default function AlertManager() {
   const [formData, setFormData] = useState({ asset_symbol: '', alert_type: 'above', threshold_price: '' });
   const [creating, setCreating] = useState(false);
   const [pulse, setPulse] = useState(false);
-  const { subscribe, rules } = useDashboardEvents();
+  const { subscribe, emit, rules } = useDashboardEvents();
+  const activeRules = useMemo(() => rules.filter((rule) => rule.enabled && rule.target === 'alerts'), [rules]);
 
   useEffect(() => {
     fetchAlerts();
   }, []);
 
   useEffect(() => {
-    const alertRuleEnabled = rules.some((rule) => rule.enabled && rule.source === 'market' && rule.target === 'alerts' && rule.action === 'scan_alerts');
-    if (!alertRuleEnabled) return;
-
-    return subscribe('market.price_change', () => {
+    const unsubscribe = subscribe('alert-manager', (dashboardEvent) => {
+      const matched = activeRules.some((rule) => rule.source === dashboardEvent.source && rule.event === dashboardEvent.event);
+      if (!matched) return;
       setPulse(true);
-      setTimeout(() => setPulse(false), 900);
+      window.setTimeout(() => setPulse(false), 1200);
       fetchAlerts();
+
+      if (dashboardEvent.source === 'market' && dashboardEvent.event === 'priceChange') {
+        const matchedAlerts = alerts.filter((alert) => {
+          const marketItem = (dashboardEvent.payload?.prices || []).find((price) => price.symbol === alert.asset_symbol);
+          if (!marketItem) return false;
+          return alert.alert_type === 'above'
+            ? marketItem.price >= alert.threshold_price
+            : marketItem.price <= alert.threshold_price;
+        });
+
+        if (matchedAlerts.length > 0) {
+          emit('alerts', 'thresholdTriggered', { matchedAlerts });
+          toast.success(`${matchedAlerts.length} alert rule${matchedAlerts.length > 1 ? 's' : ''} matched live market data`);
+        }
+      }
     });
-  }, [rules]);
+    return unsubscribe;
+  }, [subscribe, activeRules, alerts, emit]);
 
   const fetchAlerts = async () => {
     try {
@@ -97,7 +113,7 @@ export default function AlertManager() {
   }
 
   return (
-    <div className={`bg-card border border-border rounded-xl p-4 transition-all ${pulse ? 'ring-1 ring-amber-400/50 shadow-[0_0_0_1px_rgba(251,191,36,0.16)]' : ''}`}>
+    <div className={`bg-card border rounded-xl p-4 transition-all ${pulse ? 'border-primary shadow-[0_0_0_1px_hsl(var(--primary))]' : 'border-border'}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-primary" />

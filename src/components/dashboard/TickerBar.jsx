@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useRealPrices } from '../../hooks/useRealPrices';
 import { WifiOff, Loader2 } from 'lucide-react';
-import { useDashboardEvents } from './DashboardEventContext';
+import { useDashboardEvents } from '@/context/DashboardEventsContext';
 
 export default function TickerBar() {
   const { prices, status } = useRealPrices();
-  const { emit, rules } = useDashboardEvents();
-  const previousPricesRef = useRef([]);
+  const { emit } = useDashboardEvents();
+  const previousRef = useRef('');
 
   if (status === 'loading') {
     return (
@@ -17,6 +17,15 @@ export default function TickerBar() {
     );
   }
 
+  useEffect(() => {
+    if (status !== 'live' || prices.length === 0) return;
+    const signature = JSON.stringify(prices.map((item) => ({ symbol: item.symbol, price: item.price, change: item.change })));
+    if (signature !== previousRef.current) {
+      previousRef.current = signature;
+      emit('market', 'priceChange', { prices });
+    }
+  }, [prices, status, emit]);
+
   if (status === 'error' || prices.length === 0) {
     return (
       <div className="bg-card border-b border-border flex items-center gap-2 px-4 py-2 sticky top-0 z-50">
@@ -25,24 +34,6 @@ export default function TickerBar() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (status !== 'live' || prices.length === 0) return;
-
-    emit('market.refresh', { prices });
-
-    const previous = previousPricesRef.current;
-    const changed = prices.filter((price) => {
-      const old = previous.find((item) => item.symbol === price.symbol);
-      return old && old.price !== price.price;
-    });
-
-    if (changed.length > 0) {
-      emit('market.price_change', { prices, changed, rules });
-    }
-
-    previousPricesRef.current = prices;
-  }, [prices, status]);
 
   const items = [...prices, ...prices];
   return (

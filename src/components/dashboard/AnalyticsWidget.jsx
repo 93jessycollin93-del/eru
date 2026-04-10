@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Zap, TrendingUp, Lightbulb, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { useDashboardEvents } from './DashboardEventContext';
+import { useDashboardEvents } from '@/context/DashboardEventsContext';
 
 const COLORS = ['#00e676', '#2196f3', '#7c4dff', '#ff9800', '#e91e63'];
 
@@ -13,21 +13,22 @@ export default function AnalyticsWidget() {
   const [loadingRecs, setLoadingRecs] = useState(false);
   const [pulse, setPulse] = useState(false);
   const { subscribe, rules } = useDashboardEvents();
+  const activeRules = useMemo(() => rules.filter((rule) => rule.enabled && rule.target === 'analytics'), [rules]);
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
 
   useEffect(() => {
-    const analyticsRuleEnabled = rules.some((rule) => rule.enabled && rule.target === 'analytics' && rule.action === 'refresh_recommendations');
-    if (!analyticsRuleEnabled) return;
-
-    return subscribe('market.price_change', () => {
+    const unsubscribe = subscribe('analytics-widget', (dashboardEvent) => {
+      const matched = activeRules.some((rule) => rule.source === dashboardEvent.source && rule.event === dashboardEvent.event);
+      if (!matched) return;
       setPulse(true);
-      setTimeout(() => setPulse(false), 900);
+      window.setTimeout(() => setPulse(false), 1200);
       generateRecommendations();
     });
-  }, [rules]);
+    return unsubscribe;
+  }, [subscribe, activeRules]);
 
   const fetchAnalytics = async () => {
     try {
@@ -56,7 +57,6 @@ export default function AnalyticsWidget() {
     try {
       const response = await base44.functions.invoke('generateSmartRecommendations', {});
       setRecommendations(response.data?.recommendations || []);
-      try { window.dispatchEvent(new CustomEvent('dashboard-analytics-ready')); } catch {}
     } catch (error) {
       console.error('Recommendation error:', error);
     } finally {
@@ -79,10 +79,10 @@ export default function AnalyticsWidget() {
   }
 
   return (
-    <div className={`space-y-4 transition-all ${pulse ? 'ring-1 ring-blue-400/40 rounded-xl' : ''}`}>
+    <div className="space-y-4">
       {/* Usage Chart */}
       {chartData.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-4">
+        <div className={`bg-card border rounded-xl p-4 transition-all ${pulse ? 'border-primary shadow-[0_0_0_1px_hsl(var(--primary))]' : 'border-border'}`}>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-semibold">Feature Usage</h3>
@@ -103,7 +103,7 @@ export default function AnalyticsWidget() {
       )}
 
       {/* Smart Recommendations */}
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className={`bg-card border rounded-xl p-4 transition-all ${pulse ? 'border-primary shadow-[0_0_0_1px_hsl(var(--primary))]' : 'border-border'}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Lightbulb className="w-4 h-4 text-amber-400" />
