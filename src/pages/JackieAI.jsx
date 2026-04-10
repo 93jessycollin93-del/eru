@@ -11,6 +11,7 @@ import EducationPanel from '../components/jackie/EducationPanel';
 import FeedbackPanel from '../components/jackie/FeedbackPanel';
 import IntegrationsPanel from '../components/jackie/IntegrationsPanel';
 import JackieGamificationPanel from '../components/jackie/JackieGamificationPanel';
+import FoundryControlPanel from '../components/jackie/FoundryControlPanel';
 import InputBar from '../components/jackie/InputBar';
 import { VOICES } from '../components/jackie/VoiceSelector';
 
@@ -90,6 +91,8 @@ export default function JackieAI() {
   const [voice, setVoice] = useState('default');
   const [pendingFiles, setPendingFiles] = useState([]);
   const [jackieProgress, setJackieProgress] = useState(null);
+  const [foundryPreview, setFoundryPreview] = useState(null);
+  const [applyingFoundry, setApplyingFoundry] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
@@ -186,6 +189,15 @@ export default function JackieAI() {
     const fileUrls = files.map(f => f.url);
     const displayMsg = msg + (files.length > 0 ? `\n📎 ${files.map(f => f.name).join(', ')}` : '');
     setMessages(prev => [...prev, { role: 'user', content: displayMsg }]);
+
+    const preview = buildFoundryPreview(msg);
+    if (preview) {
+      setFoundryPreview(preview);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'I prepared a foundry preview for your bot/key request. Review it below and confirm when ready.' }]);
+      await updateJackieProgress({ xp: 10, messages_sent: 1, countMessage: true });
+      return;
+    }
+
     setLoading(true);
 
     const prompt = buildPrompt(msg || 'Analyze the attached files.');
@@ -213,6 +225,74 @@ export default function JackieAI() {
 
   const handleQuickCommand = (cmd) => {
     setInput(workingContext ? cmd + ' this:\n' + workingContext.slice(0, 2000) : cmd + ' the last output');
+  };
+
+  const buildFoundryPreview = (message) => {
+    const lower = message.toLowerCase();
+    const wantsBot = /bot|agent|assistant/.test(lower);
+    const wantsKey = /api key|key\b|token/.test(lower);
+    if (!wantsBot && !wantsKey) return null;
+
+    const linkedBot = userBots[0] || null;
+    return {
+      bot: wantsBot ? {
+        name: /named\s+([\w -]+)/i.exec(message)?.[1]?.trim() || 'New Jackie Bot',
+        role: /trader/.test(lower) ? 'trader' : /social/.test(lower) ? 'social' : /game/.test(lower) ? 'game_helper' : 'assistant',
+        response_style: /short/.test(lower) ? 'short' : /creative/.test(lower) ? 'creative' : /strategic/.test(lower) ? 'strategic' : 'detailed',
+        description: message.slice(0, 140),
+        instructions: `Created from Jackie request: ${message}`,
+        memory_enabled: true,
+        is_public: /public/.test(lower),
+        status: 'active',
+        page_assignments: [],
+        connected_bot_ids: [],
+        handoff_instructions: ''
+      } : null,
+      apiKey: wantsKey ? {
+        name: linkedBot ? `${linkedBot.name} Access Key` : 'Jackie Foundry Key',
+        botId: linkedBot?.id || '',
+        botName: linkedBot?.name || '',
+        permissions: linkedBot
+          ? ['bot:chat', 'bot:create', 'bot:memory', 'bot:analytics', 'jackie:read', 'jackie:write']
+          : ['bot:chat', 'bot:analytics', 'jackie:read']
+      } : null
+    };
+  };
+
+  const applyFoundryPreview = async () => {
+    if (!foundryPreview) return;
+    setApplyingFoundry(true);
+    let createdBot = null;
+
+    if (foundryPreview.bot) {
+      createdBot = await base44.entities.UserBot.create(foundryPreview.bot);
+    }
+
+    if (foundryPreview.apiKey) {
+      const raw = `sk_live_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+      const enc = new TextEncoder().encode(raw);
+      const buf = await crypto.subtle.digest('SHA-256', enc);
+      const hashed = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      await base44.entities.ApiKey.create({
+        name: foundryPreview.apiKey.name,
+        hashed_key: hashed,
+        key_prefix: raw.slice(0, 15) + '...',
+        permissions: foundryPreview.apiKey.permissions,
+        status: 'active',
+        bot_id: createdBot?.id || foundryPreview.apiKey.botId || null,
+      });
+      setMessages(prev => [...prev, { role: 'assistant', content: `Foundry applied successfully. Save this new API key now: \`${raw}\`` }]);
+    } else {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Foundry applied successfully.' }]);
+    }
+
+    setFoundryPreview(null);
+    setApplyingFoundry(false);
+  };
+
+  const discardFoundryPreview = () => {
+    setFoundryPreview(null);
+    setMessages(prev => [...prev, { role: 'assistant', content: 'Preview discarded. Tell me what to adjust and I’ll prepare a new one.' }]);
   };
 
   const handleSave = async (content) => {
@@ -271,6 +351,15 @@ export default function JackieAI() {
                   onInject={handleInjectAsset}
                 />
               ))
+            )}
+
+            {foundryPreview && (
+              <FoundryControlPanel
+                preview={foundryPreview}
+                onConfirm={applyFoundryPreview}
+                onDiscard={discardFoundryPreview}
+                busy={applyingFoundry}
+              />
             )}
 
             {loading && (

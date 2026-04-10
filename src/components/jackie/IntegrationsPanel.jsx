@@ -24,9 +24,12 @@ export default function IntegrationsPanel() {
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-        <LinkIcon className="w-3 h-3" /> Existing app connectors can be used to expand Jackie with external financial data sources.
-      </p>
+      <div className="space-y-1">
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <LinkIcon className="w-3 h-3" /> Existing app connectors can be used to expand Jackie with external financial data sources.
+        </p>
+        <p className="text-[10px] text-muted-foreground">Jackie Foundry can now prepare preview-first bot and API key setups before applying them.</p>
+      </div>
     </div>
   );
 }

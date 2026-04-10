@@ -10,6 +10,8 @@ const COMMANDS = [
   { cmd: 'fix errors', icon: Bug, label: 'Fix' },
   { cmd: 'rewrite for English, Ukrainian, and Simplified Chinese', icon: Zap, label: '3-Lang Copy' },
   { cmd: 'recommend educational investing resources for this topic', icon: Sparkles, label: 'Learn More' },
+  { cmd: 'prepare a preview to create a new bot for this goal', icon: Sparkles, label: 'Preview Bot' },
+  { cmd: 'prepare a preview to create a new api key with the right permissions for this workflow', icon: Zap, label: 'Preview Key' },
   { cmd: 'analyze this using connected financial platforms and external data sources', icon: Layers, label: 'Integrate Data' },
 ];
 
