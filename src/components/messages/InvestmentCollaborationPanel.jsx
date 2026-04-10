@@ -1,4 +1,4 @@
-import { Users, MessageSquare, Plus } from 'lucide-react';
+import { Users, MessageSquare, Plus, ShieldCheck } from 'lucide-react';
 
 const COLLABS = [
   { name: 'Alex Chen', role: 'Advisor', focus: 'Risk review and portfolio balance' },
@@ -17,6 +17,10 @@ export default function InvestmentCollaborationPanel() {
           <button className="text-[10px] px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
             <Plus className="w-3 h-3" /> Invite
           </button>
+        </div>
+        <div className="mb-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 flex items-start gap-2">
+          <ShieldCheck className="w-3.5 h-3.5 text-primary mt-0.5" />
+          <p className="text-[10px] text-muted-foreground leading-relaxed">Collaborate on strategy ideas, share notes, and keep advisor feedback in one place.</p>
         </div>
         <div className="space-y-2">
           {COLLABS.map((person) => (

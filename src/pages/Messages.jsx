@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, Send, Trash2 } from 'lucide-react';
 import InvestmentCollaborationPanel from '../components/messages/InvestmentCollaborationPanel';
+import StrategyWorkspace from '../components/messages/StrategyWorkspace';
 
 const THREADS = [
   { id: 1, from: 'TON Support', subject: 'Transaction Confirmed', preview: 'Your swap of 50 TON → USDT has been completed...', time: '2m ago', unread: true, color: '#00e676' },
@@ -119,6 +120,7 @@ export default function Messages() {
         </div>
       </div>
       <InvestmentCollaborationPanel />
+      <StrategyWorkspace />
       <div className="divide-y divide-border px-0">
         {threads.map(t => (
           <div key={t.id} className="flex items-center px-4 py-3 gap-3 hover:bg-secondary/40 transition-colors">
