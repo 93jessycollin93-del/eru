@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Download, Gauge, Smile, Timer, Trophy } from 'lucide-react';
+import BotResourceManagementPanel from './BotResourceManagementPanel';
 import { base44 } from '@/api/base44Client';
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -34,7 +35,7 @@ function estimateBotMetrics(bot, ratings, improvements) {
   };
 }
 
-export default function BotMonitoringDashboard({ bots }) {
+export default function BotMonitoringDashboard({ bots, onBotsUpdated }) {
   const [ratings, setRatings] = useState([]);
   const [improvements, setImprovements] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -144,6 +145,8 @@ export default function BotMonitoringDashboard({ bots }) {
           </div>
         ))}
       </div>
+
+      <BotResourceManagementPanel bots={bots} onBotsUpdated={onBotsUpdated} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">

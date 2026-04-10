@@ -642,7 +642,7 @@ export default function AILab() {
       {tab === 'testing' && <BotTestingSuite bots={bots} globalPolicy={globalPolicy} />}
 
       {/* DASHBOARD */}
-      {tab === 'dashboard' && <div><BotMonitoringDashboard bots={bots} /><BotDashboard bots={bots} /></div>}
+      {tab === 'dashboard' && <div><BotMonitoringDashboard bots={bots} onBotsUpdated={loadBots} /><BotDashboard bots={bots} /></div>}
 
       {/* PINNED CARDS */}
       {tab === 'pinned' && <PinnedCards bots={bots} />}

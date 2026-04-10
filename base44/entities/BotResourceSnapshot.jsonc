@@ -1,0 +1,53 @@
+{
+  "name": "BotResourceSnapshot",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "resource_utilization": {
+      "type": "number"
+    },
+    "upgrade_action": {
+      "type": "string",
+      "enum": [
+        "none",
+        "suggest_memory_boost",
+        "trigger_memory_boost",
+        "suggest_processing_power",
+        "trigger_processing_power"
+      ],
+      "default": "none"
+    },
+    "window_label": {
+      "type": "string",
+      "default": "1h"
+    },
+    "snapshot_time": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name",
+    "resource_utilization",
+    "snapshot_time"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
