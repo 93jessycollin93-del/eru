@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { RefreshCcw, ArrowRightLeft } from 'lucide-react';
+import { RefreshCcw, ArrowRightLeft, TrendingUp, Wallet } from 'lucide-react';
 
-const DEFAULT_CURRENT = [
-  { symbol: 'BTC', value: 35000 },
-  { symbol: 'ETH', value: 30000 },
-  { symbol: 'SOL', value: 20000 },
-  { symbol: 'USDC', value: 15000 },
+const DEFAULT_HOLDINGS = [
+  { symbol: 'BTC', currentValue: 35000, gainsLosses: 4200 },
+  { symbol: 'ETH', currentValue: 30000, gainsLosses: -1800 },
+  { symbol: 'SOL', currentValue: 20000, gainsLosses: 2600 },
+  { symbol: 'USDC', currentValue: 15000, gainsLosses: 0 },
 ];
 
 const DEFAULT_TARGETS = [
@@ -16,18 +16,24 @@ const DEFAULT_TARGETS = [
 ];
 
 export default function RebalancingPlanner() {
+  const [holdings, setHoldings] = useState(DEFAULT_HOLDINGS);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
   const [planned, setPlanned] = useState(false);
 
   const plan = useMemo(() => {
-    const totalValue = DEFAULT_CURRENT.reduce((sum, item) => sum + item.value, 0);
-    const rows = DEFAULT_CURRENT.map((holding) => {
-      const currentPct = totalValue ? (holding.value / totalValue) * 100 : 0;
+    const totalValue = holdings.reduce((sum, item) => sum + Number(item.currentValue || 0), 0);
+    const totalGainsLosses = holdings.reduce((sum, item) => sum + Number(item.gainsLosses || 0), 0);
+    const rows = holdings.map((holding) => {
+      const currentValue = Number(holding.currentValue || 0);
+      const gainsLosses = Number(holding.gainsLosses || 0);
+      const currentPct = totalValue ? (currentValue / totalValue) * 100 : 0;
       const targetPct = targets.find((item) => item.symbol === holding.symbol)?.target || 0;
       const targetValue = (targetPct / 100) * totalValue;
-      const difference = targetValue - holding.value;
+      const difference = targetValue - currentValue;
       return {
         ...holding,
+        currentValue,
+        gainsLosses,
         currentPct,
         targetPct,
         targetValue,
@@ -53,8 +59,8 @@ export default function RebalancingPlanner() {
       });
     });
 
-    return { totalValue, rows, steps };
-  }, [targets]);
+    return { totalValue, totalGainsLosses, rows, steps };
+  }, [holdings, targets]);
 
   const totalTarget = targets.reduce((sum, item) => sum + Number(item.target || 0), 0);
 
@@ -63,6 +69,49 @@ export default function RebalancingPlanner() {
       <div className="flex items-center gap-2">
         <RefreshCcw className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-semibold">Rebalancing Planner</h3>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-secondary rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <Wallet className="w-3.5 h-3.5" />
+            <span className="text-[10px] uppercase">Total assets</span>
+          </div>
+          <p className="text-lg font-bold">${plan.totalValue.toFixed(0)}</p>
+        </div>
+        <div className="bg-secondary rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span className="text-[10px] uppercase">Net gain/loss</span>
+          </div>
+          <p className={`text-lg font-bold ${plan.totalGainsLosses >= 0 ? 'text-green-400' : 'text-red-400'}`}>${plan.totalGainsLosses.toFixed(0)}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {holdings.map((item) => (
+          <div key={item.symbol} className="grid grid-cols-3 gap-2 bg-secondary rounded-lg border border-border px-3 py-2">
+            <input
+              value={item.symbol}
+              onChange={(e) => setHoldings((prev) => prev.map((entry) => entry.symbol === item.symbol ? { ...entry, symbol: e.target.value.toUpperCase() } : entry))}
+              className="bg-transparent text-xs font-medium outline-none text-foreground"
+            />
+            <input
+              type="number"
+              value={item.currentValue}
+              onChange={(e) => setHoldings((prev) => prev.map((entry) => entry.symbol === item.symbol ? { ...entry, currentValue: Number(e.target.value || 0) } : entry))}
+              className="bg-transparent text-xs outline-none text-foreground"
+              placeholder="Current value"
+            />
+            <input
+              type="number"
+              value={item.gainsLosses}
+              onChange={(e) => setHoldings((prev) => prev.map((entry) => entry.symbol === item.symbol ? { ...entry, gainsLosses: Number(e.target.value || 0) } : entry))}
+              className="bg-transparent text-xs outline-none text-foreground"
+              placeholder="Gain/loss"
+            />
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -98,7 +147,7 @@ export default function RebalancingPlanner() {
           <div key={item.symbol} className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
             <div>
               <p className="text-xs font-medium">{item.symbol}</p>
-              <p className="text-[10px] text-muted-foreground">Current {item.currentPct.toFixed(1)}% → Target {item.targetPct.toFixed(1)}%</p>
+              <p className="text-[10px] text-muted-foreground">Current {item.currentPct.toFixed(1)}% → Target {item.targetPct.toFixed(1)}% · P/L ${item.gainsLosses.toFixed(0)}</p>
             </div>
             <p className={`text-xs font-semibold ${item.difference > 0 ? 'text-green-400' : item.difference < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
               {item.action} {Math.abs(item.difference).toFixed(0) > 0 ? `$${Math.abs(item.difference).toFixed(0)}` : ''}
