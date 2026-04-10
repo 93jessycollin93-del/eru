@@ -34,6 +34,9 @@ const ALL_PAGES = [
 const DEFAULT_PINNED = ['home', 'markets', 'trade', 'nfts', 'portfolio'];
 const STORAGE_KEY = 'floating_nav_pinned';
 const POS_KEY = 'floating_nav_pos';
+const ORIENTATION_KEY = 'floating_nav_orientation';
+const EXPANDED_KEY = 'floating_nav_expanded';
+const ROWS_KEY = 'floating_nav_rows';
 
 export default function FloatingNav({ onSearchOpen }) {
   const { pathname } = useLocation();
@@ -47,6 +50,9 @@ export default function FloatingNav({ onSearchOpen }) {
   });
   const [isExpanded, setIsExpanded] = useState(() => {
     try { return JSON.parse(localStorage.getItem(EXPANDED_KEY)) || false; } catch { return false; }
+  });
+  const [rows, setRows] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(ROWS_KEY)) || 1; } catch { return 1; }
   });
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
@@ -77,6 +83,23 @@ export default function FloatingNav({ onSearchOpen }) {
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
     localStorage.setItem(EXPANDED_KEY, JSON.stringify(!isExpanded));
+  };
+
+  const cycleRows = () => {
+    const newRows = rows === 1 ? 2 : rows === 2 ? 3 : 1;
+    setRows(newRows);
+    localStorage.setItem(ROWS_KEY, JSON.stringify(newRows));
+  };
+
+  // Distribute pinned pages across rows
+  const getPagesByRow = () => {
+    const pages = pinnedPages.length;
+    const perRow = Math.ceil(pages / rows);
+    const rowArray = [];
+    for (let i = 0; i < rows; i++) {
+      rowArray.push(pinnedPages.slice(i * perRow, (i + 1) * perRow));
+    }
+    return rowArray;
   };
 
   const onPointerDown = useCallback((e) => {
@@ -119,7 +142,7 @@ export default function FloatingNav({ onSearchOpen }) {
         onPointerUp={onPointerUp}
         className={`bg-card/95 backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl cursor-grab active:cursor-grabbing ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
-        {/* Drag handle + orientation toggle */}
+        {/* Drag handle + orientation toggle + rows toggle */}
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
           <GripHorizontal className="w-3.5 h-3.5" />
           <button
@@ -133,24 +156,58 @@ export default function FloatingNav({ onSearchOpen }) {
               <ArrowLeftRight className="w-3.5 h-3.5" />
             )}
           </button>
+          <button
+            onClick={cycleRows}
+            className="transition-colors hover:text-primary text-[10px] font-bold w-3.5 h-3.5 flex items-center justify-center"
+            title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
+          >
+            {rows}
+          </button>
         </div>
 
-        {pinnedPages.map(({ id, label, icon: Icon, to }) => {
-          const active = pathname === to || (to !== '/' && pathname.startsWith(to));
-          return (
-            <Link
-              key={id}
-              to={to}
-              title={label}
-              className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
-                active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
-              <span className="text-[8px] font-medium leading-none">{label}</span>
-            </Link>
-          );
-        })}
+        {orientation === 'horizontal' ? (
+          // Horizontal with rows
+          <div className="flex flex-col gap-0.5">
+            {getPagesByRow().map((pageRow, rowIdx) => (
+              <div key={rowIdx} className="flex gap-0.5">
+                {pageRow.map(({ id, label, icon: Icon, to }) => {
+                  const active = pathname === to || (to !== '/' && pathname.startsWith(to));
+                  return (
+                    <Link
+                      key={id}
+                      to={to}
+                      title={label}
+                      className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                        active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+                      <span className="text-[8px] font-medium leading-none">{label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Vertical (unchanged)
+          pinnedPages.map(({ id, label, icon: Icon, to }) => {
+            const active = pathname === to || (to !== '/' && pathname.startsWith(to));
+            return (
+              <Link
+                key={id}
+                to={to}
+                title={label}
+                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                  active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+                <span className="text-[8px] font-medium leading-none">{label}</span>
+              </Link>
+            );
+          })
+        )}
 
         {/* Search button */}
         <button
@@ -210,10 +267,26 @@ export default function FloatingNav({ onSearchOpen }) {
                 })}
               </div>
             </div>
-            <div className="px-4 py-3 border-t border-border flex-shrink-0">
-              <button onClick={() => setEditMode(false)} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold">
-                Done · {pinned.length} pages
-              </button>
+            <div className="px-4 py-3 border-t border-border flex-shrink-0 space-y-2">
+              <div className="flex gap-2">
+                <button onClick={() => setEditMode(false)} className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold">
+                  Done
+                </button>
+                <div className="flex gap-1 bg-secondary rounded-xl p-1">
+                  {[1, 2, 3].map(r => (
+                    <button
+                      key={r}
+                      onClick={() => { setRows(r); localStorage.setItem(ROWS_KEY, JSON.stringify(r)); }}
+                      className={`w-8 h-8 rounded text-xs font-medium transition-colors ${
+                        rows === r ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">Pages: {pinned.length}</p>
             </div>
           </div>
         </div>
