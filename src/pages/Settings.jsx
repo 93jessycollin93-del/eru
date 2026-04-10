@@ -81,6 +81,8 @@ function SettingsSheet({ type, onClose }) {
 }
 
 export default function Settings() {
+  const { lang, setLang } = useLanguage();
+  const { currentUser } = useAuth();
   const [showSheet, setShowSheet] = useState(null);
   const [biometricOpen, setBiometricOpen] = useState(false);
   const [biometricAction, setBiometricAction] = useState('');
