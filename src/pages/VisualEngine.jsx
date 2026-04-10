@@ -9,7 +9,7 @@ const THEME_CATS = {
   organic:'Organic', energy:'Energy', mythic:'Mythic', cool:'Cool',
   warm:'Warm', minimal:'Minimal',
 };
-const BG_CATS = { off:'Off', digital:'Digital', space:'Space', nature:'Nature', energy:'Energy', mythic:'Mythic' };
+const BG_CATS = { off:'Off', digital:'Digital', space:'Space', nature:'Nature', energy:'Energy', mythic:'Mythic', still:'Astronomical' };
 
 function ColorWheel({ colors, size = 44 }) {
   const r = size / 2;
@@ -218,22 +218,26 @@ function BackgroundsTab() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {filtered.map(([key, env]) => (
-          <button key={key}
-            onMouseEnter={() => setPreview(key)}
-            onMouseLeave={() => setPreview(null)}
-            onClick={() => setBg(key)}
-            className={`relative rounded-xl border p-3 text-left transition-all ${bg === key ? 'border-primary ring-1 ring-primary/30 bg-primary/5' : 'border-border bg-secondary hover:border-primary/30'}`}>
-            {bg === key && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
-            <div className="w-6 h-6 rounded-lg bg-black/40 border border-border flex items-center justify-center mb-2">
-              <span className="text-[10px]">
-                {env.cat === 'digital' ? '⬡' : env.cat === 'space' ? '✦' : env.cat === 'nature' ? '◈' : env.cat === 'energy' ? '⚡' : env.cat === 'mythic' ? '⟡' : '○'}
-              </span>
-            </div>
-            <p className="text-[11px] font-medium">{env.label}</p>
-            <p className="text-[9px] text-muted-foreground capitalize">{env.cat}</p>
-          </button>
-        ))}
+      {filtered.map(([key, env]) => (
+        <button key={key}
+          onClick={() => setBg(key)}
+          className={`relative rounded-xl border overflow-hidden text-left transition-all ${bg === key ? 'border-primary ring-1 ring-primary/30' : 'border-border hover:border-primary/30'}`}
+          style={env.url ? { backgroundImage: `url(${env.url})`, backgroundSize: 'cover', backgroundPosition: 'center', minHeight: 72 } : {}}>
+          {env.url && <div className="absolute inset-0 bg-black/40" />}
+          <div className={`relative p-3 ${env.url ? 'text-white' : ''}`}>
+            {bg === key && <CheckCircle2 className="absolute top-0 right-0 w-3.5 h-3.5 text-primary" />}
+            {!env.url && (
+              <div className="w-6 h-6 rounded-lg bg-black/40 border border-border flex items-center justify-center mb-2">
+                <span className="text-[10px]">
+                  {env.cat === 'digital' ? '⬡' : env.cat === 'space' ? '✦' : env.cat === 'nature' ? '◈' : env.cat === 'energy' ? '⚡' : env.cat === 'mythic' ? '⟡' : '○'}
+                </span>
+              </div>
+            )}
+            <p className="text-[11px] font-semibold mt-6">{env.label}</p>
+            <p className="text-[9px] opacity-70 capitalize">{env.cat}</p>
+          </div>
+        </button>
+      ))}
       </div>
 
       <div className="space-y-3 p-3 bg-card rounded-xl border border-border">

@@ -5,53 +5,6 @@ import { useTheme } from '../context/ThemeContext';
 // Pattern: every engine MUST return a cleanup fn. All use a `cancelled` flag so
 // the RAF loop halts immediately on the same tick as cancelAnimationFrame.
 const ENGINES = {
-  matrix: (canvas, density = 1) => {
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth || window.innerWidth;
-    canvas.height = canvas.offsetHeight || window.innerHeight;
-    // Read the app's current primary color from CSS variables for theme compatibility
-    const accentHSL = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '160 100% 45%';
-    const accentColor = `hsl(${accentHSL})`;
-    const fontSize = 14;
-    const cols = Math.floor((canvas.width / fontSize) * Math.min(density, 2));
-    const drops = Array.from({ length: cols }, () => Math.floor(Math.random() * -canvas.height / fontSize));
-    let frame = 0, raf, cancelled = false;
-    // Solid background fill on init to prevent ghosting
-    ctx.fillStyle = 'rgba(0,0,0,1)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const draw = () => {
-      if (cancelled) return;
-      frame++;
-      if (frame % 3 === 0) {
-        // Semi-transparent overlay creates the trailing fade
-        ctx.fillStyle = 'rgba(0,0,0,0.06)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = accentColor;
-        ctx.font = `${fontSize}px JetBrains Mono, monospace`;
-        drops.forEach((y, i) => {
-          // Random katakana character
-          const char = String.fromCharCode(0x30A0 + Math.random() * 96);
-          const x = i * fontSize;
-          const yPx = y * fontSize;
-          // Lead character is brighter
-          ctx.fillStyle = 'rgba(255,255,255,0.9)';
-          ctx.fillText(char, x, yPx);
-          ctx.fillStyle = accentColor;
-          ctx.fillText(char, x, yPx + fontSize);
-          // Reset drop when it goes off screen
-          if (yPx > canvas.height && Math.random() > 0.975) drops[i] = 0;
-          drops[i]++;
-        });
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
-  },
 
   neural_mesh: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
@@ -288,7 +241,12 @@ export default function AnimatedBackground({ type, opacity: opacityProp }) {
   const canvasRef = useRef(null);
   const effectiveType = lowPower ? 'none' : resolvedType;
 
+  // Check if this is a still image backdrop
+  const isStill = effectiveType.startsWith('still_');
+  const stillUrl = isStill ? (BG_ENVS[effectiveType]?.url ?? null) : null;
+
   useEffect(() => {
+    if (isStill) return; // still images don't use canvas
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -304,9 +262,24 @@ export default function AnimatedBackground({ type, opacity: opacityProp }) {
       const c = canvasRef.current;
       if (c) c.getContext('2d')?.clearRect(0, 0, c.width, c.height);
     };
-  }, [effectiveType, density]);
+  }, [effectiveType, density, isStill]);
 
   if (effectiveType === 'none') return null;
+
+  if (isStill && stillUrl) {
+    return (
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `url(${stillUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: resolvedOpacity,
+        }}
+      />
+    );
+  }
 
   return (
     <canvas

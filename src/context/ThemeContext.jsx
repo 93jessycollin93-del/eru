@@ -3,19 +3,34 @@ import { createContext, useContext, useState, useEffect } from 'react';
 // ─── BACKGROUND ENVIRONMENTS ─────────────────────────────────────────────────
 export const BG_ENVS = {
   none:            { label: 'None',           cat: 'off'      },
-  // Digital
-  matrix:          { label: 'Matrix Rain',    cat: 'digital'  },
+  // Digital (animated)
   neural_mesh:     { label: 'Neural Mesh',    cat: 'digital'  },
-  // Space
+  // Space (animated)
   stars:           { label: 'Star Field',     cat: 'space'    },
   nebula:          { label: 'Nebula',         cat: 'space'    },
   aurora_sky:      { label: 'Aurora Sky',     cat: 'space'    },
-  // Nature
+  // Nature (animated)
   particles:       { label: 'Floating Dust',  cat: 'nature'   },
-  // Energy
+  // Energy (animated)
   fire:            { label: 'Embers',         cat: 'energy'   },
-  // Mythic
+  // Mythic (animated)
   crystal_lattice: { label: 'Crystal Lattice',cat: 'mythic'   },
+  // ── Astronomical Still Backdrops ──────────────────────────────────────────
+  still_milkyway:   { label: 'Milky Way Core',    cat: 'still', url: 'https://images.unsplash.com/photo-1465101162946-4377e57745c3?w=1600&q=90&fit=crop' },
+  still_nebula:     { label: 'Pillars of Cosmos', cat: 'still', url: 'https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=1600&q=90&fit=crop' },
+  still_galaxy:     { label: 'Spiral Galaxy',     cat: 'still', url: 'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=1600&q=90&fit=crop' },
+  still_aurora:     { label: 'Aurora Borealis',   cat: 'still', url: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1600&q=90&fit=crop' },
+  still_earth:      { label: 'Earth From Orbit',  cat: 'still', url: 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=1600&q=90&fit=crop' },
+  still_moon:       { label: 'Lunar Surface',     cat: 'still', url: 'https://images.unsplash.com/photo-1522030299830-16b8d3d049fe?w=1600&q=90&fit=crop' },
+  still_startrail:  { label: 'Star Trails',       cat: 'still', url: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1600&q=90&fit=crop' },
+  still_cosmos:     { label: 'Deep Cosmos',       cat: 'still', url: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1600&q=90&fit=crop' },
+  still_saturn:     { label: 'Ringed Planet',     cat: 'still', url: 'https://images.unsplash.com/photo-1614726365952-510103b1bdb8?w=1600&q=90&fit=crop' },
+  still_stardust:   { label: 'Cosmic Stardust',   cat: 'still', url: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=1600&q=90&fit=crop' },
+  still_eclipse:    { label: 'Solar Eclipse',     cat: 'still', url: 'https://images.unsplash.com/photo-1532798369041-b33eb576ef16?w=1600&q=90&fit=crop' },
+  still_supernova:  { label: 'Supernova',         cat: 'still', url: 'https://images.unsplash.com/photo-1543722530-d2c3201371e7?w=1600&q=90&fit=crop' },
+  still_telescope:  { label: 'Observatory Night', cat: 'still', url: 'https://images.unsplash.com/photo-1537420327992-d6e192287183?w=1600&q=90&fit=crop' },
+  still_darksky:    { label: 'Dark Sky Desert',   cat: 'still', url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1600&q=90&fit=crop' },
+  still_plasma:     { label: 'Plasma Storm',      cat: 'still', url: 'https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=1600&q=90&fit=crop' },
 };
 
 // ─── MOTION PRESETS ──────────────────────────────────────────────────────────
