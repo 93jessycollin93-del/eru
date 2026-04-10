@@ -1,0 +1,56 @@
+{
+  "name": "BotPerformanceAlert",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "metric": {
+      "type": "string",
+      "enum": [
+        "response_time",
+        "accuracy",
+        "resource_utilization",
+        "satisfaction"
+      ]
+    },
+    "threshold": {
+      "type": "number"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "above",
+        "below"
+      ]
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name",
+    "metric",
+    "threshold",
+    "direction"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -11,6 +11,7 @@ import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
 import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
+import BotMonitoringDashboard from '../components/ailab/BotMonitoringDashboard';
 import PinnedCards from '../components/ailab/PinnedCards';
 import SquadBoard from '../components/ailab/SquadBoard';
 import BotCollaborationWorkspace from '../components/ailab/BotCollaborationWorkspace';
@@ -636,7 +637,7 @@ export default function AILab() {
       {tab === 'versions' && <BotVersionHistory bots={bots} onRollback={loadBots} />}
 
       {/* DASHBOARD */}
-      {tab === 'dashboard' && <BotDashboard bots={bots} />}
+      {tab === 'dashboard' && <div><BotMonitoringDashboard bots={bots} /><BotDashboard bots={bots} /></div>}
 
       {/* PINNED CARDS */}
       {tab === 'pinned' && <PinnedCards bots={bots} />}
