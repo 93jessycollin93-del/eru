@@ -9,7 +9,7 @@ const THEME_CATS = {
   organic:'Organic', energy:'Energy', mythic:'Mythic', cool:'Cool',
   warm:'Warm', minimal:'Minimal',
 };
-const BG_CATS = { off:'Off', digital:'Digital', space:'Space', nature:'Nature', energy:'Energy', mythic:'Mythic', still:'Astronomical' };
+const BG_CATS = { off:'Off', digital:'Digital', space:'Space', nature:'Nature', energy:'Energy', mythic:'Mythic', still:'Astronomical', wildlife:'Wildlife' };
 
 function ColorWheel({ colors, size = 44 }) {
   const r = size / 2;
