@@ -14,6 +14,7 @@ import JackieGamificationPanel from '../components/jackie/JackieGamificationPane
 import FoundryControlPanel from '../components/jackie/FoundryControlPanel';
 import InputBar from '../components/jackie/InputBar';
 import TelegramBotSetupPanel from '../components/jackie/TelegramBotSetupPanel';
+import CodeWorkspace from '../components/jackie/CodeWorkspace';
 import { VOICES } from '../components/jackie/VoiceSelector';
 
 const PAGE_NAV_MAP = [
@@ -95,6 +96,7 @@ export default function JackieAI() {
   const [jackieProgress, setJackieProgress] = useState(null);
   const [foundryPreview, setFoundryPreview] = useState(null);
   const [applyingFoundry, setApplyingFoundry] = useState(false);
+  const [workspaceCode, setWorkspaceCode] = useState('');
   const bottomRef = useRef(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
@@ -222,6 +224,7 @@ export default function JackieAI() {
 
   const handleInjectAsset = (content) => {
     setWorkingContext(content);
+    setWorkspaceCode(content);
     setTab('main');
     setInput('Build from this asset: ');
   };
@@ -371,6 +374,14 @@ export default function JackieAI() {
                 onConfirm={applyFoundryPreview}
                 onDiscard={discardFoundryPreview}
                 busy={applyingFoundry}
+              />
+            )}
+
+            {(mode === 'code' || workspaceCode) && (
+              <CodeWorkspace
+                content={workspaceCode || workingContext}
+                onInject={setWorkspaceCode}
+                onSave={handleSave}
               />
             )}
 
