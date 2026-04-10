@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, BG_ENVS } from '../context/ThemeContext';
 
 // ─── ANIMATION ENGINES ──────────────────────────────────────────────────────
 // Pattern: every engine MUST return a cleanup fn. All use a `cancelled` flag so
