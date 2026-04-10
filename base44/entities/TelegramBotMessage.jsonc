@@ -1,0 +1,86 @@
+{
+  "name": "TelegramBotMessage",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "telegram_chat_id": {
+      "type": "string"
+    },
+    "telegram_message_id": {
+      "type": "string"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "incoming",
+        "outgoing"
+      ]
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "command",
+        "callback",
+        "system",
+        "error"
+      ],
+      "default": "text"
+    },
+    "content": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "received",
+        "processed",
+        "sent",
+        "failed"
+      ],
+      "default": "received"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "latency_ms": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "bot_id",
+    "telegram_chat_id",
+    "direction",
+    "content"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {},
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

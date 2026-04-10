@@ -1,0 +1,112 @@
+{
+  "name": "TelegramBot",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Internal bot name"
+    },
+    "bot_username": {
+      "type": "string",
+      "description": "Telegram bot username without @"
+    },
+    "token_label": {
+      "type": "string",
+      "description": "Reference label for the configured bot token"
+    },
+    "webhook_url": {
+      "type": "string",
+      "description": "Webhook endpoint URL"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "offline",
+        "error"
+      ],
+      "default": "draft"
+    },
+    "system_prompt": {
+      "type": "string",
+      "description": "Core personality and behavior instructions"
+    },
+    "greeting_message": {
+      "type": "string",
+      "description": "Welcome message for /start"
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "is_public": {
+      "type": "boolean",
+      "default": true
+    },
+    "last_webhook_at": {
+      "type": "string",
+      "description": "Last time a webhook was received"
+    },
+    "last_error": {
+      "type": "string",
+      "description": "Last known error message"
+    }
+  },
+  "required": [
+    "name",
+    "system_prompt"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

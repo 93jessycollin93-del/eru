@@ -1,0 +1,57 @@
+{
+  "name": "TelegramConversation",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string",
+      "description": "TelegramBot ID"
+    },
+    "telegram_chat_id": {
+      "type": "string",
+      "description": "Telegram chat ID"
+    },
+    "telegram_user_id": {
+      "type": "string",
+      "description": "Telegram user ID"
+    },
+    "telegram_username": {
+      "type": "string"
+    },
+    "last_user_message": {
+      "type": "string"
+    },
+    "last_bot_reply": {
+      "type": "string"
+    },
+    "message_count": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "paused",
+        "blocked"
+      ],
+      "default": "active"
+    },
+    "last_activity_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "telegram_chat_id"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {},
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

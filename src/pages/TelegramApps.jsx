@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, X, GripVertical, Star, ExternalLink, ChevronRight, Zap } from 'lucide-react';
 import TelegramSettings from '../components/TelegramSettings';
+import TelegramBotDashboard from '../components/telegram/TelegramBotDashboard';
 import SecurityAnalysis from '../components/SecurityAnalysis';
 
 const ALL_APPS = [
@@ -117,7 +118,7 @@ export default function TelegramApps() {
 
       {/* Tabs */}
       <div className="flex border-b border-border overflow-x-auto">
-        {[{ id: 'integration', label: 'Integration' }, { id: 'home', label: 'My Apps' }, { id: 'store', label: 'Discover' }, { id: 'arrange', label: 'Arrange' }, { id: 'security', label: '🛡️ Security' }].map(t => (
+        {[{ id: 'integration', label: 'Integration' }, { id: 'bots', label: 'AI Bots' }, { id: 'home', label: 'My Apps' }, { id: 'store', label: 'Discover' }, { id: 'arrange', label: 'Arrange' }, { id: 'security', label: '🛡️ Security' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-shrink-0 flex-1 py-2.5 text-xs font-medium whitespace-nowrap transition-colors px-2 ${tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
             {t.label}
@@ -138,6 +139,23 @@ export default function TelegramApps() {
             </ul>
           </div>
           <TelegramSettings />
+        </div>
+      )}
+
+      {tab === 'builder' && (
+        <div className="px-4 py-4 space-y-4">
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+            <p className="text-sm font-semibold mb-1">AI Telegram Bot Builder</p>
+            <p className="text-xs text-muted-foreground">Create Telegram bots, configure AI behavior, enable webhooks, and monitor live conversations.</p>
+          </div>
+          <TelegramBotDashboard />
+        </div>
+      )}
+
+      {/* AI BOTS */}
+      {tab === 'bots' && (
+        <div className="px-4 py-4">
+          <TelegramBotDashboard />
         </div>
       )}
 

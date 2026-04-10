@@ -1,0 +1,66 @@
+{
+  "name": "TelegramBotSession",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "telegram_chat_id": {
+      "type": "string"
+    },
+    "telegram_user_id": {
+      "type": "string"
+    },
+    "telegram_username": {
+      "type": "string"
+    },
+    "last_user_message": {
+      "type": "string"
+    },
+    "last_bot_response": {
+      "type": "string"
+    },
+    "memory_summary": {
+      "type": "string"
+    },
+    "message_count": {
+      "type": "number",
+      "default": 0
+    },
+    "last_message_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "telegram_chat_id"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {},
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
