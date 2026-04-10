@@ -22,6 +22,7 @@ import ThinkersClub from './pages/ThinkersClub';
 import AppReview from './pages/AppReview';
 import Reputation from './pages/Reputation';
 import TelegramApps from './pages/TelegramApps';
+import TelegramBotManagement from './pages/TelegramBotManagement';
 import JackieAI from './pages/JackieAI';
 import AILab from './pages/AILab';
 import APIKeys from './pages/APIKeys';
@@ -90,6 +91,7 @@ const AuthenticatedApp = () => {
         <Route path="/review" element={<AppReview />} />
         <Route path="/reputation" element={<Reputation />} />
         <Route path="/tgapps" element={<TelegramApps />} />
+        <Route path="/telegram-bots" element={<TelegramBotManagement />} />
         <Route path="/jackie" element={<JackieAI />} />
         <Route path="/ailab" element={<AILab />} />
         <Route path="/apikeys" element={<APIKeys />} />

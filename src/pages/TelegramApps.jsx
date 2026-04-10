@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus, X, GripVertical, Star, ExternalLink, ChevronRight, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
 import TelegramBotDashboard from '../components/telegram/TelegramBotDashboard';
 import SecurityAnalysis from '../components/SecurityAnalysis';
@@ -145,9 +146,14 @@ export default function TelegramApps() {
       {/* AI BOTS */}
       {tab === 'bots' && (
         <div className="px-4 py-4 space-y-4">
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
-            <p className="text-sm font-semibold mb-1">Centralized AI Bot Management</p>
-            <p className="text-xs text-muted-foreground">Create, configure, monitor, and compare multiple Telegram bots with interactive charts and one unified control center.</p>
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold mb-1">Centralized AI Bot Management</p>
+              <p className="text-xs text-muted-foreground">Create, configure, monitor, and compare multiple Telegram bots with interactive charts and one unified control center.</p>
+            </div>
+            <Link to="/telegram-bots" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">
+              Open full management page
+            </Link>
           </div>
           <TelegramBotDashboard />
         </div>
