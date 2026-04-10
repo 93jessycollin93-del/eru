@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -21,6 +21,12 @@ const ROLES = [
 ];
 
 const STYLES = ['short', 'detailed', 'strategic', 'creative'];
+const CAPABILITY_LABELS = {
+  memory_boost: 'Memory Boost',
+  web_search: 'Web Search',
+  code_execution: 'Code Execution',
+  auto_schedule: 'Auto Schedule',
+};
 
 const PAGE_OPTIONS = [
   { route: '/', label: 'Dashboard' },
@@ -62,6 +68,11 @@ export default function AILab() {
   const [testing, setTesting] = useState(false);
   const [selectedBotIds, setSelectedBotIds] = useState([]);
   const [bulkAction, setBulkAction] = useState('publish');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
 
   useEffect(() => { loadBots(); }, []);
 
@@ -92,7 +103,7 @@ export default function AILab() {
   };
 
   const toggleSelectAllBots = () => {
-    setSelectedBotIds((prev) => prev.length === bots.length ? [] : bots.map((bot) => bot.id));
+    setSelectedBotIds((prev) => prev.length === visibleBots.length ? [] : visibleBots.map((bot) => bot.id));
   };
 
   const applyBulkAction = async () => {
@@ -149,16 +160,39 @@ export default function AILab() {
     const newLevel = Math.min(10, Math.floor(newXp / 100) + 1);
     const caps = bot.unlocked_capabilities || [];
     const newCaps = [...caps];
-    if (newLevel >= 3 && !caps.includes('memory_boost')) newCaps.push('memory_boost');
-    if (newLevel >= 5 && !caps.includes('web_search')) newCaps.push('web_search');
-    if (newLevel >= 7 && !caps.includes('code_execution')) newCaps.push('code_execution');
-    if (newLevel >= 10 && !caps.includes('auto_schedule')) newCaps.push('auto_schedule');
+    if ((newLevel >= 3 || newUsage >= 5) && !caps.includes('memory_boost')) newCaps.push('memory_boost');
+    if ((newLevel >= 5 || newUsage >= 10) && !caps.includes('web_search')) newCaps.push('web_search');
+    if ((newLevel >= 7 || newUsage >= 20) && !caps.includes('code_execution')) newCaps.push('code_execution');
+    if ((newLevel >= 10 || newUsage >= 30) && !caps.includes('auto_schedule')) newCaps.push('auto_schedule');
     await base44.entities.UserBot.update(bot.id, {
       xp: newXp, level: newLevel, usage_count: newUsage,
       unlocked_capabilities: newCaps, last_interaction: new Date().toISOString()
     });
     loadBots();
   };
+
+  const visibleBots = useMemo(() => {
+    const filtered = bots.filter((bot) => {
+      const roleLabel = ROLES.find((role) => role.id === bot.role)?.label || '';
+      const matchesSearch = !search || [bot.name, bot.description, bot.role, roleLabel].filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase());
+      const matchesRole = roleFilter === 'all' || bot.role === roleFilter;
+      const matchesStatus = statusFilter === 'all' || (bot.status || 'active') === statusFilter;
+      const level = bot.level || 1;
+      const matchesLevel = levelFilter === 'all'
+        || (levelFilter === '1-3' && level >= 1 && level <= 3)
+        || (levelFilter === '4-6' && level >= 4 && level <= 6)
+        || (levelFilter === '7+' && level >= 7);
+      return matchesSearch && matchesRole && matchesStatus && matchesLevel;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
+      if (sortBy === 'level') return (b.level || 1) - (a.level || 1);
+      if (sortBy === 'status') return (a.status || 'active').localeCompare(b.status || 'active');
+      return new Date(b.created_date || 0) - new Date(a.created_date || 0);
+    });
+  }, [bots, search, roleFilter, statusFilter, levelFilter, sortBy]);
 
   const runTest = async () => {
     if (!testInput.trim() || !testBot) return;
@@ -215,15 +249,62 @@ export default function AILab() {
 
           {bots.length > 0 && (
             <div className="bg-card border border-border rounded-xl p-3 space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <button
-                  onClick={toggleSelectAllBots}
-                  className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground"
-                >
-                  {selectedBotIds.length === bots.length && bots.length > 0 ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
-                  {selectedBotIds.length === bots.length && bots.length > 0 ? 'Clear selection' : 'Select all'}
-                </button>
-                <span className="text-[11px] text-muted-foreground">{selectedBotIds.length} selected</span>
+              <div className="grid gap-2 md:grid-cols-4">
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                  <Search className="w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search bots..."
+                    className="flex-1 bg-transparent text-xs outline-none text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                  <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-full bg-transparent text-xs outline-none text-foreground">
+                    <option value="all">All roles</option>
+                    {ROLES.map((role) => <option key={role.id} value={role.id}>{role.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                  <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full bg-transparent text-xs outline-none text-foreground">
+                    <option value="all">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full bg-transparent text-xs outline-none text-foreground">
+                    <option value="newest">Newest</option>
+                    <option value="name">Name</option>
+                    <option value="role">Role</option>
+                    <option value="level">Level</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-col sm:flex-row">
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs text-muted-foreground sm:w-48">
+                  <Filter className="w-3.5 h-3.5" />
+                  <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="w-full bg-transparent outline-none text-foreground">
+                    <option value="all">All levels</option>
+                    <option value="1-3">Level 1-3</option>
+                    <option value="4-6">Level 4-6</option>
+                    <option value="7+">Level 7+</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between gap-3 flex-1 flex-wrap">
+                  <button
+                    onClick={toggleSelectAllBots}
+                    className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground"
+                  >
+                    {selectedBotIds.length === visibleBots.length && visibleBots.length > 0 ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+                    {selectedBotIds.length === visibleBots.length && visibleBots.length > 0 ? 'Clear selection' : 'Select visible'}
+                  </button>
+                  <span className="text-[11px] text-muted-foreground">{selectedBotIds.length} selected · {visibleBots.length} shown</span>
+                </div>
               </div>
               <div className="flex gap-2 flex-col sm:flex-row">
                 <select
@@ -255,7 +336,13 @@ export default function AILab() {
               <p className="text-sm text-muted-foreground">No bots yet</p>
               <p className="text-xs text-muted-foreground/60 mt-1">Create your first AI bot above</p>
             </div>
-          ) : bots.map(bot => {
+          ) : visibleBots.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Bot className="w-12 h-12 text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">No bots match your filters</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Try changing your search, sort, or filter settings</p>
+            </div>
+          ) : visibleBots.map(bot => {
             const role = ROLES.find(r => r.id === bot.role);
             return (
               <div key={bot.id} className="bg-card border border-border rounded-xl p-4">
@@ -285,13 +372,19 @@ export default function AILab() {
                       </div>
                       <span className="text-[9px] text-muted-foreground">{bot.xp || 0} XP</span>
                     </div>
-                    {(bot.unlocked_capabilities || []).length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {(bot.unlocked_capabilities || []).map(c => (
-                          <span key={c} className="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded-full">⚡ {c.replace('_', ' ')}</span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="mt-2 space-y-1">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Unlocked capabilities</p>
+                      {(bot.unlocked_capabilities || []).length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {(bot.unlocked_capabilities || []).map(c => (
+                            <span key={c} className="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full">⚡ {CAPABILITY_LABELS[c] || c.replace('_', ' ')}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground">No advanced capabilities unlocked yet.</p>
+                      )}
+                      <p className="text-[9px] text-muted-foreground/70">Unlocks by level or usage: Web Search, Code Execution, and Auto Schedule.</p>
+                    </div>
                     {bot.description && <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">{bot.description}</p>}
                   </div>
                 </div>
