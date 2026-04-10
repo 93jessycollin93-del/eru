@@ -3,6 +3,7 @@ import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, F
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
+import ProgrammingMemoryPanel from '../components/ailab/ProgrammingMemoryPanel';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
@@ -46,7 +47,9 @@ const PAGE_OPTIONS = [
   { route: '/thinkers', label: 'Thinkers Club' },
 ];
 
-const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: '', response_style: 'detailed', memory_enabled: false, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '' };
+const PROGRAMMING_MEMORY_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default when teaching, comparing, coding, debugging, or designing systems.";
+
+const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '' };
 
 const downloadJson = (filename, data) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -133,7 +136,7 @@ export default function AILab() {
   };
 
   const startEdit = (bot) => {
-    setForm({ name: bot.name, description: bot.description || '', role: bot.role, personality: bot.personality || '', instructions: bot.instructions || '', response_style: bot.response_style || 'detailed', memory_enabled: !!bot.memory_enabled, is_public: !!bot.is_public, status: bot.status || 'active' });
+    setForm({ name: bot.name, description: bot.description || '', role: bot.role, personality: bot.personality || '', instructions: bot.instructions || PROGRAMMING_MEMORY_PROMPT, response_style: bot.response_style || 'detailed', memory_enabled: bot.memory_enabled !== false, is_public: !!bot.is_public, status: bot.status || 'active' });
     setEditId(bot.id);
     setTab('build');
   };
@@ -618,7 +621,7 @@ export default function AILab() {
       {tab === 'agents' && <AgentRunner bots={bots} globalPolicy={globalPolicy} />}
 
       {/* MEMORY */}
-      {tab === 'memory' && <MemoryViewer bots={bots} />}
+      {tab === 'memory' && <div><ProgrammingMemoryPanel /><MemoryViewer bots={bots} /></div>}
 
       {/* ORCHESTRATOR */}
       {tab === 'orchestrator' && <MultiAgentOrchestrator bots={bots} />}

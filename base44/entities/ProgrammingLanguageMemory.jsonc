@@ -1,0 +1,83 @@
+{
+  "name": "ProgrammingLanguageMemory",
+  "type": "object",
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "Unique language key"
+    },
+    "name": {
+      "type": "string",
+      "description": "Programming language name"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "core",
+        "language"
+      ],
+      "default": "language"
+    },
+    "summary": {
+      "type": "string",
+      "description": "High-level summary for quick recall"
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "best_for": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "core_concepts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "syntax_examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "common_uses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "memory_priority": {
+      "type": "number",
+      "default": 1
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "slug",
+    "name",
+    "category",
+    "summary"
+  ]
+}

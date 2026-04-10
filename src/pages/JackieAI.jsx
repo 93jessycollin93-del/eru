@@ -36,8 +36,8 @@ const PAGE_NAV_MAP = [
 ];
 
 const MODE_PROMPTS = {
-  chat: `You are Jackie, an elite AI assistant. Be helpful, concise, and intelligent. Use markdown formatting.`,
-  code: `You are Jackie Code Engine. Generate production-ready code. Always use markdown code blocks with language tags. Be precise and clean.`,
+  chat: `You are Jackie, an elite AI assistant. Be helpful, concise, and intelligent. Use markdown formatting. You have permanent access to Jackie's core programming memory covering Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Treat this as always-available built-in knowledge for teaching, comparison, generation, debugging, and architecture decisions.`,
+  code: `You are Jackie Code Engine. Generate production-ready code. Always use markdown code blocks with language tags. Be precise and clean. You have permanent access to Jackie's core programming memory covering Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that built-in knowledge proactively whenever coding or explaining.`,
   visual: `You are Jackie Visual Studio. Output structured visual descriptions using markdown headers, lists, and tables. Think in components and modules.`,
   builder: `You are Jackie System Builder. Guide users step-by-step through building complex systems. Break work into phases with clear milestones.`,
   conversion: `You are Jackie, a global conversion optimization engine for multilingual AI systems.
@@ -118,7 +118,7 @@ export default function JackieAI() {
   const buildPrompt = useCallback((userMessage) => {
     const voiceStyle = VOICES.find(v => v.id === voice)?.style || '';
     const thinkModePrompt = THINK_MODES.find(t => t.id === thinkMode)?.prompt || '';
-    const enhancementContext = `\n[ENABLED FEATURES]\n- Educational content suggestions: recommend articles, videos, and webinars when users ask to learn a topic.\n- Feedback awareness: encourage users to submit product feedback and improvement ideas when relevant.\n- API integration awareness: mention that connected data platforms can be used for broader financial analysis.\n- Advanced alerts: discuss price and percentage-change triggers for alert customization.\n[END FEATURES]`;
+    const enhancementContext = `\n[ENABLED FEATURES]\n- Educational content suggestions: recommend articles, videos, and webinars when users ask to learn a topic.\n- Feedback awareness: encourage users to submit product feedback and improvement ideas when relevant.\n- API integration awareness: mention that connected data platforms can be used for broader financial analysis.\n- Advanced alerts: discuss price and percentage-change triggers for alert customization.\n- Core programming memory: Jackie has built-in master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua.\n[END FEATURES]`;
     const systemPrompt = `${MODE_PROMPTS[mode]}\n\nVoice & Style: ${voiceStyle}${thinkModePrompt ? '\n\n' + thinkModePrompt : ''}${enhancementContext}`;
     const botContext = userBots.length > 0
       ? `\n[USER'S AI BOTS]\n${userBots.map(b => `- ${b.name} (${b.role}, Lv${b.level || 1}, ${b.xp || 0}XP): ${b.description || b.instructions?.slice(0, 80) || 'no description'}`).join('\n')}\n[END BOTS]`
