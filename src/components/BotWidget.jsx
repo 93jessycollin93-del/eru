@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bot, X, Send, ChevronDown, Zap } from 'lucide-react';
+import { Bot, Send, ChevronDown, Zap, Globe } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const ROLE_ICONS = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚡' };
@@ -13,7 +13,8 @@ export default function BotWidget() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [consulting, setConsulting] = useState(null); // which connected bot is being consulted
+  const [consulting, setConsulting] = useState(null);
+  const [webSearch, setWebSearch] = useState(false); // which connected bot is being consulted
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -69,7 +70,10 @@ export default function BotWidget() {
       ? `You are ${bot.name}. ${bot.instructions || ''}\nA connected bot provided this: ${consultResult}\nSummarize and present this to the user helpfully.\n\nUser original question: ${userMsg}\n\n${bot.name}:`
       : `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}\nContext: User is on the page "${pathname}".\n\nUser: ${userMsg}\n\n${bot.name}:`;
 
-    const res = await base44.integrations.Core.InvokeLLM({ prompt });
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt,
+      ...(webSearch ? { add_context_from_internet: true, model: 'gemini_3_flash' } : {}),
+    });
     setMessages(prev => [...prev, { role: 'bot', text: res, delegated: !!consultResult }]);
 
     // Award XP silently
@@ -122,6 +126,11 @@ export default function BotWidget() {
                 <span className="text-[9px] text-muted-foreground ml-0.5">network</span>
               </div>
             )}
+            <button onClick={() => setWebSearch(w => !w)}
+              title={webSearch ? 'Web search ON' : 'Web search OFF'}
+              className={`p-1.5 rounded-lg border transition-all ${webSearch ? 'border-blue-400/50 text-blue-400 bg-blue-400/10' : 'border-border text-muted-foreground'}`}>
+              <Globe className="w-3.5 h-3.5" />
+            </button>
             <button onClick={() => setOpen(false)} className="text-muted-foreground p-1">
               <ChevronDown className="w-4 h-4" />
             </button>

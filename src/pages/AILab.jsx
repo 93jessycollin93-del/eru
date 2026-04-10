@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2 } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
+import BotVersionHistory from '../components/ailab/BotVersionHistory';
 import { base44 } from '@/api/base44Client';
 
 const ROLES = [
@@ -116,6 +117,7 @@ export default function AILab() {
     { id: 'memory', label: 'Memory', icon: Brain },
     { id: 'orchestrator', label: 'Orchestra', icon: Network },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+    { id: 'versions', label: 'Versions', icon: History },
     { id: 'discover', label: 'Discover', icon: Sparkles },
   ];
 
@@ -398,6 +400,9 @@ export default function AILab() {
 
       {/* ANALYTICS */}
       {tab === 'analytics' && <LabAnalytics bots={bots} />}
+
+      {/* VERSIONS */}
+      {tab === 'versions' && <BotVersionHistory bots={bots} onRollback={loadBots} />}
 
       {/* DISCOVER */}
       {tab === 'discover' && (

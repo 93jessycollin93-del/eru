@@ -1,0 +1,71 @@
+{
+  "name": "BotAutomation",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "task_prompt": {
+      "type": "string",
+      "description": "What the bot should do each run"
+    },
+    "interval_hours": {
+      "type": "number",
+      "default": 24
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "paused"
+      ],
+      "default": "active"
+    },
+    "slack_webhook_url": {
+      "type": "string",
+      "description": "Optional Slack webhook to post results to"
+    },
+    "alert_condition": {
+      "type": "string",
+      "description": "e.g. Only alert if result contains 'warning' or 'drop'"
+    },
+    "last_run_at": {
+      "type": "string"
+    },
+    "last_run_result": {
+      "type": "string"
+    },
+    "run_count": {
+      "type": "number",
+      "default": 0
+    },
+    "user_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "bot_id",
+    "task_prompt"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

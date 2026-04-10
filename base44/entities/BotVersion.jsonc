@@ -1,0 +1,54 @@
+{
+  "name": "BotVersion",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "version_label": {
+      "type": "string",
+      "description": "e.g. v1.0, Stable, Pre-training"
+    },
+    "instructions": {
+      "type": "string"
+    },
+    "personality": {
+      "type": "string"
+    },
+    "response_style": {
+      "type": "string"
+    },
+    "handoff_instructions": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Why this snapshot was saved"
+    },
+    "user_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name",
+    "instructions"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

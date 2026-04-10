@@ -37,6 +37,7 @@ import CreatureLab from './pages/CreatureLab';
 import AdminEconomyDashboard from './pages/AdminEconomyDashboard';
 import PerformanceDashboard from './pages/PerformanceDashboard';
 import ActivityAuditLog from './pages/ActivityAuditLog';
+import BotAutomations from './pages/BotAutomations';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -97,6 +98,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/economy" element={<AdminEconomyDashboard />} />
         <Route path="/performance" element={<PerformanceDashboard />} />
         <Route path="/audit" element={<ActivityAuditLog />} />
+        <Route path="/bot-automations" element={<BotAutomations />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
