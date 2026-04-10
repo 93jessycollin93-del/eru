@@ -1,0 +1,46 @@
+{
+  "name": "BotImprovement",
+  "type": "object",
+  "properties": {
+    "goal": {
+      "type": "string"
+    },
+    "plan": {
+      "type": "string"
+    },
+    "execution": {
+      "type": "string"
+    },
+    "analysis": {
+      "type": "string"
+    },
+    "improvement": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number"
+    },
+    "bot_id": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "goal",
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {},
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

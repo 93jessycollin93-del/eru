@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2 } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2 } from 'lucide-react';
+import BotFactory from '../components/ailab/BotFactory';
+import AgentRunner from '../components/ailab/AgentRunner';
+import MemoryViewer from '../components/ailab/MemoryViewer';
+import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
+import LabAnalytics from '../components/ailab/LabAnalytics';
 import { base44 } from '@/api/base44Client';
 
 const ROLES = [
@@ -32,6 +37,16 @@ const BLANK = { name: '', description: '', role: 'assistant', personality: '', i
 
 export default function AILab() {
   const [tab, setTab] = useState('my');
+  const TABS = [
+    { id: 'my', label: 'My Bots', icon: Bot },
+    { id: 'build', label: editId ? 'Edit' : 'Build', icon: Plus },
+    { id: 'factory', label: 'Factory', icon: Wand2 },
+    { id: 'agents', label: 'Agents', icon: Zap },
+    { id: 'memory', label: 'Memory', icon: Brain },
+    { id: 'orchestrator', label: 'Orchestra', icon: Network },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+    { id: 'discover', label: 'Discover', icon: Sparkles },
+  ];
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(BLANK);
@@ -114,11 +129,11 @@ export default function AILab() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border">
-        {[{ id: 'my', label: 'My Bots' }, { id: 'build', label: editId ? 'Edit Bot' : 'Create Bot' }, { id: 'discover', label: 'Discover' }].map(t => (
+      <div className="flex border-b border-border overflow-x-auto">
+        {TABS.map(t => (
           <button key={t.id} onClick={() => { setTab(t.id); if (t.id !== 'build') { setForm(BLANK); setEditId(null); } }}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors ${tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
-            {t.label}
+            className={`flex-shrink-0 flex items-center gap-1 px-3 py-2.5 text-xs font-medium transition-colors whitespace-nowrap ${tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
+            <t.icon className="w-3 h-3" />{t.label}
           </button>
         ))}
       </div>
@@ -367,6 +382,21 @@ export default function AILab() {
           <button onClick={() => setTab('my')} className="w-full text-sm text-muted-foreground py-2">← Back to My Bots</button>
         </div>
       )}
+
+      {/* FACTORY */}
+      {tab === 'factory' && <BotFactory onSaveBot={loadBots} />}
+
+      {/* AGENTS */}
+      {tab === 'agents' && <AgentRunner bots={bots} />}
+
+      {/* MEMORY */}
+      {tab === 'memory' && <MemoryViewer bots={bots} />}
+
+      {/* ORCHESTRATOR */}
+      {tab === 'orchestrator' && <MultiAgentOrchestrator bots={bots} />}
+
+      {/* ANALYTICS */}
+      {tab === 'analytics' && <LabAnalytics bots={bots} />}
 
       {/* DISCOVER */}
       {tab === 'discover' && (
