@@ -5,36 +5,6 @@ import { useTheme } from '../context/ThemeContext';
 // Pattern: every engine MUST return a cleanup fn. All use a `cancelled` flag so
 // the RAF loop halts immediately on the same tick as cancelAnimationFrame.
 const ENGINES = {
-  matrix: (canvas, density = 1) => {
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth || window.innerWidth;
-    canvas.height = canvas.offsetHeight || window.innerHeight;
-    ctx.fillStyle = 'rgba(10,12,20,1)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const cols = Math.floor(canvas.width / 16 * Math.min(density, 2));
-    const drops = Array(cols).fill(1);
-    let frame = 0, raf, cancelled = false;
-    const draw = () => {
-      if (cancelled) return;
-      frame++;
-      if (frame % 3 === 0) {
-        ctx.fillStyle = 'rgba(10,12,20,0.05)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#00e676';
-        ctx.font = '14px JetBrains Mono, monospace';
-        drops.forEach((y, i) => {
-          const char = String.fromCharCode(0x30A0 + Math.random() * 96);
-          ctx.fillText(char, i * 16, y * 16);
-          if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
-          drops[i]++;
-        });
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
-  },
-
   neural_mesh: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth || window.innerWidth;

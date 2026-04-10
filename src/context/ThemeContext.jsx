@@ -4,7 +4,6 @@ import { createContext, useContext, useState, useEffect } from 'react';
 export const BG_ENVS = {
   none:            { label: 'None',           cat: 'off'      },
   // Digital
-  matrix:          { label: 'Matrix Rain',    cat: 'digital'  },
   neural_mesh:     { label: 'Neural Mesh',    cat: 'digital'  },
   // Space
   stars:           { label: 'Star Field',     cat: 'space'    },
