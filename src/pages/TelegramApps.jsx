@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, X, GripVertical, Star, ExternalLink, ChevronRight, Zap } from 'lucide-react';
 import TelegramSettings from '../components/TelegramSettings';
+import SecurityAnalysis from '../components/SecurityAnalysis';
 
 const ALL_APPS = [
   { id: 'wallet',    name: 'TON Wallet',       icon: '💎', category: 'Finance',   stars: 4.9, users: '2.1M', desc: 'Send & receive TON instantly',       color: '#0088cc', pinned: true  },
@@ -115,10 +116,10 @@ export default function TelegramApps() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border">
-        {[{ id: 'integration', label: 'Integration' }, { id: 'home', label: 'My Apps' }, { id: 'store', label: 'Discover' }, { id: 'arrange', label: 'Arrange' }].map(t => (
+      <div className="flex border-b border-border overflow-x-auto">
+        {[{ id: 'integration', label: 'Integration' }, { id: 'home', label: 'My Apps' }, { id: 'store', label: 'Discover' }, { id: 'arrange', label: 'Arrange' }, { id: 'security', label: '🛡️ Security' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors ${tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
+            className={`flex-shrink-0 flex-1 py-2.5 text-xs font-medium whitespace-nowrap transition-colors px-2 ${tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
             {t.label}
           </button>
         ))}
@@ -275,6 +276,8 @@ export default function TelegramApps() {
           )}
         </div>
       )}
+      {/* SECURITY */}
+      {tab === 'security' && <SecurityAnalysis />}
     </div>
   );
 }
