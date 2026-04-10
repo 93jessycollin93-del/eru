@@ -95,14 +95,12 @@
         "base44",
         "openai",
         "anthropic",
+        "huggingface_builder",
         "huggingface_user"
       ],
       "default": "base44"
     },
     "model_name": {
-      "type": "string"
-    },
-    "api_label": {
       "type": "string"
     }
   },

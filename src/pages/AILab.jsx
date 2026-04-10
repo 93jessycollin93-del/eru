@@ -502,6 +502,8 @@ export default function AILab() {
             </div>
           </div>
 
+          <ModelProviderPanel value={form} onChange={(next) => setForm((prev) => ({ ...prev, ...next }))} />
+
           <ExternalAISettingsPanel value={{ provider: form.model_provider, model: form.model_name, api_label: form.api_label }} onChange={(value) => setForm((prev) => ({ ...prev, model_provider: value.provider, model_name: value.model, api_label: value.api_label }))} />
 
           <div className="flex gap-3">
