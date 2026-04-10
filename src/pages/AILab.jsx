@@ -9,6 +9,7 @@ import KnowledgeMap from '../components/ailab/KnowledgeMap';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
+import BotTestingSuite from '../components/ailab/BotTestingSuite';
 import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
 import BotMonitoringDashboard from '../components/ailab/BotMonitoringDashboard';
@@ -227,6 +228,7 @@ export default function AILab() {
     { id: 'orchestrator', label: 'Orchestra', icon: Network },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'versions', label: 'Versions', icon: History },
+    { id: 'testing', label: 'Testing', icon: CheckSquare },
     { id: 'dashboard', label: 'Stats', icon: LayoutDashboard },
     { id: 'pinned', label: 'Cards', icon: Pin },
     { id: 'squad', label: 'Squad', icon: Network },
@@ -635,6 +637,9 @@ export default function AILab() {
 
       {/* VERSIONS */}
       {tab === 'versions' && <BotVersionHistory bots={bots} onRollback={loadBots} />}
+
+      {/* TESTING */}
+      {tab === 'testing' && <BotTestingSuite bots={bots} globalPolicy={globalPolicy} />}
 
       {/* DASHBOARD */}
       {tab === 'dashboard' && <div><BotMonitoringDashboard bots={bots} /><BotDashboard bots={bots} /></div>}

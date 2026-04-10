@@ -1,0 +1,50 @@
+{
+  "name": "BotTestCase",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "input": {
+      "type": "string"
+    },
+    "expected_output": {
+      "type": "string"
+    },
+    "min_similarity_score": {
+      "type": "number",
+      "default": 0.75
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name",
+    "title",
+    "input",
+    "expected_output"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

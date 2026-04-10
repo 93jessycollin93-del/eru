@@ -1,0 +1,71 @@
+{
+  "name": "BotTestRun",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "test_case_id": {
+      "type": "string"
+    },
+    "test_title": {
+      "type": "string"
+    },
+    "input": {
+      "type": "string"
+    },
+    "expected_output": {
+      "type": "string"
+    },
+    "actual_output": {
+      "type": "string"
+    },
+    "similarity_score": {
+      "type": "number"
+    },
+    "passed": {
+      "type": "boolean",
+      "default": false
+    },
+    "pass_rate_snapshot": {
+      "type": "number"
+    },
+    "regression_flag": {
+      "type": "boolean",
+      "default": false
+    },
+    "regression_reason": {
+      "type": "string"
+    },
+    "run_group": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name",
+    "test_case_id",
+    "test_title",
+    "input",
+    "expected_output",
+    "actual_output",
+    "similarity_score"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
