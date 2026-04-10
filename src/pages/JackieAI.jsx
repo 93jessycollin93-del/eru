@@ -156,13 +156,14 @@ export default function JackieAI() {
       resources_opened: (current.resources_opened || 0) + (changes.resources_opened || 0),
       feedback_sent: (current.feedback_sent || 0) + (changes.feedback_sent || 0)
     };
-    if (jackieProgress?.id) {
-      await jackieProgressEntity.update(jackieProgress.id, payload);
-      setJackieProgress({ ...jackieProgress, ...payload });
-    } else {
-      const created = await jackieProgressEntity.create(payload);
-      setJackieProgress(created);
-    }
+
+    return jackieProgress?.id
+      ? jackieProgressEntity.update(jackieProgress.id, payload).then(() => {
+          setJackieProgress({ ...jackieProgress, ...payload });
+        }).catch(() => {})
+      : jackieProgressEntity.create(payload).then((created) => {
+          setJackieProgress(created);
+        }).catch(() => {});
   };
 
   const send = async (attachments = []) => {
