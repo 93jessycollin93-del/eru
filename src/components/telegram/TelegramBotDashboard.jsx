@@ -30,14 +30,14 @@ export default function TelegramBotDashboard() {
   const [verification, setVerification] = useState(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedBotIds, setSelectedBotIds] = useState([]);
-  const [data, setData] = useState({ bots: [], messages: [], logs: [], sessions: [] });
+  const [data, setData] = useState({ bots: [], messages: [], logs: [], sessions: [], comparisons: [] });
   const [selectedBotId, setSelectedBotId] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
 
   const load = async () => {
     setLoading(true);
     const response = await base44.functions.invoke('listTelegramBotDashboard', {});
-    setData(response.data || { bots: [], messages: [], logs: [], sessions: [] });
+    setData(response.data || { bots: [], messages: [], logs: [], sessions: [], comparisons: [] });
     setLoading(false);
   };
 
@@ -261,7 +261,7 @@ export default function TelegramBotDashboard() {
         </div>
       </div>
 
-      <BotOverviewCharts bots={data.bots} messages={data.messages} logs={data.logs} />
+      <BotOverviewCharts bots={data.bots} messages={data.messages} logs={data.logs} comparisons={data.comparisons || []} />
 
       <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
         Use the builder below to configure each bot’s agent behavior, memory, and tools.
