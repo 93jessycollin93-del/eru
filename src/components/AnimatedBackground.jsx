@@ -241,9 +241,10 @@ export default function AnimatedBackground({ type, opacity: opacityProp }) {
   const canvasRef = useRef(null);
   const effectiveType = lowPower ? 'none' : resolvedType;
 
-  // Check if this is a still image backdrop
-  const isStill = effectiveType.startsWith('still_');
-  const stillUrl = isStill ? (BG_ENVS[effectiveType]?.url ?? null) : null;
+  // Check if this bg has a url (still image) — works for any prefix
+  const envConfig = BG_ENVS[effectiveType];
+  const isStill = !!envConfig?.url;
+  const stillUrl = isStill ? envConfig.url : null;
 
   useEffect(() => {
     if (isStill) return; // still images don't use canvas
