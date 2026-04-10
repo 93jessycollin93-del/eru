@@ -1,11 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Star, Download, MessageSquare, Search, Send, X, Sparkles, Briefcase, Blocks, Globe2, Bot } from 'lucide-react';
+import { Star, Download, MessageSquare, Search, Send, X, Sparkles, Briefcase, Blocks, Bot, ArrowUpDown, TrendingUp } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚙️' };
 const CATEGORY_OPTIONS = ['All', 'Assistant', 'Trading', 'Gaming', 'Social', 'Custom'];
 const INDUSTRY_OPTIONS = ['All', 'General', 'Finance', 'Ecommerce', 'Support', 'Education', 'Marketing', 'Gaming'];
+const SORT_OPTIONS = [
+  { value: 'featured', label: 'Featured' },
+  { value: 'popularity', label: 'Popularity' },
+  { value: 'rating', label: 'Rating' },
+  { value: 'newestReviews', label: 'Most Reviewed' },
+  { value: 'name', label: 'Name' },
+];
 
 const getCategory = (bot) => ({
   assistant: 'Assistant',
@@ -127,6 +134,7 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [industry, setIndustry] = useState('All');
+  const [sortBy, setSortBy] = useState('featured');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
 
@@ -169,7 +177,29 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
     load();
   };
 
-  const featured = useMemo(() => bots.slice(0, embedded ? 3 : 4), [bots, embedded]);
+  const botInsights = useMemo(() => {
+    const ratingsByBot = ratings.reduce((acc, rating) => {
+      if (!acc[rating.bot_id]) acc[rating.bot_id] = [];
+      acc[rating.bot_id].push(rating);
+      return acc;
+    }, {});
+
+    return bots.reduce((acc, bot) => {
+      const botRatings = ratingsByBot[bot.id] || [];
+      const reviewCount = botRatings.length;
+      const averageRating = reviewCount ? botRatings.reduce((sum, item) => sum + item.rating, 0) / reviewCount : 0;
+      const popularityScore = (bot.usage_count || 0) + (reviewCount * 8) + (averageRating * 20);
+      const featuredScore = popularityScore + ((bot.level || 1) * 3);
+      acc[bot.id] = { reviewCount, averageRating, popularityScore, featuredScore };
+      return acc;
+    }, {});
+  }, [bots, ratings]);
+
+  const featured = useMemo(() => {
+    return [...bots]
+      .sort((a, b) => (botInsights[b.id]?.featuredScore || 0) - (botInsights[a.id]?.featuredScore || 0))
+      .slice(0, embedded ? 3 : 4);
+  }, [bots, botInsights, embedded]);
 
   const marketplaceStats = useMemo(() => {
     const totalReviews = ratings.length;
@@ -177,12 +207,25 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
     return { totalReviews, avgRating };
   }, [ratings]);
 
-  const filtered = bots.filter((b) => {
-    const matchesSearch = !search || b.name.toLowerCase().includes(search.toLowerCase()) || (b.description || '').toLowerCase().includes(search.toLowerCase()) || (b.role || '').includes(search.toLowerCase());
-    const matchesCategory = category === 'All' || getCategory(b) === category;
-    const matchesIndustry = industry === 'All' || getIndustry(b) === industry;
-    return matchesSearch && matchesCategory && matchesIndustry;
-  });
+  const filtered = useMemo(() => {
+    const filteredBots = bots.filter((b) => {
+      const matchesSearch = !search || b.name.toLowerCase().includes(search.toLowerCase()) || (b.description || '').toLowerCase().includes(search.toLowerCase()) || (b.role || '').includes(search.toLowerCase());
+      const matchesCategory = category === 'All' || getCategory(b) === category;
+      const matchesIndustry = industry === 'All' || getIndustry(b) === industry;
+      return matchesSearch && matchesCategory && matchesIndustry;
+    });
+
+    return filteredBots.sort((a, b) => {
+      const aInsights = botInsights[a.id] || { reviewCount: 0, averageRating: 0, popularityScore: 0, featuredScore: 0 };
+      const bInsights = botInsights[b.id] || { reviewCount: 0, averageRating: 0, popularityScore: 0, featuredScore: 0 };
+
+      if (sortBy === 'popularity') return bInsights.popularityScore - aInsights.popularityScore;
+      if (sortBy === 'rating') return bInsights.averageRating - aInsights.averageRating || bInsights.reviewCount - aInsights.reviewCount;
+      if (sortBy === 'newestReviews') return bInsights.reviewCount - aInsights.reviewCount;
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      return bInsights.featuredScore - aInsights.featuredScore;
+    });
+  }, [bots, search, category, industry, sortBy, botInsights]);
 
   return (
     <div className="px-4 py-4 space-y-4">
@@ -214,19 +257,23 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
         <div className="flex items-center gap-2 text-sm font-medium"><Sparkles className="h-4 w-4 text-primary" /> Featured bots</div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {featured.map((bot) => {
-            const botRatings = ratings.filter((r) => r.bot_id === bot.id);
-            const avg = botRatings.length ? (botRatings.reduce((sum, item) => sum + item.rating, 0) / botRatings.length).toFixed(1) : 'New';
+            const insights = botInsights[bot.id] || { reviewCount: 0, averageRating: 0, popularityScore: 0 };
+            const avg = insights.reviewCount ? insights.averageRating.toFixed(1) : 'New';
             return (
               <div key={bot.id} className="rounded-xl border border-border bg-secondary/40 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold">{bot.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold">{bot.name}</p>
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">Featured</span>
+                    </div>
                     <p className="text-[11px] text-muted-foreground">{getIndustry(bot)}</p>
                   </div>
                   <span className="text-xl">{ROLE_EMOJI[bot.role] || '🤖'}</span>
                 </div>
-                <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> {avg}</span>
+                  <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {bot.usage_count || 0} uses</span>
                   <span>{getCategory(bot)}</span>
                 </div>
               </div>
@@ -236,7 +283,7 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr),180px,180px]">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr),180px,180px,180px]">
           <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2">
             <Search className="w-3.5 h-3.5 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bots, use cases, or roles…"
@@ -254,10 +301,16 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
               {INDUSTRY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </div>
-        </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2">
+            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full bg-transparent text-xs outline-none">
+              {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </div>
+          </div>
 
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">{filtered.length} bots matched</p>
+          <p className="text-xs text-muted-foreground">{filtered.length} bots matched · sorted by {SORT_OPTIONS.find((option) => option.value === sortBy)?.label.toLowerCase()}</p>
           <p className="text-[10px] text-muted-foreground/60">Install copies the bot into your workspace so you can customize it.</p>
         </div>
       </div>
