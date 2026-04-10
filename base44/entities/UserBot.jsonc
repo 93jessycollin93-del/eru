@@ -88,6 +88,22 @@
     "handoff_instructions": {
       "type": "string",
       "description": "Instructions for when and how to hand off to connected bots"
+    },
+    "model_provider": {
+      "type": "string",
+      "enum": [
+        "base44",
+        "openai",
+        "anthropic",
+        "huggingface_user"
+      ],
+      "default": "base44"
+    },
+    "model_name": {
+      "type": "string"
+    },
+    "api_label": {
+      "type": "string"
     }
   },
   "required": [

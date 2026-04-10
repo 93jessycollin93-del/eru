@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Wand2, Copy, Save, ChevronRight, Loader2, Download } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import ExternalAISettingsPanel from './ExternalAISettingsPanel';
+import { invokeSelectedModel } from './modelRouting';
 
 const TEMPLATES = [
   { label: 'Crypto Watcher', prompt: 'A bot that tracks BTC/ETH prices and sends alerts when thresholds are crossed' },
@@ -24,6 +26,7 @@ export default function BotFactory({ onSaveBot }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [modelConfig, setModelConfig] = useState({ provider: 'base44', model: '', api_label: '' });
 
   const generate = async () => {
     if (!prompt.trim()) return;
@@ -31,7 +34,9 @@ export default function BotFactory({ onSaveBot }) {
     setResult(null);
     setSaved(false);
 
-    const res = await base44.integrations.Core.InvokeLLM({
+    const content = await invokeSelectedModel({
+      provider: modelConfig.provider,
+      model: modelConfig.model,
       prompt: `You are an AI bot architect. Generate a complete bot configuration based on this request: "${prompt}".
       
 Return ONLY a JSON object with these fields:
@@ -45,21 +50,9 @@ Return ONLY a JSON object with these fields:
   "handoff_instructions": "when to escalate or delegate",
   "suggested_pages": ["list of relevant page routes from: /, /markets, /trade, /portfolio, /arena, /jackie, /storefront"]
 }`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          description: { type: 'string' },
-          role: { type: 'string' },
-          personality: { type: 'string' },
-          instructions: { type: 'string' },
-          response_style: { type: 'string' },
-          handoff_instructions: { type: 'string' },
-          suggested_pages: { type: 'array', items: { type: 'string' } },
-        }
-      }
     });
 
+    const res = typeof content === 'string' ? JSON.parse(content) : content;
     setResult(res);
     setLoading(false);
   };
@@ -77,6 +70,9 @@ Return ONLY a JSON object with these fields:
       page_assignments: result.suggested_pages || [],
       status: 'active',
       memory_enabled: true,
+      model_provider: modelConfig.provider,
+      model_name: modelConfig.model,
+      api_label: modelConfig.api_label,
     });
     setSaved(true);
     onSaveBot?.();
@@ -102,6 +98,8 @@ Return ONLY a JSON object with these fields:
           ))}
         </div>
       </div>
+
+      <ExternalAISettingsPanel value={modelConfig} onChange={setModelConfig} />
 
       {/* Input */}
       <div className="space-y-2">

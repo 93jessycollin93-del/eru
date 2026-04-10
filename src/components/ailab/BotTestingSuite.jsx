@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FlaskConical, Play, Plus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { invokeSelectedModel } from './modelRouting';
 
 const EMPTY_CASE = {
   bot_id: '',
@@ -71,7 +72,7 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
     for (const testCase of cases) {
       const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}` : '';
       const prompt = `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testCase.input}\n\n${bot.name}:`;
-      const actualOutput = await base44.integrations.Core.InvokeLLM({ prompt });
+      const actualOutput = await invokeSelectedModel({ provider: bot.model_provider, model: bot.model_name, prompt });
       const scored = await scoreSimilarity(testCase.expected_output, actualOutput);
       const previousForCase = previousRuns.find((item) => item.test_case_id === testCase.id);
       const similarity = Number(scored.similarity_score || 0);
@@ -142,7 +143,7 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-foreground">{bot.name}</p>
-                <p className="text-[11px] text-muted-foreground">{caseCount} test cases · {passRate}% latest pass rate</p>
+                <p className="text-[11px] text-muted-foreground">{caseCount} test cases · {passRate}% latest pass rate · {(bot.api_label || bot.model_name || bot.model_provider || 'base44')}</p>
               </div>
               <button onClick={() => runTests(bot.id)} disabled={caseCount === 0 || runningBotId === bot.id} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary disabled:opacity-40">
                 <Play className="w-3.5 h-3.5" /> {runningBotId === bot.id ? 'Running...' : 'Run tests'}
