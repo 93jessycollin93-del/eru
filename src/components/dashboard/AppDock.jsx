@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, X, Bookmark, Search, Check } from 'lucide-react';
 
 const ALL_APPS = [
@@ -41,18 +42,44 @@ const ALL_APPS = [
   { id: 'codesandbox', label: 'CodeSandbox', emoji: '📦', url: 'https://codesandbox.io', category: 'Dev' },
   { id: 'tradingview', label: 'TradingView', emoji: '📈', url: 'https://tradingview.com', category: 'Finance' },
   { id: 'coinmarketcap', label: 'CoinMktCap', emoji: '🏆', url: 'https://coinmarketcap.com', category: 'Finance' },
+  // App Pages
+  { id: 'markets', label: 'Markets', emoji: '📈', url: '/markets', category: 'App Pages' },
+  { id: 'trade', label: 'Trade', emoji: '↔️', url: '/trade', category: 'App Pages' },
+  { id: 'nfts', label: 'NFTs', emoji: '🖼️', url: '/nfts', category: 'App Pages' },
+  { id: 'portfolio', label: 'Portfolio', emoji: '💼', url: '/portfolio', category: 'App Pages' },
+  { id: 'collectables', label: 'Collectables', emoji: '📦', url: '/collectables', category: 'App Pages' },
+  { id: 'messages', label: 'Messages', emoji: '✉️', url: '/messages', category: 'App Pages' },
+  { id: 'settings', label: 'Settings', emoji: '⚙️', url: '/settings', category: 'App Pages' },
+  { id: 'workstation', label: 'Workstation', emoji: '🛠️', url: '/workstation', category: 'App Pages' },
+  { id: 'creator', label: 'Creator Hub', emoji: '💡', url: '/creator', category: 'App Pages' },
+  { id: 'thinkers', label: 'Thinkers Club', emoji: '🧠', url: '/thinkers', category: 'App Pages' },
+  { id: 'review', label: 'App Review', emoji: '⭐', url: '/review', category: 'App Pages' },
+  { id: 'reputation', label: 'Reputation', emoji: '🏅', url: '/reputation', category: 'App Pages' },
+  { id: 'tgapps', label: 'Telegram Apps', emoji: '✈️', url: '/tgapps', category: 'App Pages' },
+  { id: 'jackie', label: 'Jackie AI', emoji: '🤖', url: '/jackie', category: 'App Pages' },
+  { id: 'ailab', label: 'AI Lab', emoji: '🧪', url: '/ailab', category: 'App Pages' },
+  { id: 'apikeys', label: 'API Keys', emoji: '🔑', url: '/apikeys', category: 'App Pages' },
+  { id: 'builder', label: 'System Builder', emoji: '🏗️', url: '/builder', category: 'App Pages' },
+  { id: 'pipeline', label: 'Pipeline', emoji: '🔧', url: '/pipeline', category: 'App Pages' },
+  { id: 'jta', label: 'Jade Atelier', emoji: '💎', url: '/jta', category: 'App Pages' },
+  { id: 'visual', label: 'Visual Engine', emoji: '🎨', url: '/visual', category: 'App Pages' },
+  { id: 'arena', label: 'Card Arena', emoji: '⚔️', url: '/arena', category: 'App Pages' },
+  { id: 'creatures', label: 'Creature Lab', emoji: '🧬', url: '/creatures', category: 'App Pages' },
+  { id: 'storefront', label: 'Storefront', emoji: '🛍️', url: '/storefront', category: 'App Pages' },
+  { id: 'storefront_analytics', label: 'SF Analytics', emoji: '📊', url: '/storefront-analytics', category: 'App Pages' },
+  { id: 'admin_economy', label: 'Economy Admin', emoji: '💰', url: '/admin/economy', category: 'App Pages' },
 ];
 
-const CATEGORIES = ['All', 'Social', 'Messaging', 'Calls', 'Streaming', 'TG Mini Apps', 'Dev', 'Finance'];
+const CATEGORIES = ['All', 'Social', 'Messaging', 'Calls', 'Streaming', 'TG Mini Apps', 'Dev', 'Finance', 'App Pages'];
 const DEFAULT_PINNED = ['discord', 'whatsapp', 'telegram', 'instagram', 'tiktok', 'youtube', 'spotify', 'tg_tonspace'];
 
 export default function AppDock() {
+  const navigate = useNavigate();
   const [pinned, setPinned] = useState(DEFAULT_PINNED);
   const [editMode, setEditMode] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
-  const [openUrl, setOpenUrl] = useState(null);
 
   const pinnedApps = ALL_APPS.filter(a => pinned.includes(a.id));
   const filteredStore = ALL_APPS.filter(a =>
@@ -66,7 +93,11 @@ export default function AppDock() {
 
   const openApp = (app) => {
     if (editMode) return;
-    window.open(app.url, '_blank');
+    if (app.url.startsWith('/')) {
+      navigate(app.url);
+    } else {
+      window.open(app.url, '_blank');
+    }
   };
 
   return (

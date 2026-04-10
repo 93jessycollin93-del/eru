@@ -35,7 +35,7 @@ export default function CenteredBottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-40 overflow-x-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className="max-w-md mx-auto flex min-w-max px-1">
+      <div className="max-w-md mx-auto flex justify-around px-1">
         {getNav(t).map(({ icon: Icon, label, to }) => {
           const active = pathname === to || (to !== '/' && pathname.startsWith(to));
           return (
