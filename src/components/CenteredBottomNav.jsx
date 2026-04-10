@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search } from 'lucide-react';
 
 const ALL_PAGES = [
   { id: 'home',       label: 'Home',         icon: Home,          to: '/' },
@@ -35,9 +35,8 @@ const DEFAULT_PINNED = ['home', 'markets', 'trade', 'nfts', 'portfolio'];
 const STORAGE_KEY = 'floating_nav_pinned';
 const POS_KEY = 'floating_nav_pos';
 
-export default function FloatingNav() {
+export default function FloatingNav({ onSearchOpen }) {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
 
   const [pinned, setPinned] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || DEFAULT_PINNED; } catch { return DEFAULT_PINNED; }
@@ -124,6 +123,16 @@ export default function FloatingNav() {
             </Link>
           );
         })}
+
+        {/* Search button */}
+        <button
+          onClick={onSearchOpen}
+          className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-muted-foreground hover:text-primary transition-colors"
+          title="Search"
+        >
+          <Search style={{ width: 18, height: 18 }} />
+          <span className="text-[8px] font-medium leading-none">Search</span>
+        </button>
 
         {/* Edit button */}
         <button
