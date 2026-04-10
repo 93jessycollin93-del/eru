@@ -1,0 +1,77 @@
+{
+  "name": "RoleAssignment",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of user being assigned role"
+    },
+    "custom_role_id": {
+      "type": "string",
+      "description": "ID of the CustomRole entity"
+    },
+    "role_name": {
+      "type": "string",
+      "description": "Display name of role (Manager, Analyst, Viewer)"
+    },
+    "assigned_by": {
+      "type": "string",
+      "description": "Admin email who assigned this role"
+    },
+    "assigned_at": {
+      "type": "string",
+      "description": "ISO timestamp when role was assigned"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "Optional expiration date for temporary role assignments"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this role assignment is currently active"
+    },
+    "scope_data": {
+      "type": "object",
+      "description": "Scope constraints (e.g., {department: 'Sales', regions: ['US', 'CA']})"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Admin notes about this assignment"
+    }
+  },
+  "required": [
+    "user_email",
+    "custom_role_id",
+    "role_name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

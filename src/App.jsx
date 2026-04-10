@@ -41,6 +41,7 @@ import BotAutomations from './pages/BotAutomations';
 import ComplianceCenter from './pages/ComplianceCenter';
 import SecurityDashboard from './pages/SecurityDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import RoleManagement from './pages/RoleManagement';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -105,6 +106,7 @@ const AuthenticatedApp = () => {
         <Route path="/compliance" element={<ComplianceCenter />} />
         <Route path="/security-dashboard" element={<SecurityDashboard />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/role-management" element={<RoleManagement />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

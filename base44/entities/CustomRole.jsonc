@@ -1,0 +1,95 @@
+{
+  "name": "CustomRole",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Role name (Manager, Analyst, Viewer, etc)"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable role name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Role purpose and responsibilities"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of permission keys (e.g., ['view_economy_logs', 'edit_transactions', 'export_reports'])",
+      "default": []
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "global",
+        "department",
+        "custom"
+      ],
+      "default": "global",
+      "description": "Scope of the role"
+    },
+    "is_system": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for built-in roles (admin, user). False for custom roles"
+    },
+    "can_be_deleted": {
+      "type": "boolean",
+      "default": true,
+      "description": "System roles cannot be deleted"
+    },
+    "created_by_admin": {
+      "type": "string",
+      "description": "Admin email who created this role"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional role metadata (color, icon, etc)"
+    }
+  },
+  "required": [
+    "name",
+    "display_name",
+    "permissions"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "is_system": true
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "can_be_deleted": true
+        }
+      ]
+    }
+  }
+}
