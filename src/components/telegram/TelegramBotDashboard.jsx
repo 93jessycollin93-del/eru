@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Bot, Loader2, Plus, RefreshCw, Radio, Save, Settings2, TerminalSquare, CheckCircle2, Power } from 'lucide-react';
+import { Bot, Loader2, Plus, RefreshCw, Radio, Save, Settings2, TerminalSquare, CheckCircle2, Power, Copy, Trash2, BarChart3 } from 'lucide-react';
 import BotFlowBuilder from './BotFlowBuilder';
+import TelegramBotAnalytics from './TelegramBotAnalytics';
+import TelegramAgentBuilder from './TelegramAgentBuilder';
 
 const DEFAULT_FORM = {
   name: '',
@@ -10,6 +12,9 @@ const DEFAULT_FORM = {
   system_prompt: 'You are a helpful Telegram AI assistant.',
   greeting_message: 'Welcome. Ask me anything.',
   flow_blocks: [],
+  memory_enabled: true,
+  max_memory_messages: 12,
+  tool_modules: [],
 };
 
 function BotCard({ bot, onSelect, active }) {
@@ -43,6 +48,8 @@ export default function TelegramBotDashboard() {
   const [verifying, setVerifying] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [verification, setVerification] = useState(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedBotIds, setSelectedBotIds] = useState([]);
   const [data, setData] = useState({ bots: [], messages: [], logs: [], sessions: [] });
   const [selectedBotId, setSelectedBotId] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
@@ -71,6 +78,9 @@ export default function TelegramBotDashboard() {
         system_prompt: selectedBot.system_prompt || DEFAULT_FORM.system_prompt,
         greeting_message: selectedBot.greeting_message || DEFAULT_FORM.greeting_message,
         flow_blocks: selectedBot.flow_blocks || [],
+        memory_enabled: selectedBot.memory_enabled ?? true,
+        max_memory_messages: selectedBot.max_memory_messages || 12,
+        tool_modules: selectedBot.tool_modules || [],
       });
       setVerification(null);
     } else {
@@ -93,6 +103,39 @@ export default function TelegramBotDashboard() {
     [data.sessions, selectedBot?.id]
   );
 
+  const toggleSelectedBot = (botId) => {
+    setSelectedBotIds((prev) => prev.includes(botId) ? prev.filter((id) => id !== botId) : [...prev, botId]);
+  };
+
+  const cloneBot = async () => {
+    if (!selectedBot) return;
+    await base44.entities.TelegramBot.create({
+      ...selectedBot,
+      name: `${selectedBot.name} Copy`,
+      status: 'draft'
+    });
+    await load();
+  };
+
+  const deleteSelectedBots = async () => {
+    await Promise.all(selectedBotIds.map((id) => base44.entities.TelegramBot.delete(id)));
+    setSelectedBotIds([]);
+    await load();
+  };
+
+  const bulkActivateSelected = async () => {
+    await Promise.all(selectedBotIds.map((id) => {
+      const bot = data.bots.find((item) => item.id === id);
+      return base44.functions.invoke('manageTelegramWebhook', {
+        botId: id,
+        botToken: bot?.bot_token,
+        action: 'activate'
+      });
+    }));
+    setSelectedBotIds([]);
+    await load();
+  };
+
   const createBot = async () => {
     setSaving(true);
     const created = await base44.entities.TelegramBot.create({
@@ -102,6 +145,9 @@ export default function TelegramBotDashboard() {
         ...(form.flow_blocks || []).map((block) => block.value),
       ].filter(Boolean).join('\n\n'),
       status: 'draft',
+      memory_enabled: form.memory_enabled,
+      max_memory_messages: Number(form.max_memory_messages || 12),
+      tool_modules: form.tool_modules || [],
       commands: [
         { command: '/start', description: 'Start the bot' },
         { command: '/help', description: 'See bot help' },
@@ -122,6 +168,9 @@ export default function TelegramBotDashboard() {
         form.system_prompt,
         ...(form.flow_blocks || []).map((block) => block.value),
       ].filter(Boolean).join('\n\n'),
+      memory_enabled: form.memory_enabled,
+      max_memory_messages: Number(form.max_memory_messages || 12),
+      tool_modules: form.tool_modules || [],
     });
     await load();
     setSaving(false);
@@ -187,20 +236,44 @@ export default function TelegramBotDashboard() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <TelegramAgentBuilder onCreated={load} />
+
+      <div className="flex items-center gap-2 flex-wrap">
         <button onClick={createBot} disabled={saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">
           <Plus className="w-4 h-4" /> New Bot
+        </button>
+        <button onClick={() => setBulkMode((prev) => !prev)} className="px-3 py-3 bg-secondary border border-border rounded-xl text-muted-foreground text-sm">
+          Bulk
+        </button>
+        <button onClick={cloneBot} disabled={!selectedBot} className="px-3 py-3 bg-secondary border border-border rounded-xl text-muted-foreground">
+          <Copy className="w-4 h-4" />
         </button>
         <button onClick={load} className="px-3 py-3 bg-secondary border border-border rounded-xl text-muted-foreground">
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
 
+      {bulkMode && selectedBotIds.length > 0 && (
+        <div className="flex gap-2">
+          <button onClick={bulkActivateSelected} className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium">Activate selected</button>
+          <button onClick={deleteSelectedBots} className="px-4 py-2.5 bg-destructive/10 text-destructive border border-destructive/20 rounded-xl text-sm font-medium flex items-center gap-2">
+            <Trash2 className="w-4 h-4" /> Delete
+          </button>
+        </div>
+      )}
+
       <div className="space-y-2">
         {data.bots.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">No Telegram bots yet. Create one to begin.</div>
         ) : data.bots.map((bot) => (
-          <BotCard key={bot.id} bot={bot} active={selectedBot?.id === bot.id} onSelect={(item) => setSelectedBotId(item.id)} />
+          <div key={bot.id} className="flex items-center gap-2">
+            {bulkMode && (
+              <input type="checkbox" checked={selectedBotIds.includes(bot.id)} onChange={() => toggleSelectedBot(bot.id)} className="accent-primary" />
+            )}
+            <div className="flex-1">
+              <BotCard bot={bot} active={selectedBot?.id === bot.id} onSelect={(item) => setSelectedBotId(item.id)} />
+            </div>
+          </div>
         ))}
       </div>
 
@@ -214,6 +287,22 @@ export default function TelegramBotDashboard() {
         <input value={form.bot_token} onChange={(e) => setForm((prev) => ({ ...prev, bot_token: e.target.value }))} placeholder="Telegram bot token" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
         <textarea value={form.system_prompt} onChange={(e) => setForm((prev) => ({ ...prev, system_prompt: e.target.value }))} placeholder="System prompt" className="w-full min-h-[120px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
         <textarea value={form.greeting_message} onChange={(e) => setForm((prev) => ({ ...prev, greeting_message: e.target.value }))} placeholder="Greeting message" className="w-full min-h-[80px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
+        <div className="grid grid-cols-2 gap-2">
+          <label className="rounded-xl border border-border bg-secondary/40 px-3 py-3 text-sm">
+            <span className="block text-xs text-muted-foreground mb-2">Memory enabled</span>
+            <input type="checkbox" checked={form.memory_enabled} onChange={(e) => setForm((prev) => ({ ...prev, memory_enabled: e.target.checked }))} className="accent-primary" />
+          </label>
+          <label className="rounded-xl border border-border bg-secondary/40 px-3 py-3 text-sm">
+            <span className="block text-xs text-muted-foreground mb-2">Memory retention</span>
+            <input type="number" min="1" max="100" value={form.max_memory_messages} onChange={(e) => setForm((prev) => ({ ...prev, max_memory_messages: e.target.value }))} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none" />
+          </label>
+        </div>
+        <div className="rounded-xl border border-border bg-secondary/20 p-3 space-y-2">
+          <p className="text-xs text-muted-foreground">Tool modules</p>
+          <div className="flex flex-wrap gap-2">
+            {(form.tool_modules || []).length === 0 ? <span className="text-[11px] text-muted-foreground">No modules selected</span> : form.tool_modules.map((module) => <span key={module} className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[11px]">{module}</span>)}
+          </div>
+        </div>
         <BotFlowBuilder value={form.flow_blocks} onChange={(flow_blocks) => setForm((prev) => ({ ...prev, flow_blocks }))} />
         <div className="flex gap-2 flex-wrap">
           <button onClick={updateBot} disabled={!selectedBot || saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">
@@ -232,6 +321,8 @@ export default function TelegramBotDashboard() {
         {verification?.bot_username && <p className="text-[11px] text-green-400">Connected as @{verification.bot_username}</p>}
         {selectedBot?.webhook_url && <p className="text-[11px] text-muted-foreground break-all">Webhook: {selectedBot.webhook_url}</p>}
       </div>
+
+      <TelegramBotAnalytics bot={selectedBot} messages={selectedMessages} logs={selectedLogs} sessions={selectedSessions} />
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">

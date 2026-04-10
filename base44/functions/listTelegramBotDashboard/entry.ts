@@ -10,9 +10,9 @@ Deno.serve(async (req) => {
     }
 
     const bots = await base44.entities.TelegramBot.list('-updated_date', 50);
-    const messages = await base44.entities.TelegramBotMessage.list('-created_date', 100);
-    const logs = await base44.entities.TelegramBotLog.list('-created_date', 100);
-    const sessions = await base44.entities.TelegramBotSession.list('-updated_date', 100);
+    const messages = await base44.entities.TelegramBotMessage.list('-created_date', 200);
+    const logs = await base44.entities.TelegramBotLog.list('-created_date', 200);
+    const sessions = await base44.entities.TelegramBotSession.list('-updated_date', 200);
 
     return Response.json({
       bots,

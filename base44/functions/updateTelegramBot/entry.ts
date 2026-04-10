@@ -14,12 +14,12 @@ Deno.serve(async (req) => {
     }
 
     const updated = await base44.entities.TelegramBot.update(payload.botId, {
-      personality_prompt: payload.personality_prompt,
-      welcome_message: payload.welcome_message,
-      model_preference: payload.model_preference,
+      system_prompt: payload.system_prompt,
+      greeting_message: payload.greeting_message,
+      flow_blocks: payload.flow_blocks,
       memory_enabled: payload.memory_enabled,
       max_memory_messages: payload.max_memory_messages,
-      custom_logic_notes: payload.custom_logic_notes,
+      tool_modules: payload.tool_modules,
       status: payload.status,
     });
 

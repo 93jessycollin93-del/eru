@@ -93,6 +93,21 @@
     "last_error": {
       "type": "string",
       "description": "Last known error message"
+    },
+    "memory_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "max_memory_messages": {
+      "type": "number",
+      "default": 12
+    },
+    "tool_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
     }
   },
   "required": [
