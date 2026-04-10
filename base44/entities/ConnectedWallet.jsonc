@@ -1,0 +1,72 @@
+{
+  "name": "ConnectedWallet",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User email"
+    },
+    "wallet_address": {
+      "type": "string",
+      "description": "Ethereum/wallet address (checksummed)"
+    },
+    "chain_id": {
+      "type": "number",
+      "description": "Chain ID (1=Ethereum, 137=Polygon, etc)"
+    },
+    "connector_type": {
+      "type": "string",
+      "enum": [
+        "metamask",
+        "walletconnect"
+      ],
+      "description": "Which connector was used"
+    },
+    "label": {
+      "type": "string",
+      "description": "User-friendly name (e.g. 'Main Wallet')"
+    },
+    "is_primary": {
+      "type": "boolean",
+      "default": false,
+      "description": "Primary wallet for tracking"
+    },
+    "is_connected": {
+      "type": "boolean",
+      "default": true,
+      "description": "Current connection status"
+    },
+    "last_synced": {
+      "type": "string",
+      "description": "ISO timestamp of last holdings update"
+    },
+    "total_value_usd": {
+      "type": "number",
+      "description": "Total portfolio value in USD"
+    },
+    "ens_name": {
+      "type": "string",
+      "description": "ENS name if available"
+    }
+  },
+  "required": [
+    "user_email",
+    "wallet_address",
+    "chain_id",
+    "connector_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

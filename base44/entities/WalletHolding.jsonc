@@ -1,0 +1,78 @@
+{
+  "name": "WalletHolding",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User email"
+    },
+    "wallet_id": {
+      "type": "string",
+      "description": "Reference to ConnectedWallet ID"
+    },
+    "wallet_address": {
+      "type": "string",
+      "description": "Wallet address"
+    },
+    "token_symbol": {
+      "type": "string",
+      "description": "Token symbol (ETH, USDC, DAI, etc)"
+    },
+    "token_address": {
+      "type": "string",
+      "description": "Token contract address (null for native)"
+    },
+    "balance": {
+      "type": "string",
+      "description": "Token balance as string (for precision)"
+    },
+    "balance_decimal": {
+      "type": "number",
+      "description": "Balance in decimal format"
+    },
+    "price_usd": {
+      "type": "number",
+      "description": "Current token price in USD"
+    },
+    "value_usd": {
+      "type": "number",
+      "description": "Total value in USD (balance \u00d7 price)"
+    },
+    "chain_id": {
+      "type": "number",
+      "description": "Chain ID"
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "ISO timestamp of last price update"
+    }
+  },
+  "required": [
+    "user_email",
+    "wallet_id",
+    "wallet_address",
+    "token_symbol",
+    "balance"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {},
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

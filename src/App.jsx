@@ -43,6 +43,7 @@ import SecurityDashboard from './pages/SecurityDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import RoleManagement from './pages/RoleManagement';
 import BlockchainAnalytics from './pages/BlockchainAnalytics';
+import WalletManager from './pages/WalletManager';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -109,6 +110,7 @@ const AuthenticatedApp = () => {
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/role-management" element={<RoleManagement />} />
         <Route path="/blockchain-analytics" element={<BlockchainAnalytics />} />
+        <Route path="/wallet-manager" element={<WalletManager />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
