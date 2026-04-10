@@ -170,39 +170,51 @@ export default function TelegramBotDashboard() {
   const verifyConnection = async () => {
     if (!selectedBot) return;
     setVerifying(true);
-    const response = await base44.functions.invoke('manageTelegramWebhook', {
-      botId: selectedBot.id,
-      botToken: form.bot_token,
-      action: 'verify'
-    });
-    setVerification(response.data);
-    await load();
+    try {
+      const response = await base44.functions.invoke('manageTelegramWebhook', {
+        botId: selectedBot.id,
+        botToken: form.bot_token?.trim() || selectedBot.bot_token,
+        action: 'verify'
+      });
+      setVerification(response.data);
+      await load();
+    } catch (error) {
+      setVerification({ error: error?.response?.data?.error || error?.message || 'Verification failed.' });
+    }
     setVerifying(false);
   };
 
   const registerWebhook = async () => {
     if (!selectedBot) return;
     setRegistering(true);
-    const response = await base44.functions.invoke('manageTelegramWebhook', {
-      botId: selectedBot.id,
-      botToken: form.bot_token,
-      action: 'activate'
-    });
-    setVerification(response.data);
-    await load();
+    try {
+      const response = await base44.functions.invoke('manageTelegramWebhook', {
+        botId: selectedBot.id,
+        botToken: form.bot_token?.trim() || selectedBot.bot_token,
+        action: 'activate'
+      });
+      setVerification(response.data);
+      await load();
+    } catch (error) {
+      setVerification({ error: error?.response?.data?.error || error?.message || 'Webhook setup failed.' });
+    }
     setRegistering(false);
   };
 
   const toggleBotStatus = async () => {
     if (!selectedBot) return;
     setToggling(true);
-    const response = await base44.functions.invoke('manageTelegramWebhook', {
-      botId: selectedBot.id,
-      botToken: form.bot_token,
-      action: selectedBot.status === 'active' ? 'offline' : 'activate'
-    });
-    setVerification(response.data);
-    await load();
+    try {
+      const response = await base44.functions.invoke('manageTelegramWebhook', {
+        botId: selectedBot.id,
+        botToken: form.bot_token?.trim() || selectedBot.bot_token,
+        action: selectedBot.status === 'active' ? 'offline' : 'activate'
+      });
+      setVerification(response.data);
+      await load();
+    } catch (error) {
+      setVerification({ error: error?.response?.data?.error || error?.message || 'Status update failed.' });
+    }
     setToggling(false);
   };
 
@@ -319,6 +331,7 @@ export default function TelegramBotDashboard() {
         <input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Bot name" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
         <input value={form.bot_username} onChange={(e) => setForm((prev) => ({ ...prev, bot_username: e.target.value }))} placeholder="Telegram username" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
         <input value={form.bot_token} onChange={(e) => setForm((prev) => ({ ...prev, bot_token: e.target.value }))} placeholder="Telegram bot token" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
+        <p className="text-[11px] text-muted-foreground">Paste the token exactly as provided by BotFather. The saved bot token will also be reused if this field is left unchanged.</p>
         <textarea value={form.greeting_message} onChange={(e) => setForm((prev) => ({ ...prev, greeting_message: e.target.value }))} placeholder="Greeting message" className="w-full min-h-[80px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
         <TelegramAgentBuilder form={form} setForm={setForm} />
         <BotFlowBuilder value={form.flow_blocks} onChange={(flow_blocks) => setForm((prev) => ({ ...prev, flow_blocks }))} />
@@ -343,6 +356,7 @@ export default function TelegramBotDashboard() {
           </button>
         </div>
         {verification?.bot_username && <p className="text-[11px] text-green-400">Connected as @{verification.bot_username}</p>}
+        {verification?.error && <p className="text-[11px] text-red-400">{verification.error}</p>}
         {selectedBot?.webhook_url && <p className="text-[11px] text-muted-foreground break-all">Webhook: {selectedBot.webhook_url}</p>}
       </div>
 

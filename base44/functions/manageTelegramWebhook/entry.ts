@@ -42,7 +42,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Telegram bot token is required' }, { status: 400 });
     }
 
-    const appBaseUrl = Deno.env.get('BASE44_APP_BASE_URL') || Deno.env.get('APP_BASE_URL') || new URL(req.url).origin;
+    const requestUrl = new URL(req.url);
+    const appBaseUrl = (Deno.env.get('BASE44_APP_BASE_URL') || Deno.env.get('APP_BASE_URL') || `${requestUrl.protocol}//${requestUrl.host}`).replace(/\/$/, '');
     const webhookUrl = `${appBaseUrl}/functions/telegramWebhook?botId=${encodeURIComponent(botId)}`;
 
     if (action === 'verify') {
@@ -97,6 +98,6 @@ Deno.serve(async (req) => {
 
     return Response.json({ error: 'Unsupported action' }, { status: 400 });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message || 'Telegram webhook action failed' }, { status: 500 });
   }
 });
