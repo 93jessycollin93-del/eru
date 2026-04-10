@@ -25,6 +25,12 @@ const SUGGESTIONS = {
     'Create a user onboarding flow',
     'Plan a multi-module platform',
   ],
+  conversion: [
+    'Rewrite this landing page headline for higher conversion',
+    'Turn this product pitch into English, Ukrainian, and Simplified Chinese',
+    'Optimize these CTA buttons for multilingual markets',
+    'Adapt this offer copy for Ukraine and China',
+  ],
 };
 
 const MODE_META = {
@@ -32,6 +38,7 @@ const MODE_META = {
   code: { icon: Code, title: 'Code Engine', desc: 'Generate, refine & ship code' },
   visual: { icon: Layout, title: 'Visual Studio', desc: 'Layouts, systems & flows' },
   builder: { icon: Cpu, title: 'System Builder', desc: 'Step-by-step creation' },
+  conversion: { icon: Sparkles, title: 'Conversion Engine', desc: 'Native multilingual copy that sells' },
 };
 
 export default function WelcomeScreen({ mode, onSend }) {

@@ -8,6 +8,7 @@ const COMMANDS = [
   { cmd: 'make responsive', icon: Smartphone, label: 'Responsive' },
   { cmd: 'add animations', icon: Wind, label: 'Animate' },
   { cmd: 'fix errors', icon: Bug, label: 'Fix' },
+  { cmd: 'rewrite for English, Ukrainian, and Simplified Chinese', icon: Zap, label: '3-Lang Copy' },
 ];
 
 export default function QuickCommands({ onCommand, visible }) {

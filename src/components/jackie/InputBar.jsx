@@ -19,6 +19,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
     code: 'Describe what to build or paste code...',
     visual: 'Describe a layout, flow or system...',
     builder: 'What system should we build?',
+    conversion: 'Paste copy to rewrite for English, Ukrainian, and Simplified Chinese...',
   };
 
   // Speech to text
@@ -81,12 +82,20 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
     >
       <div className="max-w-md mx-auto px-4 pt-2 pb-2">
         {/* Voice + quick cmd row */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 gap-2">
           <VoiceSelector voice={voice} setVoice={setVoice} />
-          <button onClick={onToggleCommands}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs transition-all ${showCommands ? 'bg-primary/10 text-primary border-primary/30' : 'bg-secondary text-muted-foreground border-border'}`}>
-            <Zap className="w-3 h-3" /> Commands
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setInput('Rewrite and optimize this for conversion in English, Ukrainian, and Simplified Chinese:\n')}
+              className="px-2.5 py-1.5 rounded-xl border bg-primary/10 text-primary border-primary/30 text-xs font-medium"
+            >
+              Multilingual CTA
+            </button>
+            <button onClick={onToggleCommands}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs transition-all ${showCommands ? 'bg-primary/10 text-primary border-primary/30' : 'bg-secondary text-muted-foreground border-border'}`}>
+              <Zap className="w-3 h-3" /> Commands
+            </button>
+          </div>
         </div>
 
         {/* Attachments */}

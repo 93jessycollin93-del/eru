@@ -5,6 +5,7 @@ const MODES = [
   { id: 'code', label: 'Code', icon: Bot },
   { id: 'visual', label: 'Visual', icon: Bot },
   { id: 'builder', label: 'Builder', icon: Bot },
+  { id: 'conversion', label: 'Convert', icon: Sparkles },
 ];
 
 export default function JackieHeader({ mode, setMode, tab, setTab, onClear, projectName }) {
