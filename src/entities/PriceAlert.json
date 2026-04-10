@@ -42,6 +42,17 @@
       "default": false,
       "description": "Whether user has been notified for this alert"
     },
+    "push_notification_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether push notifications are enabled for this alert"
+    },
+    "push_notification_status": {
+      "type": "string",
+      "enum": ["ready", "pending", "sent", "failed"],
+      "default": "ready",
+      "description": "Visible push notification delivery state"
+    },
     "user_email": {
       "type": "string",
       "description": "User's email"

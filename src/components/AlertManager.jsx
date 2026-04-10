@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, Plus, Trash2, Check, Loader2 } from 'lucide-react';
+import { Bell, Plus, Trash2, Check, Loader2, Smartphone } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { useDashboardEvents } from '@/context/DashboardEventsContext';
@@ -8,7 +8,7 @@ export default function AlertManager() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '' });
+  const [formData, setFormData] = useState({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '', push_notification_enabled: true });
   const [creating, setCreating] = useState(false);
   const [pulse, setPulse] = useState(false);
   const { subscribe, emit, rules } = useDashboardEvents();
@@ -43,6 +43,13 @@ export default function AlertManager() {
         });
 
         if (matchedAlerts.length > 0) {
+          matchedAlerts.forEach((alert) => {
+            base44.entities.PriceAlert.update(alert.id, {
+              triggered_at: new Date().toISOString(),
+              notification_sent: !!alert.push_notification_enabled,
+              push_notification_status: alert.push_notification_enabled ? 'sent' : 'pending'
+            });
+          });
           emit('alerts', 'thresholdTriggered', { matchedAlerts });
           toast.success(`${matchedAlerts.length} alert rule${matchedAlerts.length > 1 ? 's' : ''} matched live market data`);
         }
@@ -81,9 +88,11 @@ export default function AlertManager() {
         percent_change: formData.percent_change ? parseFloat(formData.percent_change) : null,
         note: formData.note,
         is_active: true,
+        push_notification_enabled: formData.push_notification_enabled,
+        push_notification_status: formData.push_notification_enabled ? 'ready' : 'pending',
         user_email: user.email,
       });
-      setFormData({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '' });
+      setFormData({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '', push_notification_enabled: true });
       setShowForm(false);
       toast.success('Price alert created');
       fetchAlerts();
@@ -114,6 +123,18 @@ export default function AlertManager() {
     }
   };
 
+  const handleTogglePush = async (alert) => {
+    try {
+      await base44.entities.PriceAlert.update(alert.id, {
+        push_notification_enabled: !alert.push_notification_enabled,
+        push_notification_status: !alert.push_notification_enabled ? 'ready' : 'pending'
+      });
+      fetchAlerts();
+    } catch (error) {
+      toast.error('Failed to update push status');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 bg-card border border-border rounded-xl flex items-center justify-center h-32">
@@ -127,7 +148,7 @@ export default function AlertManager() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-semibold">Price Alerts</h3>
+          <h3 className="text-sm font-semibold">Custom Alerts</h3>
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{alerts.filter(a => a.is_active).length}</span>
         </div>
         <button
@@ -188,6 +209,15 @@ export default function AlertManager() {
               onChange={e => setFormData({ ...formData, note: e.target.value })}
               className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground placeholder-muted-foreground sm:col-span-2"
             />
+            <label className="sm:col-span-2 flex items-center gap-2 px-3 py-2 bg-card border border-border rounded text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={formData.push_notification_enabled}
+                onChange={e => setFormData({ ...formData, push_notification_enabled: e.target.checked })}
+                className="accent-primary"
+              />
+              Enable push notification status tracking
+            </label>
           </div>
           <div className="flex gap-2">
             <button
@@ -208,24 +238,51 @@ export default function AlertManager() {
       )}
 
       {alerts.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4">No price alerts yet. Create one to monitor assets.</p>
+        <p className="text-xs text-muted-foreground text-center py-4">No alerts yet. Create one to monitor asset thresholds.</p>
       ) : (
-        <div className="space-y-2">
+        <>
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            <div className="bg-secondary rounded-lg border border-border px-3 py-2">
+              <p className="text-[10px] text-muted-foreground">Active alerts</p>
+              <p className="text-sm font-semibold">{alerts.filter(a => a.is_active).length}</p>
+            </div>
+            <div className="bg-secondary rounded-lg border border-border px-3 py-2">
+              <p className="text-[10px] text-muted-foreground">Push ready</p>
+              <p className="text-sm font-semibold">{alerts.filter(a => a.push_notification_enabled).length}</p>
+            </div>
+            <div className="bg-secondary rounded-lg border border-border px-3 py-2">
+              <p className="text-[10px] text-muted-foreground">Triggered</p>
+              <p className="text-sm font-semibold">{alerts.filter(a => a.triggered_at).length}</p>
+            </div>
+          </div>
+          <div className="space-y-2">
           {alerts.map(alert => (
             <div key={alert.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${alert.is_active ? 'bg-green-500/5 border-green-500/20' : 'bg-secondary/50 border-border/50'}`}>
               <div className="flex-1">
-                <p className="text-xs font-medium text-foreground">
-                  {alert.asset_symbol} <span className="text-muted-foreground text-[9px]">{alert.alert_type === 'above' ? '↑' : '↓'}</span>
-                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs font-medium text-foreground">
+                    {alert.asset_symbol} <span className="text-muted-foreground text-[9px]">{alert.alert_type === 'above' ? '↑' : '↓'}</span>
+                  </p>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{alert.push_notification_status || 'ready'}</span>
+                </div>
                 <p className="text-[10px] text-muted-foreground">
                   {alert.trigger_basis === 'percent_change'
                     ? `${alert.percent_change}% 24h change`
                     : `$${Number(alert.threshold_price || 0).toFixed(2)}`}
                 </p>
                 {alert.note && <p className="text-[10px] text-muted-foreground/70 mt-0.5">{alert.note}</p>}
+                <p className="text-[10px] text-muted-foreground/70 mt-1">
+                  Push: {alert.push_notification_enabled ? 'On' : 'Off'}{alert.triggered_at ? ` · Last trigger ${new Date(alert.triggered_at).toLocaleString()}` : ''}
+                </p>
               </div>
               <div className="flex items-center gap-1.5">
                 {alert.notification_sent && <Check className="w-3.5 h-3.5 text-green-400" />}
+                <button
+                  onClick={() => handleTogglePush(alert)}
+                  className={`p-1.5 rounded transition-colors ${alert.push_notification_enabled ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}
+                >
+                  <Smartphone className="w-3 h-3" />
+                </button>
                 <button
                   onClick={() => handleToggleAlert(alert.id, alert.is_active)}
                   className={`w-8 h-6 rounded transition-colors ${alert.is_active ? 'bg-green-500/20' : 'bg-secondary'}`}
@@ -239,7 +296,8 @@ export default function AlertManager() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
