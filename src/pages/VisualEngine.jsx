@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, Battery, Sparkles } from 'lucide-react';
+import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, Battery, Sparkles, LayoutDashboard } from 'lucide-react';
 import { useTheme, THEMES, BG_ENVS, MOTION_PRESETS, TYPOGRAPHY_PACKS } from '../context/ThemeContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 
@@ -232,6 +232,83 @@ function MotionTab() {
   );
 }
 
+// ─── TAB: LAYOUT ─────────────────────────────────────────────────────────────
+const DASH_WIDGETS = [
+  { id: 'portfolio', label: 'Portfolio Summary', color: '#00e676' },
+  { id: 'markets',   label: 'Live Markets',      color: '#2196f3' },
+  { id: 'ideas',     label: 'My Ideas',          color: '#7c4dff' },
+  { id: 'thinkers',  label: 'Thinkers Club',     color: '#ff9800' },
+  { id: 'nfts',      label: 'NFT Gallery',       color: '#e91e63' },
+  { id: 'ads',       label: 'My Ads',            color: '#ffeb3b' },
+];
+
+function LayoutTab() {
+  const { uiScale, setUiScale } = useTheme();
+  const [activeWidgets, setActiveWidgets] = useState(['portfolio', 'markets', 'ideas']);
+
+  const pct = Math.round(uiScale * 100);
+  const label = pct < 90 ? 'Compact' : pct > 110 ? 'Large' : 'Default';
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={LayoutDashboard} label="Layout & Scale" sub="UI zoom and dashboard widget visibility" />
+
+      {/* Scale control */}
+      <div className="p-4 bg-card border border-border rounded-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-muted-foreground">UI Scale</p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{label}</span>
+            <span className="text-xs font-mono text-foreground">{pct}%</span>
+          </div>
+        </div>
+
+        {/* Quick presets */}
+        <div className="grid grid-cols-4 gap-1.5">
+          {[{ v: 0.85, l: '85%' }, { v: 1, l: '100%' }, { v: 1.1, l: '110%' }, { v: 1.2, l: '120%' }].map(({ v, l }) => (
+            <button key={v} onClick={() => setUiScale(v)}
+              className={`py-1.5 rounded-lg text-xs font-medium border transition-all ${Math.abs(uiScale - v) < 0.01 ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary border-border text-muted-foreground hover:border-primary/40'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        <input type="range" min="0.75" max="1.3" step="0.01" value={uiScale}
+          onChange={e => setUiScale(parseFloat(e.target.value))}
+          className="w-full accent-primary h-2 rounded-full" />
+
+        <div className="flex justify-between text-[9px] text-muted-foreground">
+          <span>75% — Compact</span>
+          <span>100% — Default</span>
+          <span>130% — Large</span>
+        </div>
+
+        <button onClick={() => setUiScale(1)}
+          className="w-full py-2 bg-secondary border border-border rounded-xl text-xs text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all">
+          Reset to 100%
+        </button>
+      </div>
+
+      {/* Widgets */}
+      <div className="space-y-2">
+        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Dashboard Widgets</p>
+        {DASH_WIDGETS.map(w => (
+          <div key={w.id} className="flex items-center justify-between bg-card border border-border rounded-xl px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: w.color }} />
+              <span className="text-sm">{w.label}</span>
+            </div>
+            <button onClick={() => setActiveWidgets(prev => prev.includes(w.id) ? prev.filter(x => x !== w.id) : [...prev, w.id])}
+              className={`w-10 h-5 rounded-full transition-colors relative ${activeWidgets.includes(w.id) ? 'bg-primary' : 'bg-secondary border border-border'}`}>
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${activeWidgets.includes(w.id) ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── TAB: DISPLAY ────────────────────────────────────────────────────────────
 function DisplayTab() {
   const { brightness, setBrightness, contrast, setContrast, saturation, setSaturation, typography, setTypography, isLocked } = useTheme();
@@ -328,11 +405,12 @@ function ControlTab() {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'themes',  label: 'Themes',     Icon: Palette  },
-  { id: 'bg',      label: 'Backgrounds',Icon: Layers   },
-  { id: 'motion',  label: 'Motion',     Icon: Zap      },
-  { id: 'display', label: 'Display',    Icon: Sliders  },
-  { id: 'control', label: 'Control',    Icon: Lock     },
+  { id: 'themes',  label: 'Themes',     Icon: Palette        },
+  { id: 'bg',      label: 'Backgrounds',Icon: Layers         },
+  { id: 'motion',  label: 'Motion',     Icon: Zap            },
+  { id: 'display', label: 'Display',    Icon: Sliders        },
+  { id: 'layout',  label: 'Layout',     Icon: LayoutDashboard},
+  { id: 'control', label: 'Control',    Icon: Lock           },
 ];
 
 export default function VisualEngine() {
@@ -368,6 +446,7 @@ export default function VisualEngine() {
         {tab === 'bg'      && <BackgroundsTab />}
         {tab === 'motion'  && <MotionTab />}
         {tab === 'display' && <DisplayTab />}
+        {tab === 'layout'  && <LayoutTab />}
         {tab === 'control' && <ControlTab />}
       </div>
     </div>

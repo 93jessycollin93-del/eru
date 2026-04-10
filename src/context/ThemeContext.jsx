@@ -118,6 +118,7 @@ const DEFAULTS = {
   typography: 'modern',
   lowPowerMode: false,
   lockedSettings: [],
+  uiScale: 1,
 };
 
 function load(key) {
@@ -143,6 +144,7 @@ export function ThemeProvider({ children }) {
   const [typography,     setTypography]  = useState(() => load('typography'));
   const [lowPowerMode,   setLowPower]    = useState(() => load('lowPowerMode'));
   const [lockedSettings, setLocked]      = useState(() => load('lockedSettings'));
+  const [uiScale,        setUiScaleRaw]  = useState(() => load('uiScale'));
 
   // Setters that check lock
   const isLocked = (key) => lockedSettings.includes(key);
@@ -163,6 +165,11 @@ export function ThemeProvider({ children }) {
     });
   }, [theme]);
 
+  // Apply UI scale
+  useEffect(() => {
+    document.body.style.zoom = uiScale;
+  }, [uiScale]);
+
   // Apply filter effects
   useEffect(() => {
     const filter = lowPowerMode
@@ -176,6 +183,8 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.style.setProperty('--glow-intensity', glowIntensity);
   }, [glowIntensity]);
+
+  const setUiScale = (val) => { setUiScaleRaw(val); save('uiScale', val); };
 
   const resetAll = () => {
     Object.entries(DEFAULTS).forEach(([k, v]) => save(k, v));
@@ -192,6 +201,7 @@ export function ThemeProvider({ children }) {
     setSaturation(DEFAULTS.saturation);
     setTypography(DEFAULTS.typography);
     setLowPower(DEFAULTS.lowPowerMode);
+    setUiScaleRaw(DEFAULTS.uiScale);
   };
 
   const value = {
@@ -221,8 +231,7 @@ export function ThemeProvider({ children }) {
     isLocked,
     // utils
     resetAll,
-    // legacy compat
-    uiScale: 1, setUiScale: () => {},
+    uiScale, setUiScale,
   };
 
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;
