@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Bot, Loader2, Plus, RefreshCw, Radio, Save, Settings2, TerminalSquare, CheckCircle2, Power, Copy, Trash2, BarChart3 } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Radio, Save, Settings2, TerminalSquare, CheckCircle2, Power, Copy, Trash2, BarChart3 } from 'lucide-react';
 import BotFlowBuilder from './BotFlowBuilder';
 import TelegramBotAnalytics from './TelegramBotAnalytics';
 import TelegramAgentBuilder from './TelegramAgentBuilder';
+import BotOverviewCharts from './BotOverviewCharts';
+import BotFleetTable from './BotFleetTable';
 
 const DEFAULT_FORM = {
   name: '',
@@ -18,30 +20,6 @@ const DEFAULT_FORM = {
   tool_modules: [],
   agent_notes: '',
 };
-
-function BotCard({ bot, onSelect, active }) {
-  return (
-    <button
-      onClick={() => onSelect(bot)}
-      className={`w-full rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-            <Bot className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold truncate">{bot.name}</p>
-            <p className="text-[11px] text-muted-foreground truncate">{bot.bot_username ? `@${bot.bot_username}` : 'Username not set'}</p>
-          </div>
-        </div>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full ${bot.status === 'active' ? 'bg-green-500/10 text-green-400' : bot.status === 'error' ? 'bg-red-500/10 text-red-400' : 'bg-secondary text-muted-foreground'}`}>
-          {bot.status}
-        </span>
-      </div>
-    </button>
-  );
-}
 
 export default function TelegramBotDashboard() {
   const [loading, setLoading] = useState(true);
@@ -264,7 +242,7 @@ export default function TelegramBotDashboard() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <div className="rounded-xl border border-border bg-card p-3">
           <p className="text-[10px] text-muted-foreground uppercase">Bots</p>
           <p className="text-lg font-semibold mt-1">{data.bots.length}</p>
@@ -277,7 +255,13 @@ export default function TelegramBotDashboard() {
           <p className="text-[10px] text-muted-foreground uppercase">Messages</p>
           <p className="text-lg font-semibold mt-1">{selectedMessages.length}</p>
         </div>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-[10px] text-muted-foreground uppercase">Errors</p>
+          <p className="text-lg font-semibold mt-1">{selectedAnalytics.errorCount}</p>
+        </div>
       </div>
+
+      <BotOverviewCharts bots={data.bots} messages={data.messages} logs={data.logs} />
 
       <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
         Use the builder below to configure each bot’s agent behavior, memory, and tools.
@@ -307,19 +291,24 @@ export default function TelegramBotDashboard() {
         </div>
       )}
 
-      <div className="space-y-2">
-        {data.bots.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">No Telegram bots yet. Create one to begin.</div>
-        ) : data.bots.map((bot) => (
-          <div key={bot.id} className="flex items-center gap-2">
-            {bulkMode && (
-              <input type="checkbox" checked={selectedBotIds.includes(bot.id)} onChange={() => toggleSelectedBot(bot.id)} className="accent-primary" />
-            )}
-            <div className="flex-1">
-              <BotCard bot={bot} active={selectedBot?.id === bot.id} onSelect={(item) => setSelectedBotId(item.id)} />
-            </div>
+      <div className="space-y-3">
+        {bulkMode && data.bots.length > 0 && (
+          <div className="space-y-2 rounded-xl border border-border bg-card p-3">
+            {data.bots.map((bot) => (
+              <label key={bot.id} className="flex items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" checked={selectedBotIds.includes(bot.id)} onChange={() => toggleSelectedBot(bot.id)} className="accent-primary" />
+                <span>{bot.name}</span>
+              </label>
+            ))}
           </div>
-        ))}
+        )}
+        <BotFleetTable
+          bots={data.bots}
+          selectedBotId={selectedBot?.id}
+          onSelectBot={setSelectedBotId}
+          onCloneBot={cloneBot}
+          onDeleteBot={deleteBot}
+        />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">

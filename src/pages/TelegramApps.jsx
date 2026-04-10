@@ -146,8 +146,8 @@ export default function TelegramApps() {
       {tab === 'bots' && (
         <div className="px-4 py-4 space-y-4">
           <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
-            <p className="text-sm font-semibold mb-1">AI Telegram Bot Builder</p>
-            <p className="text-xs text-muted-foreground">Create Telegram bots, configure AI behavior, enable webhooks, and monitor live conversations.</p>
+            <p className="text-sm font-semibold mb-1">Centralized AI Bot Management</p>
+            <p className="text-xs text-muted-foreground">Create, configure, monitor, and compare multiple Telegram bots with interactive charts and one unified control center.</p>
           </div>
           <TelegramBotDashboard />
         </div>
