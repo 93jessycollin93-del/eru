@@ -42,6 +42,12 @@ export default function FloatingNav({ onSearchOpen }) {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || DEFAULT_PINNED; } catch { return DEFAULT_PINNED; }
   });
   const [editMode, setEditMode] = useState(false);
+  const [orientation, setOrientation] = useState(() => {
+    try { return localStorage.getItem(ORIENTATION_KEY) || 'horizontal'; } catch { return 'horizontal'; }
+  });
+  const [isExpanded, setIsExpanded] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(EXPANDED_KEY)) || false; } catch { return false; }
+  });
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
   });
@@ -60,6 +66,17 @@ export default function FloatingNav({ onSearchOpen }) {
 
   const togglePin = (id) => {
     savePinned(pinned.includes(id) ? pinned.filter(p => p !== id) : [...pinned, id]);
+  };
+
+  const toggleOrientation = () => {
+    const newOrientation = orientation === 'horizontal' ? 'vertical' : 'horizontal';
+    setOrientation(newOrientation);
+    localStorage.setItem(ORIENTATION_KEY, newOrientation);
+  };
+
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify(!isExpanded));
   };
 
   const onPointerDown = useCallback((e) => {
