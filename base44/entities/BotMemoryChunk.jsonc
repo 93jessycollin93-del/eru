@@ -1,0 +1,60 @@
+{
+  "name": "BotMemoryChunk",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "chunk_key": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "message_count": {
+      "type": "number",
+      "default": 0
+    },
+    "archive_file_uri": {
+      "type": "string"
+    },
+    "archive_signed_url": {
+      "type": "string"
+    },
+    "storage_tier": {
+      "type": "string",
+      "enum": [
+        "hot",
+        "warm",
+        "cold"
+      ],
+      "default": "warm"
+    },
+    "last_message_at": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "bot_id",
+    "user_email",
+    "chunk_key",
+    "summary"
+  ]
+}
