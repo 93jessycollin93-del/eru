@@ -106,8 +106,10 @@ function HueRing({ hue, sat = 100, light = 50, size = 36 }) {
 }
 
 function ThemesTab() {
-  const { primaryHue, updatePrimaryHue, bgHue, updateBgHue, cardHue, updateCardHue,
-    borderHue, updateBorderHue, primarySat, updatePrimarySat, primaryLight, updatePrimaryLight } = useTheme();
+  const theme = useTheme() || {};
+  const { primaryHue = 160, updatePrimaryHue = () => {}, bgHue = 230, updateBgHue = () => {},
+    cardHue = 230, updateCardHue = () => {}, borderHue = 230, updateBorderHue = () => {},
+    primarySat = 100, updatePrimarySat = () => {}, primaryLight = 45, updatePrimaryLight = () => {} } = theme;
 
   const applyPalette = (p) => {
     updatePrimaryHue(p.primaryHue); updateBgHue(p.bgHue); updateCardHue(p.cardHue);
