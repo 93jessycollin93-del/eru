@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { History, Save, RotateCcw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import BotVersionComparator from './BotVersionComparator';
 
 export default function BotVersionHistory({ bots, onRollback }) {
   const { currentUser } = useAuth();
@@ -99,6 +100,8 @@ export default function BotVersionHistory({ bots, onRollback }) {
           ))}
         </div>
       )}
+
+      <BotVersionComparator versions={versions} selectedBot={selectedBot} onSaved={load} />
 
       {/* Filter */}
       <div className="flex gap-2 overflow-x-auto pb-1">

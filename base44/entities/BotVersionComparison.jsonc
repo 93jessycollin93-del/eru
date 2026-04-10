@@ -1,0 +1,74 @@
+{
+  "name": "BotVersionComparison",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "version_a_id": {
+      "type": "string"
+    },
+    "version_a_label": {
+      "type": "string"
+    },
+    "version_b_id": {
+      "type": "string"
+    },
+    "version_b_label": {
+      "type": "string"
+    },
+    "engagement_a": {
+      "type": "number",
+      "default": 0
+    },
+    "engagement_b": {
+      "type": "number",
+      "default": 0
+    },
+    "accuracy_a": {
+      "type": "number",
+      "default": 0
+    },
+    "accuracy_b": {
+      "type": "number",
+      "default": 0
+    },
+    "winner": {
+      "type": "string",
+      "enum": [
+        "version_a",
+        "version_b",
+        "tie"
+      ],
+      "default": "tie"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "version_a_id",
+    "version_b_id"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
