@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ClipboardList, Search, Filter, Shield, CreditCard, Key, Link, Database, Settings, LogIn, Fingerprint, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -85,6 +86,65 @@ export default function ActivityAuditLog() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadPDF = () => {
+    setDownloading(true);
+    const doc = new jsPDF();
+    const now = new Date().toLocaleString();
+
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(30, 30, 30);
+    doc.text('Activity & Transaction Report', 14, 20);
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Generated: ${now}`, 14, 28);
+    doc.text(`Filters — Type: ${typeFilter} | Status: ${statusFilter}${search ? ` | Search: "${search}"` : ''}`, 14, 34);
+    doc.text(`Total records: ${filtered.length}`, 14, 40);
+
+    // Divider
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, 44, 196, 44);
+
+    let y = 52;
+    filtered.forEach((log, i) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+
+      doc.setFontSize(10);
+      doc.setTextColor(30, 30, 30);
+      doc.text(`${i + 1}. ${log.action}`, 14, y);
+
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      const meta = [
+        log.action_type?.toUpperCase(),
+        log.status,
+        log.severity,
+        log.platform,
+        log.source_app,
+        log.amount ? `${log.amount} ${log.currency || 'GOLD'}` : null,
+        new Date(log.created_date).toLocaleString(),
+      ].filter(Boolean).join('  ·  ');
+      doc.text(meta, 14, y + 5);
+
+      if (log.detail) {
+        doc.setFontSize(8);
+        doc.setTextColor(80, 80, 80);
+        const lines = doc.splitTextToSize(log.detail, 182);
+        doc.text(lines, 14, y + 11);
+        y += 11 + lines.length * 4 + 4;
+      } else {
+        y += 16;
+      }
+
+      doc.setDrawColor(230, 230, 230);
+      doc.line(14, y - 1, 196, y - 1);
+    });
+
+    doc.save(`activity-report-${Date.now()}.pdf`);
+    setDownloading(false);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -118,8 +178,9 @@ export default function ActivityAuditLog() {
           <h2 className="text-base font-bold flex items-center gap-2"><ClipboardList className="w-4 h-4 text-primary" /> Activity Log</h2>
           <p className="text-[10px] text-muted-foreground">All actions, payments & security events</p>
         </div>
-        <button className="p-1.5 rounded-lg border border-border text-muted-foreground">
-          <Download className="w-3.5 h-3.5" />
+        <button onClick={downloadPDF} disabled={downloading || filtered.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all disabled:opacity-40 text-xs font-medium">
+          <Download className="w-3.5 h-3.5" />{downloading ? 'Generating…' : 'Export PDF'}
         </button>
       </div>
 
