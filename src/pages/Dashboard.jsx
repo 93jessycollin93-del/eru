@@ -3,6 +3,7 @@ import TickerBar from '../components/dashboard/TickerBar';
 import WidgetRulesPanel from '../components/dashboard/WidgetRulesPanel';
 import { DashboardEventsProvider } from '../context/DashboardEventsContext';
 import DataVisualizer from '../components/dashboard/DataVisualizer';
+import WidgetLibrary from '../components/dashboard/WidgetLibrary';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import AppDock from '../components/dashboard/AppDock';
 import FinanceModule from '../components/dashboard/FinanceModule';
@@ -42,6 +43,7 @@ export default function Dashboard() {
         <div className="px-4 mt-4 space-y-4 pb-4">
           <TelegramFirstBanner />
           <WidgetRulesPanel />
+          <WidgetLibrary prices={prices} />
           <AppDock />
           <NotificationCenter />
           <AlertManager />
