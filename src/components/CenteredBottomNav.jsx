@@ -17,6 +17,7 @@ const ALL_PAGES = [
   { id: 'tgapps',     label: 'TG Apps',       icon: Send,          to: '/tgapps' },
   { id: 'jackie',     label: 'Jackie AI',     icon: Bot,           to: '/jackie' },
   { id: 'ailab',      label: 'AI Lab',        icon: FlaskConical,  to: '/ailab' },
+  { id: 'botmarket',  label: 'Bot Market',    icon: Cpu,           to: '/bot-marketplace' },
   { id: 'apikeys',    label: 'API Keys',      icon: KeyRound,      to: '/apikeys' },
   { id: 'builder',    label: 'Builder',       icon: Wand2,         to: '/builder' },
   { id: 'pipeline',   label: 'Pipeline',      icon: Layers,        to: '/pipeline' },

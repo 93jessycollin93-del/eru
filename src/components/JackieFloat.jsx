@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bot } from 'lucide-react';
+import { Bot, Cpu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function JackieFloat() {
@@ -32,21 +32,32 @@ export default function JackieFloat() {
   };
 
   return (
-    <button
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onClick={() => !dragging && navigate('/jackie')}
+    <div
       style={{
         position: 'fixed',
         left: `${pos.x}px`,
         top: `${pos.y}px`,
       }}
-      className="z-50 w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center glow-green transition-transform hover:scale-110 active:scale-95 cursor-move"
-      title="Drag to move · Click to open"
+      className="z-50 flex flex-col gap-2"
     >
-      <Bot className="w-5 h-5 text-primary-foreground pointer-events-none" />
-    </button>
+      <button
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClick={() => !dragging && navigate('/jackie')}
+        className="w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center glow-green transition-transform hover:scale-110 active:scale-95 cursor-move"
+        title="Drag to move · Click to open Jackie"
+      >
+        <Bot className="w-5 h-5 text-primary-foreground pointer-events-none" />
+      </button>
+      <button
+        onClick={() => navigate('/bot-marketplace')}
+        className="w-12 h-12 rounded-full bg-card border border-primary/30 shadow-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+        title="Open Bot Marketplace"
+      >
+        <Cpu className="w-5 h-5 text-primary pointer-events-none" />
+      </button>
+    </div>
   );
 }
