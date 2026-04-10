@@ -1,0 +1,111 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "auth",
+        "payment",
+        "wallet",
+        "security",
+        "integration",
+        "data_access",
+        "settings",
+        "trade",
+        "login",
+        "biometric"
+      ]
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "telegram",
+        "ios",
+        "android",
+        "web",
+        "api"
+      ]
+    },
+    "action": {
+      "type": "string",
+      "description": "Short action label"
+    },
+    "detail": {
+      "type": "string",
+      "description": "Full detail / description"
+    },
+    "source_app": {
+      "type": "string",
+      "description": "Which integrated app (Google Drive, Salesforce, etc)"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "default": "info"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "blocked"
+      ],
+      "default": "success"
+    },
+    "ip_address": {
+      "type": "string"
+    },
+    "device_info": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "description": "If payment related"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "user_email",
+    "action_type",
+    "action",
+    "status"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

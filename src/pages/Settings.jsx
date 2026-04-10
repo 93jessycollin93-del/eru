@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks } from 'lucide-react';
+import BiometricAuth from '../components/BiometricAuth';
 import { useAuth } from '@/lib/AuthContext';
+import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList } from 'lucide-react';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
@@ -81,8 +82,15 @@ function SettingsSheet({ type, onClose }) {
 
 export default function Settings() {
   const [showSheet, setShowSheet] = useState(null);
-  const { currentUser } = useAuth();
-  const { lang, setLang } = useLanguage();
+  const [biometricOpen, setBiometricOpen] = useState(false);
+  const [biometricAction, setBiometricAction] = useState('');
+
+  const requireBiometric = (action, fn) => {
+    setBiometricAction(action);
+    setBiometricOpen(true);
+    // fn stored via callback in onSuccess
+    window._biometricCallback = fn;
+  };
 
   if (showSheet) return <SettingsSheet type={showSheet} onClose={() => setShowSheet(null)} />;
 
@@ -140,6 +148,26 @@ export default function Settings() {
           <p className="text-xs text-muted-foreground">Cryptocurrency trading carries significant risk. This platform does not provide financial advice. All trading is at your own risk.</p>
         </div>
 
+        {/* Biometric & security quick links */}
+        <div className="mt-4 bg-card border border-border rounded-xl divide-y divide-border">
+          <button onClick={() => requireBiometric('wallet access', () => {})} className="w-full flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
+            <Fingerprint className="w-4 h-4 text-primary" />
+            <span className="flex-1 text-sm text-left">Biometric Authentication</span>
+            <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">FaceID / Touch</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <Link to="/audit" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
+            <ClipboardList className="w-4 h-4 text-muted-foreground" />
+            <span className="flex-1 text-sm">Activity Audit Log</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+          <Link to="/performance" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
+            <Activity className="w-4 h-4 text-muted-foreground" />
+            <span className="flex-1 text-sm">Performance Monitor</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+        </div>
+
         {currentUser?.role === 'admin' && (
           <Link to="/admin/blockchain"
             className="w-full mt-4 flex items-center gap-2 px-4 py-3 text-primary text-sm font-medium border border-primary/20 bg-primary/5 rounded-xl">
@@ -151,6 +179,13 @@ export default function Settings() {
           Sign Out
         </button>
       </div>
+      <BiometricAuth
+        open={biometricOpen}
+        onClose={() => setBiometricOpen(false)}
+        onSuccess={() => { window._biometricCallback?.(); }}
+        action={biometricAction}
+        userEmail={currentUser?.email}
+      />
     </div>
   );
 }

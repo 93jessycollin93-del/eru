@@ -35,6 +35,8 @@ import StorefrontHub from './pages/StorefrontHub';
 import StorefrontAnalytics from './pages/StorefrontAnalytics';
 import CreatureLab from './pages/CreatureLab';
 import AdminEconomyDashboard from './pages/AdminEconomyDashboard';
+import PerformanceDashboard from './pages/PerformanceDashboard';
+import ActivityAuditLog from './pages/ActivityAuditLog';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -93,6 +95,8 @@ const AuthenticatedApp = () => {
         <Route path="/storefront" element={<StorefrontHub />} />
         <Route path="/storefront-analytics" element={<StorefrontAnalytics />} />
         <Route path="/admin/economy" element={<AdminEconomyDashboard />} />
+        <Route path="/performance" element={<PerformanceDashboard />} />
+        <Route path="/audit" element={<ActivityAuditLog />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

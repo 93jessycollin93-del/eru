@@ -1,0 +1,55 @@
+{
+  "name": "PerformanceMetric",
+  "type": "object",
+  "properties": {
+    "service": {
+      "type": "string",
+      "description": "Service/integration name"
+    },
+    "endpoint": {
+      "type": "string"
+    },
+    "latency_ms": {
+      "type": "number"
+    },
+    "status_code": {
+      "type": "number"
+    },
+    "success": {
+      "type": "boolean",
+      "default": true
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "error_type": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string",
+      "default": "us-east"
+    },
+    "user_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "service",
+    "latency_ms",
+    "success",
+    "timestamp"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {},
+    "delete": {}
+  }
+}
