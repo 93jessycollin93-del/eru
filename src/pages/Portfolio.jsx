@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Zap, Trophy, Flame, TrendingUp, Star, Heart, Share2, Lock, Calendar, Download } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
+import ScenarioAnalysisPanel from '../components/portfolio/ScenarioAnalysisPanel';
+import DiversificationToolsPanel from '../components/portfolio/DiversificationToolsPanel';
+import PerformanceBenchmarkPanel from '../components/portfolio/PerformanceBenchmarkPanel';
 
 export default function Portfolio() {
   const [tab, setTab] = useState('inventory');
@@ -85,6 +88,7 @@ export default function Portfolio() {
       <div className="flex border-b border-border px-4 gap-1">
         {[
           { id: 'inventory', label: 'Inventory' },
+          { id: 'analysis', label: 'Analysis' },
           { id: 'showcase', label: 'Showcase' },
           { id: 'history', label: 'History' },
           { id: 'profile', label: 'Profile' }
@@ -153,6 +157,15 @@ export default function Portfolio() {
               )}
             </div>
           </>
+        )}
+
+        {/* ANALYSIS */}
+        {tab === 'analysis' && (
+          <div className="space-y-3">
+            <ScenarioAnalysisPanel />
+            <DiversificationToolsPanel />
+            <PerformanceBenchmarkPanel />
+          </div>
         )}
 
         {/* SHOWCASE */}
