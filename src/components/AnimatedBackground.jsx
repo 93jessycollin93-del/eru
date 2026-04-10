@@ -1,19 +1,19 @@
 import { useEffect, useRef } from 'react';
 import { useTheme } from '../context/ThemeContext';
 
-// ─── ANIMATION ENGINES (requestAnimationFrame-based for max performance) ──────
+// ─── ANIMATION ENGINES ──────────────────────────────────────────────────────
+// Pattern: every engine MUST return a cleanup fn. All use a `cancelled` flag so
+// the RAF loop halts immediately on the same tick as cancelAnimationFrame.
 const ENGINES = {
   matrix: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-    // Clear to solid bg first to prevent ghosting on remount
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
     ctx.fillStyle = 'rgba(10,12,20,1)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const cols = Math.floor(canvas.width / 16 * Math.min(density, 2));
     const drops = Array(cols).fill(1);
-    let frame = 0;
-    let raf;
-    let cancelled = false;
+    let frame = 0, raf, cancelled = false;
     const draw = () => {
       if (cancelled) return;
       frame++;
@@ -32,23 +32,21 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   neural_mesh: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
     const n = Math.floor(35 * density);
     const pts = Array.from({ length: n }, () => ({
       x: Math.random() * canvas.width, y: Math.random() * canvas.height,
       vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
     }));
-    let frame = 0, raf;
+    let frame = 0, raf, cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 2 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -70,19 +68,21 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   stars: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
     const n = Math.floor(180 * density);
     const stars = Array.from({ length: n }, () => ({
       x: Math.random() * canvas.width, y: Math.random() * canvas.height,
       r: Math.random() * 1.5 + 0.3, twinkle: Math.random() * Math.PI * 2,
     }));
-    let frame = 0, raf;
+    let frame = 0, raf, cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 2 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -96,14 +96,16 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   nebula: (canvas) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-    let t = 0, frame = 0, raf;
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
+    let t = 0, frame = 0, raf, cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 3 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -120,14 +122,16 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   aurora_sky: (canvas) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-    let t = 0, frame = 0, raf;
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
+    let t = 0, frame = 0, raf, cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 3 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -149,19 +153,21 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   particles: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
     const n = Math.floor(50 * density);
     const pts = Array.from({ length: n }, () => ({
       x: Math.random() * canvas.width, y: Math.random() * canvas.height,
       vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4, r: Math.random() * 2 + 0.5,
     }));
-    let frame = 0, raf;
+    let frame = 0, raf, cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 2 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -183,20 +189,22 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   fire: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
     const n = Math.floor(50 * density);
     const embers = Array.from({ length: n }, () => ({
       x: Math.random() * canvas.width, y: canvas.height + 10,
       vx: (Math.random() - 0.5) * 1.5, vy: -(1 + Math.random() * 3),
       life: Math.random(), decay: 0.008 + Math.random() * 0.01, r: 1.5 + Math.random() * 2.5,
     }));
-    let frame = 0, raf;
+    let frame = 0, raf, cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 2 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -211,26 +219,28 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   crystal_lattice: (canvas, density = 1) => {
     const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
     const n = Math.floor(20 * density);
     const nodes = Array.from({ length: n }, () => ({
       x: Math.random() * canvas.width, y: Math.random() * canvas.height,
       vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
     }));
-    let frame = 0, raf;
+    let frame = 0, raf, cancelled = false;
     const draw = () => {
+      if (cancelled) return;
       frame++;
       if (frame % 2 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        nodes.forEach(n => {
-          n.x += n.vx; n.y += n.vy;
-          if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
-          if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+        nodes.forEach(nd => {
+          nd.x += nd.vx; nd.y += nd.vy;
+          if (nd.x < 0 || nd.x > canvas.width) nd.vx *= -1;
+          if (nd.y < 0 || nd.y > canvas.height) nd.vy *= -1;
         });
         nodes.forEach((a, i) => nodes.slice(i + 1).forEach(b => {
           const d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -245,7 +255,7 @@ const ENGINES = {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
   none: () => null,
