@@ -27,7 +27,7 @@ const ALL_PAGES = [
   { id: 'storefront', label: 'Storefront',    icon: Store,         to: '/storefront' },
   { id: 'sfanalytics',label: 'SF Analytics',  icon: BarChart,      to: '/storefront-analytics' },
   { id: 'economy',    label: 'Economy',       icon: Award,         to: '/admin/economy' },
-  { id: 'workstation',label: 'Workstation',   icon: Cpu,           to: '/visual' },
+
   { id: 'settings',   label: 'Settings',      icon: Settings,      to: '/settings' },
 ];
 
