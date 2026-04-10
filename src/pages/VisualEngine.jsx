@@ -188,7 +188,8 @@ function ThemesTab() {
 
 // ─── TAB: BACKGROUNDS ────────────────────────────────────────────────────────
 function BackgroundsTab() {
-  const { bg, setBg, bgOpacity, setBgOpacity, particleDensity, setParticleDensity, lowPowerMode, setLowPowerMode, isLocked } = useTheme();
+  const theme = useTheme() || {};
+  const { bg, setBg, bgOpacity, setBgOpacity, particleDensity, setParticleDensity, lowPowerMode, setLowPowerMode, isLocked = () => false } = theme;
   const [preview, setPreview] = useState(null);
   const [cat, setCat] = useState('all');
 
