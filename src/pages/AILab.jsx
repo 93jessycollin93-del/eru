@@ -5,6 +5,7 @@ import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
 import ProgrammingMemoryPanel from '../components/ailab/ProgrammingMemoryPanel';
 import TieredMemoryPanel from '../components/ailab/TieredMemoryPanel';
+import KnowledgeMap from '../components/ailab/KnowledgeMap';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
@@ -622,7 +623,7 @@ export default function AILab() {
       {tab === 'agents' && <AgentRunner bots={bots} globalPolicy={globalPolicy} />}
 
       {/* MEMORY */}
-      {tab === 'memory' && <div><ProgrammingMemoryPanel /><TieredMemoryPanel bots={bots} /><MemoryViewer bots={bots} /></div>}
+      {tab === 'memory' && <div><ProgrammingMemoryPanel /><KnowledgeMap bots={bots} /><TieredMemoryPanel bots={bots} /><MemoryViewer bots={bots} /></div>}
 
       {/* ORCHESTRATOR */}
       {tab === 'orchestrator' && <MultiAgentOrchestrator bots={bots} />}
