@@ -37,16 +37,6 @@ const BLANK = { name: '', description: '', role: 'assistant', personality: '', i
 
 export default function AILab() {
   const [tab, setTab] = useState('my');
-  const TABS = [
-    { id: 'my', label: 'My Bots', icon: Bot },
-    { id: 'build', label: editId ? 'Edit' : 'Build', icon: Plus },
-    { id: 'factory', label: 'Factory', icon: Wand2 },
-    { id: 'agents', label: 'Agents', icon: Zap },
-    { id: 'memory', label: 'Memory', icon: Brain },
-    { id: 'orchestrator', label: 'Orchestra', icon: Network },
-    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-    { id: 'discover', label: 'Discover', icon: Sparkles },
-  ];
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(BLANK);
@@ -117,6 +107,17 @@ export default function AILab() {
     await awardXP(testBot, 10);
     setTesting(false);
   };
+
+  const TABS = [
+    { id: 'my', label: 'My Bots', icon: Bot },
+    { id: 'build', label: editId ? 'Edit' : 'Build', icon: Plus },
+    { id: 'factory', label: 'Factory', icon: Wand2 },
+    { id: 'agents', label: 'Agents', icon: Zap },
+    { id: 'memory', label: 'Memory', icon: Brain },
+    { id: 'orchestrator', label: 'Orchestra', icon: Network },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+    { id: 'discover', label: 'Discover', icon: Sparkles },
+  ];
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
