@@ -88,8 +88,17 @@ export function DashboardEventsProvider({ children }) {
   return <DashboardEventsContext.Provider value={value}>{children}</DashboardEventsContext.Provider>;
 }
 
+const FALLBACK_DASHBOARD_EVENTS = {
+  rules: DEFAULT_RULES,
+  lastEvent: null,
+  emit: () => {},
+  subscribe: () => () => {},
+  addRule: () => {},
+  toggleRule: () => {},
+  deleteRule: () => {},
+};
+
 export function useDashboardEvents() {
   const context = useContext(DashboardEventsContext);
-  if (!context) throw new Error('useDashboardEvents must be used within DashboardEventsProvider');
-  return context;
+  return context || FALLBACK_DASHBOARD_EVENTS;
 }
