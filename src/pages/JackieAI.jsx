@@ -102,7 +102,9 @@ export default function JackieAI() {
       const hasBotSquad = keys.some(k => (k.permissions || []).includes('bot:squad'));
       setApiKeyCapabilities({ webSearch: hasBotWeb, code: hasBotCode, squad: hasBotSquad });
     }).catch(() => {});
-    base44.entities.JackieProgress.list('-created_date', 1).then((rows) => setJackieProgress(rows[0] || null)).catch(() => {});
+    if (base44.entities.JackieProgress) {
+      base44.entities.JackieProgress.list('-created_date', 1).then((rows) => setJackieProgress(rows[0] || null)).catch(() => {});
+    }
   }, []);
 
   const buildPrompt = useCallback((userMessage) => {
@@ -122,6 +124,8 @@ export default function JackieAI() {
   }, [mode, thinkMode, messages, workingContext, voice, userBots, apiKeyCount]);
 
   const updateJackieProgress = async (changes) => {
+    if (!base44.entities.JackieProgress) return;
+
     const current = jackieProgress || { xp: 0, level: 1, streak_days: 0, badges: [], messages_sent: 0, resources_opened: 0, feedback_sent: 0 };
     const today = new Date().toISOString().slice(0, 10);
     let streakDays = current.streak_days || 0;
