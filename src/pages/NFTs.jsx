@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Search, Grid, List, Wallet, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Search, Grid, List, Wallet, AlertTriangle, Plus, X, Tag } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectBar from '../components/WalletConnectBar';
 
@@ -18,12 +20,41 @@ const NFTS = [
 
 const RARITY_COLORS = { Common: 'text-gray-400', Uncommon: 'text-green-400', Rare: 'text-blue-400', Epic: 'text-purple-400', Legendary: 'text-yellow-400' };
 
+const BLANK_LIST = { title: '', price: '', description: '', image_url: '', currency: 'TON', rarity: 'Common', tags: '' };
+
 export default function NFTs() {
+  const { currentUser } = useAuth();
   const [tab, setTab] = useState('explore');
   const [view, setView] = useState('grid');
   const [selected, setSelected] = useState(null);
   const [showBuy, setShowBuy] = useState(false);
+  const [showListForm, setShowListForm] = useState(false);
+  const [listForm, setListForm] = useState(BLANK_LIST);
+  const [listing, setListing] = useState(false);
+  const [listSuccess, setListSuccess] = useState(false);
   const wallet = useWallet();
+
+  const submitListing = async () => {
+    if (!listForm.title || !listForm.price) return;
+    setListing(true);
+    await base44.entities.StorefrontListing.create({
+      title: listForm.title,
+      description: listForm.description,
+      asset_type: 'nft',
+      base_price: parseFloat(listForm.price) || 0,
+      currency: listForm.currency,
+      asset_id: 'user_nft_' + Date.now(),
+      internal_listed: true,
+      status: 'active',
+      tags: listForm.tags ? listForm.tags.split(',').map(t => t.trim()) : [],
+      asset_snapshot: { title: listForm.title, rarity: listForm.rarity, image_url: listForm.image_url },
+    });
+    setListForm(BLANK_LIST);
+    setListing(false);
+    setListSuccess(true);
+    setShowListForm(false);
+    setTimeout(() => setListSuccess(false), 3000);
+  };
 
   // Load blockchain config
   const blockchainConfig = (() => { try { return JSON.parse(localStorage.getItem('blockchain_config') || '{}'); } catch { return {}; } })();
@@ -142,10 +173,59 @@ export default function NFTs() {
           ))}
         </div>
       ) : tab === 'my_nfts' ? (
-        <div className="px-4 py-6 space-y-3">
+        <div className="px-4 py-4 space-y-3">
+          {listSuccess && (
+            <div className="bg-green-400/10 border border-green-400/30 rounded-xl px-3 py-2 text-xs text-green-400 font-medium">
+              ✅ NFT listed on the Storefront! View it in the Shop section.
+            </div>
+          )}
+
+          <button onClick={() => setShowListForm(s => !s)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-primary/30 rounded-xl text-sm font-medium text-primary hover:bg-primary/5 transition-colors">
+            <Plus className="w-4 h-4" /> List an NFT for Sale
+          </button>
+
+          {showListForm && (
+            <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold">New NFT Listing</p>
+                <button onClick={() => setShowListForm(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+              </div>
+              <input value={listForm.title} onChange={e => setListForm(f => ({...f, title: e.target.value}))}
+                placeholder="NFT Name (e.g. TON Punk #8844)"
+                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
+              <input value={listForm.image_url} onChange={e => setListForm(f => ({...f, image_url: e.target.value}))}
+                placeholder="Image URL (optional)"
+                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
+              <textarea value={listForm.description} onChange={e => setListForm(f => ({...f, description: e.target.value}))}
+                placeholder="Description"
+                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none resize-none min-h-[60px]" />
+              <div className="grid grid-cols-3 gap-2">
+                <input type="number" value={listForm.price} onChange={e => setListForm(f => ({...f, price: e.target.value}))}
+                  placeholder="Price"
+                  className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none font-mono" />
+                <select value={listForm.currency} onChange={e => setListForm(f => ({...f, currency: e.target.value}))}
+                  className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none">
+                  {['TON','GOLD','CRYPTO'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select value={listForm.rarity} onChange={e => setListForm(f => ({...f, rarity: e.target.value}))}
+                  className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none">
+                  {['Common','Uncommon','Rare','Epic','Legendary'].map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <input value={listForm.tags} onChange={e => setListForm(f => ({...f, tags: e.target.value}))}
+                placeholder="Tags (comma-separated: art, pixel, 3d)"
+                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
+              <button onClick={submitListing} disabled={!listForm.title || !listForm.price || listing}
+                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-semibold disabled:opacity-40">
+                {listing ? 'Publishing…' : '🚀 Publish Listing'}
+              </button>
+            </div>
+          )}
+
           <WalletConnectBar />
           {wallet.status !== 'connected' ? (
-            <p className="text-xs text-muted-foreground text-center">Connect your wallet to view your NFTs</p>
+            <p className="text-xs text-muted-foreground text-center">Connect your wallet to view on-chain NFTs</p>
           ) : (
             <div className="py-6 text-center">
               <p className="text-4xl mb-3">🖼</p>

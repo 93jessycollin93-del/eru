@@ -297,7 +297,8 @@ function CreateListingModal({ connectors, onClose, onSave }) {
   const [form, setForm] = useState({
     title: '', asset_type: 'jade', base_price: '', currency: 'GOLD',
     description: '', asset_id: 'manual', internal_listed: true,
-    external_syndications: [], status: 'draft', region_availability: ['global']
+    external_syndications: [], status: 'draft', region_availability: ['global'],
+    image_url: '', tags: '', rarity: 'common',
   });
   const [saving, setSaving] = useState(false);
   const activeConnectors = connectors.filter(c => c.is_enabled);
@@ -315,7 +316,8 @@ function CreateListingModal({ connectors, onClose, onSave }) {
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave({ ...form, base_price: parseFloat(form.base_price) || 0, asset_snapshot: { title: form.title, type: form.asset_type } });
+    const tags = form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    await onSave({ ...form, base_price: parseFloat(form.base_price) || 0, tags, asset_snapshot: { title: form.title, type: form.asset_type, rarity: form.rarity, image_url: form.image_url } });
     setSaving(false);
   };
 
@@ -349,9 +351,37 @@ function CreateListingModal({ connectors, onClose, onSave }) {
             </div>
           </div>
           <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Currency</label>
+            <select value={form.currency} onChange={e => setForm(f => ({...f, currency: e.target.value}))}
+              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none">
+              {['GOLD','TON','CRYPTO','TELEGRAM_STARS'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          {form.asset_type === 'nft' && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Rarity</label>
+              <select value={form.rarity} onChange={e => setForm(f => ({...f, rarity: e.target.value}))}
+                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none">
+                {['common','uncommon','rare','epic','legendary','mythic'].map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Image URL (optional)</label>
+            <input value={form.image_url} onChange={e => setForm(f => ({...f, image_url: e.target.value}))}
+              placeholder="https://…"
+              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 font-mono" />
+          </div>
+          <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Description</label>
             <textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))}
               rows={2} className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 resize-none" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Tags (comma-separated)</label>
+            <input value={form.tags} onChange={e => setForm(f => ({...f, tags: e.target.value}))}
+              placeholder="e.g. rare, art, pixel, 3d"
+              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50" />
           </div>
 
           {/* Syndication targets */}
