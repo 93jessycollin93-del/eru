@@ -13,6 +13,7 @@ import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
 import PinnedCards from '../components/ailab/PinnedCards';
 import SquadBoard from '../components/ailab/SquadBoard';
+import BotCollaborationWorkspace from '../components/ailab/BotCollaborationWorkspace';
 import BotGlobalPolicyPanel from '../components/ailab/BotGlobalPolicyPanel';
 import { base44 } from '@/api/base44Client';
 
@@ -626,7 +627,7 @@ export default function AILab() {
       {tab === 'memory' && <div><ProgrammingMemoryPanel /><KnowledgeMap bots={bots} /><TieredMemoryPanel bots={bots} /><MemoryViewer bots={bots} /></div>}
 
       {/* ORCHESTRATOR */}
-      {tab === 'orchestrator' && <MultiAgentOrchestrator bots={bots} />}
+      {tab === 'orchestrator' && <div><BotCollaborationWorkspace bots={bots} /><MultiAgentOrchestrator bots={bots} /></div>}
 
       {/* ANALYTICS */}
       {tab === 'analytics' && <LabAnalytics bots={bots} />}

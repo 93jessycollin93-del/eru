@@ -53,16 +53,22 @@ export default function SquadBoard({ bots }) {
   const [showRunInput, setShowRunInput] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Store pipelines as BotImprovement records with a special type, or better: as UserBot with role='custom' tagged
-  // Simplest: store pipelines in localStorage for now since we have no dedicated entity
   useEffect(() => {
-    const saved = localStorage.getItem('squad_pipelines');
-    if (saved) setPipelines(JSON.parse(saved));
-    setLoading(false);
+    base44.entities.BotCollaborationSession.list('-created_date', 50).then((rows) => {
+      const mapped = rows.filter((row) => Array.isArray(row.delegation_plan) && row.delegation_plan.length > 1).map((row) => ({
+        id: row.id,
+        name: row.title,
+        description: row.goal,
+        steps: (row.delegation_plan || []).map((item) => item.bot_id),
+        handoffs: (row.delegation_plan || []).map((item) => item.task),
+        created_at: row.created_date,
+      }));
+      setPipelines(mapped);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   const savePipelines = (updated) => {
-    localStorage.setItem('squad_pipelines', JSON.stringify(updated));
     setPipelines(updated);
   };
 
@@ -83,19 +89,56 @@ export default function SquadBoard({ bots }) {
     setHandoffs(h => h.map((v, i) => i === idx ? val : v));
   };
 
-  const savePipeline = () => {
+  const savePipeline = async () => {
     if (!form.name || form.steps.length < 2) return;
-    const pipeline = { id: Date.now().toString(), name: form.name, description: form.description, steps: form.steps, handoffs, created_at: new Date().toISOString() };
-    const updated = activePipeline
-      ? pipelines.map(p => p.id === activePipeline ? pipeline : p)
-      : [...pipelines, pipeline];
-    savePipelines(updated);
+    const delegationPlan = form.steps.map((botId, index) => {
+      const bot = bots.find((item) => item.id === botId);
+      return {
+        bot_id: botId,
+        bot_name: bot?.name || 'Unknown bot',
+        task: handoffs[index] || 'Contribute to the workflow.'
+      };
+    });
+
+    if (activePipeline) {
+      await base44.entities.BotCollaborationSession.update(activePipeline, {
+        title: form.name,
+        goal: form.description || form.name,
+        delegation_plan: delegationPlan,
+        selected_bot_ids: form.steps,
+      });
+    } else {
+      await base44.entities.BotCollaborationSession.create({
+        title: form.name,
+        goal: form.description || form.name,
+        status: 'draft',
+        selected_bot_ids: form.steps,
+        delegation_plan: delegationPlan,
+        findings: [],
+        feedback: [],
+        final_output: ''
+      });
+    }
+
+    const rows = await base44.entities.BotCollaborationSession.list('-created_date', 50);
+    const mapped = rows.filter((row) => Array.isArray(row.delegation_plan) && row.delegation_plan.length > 1).map((row) => ({
+      id: row.id,
+      name: row.title,
+      description: row.goal,
+      steps: (row.delegation_plan || []).map((item) => item.bot_id),
+      handoffs: (row.delegation_plan || []).map((item) => item.task),
+      created_at: row.created_date,
+    }));
+    savePipelines(mapped);
     setForm(BLANK_PIPELINE);
     setHandoffs([]);
     setActivePipeline(null);
   };
 
-  const deletePipeline = (id) => savePipelines(pipelines.filter(p => p.id !== id));
+  const deletePipeline = async (id) => {
+    await base44.entities.BotCollaborationSession.delete(id);
+    savePipelines(pipelines.filter(p => p.id !== id));
+  };
 
   const editPipeline = (p) => {
     setActivePipeline(p.id);
@@ -183,7 +226,7 @@ export default function SquadBoard({ bots }) {
         )}
 
         <div className="flex gap-2">
-          <button onClick={savePipeline} disabled={!form.name || form.steps.length < 2}
+          <button onClick={() => savePipeline()} disabled={!form.name || form.steps.length < 2}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold disabled:opacity-40">
             <Save className="w-3 h-3" /> {activePipeline ? 'Update' : 'Save Pipeline'}
           </button>
