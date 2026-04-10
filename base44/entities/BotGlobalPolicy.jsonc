@@ -1,0 +1,48 @@
+{
+  "name": "BotGlobalPolicy",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "shared_instructions": {
+      "type": "string"
+    },
+    "safety_guardrails": {
+      "type": "string"
+    },
+    "max_response_length": {
+      "type": "number",
+      "default": 1200
+    },
+    "require_caution_for_security": {
+      "type": "boolean",
+      "default": false
+    },
+    "require_human_review": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -13,7 +13,8 @@
       "enum": [
         "draft",
         "running",
-        "completed"
+        "completed",
+        "failed"
       ],
       "default": "draft"
     },
@@ -58,6 +59,12 @@
           },
           "finding": {
             "type": "string"
+          },
+          "assignment": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
           }
         }
       },
@@ -72,6 +79,12 @@
             "type": "string"
           },
           "reviewer_bot_name": {
+            "type": "string"
+          },
+          "from_bot_id": {
+            "type": "string"
+          },
+          "to_bot_id": {
             "type": "string"
           },
           "feedback": {
