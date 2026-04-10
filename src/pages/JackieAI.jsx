@@ -10,6 +10,7 @@ import AssetManager from '../components/jackie/AssetManager';
 import EducationPanel from '../components/jackie/EducationPanel';
 import FeedbackPanel from '../components/jackie/FeedbackPanel';
 import IntegrationsPanel from '../components/jackie/IntegrationsPanel';
+import JackieGamificationPanel from '../components/jackie/JackieGamificationPanel';
 import InputBar from '../components/jackie/InputBar';
 import { VOICES } from '../components/jackie/VoiceSelector';
 
@@ -87,6 +88,7 @@ export default function JackieAI() {
   const [workingContext, setWorkingContext] = useState('');
   const [voice, setVoice] = useState('default');
   const [pendingFiles, setPendingFiles] = useState([]);
+  const [jackieProgress, setJackieProgress] = useState(null);
   const bottomRef = useRef(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
@@ -95,12 +97,12 @@ export default function JackieAI() {
     base44.entities.UserBot.list('-created_date', 20).then(b => setUserBots(b)).catch(() => {});
     base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).then(keys => {
       setApiKeyCount(keys.length);
-      // Check if any key has web search or code capabilities
       const hasBotWeb = keys.some(k => (k.permissions || []).includes('bot:websearch'));
       const hasBotCode = keys.some(k => (k.permissions || []).includes('bot:code'));
       const hasBotSquad = keys.some(k => (k.permissions || []).includes('bot:squad'));
       setApiKeyCapabilities({ webSearch: hasBotWeb, code: hasBotCode, squad: hasBotSquad });
     }).catch(() => {});
+    base44.entities.JackieProgress.list('-created_date', 1).then((rows) => setJackieProgress(rows[0] || null)).catch(() => {});
   }, []);
 
   const buildPrompt = useCallback((userMessage) => {
@@ -118,6 +120,42 @@ export default function JackieAI() {
     const history = messages.slice(-20).map(m => `${m.role === 'user' ? 'User' : 'Jackie'}: ${m.content}`).join('\n');
     return `${systemPrompt}${botContext}${keyContext}${contextBlock}\n\nConversation:\n${history}\nUser: ${userMessage}\n\nJackie:`;
   }, [mode, thinkMode, messages, workingContext, voice, userBots, apiKeyCount]);
+
+  const updateJackieProgress = async (changes) => {
+    const current = jackieProgress || { xp: 0, level: 1, streak_days: 0, badges: [], messages_sent: 0, resources_opened: 0, feedback_sent: 0 };
+    const today = new Date().toISOString().slice(0, 10);
+    let streakDays = current.streak_days || 0;
+    if (changes.countMessage && current.last_activity_date !== today) {
+      streakDays += 1;
+    }
+    const xp = (current.xp || 0) + (changes.xp || 0);
+    const level = xp >= 280 ? 5 : xp >= 180 ? 4 : xp >= 100 ? 3 : xp >= 40 ? 2 : 1;
+    const badges = Array.from(new Set([
+      ...(current.badges || []),
+      ...(changes.badges || []),
+      ((current.messages_sent || 0) + (changes.messages_sent || 0)) >= 1 ? 'first_question' : null,
+      ((current.resources_opened || 0) + (changes.resources_opened || 0)) >= 1 ? 'curious_investor' : null,
+      ((current.feedback_sent || 0) + (changes.feedback_sent || 0)) >= 1 ? 'feedback_helper' : null,
+      streakDays >= 3 ? 'streak_3' : null,
+    ].filter(Boolean)));
+    const payload = {
+      xp,
+      level,
+      streak_days: streakDays,
+      last_activity_date: changes.countMessage ? today : current.last_activity_date,
+      badges,
+      messages_sent: (current.messages_sent || 0) + (changes.messages_sent || 0),
+      resources_opened: (current.resources_opened || 0) + (changes.resources_opened || 0),
+      feedback_sent: (current.feedback_sent || 0) + (changes.feedback_sent || 0)
+    };
+    if (jackieProgress?.id) {
+      await base44.entities.JackieProgress.update(jackieProgress.id, payload);
+      setJackieProgress({ ...jackieProgress, ...payload });
+    } else {
+      const created = await base44.entities.JackieProgress.create(payload);
+      setJackieProgress(created);
+    }
+  };
 
   const send = async (attachments = []) => {
     const msg = input.trim();
@@ -153,6 +191,7 @@ export default function JackieAI() {
 
     setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     setWorkingContext(response);
+    await updateJackieProgress({ xp: 10, messages_sent: 1, countMessage: true });
     setLoading(false);
   };
 
@@ -259,8 +298,9 @@ export default function JackieAI() {
 
       {tab === 'assets' && (
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          <EducationPanel />
-          <FeedbackPanel />
+          <JackieGamificationPanel progress={jackieProgress} />
+          <EducationPanel onResourceOpen={() => updateJackieProgress({ xp: 5, resources_opened: 1 })} />
+          <FeedbackPanel onSubmitted={() => updateJackieProgress({ xp: 15, feedback_sent: 1 })} />
           <IntegrationsPanel />
           <AssetManager onInject={handleInjectAsset} />
         </div>

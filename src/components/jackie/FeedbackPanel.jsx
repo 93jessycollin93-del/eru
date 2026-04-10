@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { MessageSquare, Star } from 'lucide-react';
 
-export default function FeedbackPanel() {
+export default function FeedbackPanel({ onSubmitted }) {
   const [form, setForm] = useState({ category: 'suggestion', rating: 5, title: '', message: '' });
   const [saved, setSaved] = useState(false);
 
@@ -12,6 +12,7 @@ export default function FeedbackPanel() {
       ...form,
       context: 'jackie_ai'
     });
+    onSubmitted?.();
     setForm({ category: 'suggestion', rating: 5, title: '', message: '' });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

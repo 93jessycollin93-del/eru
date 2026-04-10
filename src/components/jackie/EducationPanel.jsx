@@ -27,7 +27,7 @@ const RESOURCES = [
   }
 ];
 
-export default function EducationPanel() {
+export default function EducationPanel({ onResourceOpen }) {
   return (
     <div className="space-y-3">
       <div className="bg-card border border-border rounded-xl p-4">
@@ -43,6 +43,7 @@ export default function EducationPanel() {
               href={resource.href}
               target="_blank"
               rel="noreferrer"
+              onClick={onResourceOpen}
               className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 hover:border-primary/30 transition-colors"
             >
               <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
