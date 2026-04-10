@@ -49,6 +49,7 @@ export default function JackieAI() {
   const [thinkMode, setThinkMode] = useState('default');
   const [userBots, setUserBots] = useState([]);
   const [apiKeyCount, setApiKeyCount] = useState(0);
+  const [apiKeyCapabilities, setApiKeyCapabilities] = useState({ webSearch: false, code: false, squad: false });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('chat');
@@ -63,7 +64,14 @@ export default function JackieAI() {
 
   useEffect(() => {
     base44.entities.UserBot.list('-created_date', 20).then(b => setUserBots(b)).catch(() => {});
-    base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 5).then(k => setApiKeyCount(k.length)).catch(() => {});
+    base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).then(keys => {
+      setApiKeyCount(keys.length);
+      // Check if any key has web search or code capabilities
+      const hasBotWeb = keys.some(k => (k.permissions || []).includes('bot:websearch'));
+      const hasBotCode = keys.some(k => (k.permissions || []).includes('bot:code'));
+      const hasBotSquad = keys.some(k => (k.permissions || []).includes('bot:squad'));
+      setApiKeyCapabilities({ webSearch: hasBotWeb, code: hasBotCode, squad: hasBotSquad });
+    }).catch(() => {});
   }, []);
 
   const buildPrompt = useCallback((userMessage) => {
@@ -73,7 +81,9 @@ export default function JackieAI() {
     const botContext = userBots.length > 0
       ? `\n[USER'S AI BOTS]\n${userBots.map(b => `- ${b.name} (${b.role}, Lv${b.level || 1}, ${b.xp || 0}XP): ${b.description || b.instructions?.slice(0, 80) || 'no description'}`).join('\n')}\n[END BOTS]`
       : '';
-    const keyContext = apiKeyCount > 0 ? `\n[API KEYS] User has ${apiKeyCount} active API key(s).` : '';
+    const keyContext = apiKeyCount > 0
+      ? `\n[API KEYS] User has ${apiKeyCount} active key(s). Bot capabilities unlocked via keys: ${[apiKeyCapabilities.webSearch && 'web-search', apiKeyCapabilities.code && 'code-engine', apiKeyCapabilities.squad && 'squad-pipelines'].filter(Boolean).join(', ') || 'basic-only'}. You can reference these capabilities when advising on bot tasks.`
+      : '';
     const contextBlock = workingContext ? `\n[ACTIVE CONTEXT]\n${workingContext}\n[END CONTEXT]\n` : '';
     const history = messages.slice(-20).map(m => `${m.role === 'user' ? 'User' : 'Jackie'}: ${m.content}`).join('\n');
     return `${systemPrompt}${botContext}${keyContext}${contextBlock}\n\nConversation:\n${history}\nUser: ${userMessage}\n\nJackie:`;
