@@ -85,3 +85,54 @@ export async function generatePortfolioPDF(portfolioData, marketData) {
   // Download
   doc.save(`Portfolio_${new Date().toISOString().split('T')[0]}.pdf`);
 }
+
+export async function generateAppWidePDF(appData) {
+  const doc = new jsPDF();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let yPos = 15;
+
+  doc.setFontSize(20);
+  doc.setTextColor(0, 230, 118);
+  doc.text('App Data Export', 15, yPos);
+  yPos += 10;
+
+  doc.setFontSize(9);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 15, yPos);
+  yPos += 8;
+
+  const sections = [
+    ['Portfolio', appData.portfolioData],
+    ['Market Data', appData.marketData],
+    ['Alerts', appData.alerts],
+    ['Notifications', appData.notifications],
+  ];
+
+  sections.forEach(([title, value]) => {
+    if (yPos > pageHeight - 30) {
+      doc.addPage();
+      yPos = 15;
+    }
+
+    doc.setFontSize(11);
+    doc.setTextColor(200, 200, 200);
+    doc.text(title, 15, yPos);
+    yPos += 6;
+
+    doc.setFontSize(8);
+    doc.setTextColor(180, 180, 180);
+    const lines = doc.splitTextToSize(JSON.stringify(value, null, 2), 180);
+    lines.forEach((line) => {
+      if (yPos > pageHeight - 15) {
+        doc.addPage();
+        yPos = 15;
+      }
+      doc.text(line, 15, yPos);
+      yPos += 4;
+    });
+
+    yPos += 4;
+  });
+
+  doc.save(`App_Data_${new Date().toISOString().split('T')[0]}.pdf`);
+}

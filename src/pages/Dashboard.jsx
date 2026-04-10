@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import TickerBar from '../components/dashboard/TickerBar';
 import WidgetRulesPanel from '../components/dashboard/WidgetRulesPanel';
 import { DashboardEventsProvider } from '../context/DashboardEventsContext';
@@ -17,6 +17,7 @@ import NotificationCenter from '../components/notifications/NotificationCenter';
 import TelegramFirstBanner from '../components/telegram/TelegramFirstBanner';
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
+import { base44 } from '@/api/base44Client';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
   const { prices } = useRealPrices();
@@ -26,13 +27,27 @@ export default function Dashboard() {
     netGainLoss: 3250.50,
     roi: 27.09,
   });
+  const [alerts, setAlerts] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    base44.entities.PriceAlert.list('-created_date', 50).then(setAlerts).catch(() => {});
+    base44.entities.AppNotification.list('-created_date', 50).then(setNotifications).catch(() => {});
+  }, []);
+
+  const appData = {
+    portfolioData,
+    marketData: prices,
+    alerts,
+    notifications,
+  };
 
   return (
     <DashboardEventsProvider>
       <div className="flex flex-col min-h-screen bg-background pb-20">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <h2 className="text-lg font-semibold">Dashboard</h2>
-          <ExportButton portfolioData={portfolioData} marketData={prices} />
+          <ExportButton appData={appData} />
         </div>
         <div className="px-4 py-2 flex justify-end">
           <LanguageSwitcher />
