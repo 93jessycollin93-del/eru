@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Zap, TrendingUp, Lightbulb, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useDashboardEvents } from './DashboardEventContext';
 
 const COLORS = ['#00e676', '#2196f3', '#7c4dff', '#ff9800', '#e91e63'];
 
@@ -10,10 +11,23 @@ export default function AnalyticsWidget() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [pulse, setPulse] = useState(false);
+  const { subscribe, rules } = useDashboardEvents();
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  useEffect(() => {
+    const analyticsRuleEnabled = rules.some((rule) => rule.enabled && rule.target === 'analytics' && rule.action === 'refresh_recommendations');
+    if (!analyticsRuleEnabled) return;
+
+    return subscribe('market.price_change', () => {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 900);
+      generateRecommendations();
+    });
+  }, [rules]);
 
   const fetchAnalytics = async () => {
     try {
@@ -42,6 +56,7 @@ export default function AnalyticsWidget() {
     try {
       const response = await base44.functions.invoke('generateSmartRecommendations', {});
       setRecommendations(response.data?.recommendations || []);
+      try { window.dispatchEvent(new CustomEvent('dashboard-analytics-ready')); } catch {}
     } catch (error) {
       console.error('Recommendation error:', error);
     } finally {
@@ -64,7 +79,7 @@ export default function AnalyticsWidget() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 transition-all ${pulse ? 'ring-1 ring-blue-400/40 rounded-xl' : ''}`}>
       {/* Usage Chart */}
       {chartData.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">

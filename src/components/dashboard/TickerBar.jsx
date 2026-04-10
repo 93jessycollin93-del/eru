@@ -1,8 +1,12 @@
+import { useEffect, useRef } from 'react';
 import { useRealPrices } from '../../hooks/useRealPrices';
 import { WifiOff, Loader2 } from 'lucide-react';
+import { useDashboardEvents } from './DashboardEventContext';
 
 export default function TickerBar() {
   const { prices, status } = useRealPrices();
+  const { emit, rules } = useDashboardEvents();
+  const previousPricesRef = useRef([]);
 
   if (status === 'loading') {
     return (
@@ -21,6 +25,24 @@ export default function TickerBar() {
       </div>
     );
   }
+
+  useEffect(() => {
+    if (status !== 'live' || prices.length === 0) return;
+
+    emit('market.refresh', { prices });
+
+    const previous = previousPricesRef.current;
+    const changed = prices.filter((price) => {
+      const old = previous.find((item) => item.symbol === price.symbol);
+      return old && old.price !== price.price;
+    });
+
+    if (changed.length > 0) {
+      emit('market.price_change', { prices, changed, rules });
+    }
+
+    previousPricesRef.current = prices;
+  }, [prices, status]);
 
   const items = [...prices, ...prices];
   return (

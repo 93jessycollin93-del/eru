@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Plus, Trash2, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { useDashboardEvents } from './dashboard/DashboardEventContext';
 
 export default function AlertManager() {
   const [alerts, setAlerts] = useState([]);
@@ -9,10 +10,23 @@ export default function AlertManager() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ asset_symbol: '', alert_type: 'above', threshold_price: '' });
   const [creating, setCreating] = useState(false);
+  const [pulse, setPulse] = useState(false);
+  const { subscribe, rules } = useDashboardEvents();
 
   useEffect(() => {
     fetchAlerts();
   }, []);
+
+  useEffect(() => {
+    const alertRuleEnabled = rules.some((rule) => rule.enabled && rule.source === 'market' && rule.target === 'alerts' && rule.action === 'scan_alerts');
+    if (!alertRuleEnabled) return;
+
+    return subscribe('market.price_change', () => {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 900);
+      fetchAlerts();
+    });
+  }, [rules]);
 
   const fetchAlerts = async () => {
     try {
@@ -83,7 +97,7 @@ export default function AlertManager() {
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
+    <div className={`bg-card border border-border rounded-xl p-4 transition-all ${pulse ? 'ring-1 ring-amber-400/50 shadow-[0_0_0_1px_rgba(251,191,36,0.16)]' : ''}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-primary" />

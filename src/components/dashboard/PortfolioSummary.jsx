@@ -1,10 +1,24 @@
+import { useEffect, useState } from 'react';
 import { useRealPriceMap } from '../../hooks/useRealPrices';
 import { useWallet } from '../../hooks/useWallet';
 import { Wallet, WifiOff, Loader2, ExternalLink } from 'lucide-react';
+import { useDashboardEvents } from './DashboardEventContext';
 
 export default function PortfolioSummary() {
   const { map, status } = useRealPriceMap();
   const wallet = useWallet();
+  const { subscribe, rules } = useDashboardEvents();
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    const marketRefreshRuleEnabled = rules.some((rule) => rule.enabled && rule.source === 'market' && rule.target === 'portfolio' && rule.action === 'refresh_summary');
+    if (!marketRefreshRuleEnabled) return;
+
+    return subscribe('market.refresh', () => {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 900);
+    });
+  }, [rules]);
 
   if (wallet.status === 'disconnected' || wallet.status === 'unavailable') {
     return (
@@ -42,7 +56,7 @@ export default function PortfolioSummary() {
   }
 
   return (
-    <div className="mx-4 mt-3 bg-card border border-border rounded-xl p-4">
+    <div className={`mx-4 mt-3 bg-card border border-border rounded-xl p-4 transition-all ${pulse ? 'ring-1 ring-primary/50 shadow-[0_0_0_1px_rgba(16,185,129,0.15)]' : ''}`}>
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Connected Wallet</p>
