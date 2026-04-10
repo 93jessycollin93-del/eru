@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare } from 'lucide-react';
 
 const ALL_PAGES = [
   { id: 'home',       label: 'Home',         icon: Home,          to: '/' },
@@ -100,11 +100,22 @@ export default function FloatingNav({ onSearchOpen }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="flex items-center gap-0.5 bg-card/95 backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl cursor-grab active:cursor-grabbing"
+        className={`bg-card/95 backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl cursor-grab active:cursor-grabbing ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
-        {/* Drag handle */}
-        <div className="flex items-center pr-1 text-muted-foreground/40">
+        {/* Drag handle + orientation toggle */}
+        <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
           <GripHorizontal className="w-3.5 h-3.5" />
+          <button
+            onClick={toggleOrientation}
+            className="transition-colors hover:text-primary"
+            title={orientation === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}
+          >
+            {orientation === 'horizontal' ? (
+              <ArrowUpRightFromSquare className="w-3.5 h-3.5" />
+            ) : (
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+            )}
+          </button>
         </div>
 
         {pinnedPages.map(({ id, label, icon: Icon, to }) => {
