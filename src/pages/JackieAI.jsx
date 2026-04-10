@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, FlaskConical, Key, ArrowRight } from 'lucide-react';
+import { Bot, FlaskConical, Key, ArrowRight, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import JackieHeader from '../components/jackie/JackieHeader';
@@ -13,6 +13,7 @@ import IntegrationsPanel from '../components/jackie/IntegrationsPanel';
 import JackieGamificationPanel from '../components/jackie/JackieGamificationPanel';
 import FoundryControlPanel from '../components/jackie/FoundryControlPanel';
 import InputBar from '../components/jackie/InputBar';
+import TelegramBotSetupPanel from '../components/jackie/TelegramBotSetupPanel';
 import { VOICES } from '../components/jackie/VoiceSelector';
 
 const PAGE_NAV_MAP = [
@@ -27,6 +28,7 @@ const PAGE_NAV_MAP = [
   { keywords: ['settings'], path: '/settings' },
   { keywords: ['arena', 'cards', 'card arena'], path: '/arena' },
   { keywords: ['automations', 'bot automations'], path: '/bot-automations' },
+  { keywords: ['telegram', 'telegram bots', 'telegram bot management', 'botfather'], path: '/telegram-bots' },
   { keywords: ['jade', 'atelier'], path: '/jta' },
   { keywords: ['creatures'], path: '/creatures' },
   { keywords: ['creator'], path: '/creator' },
@@ -329,6 +331,10 @@ export default function JackieAI() {
           className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary border border-border rounded-xl text-[10px] font-semibold flex-shrink-0 hover:border-primary/30 text-muted-foreground">
           <Key className="w-3 h-3" /> API Keys ({apiKeyCount} active)
         </button>
+        <button onClick={() => navigate('/telegram-bots')}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary border border-border rounded-xl text-[10px] font-semibold flex-shrink-0 hover:border-primary/30 text-muted-foreground">
+          <Send className="w-3 h-3" /> Telegram Bots
+        </button>
         {userBots.slice(0, 3).map(b => (
           <button key={b.id} onClick={() => { setInput(`Use ${b.name} mode: `); }}
             className="flex items-center gap-1 px-2.5 py-1.5 bg-secondary border border-border rounded-xl text-[10px] flex-shrink-0 hover:border-primary/30 text-muted-foreground">
@@ -367,6 +373,8 @@ export default function JackieAI() {
                 busy={applyingFoundry}
               />
             )}
+
+            <TelegramBotSetupPanel onOpenManagement={() => navigate('/telegram-bots')} />
 
             {loading && (
               <div className="flex justify-start gap-2">
