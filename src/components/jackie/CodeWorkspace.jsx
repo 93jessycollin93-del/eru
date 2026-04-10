@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, MousePointerClick, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import AIEditBar from './AIEditBar';
 import CodeDiffPanel from './CodeDiffPanel';
 import CodePreviewPanel from './CodePreviewPanel';
+import EditorSwitcher from './EditorSwitcher';
 
 const TEMPLATES = {
   explain: ({ code }) => `Explain what this code does in simple terms:\n\n${code}`,
@@ -18,6 +19,7 @@ const TEMPLATES = {
 
 export default function CodeWorkspace({ content = '', onInject, onSave }) {
   const [code, setCode] = useState(content);
+  const [editor, setEditor] = useState('monaco');
   const [instruction, setInstruction] = useState('');
   const [selectedCode, setSelectedCode] = useState('');
   const [updatedCode, setUpdatedCode] = useState('');
@@ -27,11 +29,13 @@ export default function CodeWorkspace({ content = '', onInject, onSave }) {
 
   const activeCode = useMemo(() => selectedCode || code, [selectedCode, code]);
 
+  useEffect(() => {
+    setCode(content || '');
+  }, [content]);
+
   const detectSelection = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const nextSelection = code.slice(textarea.selectionStart, textarea.selectionEnd).trim();
-    setSelectedCode(nextSelection);
+    const selection = window.getSelection?.()?.toString()?.trim() || '';
+    setSelectedCode(selection);
   };
 
   const handleAction = async (action) => {
@@ -71,15 +75,20 @@ export default function CodeWorkspace({ content = '', onInject, onSave }) {
             </button>
           </div>
         </div>
-        <textarea
-          ref={textareaRef}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          onMouseUp={detectSelection}
-          onKeyUp={detectSelection}
-          className="min-h-[280px] w-full rounded-xl border border-border bg-background p-3 font-mono text-xs text-foreground outline-none"
-          placeholder="Paste component code here or ask Jackie to generate some first..."
-        />
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          {['monaco', 'codemirror', 'ace'].map((item) => (
+            <button
+              key={item}
+              onClick={() => setEditor(item)}
+              className={`rounded-lg border px-2 py-1 capitalize ${editor === item ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background'}`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <div ref={textareaRef} onMouseUp={detectSelection} onKeyUp={detectSelection}>
+          <EditorSwitcher editor={editor} code={code} onChange={setCode} />
+        </div>
         {selectedCode && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] text-primary">
             <span className="inline-flex items-center gap-1"><Check className="w-3 h-3" /> Selected code detected</span>
