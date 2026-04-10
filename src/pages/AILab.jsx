@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -39,6 +39,16 @@ const PAGE_OPTIONS = [
 ];
 
 const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: '', response_style: 'detailed', memory_enabled: false, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '' };
+
+const downloadJson = (filename, data) => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
 
 export default function AILab() {
   const [tab, setTab] = useState('my');
@@ -84,6 +94,23 @@ export default function AILab() {
   const duplicate = async (bot) => {
     await base44.entities.UserBot.create({ ...bot, name: bot.name + ' (copy)', id: undefined });
     loadBots();
+  };
+
+  const copyBotConfig = async (bot) => {
+    await navigator.clipboard.writeText(JSON.stringify(bot, null, 2));
+  };
+
+  const downloadBotConfig = (bot) => {
+    downloadJson(`${(bot.name || 'bot').replace(/\s+/g, '-').toLowerCase()}.json`, bot);
+  };
+
+  const saveBotAsAsset = async (bot) => {
+    await base44.entities.JackieSaved.create({
+      title: bot.name,
+      content: JSON.stringify(bot, null, 2),
+      tag: 'bot',
+      asset_type: 'text',
+    });
   };
 
   const awardXP = async (bot, amount) => {
@@ -197,18 +224,30 @@ export default function AILab() {
                     {bot.description && <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">{bot.description}</p>}
                   </div>
                 </div>
-                <div className="flex gap-2 mt-3">
+                <div className="flex gap-2 mt-3 flex-wrap">
                   <button onClick={() => { setTestBot(bot); setTestResponse(''); setTestInput(''); setTab('test'); }}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-medium">
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-medium min-w-[90px]">
                     <Play className="w-3 h-3" /> Test
                   </button>
                   <button onClick={() => startEdit(bot)}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-secondary border border-border rounded-lg text-xs text-muted-foreground">
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-secondary border border-border rounded-lg text-xs text-muted-foreground min-w-[90px]">
                     <Edit3 className="w-3 h-3" /> Edit
                   </button>
                   <button onClick={() => duplicate(bot)}
                     className="flex items-center justify-center px-2.5 py-1.5 bg-secondary border border-border rounded-lg text-xs text-muted-foreground">
                     <Copy className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => copyBotConfig(bot)}
+                    className="flex items-center justify-center px-2.5 py-1.5 bg-secondary border border-border rounded-lg text-xs text-muted-foreground">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => saveBotAsAsset(bot)}
+                    className="flex items-center justify-center px-2.5 py-1.5 bg-secondary border border-border rounded-lg text-xs text-muted-foreground">
+                    <Save className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => downloadBotConfig(bot)}
+                    className="flex items-center justify-center px-2.5 py-1.5 bg-secondary border border-border rounded-lg text-xs text-muted-foreground">
+                    <Download className="w-3 h-3" />
                   </button>
                   <button onClick={() => del(bot.id)}
                     className="flex items-center justify-center px-2.5 py-1.5 bg-destructive/10 border border-destructive/20 rounded-lg text-xs text-destructive">

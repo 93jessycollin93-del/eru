@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bot, Bookmark, Copy, PenLine, Check } from 'lucide-react';
+import { Bot, Bookmark, Copy, PenLine, Check, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 export default function MessageBubble({ message, onSave, onRefine, onInject }) {
@@ -19,7 +19,16 @@ export default function MessageBubble({ message, onSave, onRefine, onInject }) {
     setTimeout(() => setSaved(false), 1500);
   };
 
-  // Extract code blocks for special rendering
+  const downloadContent = () => {
+    const blob = new Blob([message.content || ''], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'jackie-output.txt';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const hasCode = message.content?.includes('```');
 
   return (
@@ -48,6 +57,9 @@ export default function MessageBubble({ message, onSave, onRefine, onInject }) {
             <button onClick={handleSave} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors">
               {saved ? <Check className="w-2.5 h-2.5" /> : <Bookmark className="w-2.5 h-2.5" />}
               {saved ? 'Saved' : 'Save'}
+            </button>
+            <button onClick={downloadContent} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors">
+              <Download className="w-2.5 h-2.5" /> Download
             </button>
             <button onClick={() => onRefine(message.content)} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors">
               <PenLine className="w-2.5 h-2.5" /> Refine

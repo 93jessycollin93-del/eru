@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { FolderOpen, Search, Pin, Trash2, Copy, PenLine, Tag, Code, Layout, Bot, Zap, FileText, Check, ArrowRight } from 'lucide-react';
+import { FolderOpen, Search, Pin, Trash2, Copy, PenLine, Tag, Code, Layout, Bot, Zap, FileText, Check, ArrowRight, Download } from 'lucide-react';
 
 const TAG_ICONS = { code: Code, ui: Layout, system: Zap, bot: Bot, strategy: Zap, prompt: FileText, general: FileText };
 const TAG_COLORS = { code: 'text-green-400', ui: 'text-purple-400', system: 'text-blue-400', bot: 'text-cyan-400', strategy: 'text-orange-400', prompt: 'text-pink-400', general: 'text-muted-foreground' };
@@ -31,6 +31,17 @@ export default function AssetManager({ onInject }) {
   const duplicate = async (a) => {
     await base44.entities.JackieSaved.create({ title: (a.title || 'Asset') + ' (copy)', content: a.content, tag: a.tag, asset_type: a.asset_type });
     load();
+  };
+
+  const downloadAsset = (a) => {
+    const extension = a.tag === 'bot' ? 'json' : 'txt';
+    const blob = new Blob([a.content || ''], { type: extension === 'json' ? 'application/json' : 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(a.title || 'asset').replace(/\s+/g, '-').toLowerCase()}.${extension}`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const filtered = assets.filter(a => {
@@ -107,6 +118,9 @@ export default function AssetManager({ onInject }) {
               </button>
               <button onClick={() => duplicate(a)} className="px-2 py-1 bg-secondary border border-border rounded-lg text-[10px] text-muted-foreground">
                 <Copy className="w-2.5 h-2.5" />
+              </button>
+              <button onClick={() => downloadAsset(a)} className="px-2 py-1 bg-secondary border border-border rounded-lg text-[10px] text-muted-foreground">
+                <Download className="w-2.5 h-2.5" />
               </button>
               <button onClick={() => del(a.id)} className="px-2 py-1 bg-destructive/10 border border-destructive/20 rounded-lg text-[10px] text-destructive">
                 <Trash2 className="w-2.5 h-2.5" />

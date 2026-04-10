@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wand2, Copy, Save, ChevronRight, Loader2 } from 'lucide-react';
+import { Wand2, Copy, Save, ChevronRight, Loader2, Download } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const TEMPLATES = [
@@ -8,6 +8,16 @@ const TEMPLATES = [
   { label: 'Content Writer', prompt: 'A creative writing bot that generates posts, captions, and marketing copy on demand' },
   { label: 'Data Analyst', prompt: 'A bot that analyzes datasets, identifies trends, and generates structured reports' },
 ];
+
+const downloadJson = (filename, data) => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
 
 export default function BotFactory({ onSaveBot }) {
   const [prompt, setPrompt] = useState('');
@@ -133,7 +143,7 @@ Return ONLY a JSON object with these fields:
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={saveBot} disabled={saved}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${saved ? 'bg-green-400/20 text-green-400 border border-green-400/30' : 'bg-primary text-primary-foreground'}`}>
               <Save className="w-3.5 h-3.5" /> {saved ? '✓ Saved to My Bots' : 'Save & Deploy Bot'}
@@ -141,6 +151,10 @@ Return ONLY a JSON object with these fields:
             <button onClick={() => navigator.clipboard.writeText(JSON.stringify(result, null, 2))}
               className="px-3 py-2.5 rounded-xl border border-border text-muted-foreground">
               <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => downloadJson(`${(result.name || 'generated-bot').replace(/\s+/g, '-').toLowerCase()}.json`, result)}
+              className="px-3 py-2.5 rounded-xl border border-border text-muted-foreground">
+              <Download className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
