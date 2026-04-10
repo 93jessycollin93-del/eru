@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Search, Grid, List, Wallet, AlertTriangle, Plus, X, Tag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectBar from '../components/WalletConnectBar';
 import ListingEditor from '../components/storefront/ListingEditor';
@@ -22,16 +21,12 @@ const NFTS = [
 
 const RARITY_COLORS = { Common: 'text-gray-400', Uncommon: 'text-green-400', Rare: 'text-blue-400', Epic: 'text-purple-400', Legendary: 'text-yellow-400' };
 
-const BLANK_LIST = { title: '', price: '', description: '', image_url: '', currency: 'TON', rarity: 'Common', tags: '' };
-
 export default function NFTs() {
-  const { currentUser } = useAuth();
   const [tab, setTab] = useState('explore');
   const [view, setView] = useState('grid');
   const [selected, setSelected] = useState(null);
   const [showBuy, setShowBuy] = useState(false);
   const [showListForm, setShowListForm] = useState(false);
-  const [listForm, setListForm] = useState(BLANK_LIST);
   const [listing, setListing] = useState(false);
   const [listSuccess, setListSuccess] = useState(false);
   const wallet = useWallet();
@@ -56,9 +51,8 @@ export default function NFTs() {
       internal_listed: true,
       status: 'active',
       tags: values.tags,
-      asset_snapshot: { title: values.title, rarity: listForm.rarity, image_url: values.media_urls?.[0] || '' },
+      asset_snapshot: { title: values.title, image_url: values.media_urls?.[0] || '' },
     });
-    setListForm(BLANK_LIST);
     setListing(false);
     setListSuccess(true);
     setShowListForm(false);

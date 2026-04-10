@@ -339,8 +339,8 @@ const TABS = [
 ];
 
 export default function StorefrontHub() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
 
   const [tab, setTab] = useState('storefront');
   const [listings, setListings] = useState([]);

@@ -24,7 +24,7 @@ export default function ListingManager({ assetType, title = 'My Listings' }) {
 
   const load = async () => {
     const data = await base44.entities.StorefrontListing.filter({ asset_type: assetType }, '-created_date', 50);
-    setListings(data || []);
+    setListings((data || []).filter((listing) => listing.created_by));
   };
 
   useEffect(() => { load(); }, [assetType]);

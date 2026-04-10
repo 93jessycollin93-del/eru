@@ -25,13 +25,7 @@ const STATUS_CONFIG = {
 
 export default function CreatorHub() {
   const [tab, setTab] = useState('browse');
-  const [form, setForm] = useState({ title: '', desc: '', price: '', category: 'idea' });
   const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = () => {
-    if (!form.title || !form.desc) return;
-    setSubmitted(true);
-  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -116,7 +110,7 @@ export default function CreatorHub() {
                   status: 'active',
                   tags: values.tags,
                 });
-                handleSubmit();
+                setSubmitted(true);
               }}
               submitLabel="Publish Creator Listing"
             />
@@ -130,7 +124,7 @@ export default function CreatorHub() {
             </div>
             <h3 className="font-semibold">Submitted for Review</h3>
             <p className="text-sm text-muted-foreground max-w-xs">Your listing is being reviewed for quality and safety. You'll be notified when it receives the Authorized badge.</p>
-            <button onClick={() => { setSubmitted(false); setForm({ title:'', desc:'', price:'', category:'idea' }); }}
+            <button onClick={() => { setSubmitted(false); }}
               className="text-primary text-sm underline">Submit another</button>
           </div>
         )}
