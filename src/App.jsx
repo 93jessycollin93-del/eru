@@ -42,7 +42,6 @@ import ComplianceCenter from './pages/ComplianceCenter';
 import SecurityDashboard from './pages/SecurityDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import RoleManagement from './pages/RoleManagement';
-import EconomicDashboard from './pages/EconomicDashboard';
 import BlockchainAnalytics from './pages/BlockchainAnalytics';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
@@ -109,7 +108,6 @@ const AuthenticatedApp = () => {
         <Route path="/security-dashboard" element={<SecurityDashboard />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/role-management" element={<RoleManagement />} />
-        <Route path="/economic-dashboard" element={<EconomicDashboard />} />
         <Route path="/blockchain-analytics" element={<BlockchainAnalytics />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
