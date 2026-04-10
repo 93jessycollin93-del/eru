@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Plus, Lightbulb, Package, Megaphone, Star, TrendingUp, Lock, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import CreatorAnalytics from '../components/CreatorAnalytics';
+import { base44 } from '@/api/base44Client';
+import ListingEditor from '../components/storefront/ListingEditor';
+import ListingManager from '../components/storefront/ListingManager';
 
 const SAMPLE_IDEAS = [
   { id: 1, title: 'Decentralized Art Gallery', desc: 'A community-owned NFT gallery with voting-based curation', price: 0.5, category: 'concept', status: 'authorized', likes: 142, author: 'Visionary_X' },
@@ -89,39 +92,34 @@ export default function CreatorHub() {
         {tab === 'sell' && !submitted && (
           <div className="space-y-3">
             <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-xl p-3">
-              <p className="text-xs text-yellow-400">Your listing will be submitted for review. Once approved, it receives the <span className="font-bold">Authorized</span> badge and becomes tradeable.</p>
+              <p className="text-xs text-yellow-400">Create editable sale or trade listings with pricing, media, condition, and buyer-facing details.</p>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Category</label>
-              <select value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value}))}
-                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none">
-                <option value="idea">💡 Idea</option>
-                <option value="concept">🎯 Concept</option>
-                <option value="project">🚀 Passion Project</option>
-                <option value="nft">🖼️ NFT / Collectable</option>
-                <option value="code">💻 Code / Script</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Title</label>
-              <input value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))}
-                placeholder="Name your creation..." className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Description</label>
-              <textarea value={form.desc} onChange={e => setForm(p => ({...p, desc: e.target.value}))}
-                placeholder="Describe your idea, its value, and what buyers get..."
-                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none min-h-[100px]" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Price (TON)</label>
-              <input type="number" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))}
-                placeholder="0.00" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
-            </div>
-            <button onClick={handleSubmit}
-              className="w-full bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2">
-              <ArrowRight className="w-4 h-4" /> Submit for Review
-            </button>
+            <ListingEditor
+              initialValue={{ asset_type: 'item', sale_mode: 'sell_or_trade' }}
+              onSave={async (values) => {
+                await base44.entities.StorefrontListing.create({
+                  title: values.title,
+                  description: values.description,
+                  asset_type: 'item',
+                  asset_id: 'creator_' + Date.now(),
+                  base_price: values.base_price,
+                  currency: values.crypto_currency,
+                  ask_price_fiat: values.ask_price_fiat,
+                  fiat_currency: values.fiat_currency,
+                  crypto_currency: values.crypto_currency,
+                  crypto_value: values.crypto_value,
+                  sale_mode: values.sale_mode,
+                  trade_preferences: values.trade_preferences,
+                  condition_score: values.condition_score,
+                  media_urls: values.media_urls,
+                  internal_listed: true,
+                  status: 'active',
+                  tags: values.tags,
+                });
+                handleSubmit();
+              }}
+              submitLabel="Publish Creator Listing"
+            />
           </div>
         )}
 
@@ -159,13 +157,7 @@ export default function CreatorHub() {
           </div>
         )}
 
-        {tab === 'my' && (
-          <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-            <Package className="w-12 h-12 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No listings yet. Share your first idea!</p>
-            <button onClick={() => setTab('sell')} className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium">Create Listing</button>
-          </div>
-        )}
+        {tab === 'my' && <ListingManager assetType="item" title="Manage Creator Listings" />}
 
         {tab === 'analytics' && <CreatorAnalytics />}
       </div>

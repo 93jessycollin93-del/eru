@@ -50,6 +50,49 @@
       "type": "boolean",
       "default": true
     },
+    "sale_mode": {
+      "type": "string",
+      "enum": [
+        "sell",
+        "trade",
+        "sell_or_trade"
+      ],
+      "default": "sell"
+    },
+    "ask_price_fiat": {
+      "type": "number",
+      "description": "Listing price in fiat"
+    },
+    "fiat_currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "Fiat currency code"
+    },
+    "crypto_currency": {
+      "type": "string",
+      "default": "TON",
+      "description": "Crypto quote currency"
+    },
+    "crypto_value": {
+      "type": "number",
+      "description": "Converted crypto value"
+    },
+    "trade_preferences": {
+      "type": "string",
+      "description": "What the user is willing to trade for"
+    },
+    "condition_score": {
+      "type": "number",
+      "description": "1 heavily used, 10 mint"
+    },
+    "media_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Images or video URLs"
+    },
     "external_syndications": {
       "type": "array",
       "items": {

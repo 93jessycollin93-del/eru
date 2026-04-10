@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Search, Star, ShoppingCart } from 'lucide-react';
+import { Search, Star, ShoppingCart, Plus, X } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import ListingEditor from '../components/storefront/ListingEditor';
+import ListingManager from '../components/storefront/ListingManager';
 
 const POKEMON = [
   { id: 1, name: 'Charizard', set: 'Base Set', grade: 'PSA 9', price: 450, rarity: 'Holo Rare', img: 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=200&h=280&fit=crop' },
@@ -19,6 +22,7 @@ export default function Collectables() {
   const [tab, setTab] = useState('pokemon');
   const [selected, setSelected] = useState(null);
   const [cart, setCart] = useState([]);
+  const [showListingForm, setShowListingForm] = useState(false);
 
   const items = tab === 'pokemon' ? POKEMON : NOSTALGIC;
 
@@ -57,14 +61,42 @@ export default function Collectables() {
     </div>
   );
 
+  const createCollectableListing = async (values) => {
+    await base44.entities.StorefrontListing.create({
+      title: values.title,
+      description: values.description,
+      asset_type: 'collectible',
+      asset_id: 'collectable_' + Date.now(),
+      base_price: values.base_price,
+      currency: values.crypto_currency,
+      ask_price_fiat: values.ask_price_fiat,
+      fiat_currency: values.fiat_currency,
+      crypto_currency: values.crypto_currency,
+      crypto_value: values.crypto_value,
+      sale_mode: values.sale_mode,
+      trade_preferences: values.trade_preferences,
+      condition_score: values.condition_score,
+      media_urls: values.media_urls,
+      internal_listed: true,
+      status: 'active',
+      tags: values.tags,
+    });
+    setShowListingForm(false);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-lg font-semibold">Collectables</h2>
-        <button className="relative">
-          <ShoppingCart className="w-5 h-5 text-muted-foreground"/>
-          {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">{cart.length}</span>}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowListingForm((s) => !s)} className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
+            {showListingForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          </button>
+          <button className="relative">
+            <ShoppingCart className="w-5 h-5 text-muted-foreground"/>
+            {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">{cart.length}</span>}
+          </button>
+        </div>
       </div>
 
       <div className="flex border-b border-border">
@@ -76,11 +108,13 @@ export default function Collectables() {
         ))}
       </div>
 
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 space-y-3">
         <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2">
           <Search className="w-4 h-4 text-muted-foreground"/>
           <input placeholder="Search collectables..." className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"/>
         </div>
+        {showListingForm && <ListingEditor initialValue={{ asset_type: 'collectible' }} onSave={createCollectableListing} submitLabel="Publish Collectable Listing" />}
+        <ListingManager assetType="collectible" title="Manage Collectable Listings" />
       </div>
 
       <div className="px-4 grid grid-cols-2 gap-3">

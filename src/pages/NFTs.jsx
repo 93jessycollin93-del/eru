@@ -4,6 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectBar from '../components/WalletConnectBar';
+import ListingEditor from '../components/storefront/ListingEditor';
+import ListingManager from '../components/storefront/ListingManager';
 
 const COLLECTIONS = [
   { id: 1, name: 'TON Punks', floor: 12.5, volume: 4820, items: 10000, img: 'https://images.unsplash.com/photo-1635322966219-b75ed372eb01?w=100&h=100&fit=crop' },
@@ -34,20 +36,27 @@ export default function NFTs() {
   const [listSuccess, setListSuccess] = useState(false);
   const wallet = useWallet();
 
-  const submitListing = async () => {
-    if (!listForm.title || !listForm.price) return;
+  const submitListing = async (values) => {
     setListing(true);
     await base44.entities.StorefrontListing.create({
-      title: listForm.title,
-      description: listForm.description,
+      title: values.title,
+      description: values.description,
       asset_type: 'nft',
-      base_price: parseFloat(listForm.price) || 0,
-      currency: listForm.currency,
+      base_price: values.base_price,
+      currency: values.crypto_currency,
+      ask_price_fiat: values.ask_price_fiat,
+      fiat_currency: values.fiat_currency,
+      crypto_currency: values.crypto_currency,
+      crypto_value: values.crypto_value,
+      sale_mode: values.sale_mode,
+      trade_preferences: values.trade_preferences,
+      condition_score: values.condition_score,
+      media_urls: values.media_urls,
       asset_id: 'user_nft_' + Date.now(),
       internal_listed: true,
       status: 'active',
-      tags: listForm.tags ? listForm.tags.split(',').map(t => t.trim()) : [],
-      asset_snapshot: { title: listForm.title, rarity: listForm.rarity, image_url: listForm.image_url },
+      tags: values.tags,
+      asset_snapshot: { title: values.title, rarity: listForm.rarity, image_url: values.media_urls?.[0] || '' },
     });
     setListForm(BLANK_LIST);
     setListing(false);
@@ -186,43 +195,16 @@ export default function NFTs() {
           </button>
 
           {showListForm && (
-            <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold">New NFT Listing</p>
                 <button onClick={() => setShowListForm(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
               </div>
-              <input value={listForm.title} onChange={e => setListForm(f => ({...f, title: e.target.value}))}
-                placeholder="NFT Name (e.g. TON Punk #8844)"
-                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
-              <input value={listForm.image_url} onChange={e => setListForm(f => ({...f, image_url: e.target.value}))}
-                placeholder="Image URL (optional)"
-                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
-              <textarea value={listForm.description} onChange={e => setListForm(f => ({...f, description: e.target.value}))}
-                placeholder="Description"
-                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none resize-none min-h-[60px]" />
-              <div className="grid grid-cols-3 gap-2">
-                <input type="number" value={listForm.price} onChange={e => setListForm(f => ({...f, price: e.target.value}))}
-                  placeholder="Price"
-                  className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none font-mono" />
-                <select value={listForm.currency} onChange={e => setListForm(f => ({...f, currency: e.target.value}))}
-                  className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none">
-                  {['TON','GOLD','CRYPTO'].map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={listForm.rarity} onChange={e => setListForm(f => ({...f, rarity: e.target.value}))}
-                  className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none">
-                  {['Common','Uncommon','Rare','Epic','Legendary'].map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <input value={listForm.tags} onChange={e => setListForm(f => ({...f, tags: e.target.value}))}
-                placeholder="Tags (comma-separated: art, pixel, 3d)"
-                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
-              <button onClick={submitListing} disabled={!listForm.title || !listForm.price || listing}
-                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-semibold disabled:opacity-40">
-                {listing ? 'Publishing…' : '🚀 Publish Listing'}
-              </button>
+              <ListingEditor initialValue={{ asset_type: 'nft' }} onSave={submitListing} submitLabel={listing ? 'Publishing…' : 'Publish NFT Listing'} />
             </div>
           )}
 
+          <ListingManager assetType="nft" title="Manage NFT Listings" />
           <WalletConnectBar />
           {wallet.status !== 'connected' ? (
             <p className="text-xs text-muted-foreground text-center">Connect your wallet to view on-chain NFTs</p>

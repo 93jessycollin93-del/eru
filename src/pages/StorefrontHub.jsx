@@ -9,6 +9,8 @@ import {
   Square, CheckSquare, Send, BarChart2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ListingEditor from '../components/storefront/ListingEditor';
+import ConditionBadge from '../components/storefront/ConditionBadge';
 
 // ─── CONNECTOR PRESETS (templates for adding new connectors) ──────────────────
 const CONNECTOR_TEMPLATES = [
@@ -143,6 +145,13 @@ function ListingCard({ listing, connectors, onEdit, selected, onSelect }) {
             'bg-secondary text-muted-foreground'
           }`}>{listing.status}</span>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+        {listing.sale_mode && <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{listing.sale_mode.replaceAll('_', ' ')}</span>}
+        {!!listing.condition_score && <ConditionBadge score={listing.condition_score} />}
+        {!!listing.ask_price_fiat && <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{listing.ask_price_fiat} {listing.fiat_currency || 'USD'}</span>}
+        {!!listing.crypto_value && <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary">{listing.crypto_value} {listing.crypto_currency || listing.currency}</span>}
       </div>
 
       {/* Syndication status row */}
@@ -294,33 +303,6 @@ function AddConnectorModal({ onClose, onSave }) {
 
 // ─── CREATE LISTING MODAL ─────────────────────────────────────────────────────
 function CreateListingModal({ connectors, onClose, onSave }) {
-  const [form, setForm] = useState({
-    title: '', asset_type: 'jade', base_price: '', currency: 'GOLD',
-    description: '', asset_id: 'manual', internal_listed: true,
-    external_syndications: [], status: 'draft', region_availability: ['global'],
-    image_url: '', tags: '', rarity: 'common',
-  });
-  const [saving, setSaving] = useState(false);
-  const activeConnectors = connectors.filter(c => c.is_enabled);
-
-  const toggleSyndication = (c) => {
-    setForm(f => {
-      const exists = f.external_syndications.find(s => s.connector_id === c.id);
-      if (exists) return { ...f, external_syndications: f.external_syndications.filter(s => s.connector_id !== c.id) };
-      return { ...f, external_syndications: [...f.external_syndications, {
-        connector_id: c.id, connector_name: c.name, enabled: true,
-        sync_status: 'pending', custom_price: null, external_listing_id: null
-      }]};
-    });
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    const tags = form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    await onSave({ ...form, base_price: parseFloat(form.base_price) || 0, tags, asset_snapshot: { title: form.title, type: form.asset_type, rarity: form.rarity, image_url: form.image_url } });
-    setSaving(false);
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={onClose}>
       <div className="w-full max-w-md bg-card rounded-t-2xl border-t border-border p-5 space-y-4 max-h-[85vh] overflow-y-auto"
@@ -329,93 +311,21 @@ function CreateListingModal({ connectors, onClose, onSave }) {
           <h3 className="font-semibold">Create Storefront Listing</h3>
           <button onClick={onClose}><XCircle className="w-5 h-5 text-muted-foreground" /></button>
         </div>
-
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Title</label>
-            <input value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))}
-              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50" />
-          </div>
-          <div className="flex gap-2">
-            <div className="flex-1 space-y-1">
-              <label className="text-xs text-muted-foreground">Asset Type</label>
-              <select value={form.asset_type} onChange={e => setForm(f => ({...f, asset_type: e.target.value}))}
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none">
-                {['jade','nft','bot','card','item','collectible'].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="flex-1 space-y-1">
-              <label className="text-xs text-muted-foreground">Price</label>
-              <input type="number" value={form.base_price} onChange={e => setForm(f => ({...f, base_price: e.target.value}))}
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 font-mono" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Currency</label>
-            <select value={form.currency} onChange={e => setForm(f => ({...f, currency: e.target.value}))}
-              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none">
-              {['GOLD','TON','CRYPTO','TELEGRAM_STARS'].map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          {form.asset_type === 'nft' && (
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Rarity</label>
-              <select value={form.rarity} onChange={e => setForm(f => ({...f, rarity: e.target.value}))}
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none">
-                {['common','uncommon','rare','epic','legendary','mythic'].map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Image URL (optional)</label>
-            <input value={form.image_url} onChange={e => setForm(f => ({...f, image_url: e.target.value}))}
-              placeholder="https://…"
-              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 font-mono" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Description</label>
-            <textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))}
-              rows={2} className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 resize-none" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Tags (comma-separated)</label>
-            <input value={form.tags} onChange={e => setForm(f => ({...f, tags: e.target.value}))}
-              placeholder="e.g. rare, art, pixel, 3d"
-              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50" />
-          </div>
-
-          {/* Syndication targets */}
-          {activeConnectors.length > 0 && (
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Syndicate to External Markets</label>
-              {activeConnectors.map(c => {
-                const selected = form.external_syndications.some(s => s.connector_id === c.id);
-                return (
-                  <button key={c.id} onClick={() => toggleSyndication(c)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-sm transition-all ${selected ? 'border-primary bg-primary/5' : 'border-border bg-secondary'}`}>
-                    <div className="flex items-center gap-2">
-                      <Plug className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>{c.name}</span>
-                    </div>
-                    {selected ? <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> : <div className="w-3.5 h-3.5 rounded-full border border-border" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {activeConnectors.length === 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-xl text-[11px] text-muted-foreground">
-              <WifiOff className="w-3.5 h-3.5" />
-              No active connectors — listing will be internal only
-            </div>
-          )}
-
-          <button onClick={handleSave} disabled={!form.title || !form.base_price || saving}
-            className="w-full py-2.5 text-sm bg-primary text-primary-foreground rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Publish Listing
-          </button>
-        </div>
+        <ListingEditor initialValue={{ asset_type: 'collectible', sale_mode: 'sell_or_trade' }} onSave={async (data) => {
+          await onSave({
+            ...data,
+            asset_id: 'manual',
+            internal_listed: true,
+            status: 'draft',
+            region_availability: ['global'],
+            currency: data.crypto_currency,
+            asset_snapshot: {
+              title: data.title,
+              type: data.asset_type,
+              image_url: data.media_urls?.[0] || '',
+            },
+          });
+        }} submitLabel="Publish Listing" />
       </div>
     </div>
   );
@@ -444,6 +354,7 @@ export default function StorefrontHub() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkPushing, setBulkPushing] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
+  const [editingListing, setEditingListing] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -486,6 +397,15 @@ export default function StorefrontHub() {
   const handleCreateListing = async (data) => {
     await base44.entities.StorefrontListing.create(data);
     setShowCreateListing(false);
+    load();
+  };
+
+  const handleUpdateListing = async (data) => {
+    await base44.entities.StorefrontListing.update(editingListing.id, {
+      ...data,
+      currency: data.crypto_currency,
+    });
+    setEditingListing(null);
     load();
   };
 
@@ -665,10 +585,14 @@ export default function StorefrontHub() {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {editingListing && <ListingEditor initialValue={editingListing} onSave={handleUpdateListing} submitLabel="Update Storefront Listing" />}
                     {filteredListings.map(l => (
-                      <ListingCard key={l.id} listing={l} connectors={connectors}
-                        selected={selectedIds.has(l.id)}
-                        onSelect={toggleSelect} />
+                      <div key={l.id} className="space-y-2">
+                        <ListingCard listing={l} connectors={connectors}
+                          selected={selectedIds.has(l.id)}
+                          onSelect={toggleSelect} />
+                        <button onClick={() => setEditingListing(l)} className="w-full text-xs bg-secondary border border-border rounded-lg py-2 text-muted-foreground hover:text-foreground">Edit listing</button>
+                      </div>
                     ))}
                   </div>
                 )}
