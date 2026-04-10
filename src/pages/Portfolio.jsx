@@ -5,6 +5,8 @@ import { base44 } from '@/api/base44Client';
 import ScenarioAnalysisPanel from '../components/portfolio/ScenarioAnalysisPanel';
 import DiversificationToolsPanel from '../components/portfolio/DiversificationToolsPanel';
 import PerformanceBenchmarkPanel from '../components/portfolio/PerformanceBenchmarkPanel';
+import RebalancingPlanner from '../components/portfolio/RebalancingPlanner';
+import InvestmentJournalPanel from '../components/portfolio/InvestmentJournalPanel';
 
 export default function Portfolio() {
   const [tab, setTab] = useState('inventory');
@@ -89,6 +91,7 @@ export default function Portfolio() {
         {[
           { id: 'inventory', label: 'Inventory' },
           { id: 'analysis', label: 'Analysis' },
+          { id: 'journal', label: 'Journal' },
           { id: 'showcase', label: 'Showcase' },
           { id: 'history', label: 'History' },
           { id: 'profile', label: 'Profile' }
@@ -162,9 +165,16 @@ export default function Portfolio() {
         {/* ANALYSIS */}
         {tab === 'analysis' && (
           <div className="space-y-3">
+            <RebalancingPlanner />
             <ScenarioAnalysisPanel />
             <DiversificationToolsPanel />
             <PerformanceBenchmarkPanel />
+          </div>
+        )}
+
+        {tab === 'journal' && (
+          <div className="space-y-3">
+            <InvestmentJournalPanel />
           </div>
         )}
 
