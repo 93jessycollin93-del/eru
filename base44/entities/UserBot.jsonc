@@ -102,6 +102,33 @@
     },
     "model_name": {
       "type": "string"
+    },
+    "prompt_template_id": {
+      "type": "string"
+    },
+    "prompt_template_name": {
+      "type": "string"
+    },
+    "template_variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "default_value": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      },
+      "default": []
     }
   },
   "required": [

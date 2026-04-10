@@ -19,7 +19,7 @@ import BotCollaborationWorkspace from '../components/ailab/BotCollaborationWorks
 import BotGlobalPolicyPanel from '../components/ailab/BotGlobalPolicyPanel';
 import PromptLibraryPanel from '../components/ailab/PromptLibraryPanel';
 import ModelProviderPanel from '../components/ailab/ModelProviderPanel';
-import { invokeSelectedModel } from '../components/ailab/modelRouting';
+import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
 import { base44 } from '@/api/base44Client';
 
 const ROLES = [
@@ -57,7 +57,7 @@ const PAGE_OPTIONS = [
 
 const PROGRAMMING_MEMORY_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, teaching, comparing languages, debugging, refactoring, architecture decisions, and multi-step technical problem solving. When a request involves software or systems work, proactively apply this knowledge instead of waiting to be asked.";
 
-const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '', model_provider: 'base44', model_name: '', api_label: '', prompt_template_id: '', prompt_template_values: {} };
+const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '', model_provider: 'base44', model_name: '', api_label: '', prompt_template_id: '', prompt_template_name: '', prompt_template_values: {} };
 
 const downloadJson = (filename, data) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -217,12 +217,11 @@ export default function AILab() {
     if (!testInput.trim() || !testBot) return;
     setTesting(true);
     const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}\nSafety guardrails: ${globalPolicy.safety_guardrails || 'None'}\nDefault max response length: ${globalPolicy.max_response_length || 1200} characters\n${globalPolicy.require_caution_for_security ? 'Apply extra caution on security-sensitive topics.\n' : ''}${globalPolicy.require_human_review ? 'Advise human review before risky or irreversible actions.\n' : ''}` : '';
-    const template = promptTemplates.find((item) => item.id === testBot.prompt_template_id);
-    const templatePrompt = template
-      ? (template.content || '').replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key) => {
-          if (key === 'user_name') return 'Test User';
-          if (key === 'context') return testInput;
-          return testBot.prompt_template_values?.[key] || template.variables?.find((variable) => variable.key === key)?.default_value || `{{${key}}}`;
+    const templatePrompt = testBot.prompt_template_id
+      ? await renderPromptTemplate({
+          templateId: testBot.prompt_template_id,
+          context: testInput,
+          variables: testBot.prompt_template_values || {}
         })
       : '';
     const prompt = `You are ${testBot.name}. ${PROGRAMMING_MEMORY_PROMPT}\n${testBot.instructions || ''}\n${templatePrompt ? `Prompt template:\n${templatePrompt}\n` : ''}Personality: ${testBot.personality || 'helpful'}\nResponse style: ${testBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testInput}\n\n${testBot.name}:`;
@@ -518,7 +517,17 @@ export default function AILab() {
 
           <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
             <label className="text-xs text-muted-foreground">Prompt Template</label>
-            <select value={form.prompt_template_id || ''} onChange={(e) => setForm((prev) => ({ ...prev, prompt_template_id: e.target.value }))} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none">
+            <select value={form.prompt_template_id || ''} onChange={(e) => {
+              const selectedTemplate = promptTemplates.find((template) => template.id === e.target.value);
+              setForm((prev) => ({
+                ...prev,
+                prompt_template_id: e.target.value,
+                prompt_template_name: selectedTemplate?.name || '',
+                prompt_template_values: selectedTemplate
+                  ? Object.fromEntries((selectedTemplate.variables || []).map((item) => [item.key, item.default_value || '']))
+                  : {},
+              }));
+            }} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none">
               <option value="">No prompt template</option>
               {promptTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
             </select>
@@ -693,7 +702,7 @@ export default function AILab() {
       {tab === 'policy' && <BotGlobalPolicyPanel />}
 
       {/* PROMPTS */}
-      {tab === 'prompts' && <PromptLibraryPanel bots={bots} />}
+      {tab === 'prompts' && <PromptLibraryPanel bots={bots} onBotsUpdated={loadBots} />}
 
       {/* DISCOVER */}
       {tab === 'discover' && <div className="px-4 py-4"><BotMarketplaceShell onInstalled={loadBots} embedded /></div>}
