@@ -1,0 +1,57 @@
+{
+  "name": "FeatureAnalytics",
+  "type": "object",
+  "properties": {
+    "feature_name": {
+      "type": "string",
+      "description": "Feature or page name (e.g., 'Markets', 'Trade', 'JackieAI')"
+    },
+    "interaction_type": {
+      "type": "string",
+      "enum": [
+        "view",
+        "action",
+        "click",
+        "search"
+      ],
+      "description": "Type of interaction"
+    },
+    "interaction_count": {
+      "type": "number",
+      "default": 1,
+      "description": "How many times this feature was interacted with"
+    },
+    "last_interacted": {
+      "type": "string",
+      "description": "ISO timestamp of last interaction"
+    },
+    "time_spent_seconds": {
+      "type": "number",
+      "default": 0,
+      "description": "Total time spent on this feature"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User's email"
+    }
+  },
+  "required": [
+    "feature_name",
+    "interaction_type",
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

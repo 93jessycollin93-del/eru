@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRealPrices } from '../hooks/useRealPrices';
 import TickerBar from '../components/dashboard/TickerBar';
 import { WifiOff, Loader2 } from 'lucide-react';
+import { useFeatureTracking, trackFeatureInteraction } from '../hooks/useFeatureTracking';
 
 function PriceRow({ asset, onClick, selected }) {
   const prevRef = useRef(asset.price);
@@ -37,9 +38,15 @@ function PriceRow({ asset, onClick, selected }) {
 }
 
 export default function Markets() {
+  useFeatureTracking('Markets');
   const { prices, status } = useRealPrices();
   const [selected, setSelected] = useState(null);
   const [interval, setIntervalLabel] = useState('1D');
+
+  const handleAssetSelect = (asset) => {
+    setSelected(asset);
+    trackFeatureInteraction('Markets', 'click');
+  };
 
   useEffect(() => {
     if (prices.length > 0 && !selected) setSelected(prices[0]);
@@ -127,7 +134,7 @@ export default function Markets() {
 
       <div className="border-t border-border">
         {prices.map(p => (
-          <PriceRow key={p.symbol} asset={p} onClick={setSelected} selected={selected?.symbol === p.symbol} />
+          <PriceRow key={p.symbol} asset={p} onClick={handleAssetSelect} selected={selected?.symbol === p.symbol} />
         ))}
       </div>
     </div>
