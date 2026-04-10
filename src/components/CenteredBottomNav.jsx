@@ -142,7 +142,7 @@ export default function FloatingNav({ onSearchOpen }) {
         onPointerUp={onPointerUp}
         className={`bg-card/95 backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl cursor-grab active:cursor-grabbing ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
-        {/* Drag handle + orientation toggle + rows toggle */}
+        {/* Drag handle + orientation toggle + rows toggle + edit */}
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
           <GripHorizontal className="w-3.5 h-3.5" />
           <button
@@ -162,6 +162,13 @@ export default function FloatingNav({ onSearchOpen }) {
             title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
           >
             {rows}
+          </button>
+          <button
+            onClick={() => setEditMode(true)}
+            className="transition-colors hover:text-primary"
+            title="Edit"
+          >
+            <Pencil className="w-3.5 h-3.5" />
           </button>
         </div>
 
@@ -217,16 +224,6 @@ export default function FloatingNav({ onSearchOpen }) {
         >
           <Search style={{ width: 18, height: 18 }} />
           <span className="text-[8px] font-medium leading-none">Search</span>
-        </button>
-
-        {/* Edit button */}
-        <button
-          onClick={() => setEditMode(true)}
-          className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-muted-foreground hover:text-primary transition-colors"
-          title="Customize"
-        >
-          <Pencil style={{ width: 18, height: 18 }} />
-          <span className="text-[8px] font-medium leading-none">Edit</span>
         </button>
       </div>
 
