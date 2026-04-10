@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, Eye, EyeOff } from 'lucide-react';
 
 const ALL_PAGES = [
   { id: 'home',       label: 'Home',         icon: Home,          to: '/' },
@@ -38,6 +38,13 @@ const POS_KEY = 'floating_nav_pos';
 const ORIENTATION_KEY = 'floating_nav_orientation';
 const EXPANDED_KEY = 'floating_nav_expanded';
 const ROWS_KEY = 'floating_nav_rows';
+const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
+
+const FLOATING_WIDGETS = [
+  { id: 'jackie', label: 'Jackie', icon: Bot },
+  { id: 'botMarket', label: 'Bot Market', icon: Cpu },
+  { id: 'botChat', label: 'Bot Chat', icon: MessageSquare },
+];
 
 export default function FloatingNav({ onSearchOpen }) {
   const { pathname } = useLocation();
@@ -58,6 +65,22 @@ export default function FloatingNav({ onSearchOpen }) {
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
   });
+  const [floatingWidgets, setFloatingWidgets] = useState(() => {
+    try {
+      return {
+        jackie: { visible: true, x: 16, y: 100 },
+        botMarket: { visible: true, x: 16, y: 156 },
+        botChat: { visible: true, x: null, y: null },
+        ...JSON.parse(localStorage.getItem(FLOATING_WIDGETS_KEY) || '{}')
+      };
+    } catch {
+      return {
+        jackie: { visible: true, x: 16, y: 100 },
+        botMarket: { visible: true, x: 16, y: 156 },
+        botChat: { visible: true, x: null, y: null },
+      };
+    }
+  });
 
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -73,6 +96,15 @@ export default function FloatingNav({ onSearchOpen }) {
 
   const togglePin = (id) => {
     savePinned(pinned.includes(id) ? pinned.filter(p => p !== id) : [...pinned, id]);
+  };
+
+  const toggleFloatingWidget = (id) => {
+    const next = {
+      ...floatingWidgets,
+      [id]: { ...floatingWidgets[id], visible: !floatingWidgets?.[id]?.visible }
+    };
+    setFloatingWidgets(next);
+    localStorage.setItem(FLOATING_WIDGETS_KEY, JSON.stringify(next));
   };
 
   const toggleOrientation = () => {
@@ -238,31 +270,59 @@ export default function FloatingNav({ onSearchOpen }) {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground px-4 py-2 border-b border-border">Tap to add or remove pages from your floating nav.</p>
-            <div className="overflow-y-auto flex-1 px-4 py-3">
-              <div className="grid grid-cols-4 gap-3">
-                {ALL_PAGES.map(({ id, label, icon: Icon, to }) => {
-                  const isPinned = pinned.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => togglePin(id)}
-                      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${
-                        isPinned ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <div className="relative">
-                        <Icon style={{ width: 20, height: 20 }} />
-                        {isPinned && (
-                          <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
-                            <Check className="w-2 h-2 text-primary-foreground" />
+            <p className="text-[10px] text-muted-foreground px-4 py-2 border-b border-border">Tap to add or remove pages and floating widgets.</p>
+            <div className="overflow-y-auto flex-1 px-4 py-3 space-y-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Pages</p>
+                <div className="grid grid-cols-4 gap-3">
+                  {ALL_PAGES.map(({ id, label, icon: Icon }) => {
+                    const isPinned = pinned.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => togglePin(id)}
+                        className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${
+                          isPinned ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <div className="relative">
+                          <Icon style={{ width: 20, height: 20 }} />
+                          {isPinned && (
+                            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
+                              <Check className="w-2 h-2 text-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[9px] font-medium text-center leading-tight">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Floating Widgets</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {FLOATING_WIDGETS.map(({ id, label, icon: Icon }) => {
+                    const isVisible = floatingWidgets?.[id]?.visible;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => toggleFloatingWidget(id)}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                          isVisible ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <div className="relative">
+                          <Icon style={{ width: 20, height: 20 }} />
+                          <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center bg-background border border-border">
+                            {isVisible ? <Eye className="w-2 h-2 text-primary" /> : <EyeOff className="w-2 h-2 text-muted-foreground" />}
                           </div>
-                        )}
-                      </div>
-                      <span className="text-[9px] font-medium text-center leading-tight">{label}</span>
-                    </button>
-                  );
-                })}
+                        </div>
+                        <span className="text-[9px] font-medium text-center leading-tight">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <div className="px-4 py-3 border-t border-border flex-shrink-0 space-y-2">
@@ -284,7 +344,7 @@ export default function FloatingNav({ onSearchOpen }) {
                   ))}
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">Pages: {pinned.length}</p>
+              <p className="text-[10px] text-muted-foreground text-center">Pages: {pinned.length} · Widgets: {Object.values(floatingWidgets).filter((item) => item?.visible).length}</p>
             </div>
           </div>
         </div>
