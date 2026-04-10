@@ -1,0 +1,115 @@
+{
+  "name": "RebalancingSuggestion",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User email for this suggestion"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewed",
+        "executed",
+        "dismissed"
+      ],
+      "default": "pending",
+      "description": "Suggestion status"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "asset": {
+            "type": "string"
+          },
+          "current_percentage": {
+            "type": "number"
+          },
+          "target_percentage": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell",
+              "hold"
+            ]
+          },
+          "percentage_change": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "List of rebalancing actions"
+    },
+    "total_deviation": {
+      "type": "number",
+      "description": "Total deviation from target allocation"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Rebalancing urgency"
+    },
+    "triggered_by_assets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Which assets triggered this suggestion"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Admin notes or user remarks"
+    },
+    "executed_date": {
+      "type": "string",
+      "description": "ISO timestamp when executed"
+    }
+  },
+  "required": [
+    "user_email",
+    "status",
+    "actions"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

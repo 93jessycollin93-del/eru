@@ -1,0 +1,69 @@
+{
+  "name": "PortfolioWeighting",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User email for this weighting target"
+    },
+    "asset_symbol": {
+      "type": "string",
+      "description": "Asset symbol (BTC, ETH, DOGE, etc)"
+    },
+    "target_percentage": {
+      "type": "number",
+      "description": "Target allocation percentage (0-100)"
+    },
+    "min_threshold": {
+      "type": "number",
+      "description": "Minimum acceptable percentage before rebalance trigger"
+    },
+    "max_threshold": {
+      "type": "number",
+      "description": "Maximum acceptable percentage before rebalance trigger"
+    },
+    "current_percentage": {
+      "type": "number",
+      "description": "Current actual allocation percentage"
+    },
+    "last_calculated": {
+      "type": "string",
+      "description": "ISO timestamp of last calculation"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this weighting is monitored"
+    },
+    "rebalance_frequency": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly",
+        "monthly",
+        "manual"
+      ],
+      "default": "weekly",
+      "description": "How often to check for rebalancing"
+    }
+  },
+  "required": [
+    "user_email",
+    "asset_symbol",
+    "target_percentage"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
