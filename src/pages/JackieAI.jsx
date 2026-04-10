@@ -233,26 +233,29 @@ export default function JackieAI() {
     const wantsKey = /api key|key\b|token/.test(lower);
     if (!wantsBot && !wantsKey) return null;
 
+    const extractedName = /named\s+([\w -]+)/i.exec(message)?.[1]?.trim();
     const linkedBot = userBots[0] || null;
+    const draftBot = wantsBot ? {
+      name: extractedName || 'New Jackie Bot',
+      role: /trader/.test(lower) ? 'trader' : /social/.test(lower) ? 'social' : /game/.test(lower) ? 'game_helper' : 'assistant',
+      response_style: /short/.test(lower) ? 'short' : /creative/.test(lower) ? 'creative' : /strategic/.test(lower) ? 'strategic' : 'detailed',
+      description: message.slice(0, 140),
+      instructions: `Created from Jackie request: ${message}`,
+      memory_enabled: true,
+      is_public: /public/.test(lower),
+      status: 'active',
+      page_assignments: [],
+      connected_bot_ids: [],
+      handoff_instructions: ''
+    } : null;
+
     return {
-      bot: wantsBot ? {
-        name: /named\s+([\w -]+)/i.exec(message)?.[1]?.trim() || 'New Jackie Bot',
-        role: /trader/.test(lower) ? 'trader' : /social/.test(lower) ? 'social' : /game/.test(lower) ? 'game_helper' : 'assistant',
-        response_style: /short/.test(lower) ? 'short' : /creative/.test(lower) ? 'creative' : /strategic/.test(lower) ? 'strategic' : 'detailed',
-        description: message.slice(0, 140),
-        instructions: `Created from Jackie request: ${message}`,
-        memory_enabled: true,
-        is_public: /public/.test(lower),
-        status: 'active',
-        page_assignments: [],
-        connected_bot_ids: [],
-        handoff_instructions: ''
-      } : null,
+      bot: draftBot,
       apiKey: wantsKey ? {
-        name: linkedBot ? `${linkedBot.name} Access Key` : 'Jackie Foundry Key',
-        botId: linkedBot?.id || '',
-        botName: linkedBot?.name || '',
-        permissions: linkedBot
+        name: extractedName ? `${extractedName} Access Key` : linkedBot ? `${linkedBot.name} Access Key` : 'Jackie Foundry Key',
+        botId: draftBot ? '' : linkedBot?.id || '',
+        botName: draftBot?.name || linkedBot?.name || '',
+        permissions: (draftBot || linkedBot)
           ? ['bot:chat', 'bot:create', 'bot:memory', 'bot:analytics', 'jackie:read', 'jackie:write']
           : ['bot:chat', 'bot:analytics', 'jackie:read']
       } : null
@@ -266,6 +269,7 @@ export default function JackieAI() {
 
     if (foundryPreview.bot) {
       createdBot = await base44.entities.UserBot.create(foundryPreview.bot);
+      setUserBots(prev => [createdBot, ...prev].slice(0, 20));
     }
 
     if (foundryPreview.apiKey) {
@@ -281,6 +285,7 @@ export default function JackieAI() {
         status: 'active',
         bot_id: createdBot?.id || foundryPreview.apiKey.botId || null,
       });
+      setApiKeyCount(prev => prev + 1);
       setMessages(prev => [...prev, { role: 'assistant', content: `Foundry applied successfully. Save this new API key now: \`${raw}\`` }]);
     } else {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Foundry applied successfully.' }]);

@@ -1,11 +1,11 @@
 import { Bot, Key, CheckCircle2, Eye, ShieldAlert, Sparkles } from 'lucide-react';
 
-function PreviewCard({ title, icon: PreviewIcon, children }) {
+function PreviewCard({ title, icon: IconComponent, children }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-          <PreviewIcon className="w-4 h-4 text-primary" />
+          <IconComponent className="w-4 h-4 text-primary" />
         </div>
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
