@@ -29,6 +29,14 @@ export default function AlertManager() {
   }, []);
 
   useEffect(() => {
+    const syncTimeout = window.setTimeout(() => {
+      fetchAlerts();
+    }, 1200);
+
+    return () => window.clearTimeout(syncTimeout);
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = subscribe('alert-manager', (dashboardEvent) => {
       const matched = activeRules.some((rule) => rule.source === dashboardEvent.source && rule.event === dashboardEvent.event);
       if (!matched) return;
@@ -68,7 +76,10 @@ export default function AlertManager() {
   const fetchAlerts = async () => {
     try {
       const user = await base44.auth.me();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       const data = await base44.entities.PriceAlert.filter({ created_by: user.email });
       setAlerts(data || []);
     } catch (error) {

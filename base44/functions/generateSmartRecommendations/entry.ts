@@ -66,6 +66,20 @@ Focus on productivity gains, feature discovery, and workflow efficiency.`,
 
     return Response.json(response);
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    const status = error?.status === 429 ? 200 : 500;
+
+    if (error?.status === 429) {
+      return Response.json({
+        recommendations: [
+          {
+            title: 'Try Again Shortly',
+            description: 'Recommendations are temporarily busy, so please refresh again in a moment.',
+            action: 'Refresh Later'
+          }
+        ]
+      }, { status });
+    }
+
+    return Response.json({ error: error?.message || 'Unexpected error' }, { status });
   }
 });

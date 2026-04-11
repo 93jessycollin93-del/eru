@@ -30,6 +30,14 @@ export default function AnalyticsWidget() {
   }, []);
 
   useEffect(() => {
+    const syncTimeout = window.setTimeout(() => {
+      fetchAnalytics();
+    }, 1400);
+
+    return () => window.clearTimeout(syncTimeout);
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = subscribe('analytics-widget', (dashboardEvent) => {
       const matched = activeRules.some((rule) => rule.source === dashboardEvent.source && rule.event === dashboardEvent.event);
       if (!matched) return;
@@ -42,7 +50,10 @@ export default function AnalyticsWidget() {
   const fetchAnalytics = async () => {
     try {
       const user = await base44.auth.me();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const data = await base44.entities.FeatureAnalytics.filter(
         { created_by: user.email },
