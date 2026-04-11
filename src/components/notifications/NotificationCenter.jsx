@@ -24,7 +24,15 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     loadNotifications();
-    const unsubscribe = base44.entities.AppNotification.subscribe(() => loadNotifications());
+    const unsubscribe = base44.entities.AppNotification.subscribe((event) => {
+      if (event.type === 'create') {
+        setNotifications((prev) => [event.data, ...prev].slice(0, 50));
+      } else if (event.type === 'update') {
+        setNotifications((prev) => prev.map((item) => item.id === event.id ? event.data : item));
+      } else if (event.type === 'delete') {
+        setNotifications((prev) => prev.filter((item) => item.id !== event.id));
+      }
+    });
     return unsubscribe;
   }, []);
 
@@ -35,14 +43,13 @@ export default function NotificationCenter() {
 
   const markAsRead = async (id) => {
     await base44.entities.AppNotification.update(id, { is_read: true });
-    loadNotifications();
+    setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, is_read: true } : item));
   };
 
   const markAllAsRead = async () => {
-    await Promise.all(
-      notifications.filter((n) => !n.is_read).map((n) => base44.entities.AppNotification.update(n.id, { is_read: true }))
-    );
-    loadNotifications();
+    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+    await Promise.all(unreadIds.map((id) => base44.entities.AppNotification.update(id, { is_read: true })));
+    setNotifications((prev) => prev.map((item) => unreadIds.includes(item.id) ? { ...item, is_read: true } : item));
   };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;

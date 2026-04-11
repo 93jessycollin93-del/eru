@@ -16,7 +16,15 @@ export default function AlertManager() {
 
   useEffect(() => {
     fetchAlerts();
-    const unsubscribe = base44.entities.PriceAlert.subscribe(() => fetchAlerts());
+    const unsubscribe = base44.entities.PriceAlert.subscribe((event) => {
+      if (event.type === 'create') {
+        setAlerts((prev) => [event.data, ...prev]);
+      } else if (event.type === 'update') {
+        setAlerts((prev) => prev.map((item) => item.id === event.id ? event.data : item));
+      } else if (event.type === 'delete') {
+        setAlerts((prev) => prev.filter((item) => item.id !== event.id));
+      }
+    });
     return unsubscribe;
   }, []);
 
@@ -26,7 +34,6 @@ export default function AlertManager() {
       if (!matched) return;
       setPulse(true);
       window.setTimeout(() => setPulse(false), 1200);
-      fetchAlerts();
 
       if (dashboardEvent.source === 'market' && dashboardEvent.event === 'priceChange') {
         const matchedAlerts = alerts.filter((alert) => {
@@ -95,7 +102,6 @@ export default function AlertManager() {
       setFormData({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '', push_notification_enabled: true });
       setShowForm(false);
       toast.success('Price alert created');
-      fetchAlerts();
     } catch (error) {
       toast.error('Failed to create alert');
       console.error(error);
@@ -108,7 +114,7 @@ export default function AlertManager() {
     try {
       await base44.entities.PriceAlert.delete(id);
       toast.success('Alert deleted');
-      fetchAlerts();
+      setAlerts((prev) => prev.filter((item) => item.id !== id));
     } catch (error) {
       toast.error('Failed to delete alert');
     }
@@ -117,7 +123,7 @@ export default function AlertManager() {
   const handleToggleAlert = async (id, isActive) => {
     try {
       await base44.entities.PriceAlert.update(id, { is_active: !isActive });
-      fetchAlerts();
+      setAlerts((prev) => prev.map((item) => item.id === id ? { ...item, is_active: !isActive } : item));
     } catch (error) {
       toast.error('Failed to update alert');
     }
@@ -125,11 +131,12 @@ export default function AlertManager() {
 
   const handleTogglePush = async (alert) => {
     try {
+      const nextPushEnabled = !alert.push_notification_enabled;
       await base44.entities.PriceAlert.update(alert.id, {
-        push_notification_enabled: !alert.push_notification_enabled,
-        push_notification_status: !alert.push_notification_enabled ? 'ready' : 'pending'
+        push_notification_enabled: nextPushEnabled,
+        push_notification_status: nextPushEnabled ? 'ready' : 'pending'
       });
-      fetchAlerts();
+      setAlerts((prev) => prev.map((item) => item.id === alert.id ? { ...item, push_notification_enabled: nextPushEnabled, push_notification_status: nextPushEnabled ? 'ready' : 'pending' } : item));
     } catch (error) {
       toast.error('Failed to update push status');
     }
