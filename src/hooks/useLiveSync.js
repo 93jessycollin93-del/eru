@@ -126,6 +126,9 @@ export function useRealtimeEntityList(entityName, options = {}) {
   const { query = {}, sort = '-updated_date', limit = 50, enabled = true } = options;
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(enabled);
+  const lastLoadRef = useRef(0);
+  const timeoutRef = useRef(null);
+  const queryKey = JSON.stringify(query);
 
   useEffect(() => {
     if (!enabled || !entityName) {
@@ -135,13 +138,18 @@ export function useRealtimeEntityList(entityName, options = {}) {
 
     let unsubscribe = null;
 
-    const load = async () => {
+    const load = async (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastLoadRef.current < 2000) return;
+
       const sdk = base44.entities[entityName];
       if (!sdk) {
         setData([]);
         setLoading(false);
         return;
       }
+
+      lastLoadRef.current = now;
       const rows = Object.keys(query).length > 0
         ? await sdk.filter(query, sort, limit)
         : await sdk.list(sort, limit);
@@ -149,11 +157,19 @@ export function useRealtimeEntityList(entityName, options = {}) {
       setLoading(false);
     };
 
-    load();
-    unsubscribe = base44.entities[entityName].subscribe(() => load());
+    const scheduleLoad = () => {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => load(), 300);
+    };
 
-    return () => unsubscribe?.();
-  }, [entityName, enabled, sort, limit, JSON.stringify(query)]);
+    load(true);
+    unsubscribe = base44.entities[entityName].subscribe(() => scheduleLoad());
+
+    return () => {
+      clearTimeout(timeoutRef.current);
+      unsubscribe?.();
+    };
+  }, [entityName, enabled, sort, limit, queryKey]);
 
   return { data, loading };
 }
