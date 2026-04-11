@@ -17,7 +17,15 @@ export default function AnalyticsWidget() {
 
   useEffect(() => {
     fetchAnalytics();
-    const unsubscribe = base44.entities.FeatureAnalytics.subscribe(() => fetchAnalytics());
+    const unsubscribe = base44.entities.FeatureAnalytics.subscribe((event) => {
+      if (event.type === 'create') {
+        setAnalytics((prev) => [event.data, ...prev].slice(0, 10));
+      } else if (event.type === 'update') {
+        setAnalytics((prev) => prev.map((item) => item.id === event.id ? event.data : item));
+      } else if (event.type === 'delete') {
+        setAnalytics((prev) => prev.filter((item) => item.id !== event.id));
+      }
+    });
     return unsubscribe;
   }, []);
 
@@ -27,7 +35,6 @@ export default function AnalyticsWidget() {
       if (!matched) return;
       setPulse(true);
       window.setTimeout(() => setPulse(false), 1200);
-      generateRecommendations();
     });
     return unsubscribe;
   }, [subscribe, activeRules]);
@@ -45,9 +52,6 @@ export default function AnalyticsWidget() {
 
       setAnalytics(data || []);
       setLoading(false);
-
-      // Auto-generate recommendations
-      generateRecommendations();
     } catch (error) {
       console.error('Analytics fetch error:', error);
       setLoading(false);
@@ -55,6 +59,7 @@ export default function AnalyticsWidget() {
   };
 
   const generateRecommendations = async () => {
+    if (loadingRecs) return;
     setLoadingRecs(true);
     try {
       const response = await base44.functions.invoke('generateSmartRecommendations', {});
@@ -138,7 +143,7 @@ export default function AnalyticsWidget() {
           </div>
         ) : (
           <p className="text-xs text-muted-foreground text-center py-4">
-            Use more features to unlock personalized recommendations
+            Tap refresh to generate personalized recommendations
           </p>
         )}
       </div>
