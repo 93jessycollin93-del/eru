@@ -55,6 +55,7 @@ export default function Dashboard() {
         <PortfolioSummary />
         <QuickActions />
         <div className="px-4 mt-4 space-y-4 pb-4">
+          <ScreenVisualizer />
           <TelegramFirstBanner />
           <WidgetRulesPanel />
           <DashboardPanelManager
@@ -67,7 +68,6 @@ export default function Dashboard() {
           <NotificationCenter />
           <AlertManager />
           <CollectorLeaderboard />
-          <ScreenVisualizer />
           <DataVisualizer />
           <FinanceModule />
         </div>
