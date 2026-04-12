@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, Eye, EyeOff } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff } from 'lucide-react';
 
 const ALL_PAGES = [
   { id: 'home',       label: 'Home',         icon: Home,          to: '/' },
@@ -44,6 +44,8 @@ const FLOATING_WIDGETS = [
   { id: 'jackie', label: 'Jackie', icon: Bot },
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
   { id: 'botChat', label: 'Bot Chat', icon: MessageSquare },
+  { id: 'promptLibrary', label: 'Prompt Library', icon: BookText },
+  { id: 'conversations', label: 'Conversations', icon: Library },
 ];
 
 export default function FloatingNav({ onSearchOpen }) {
@@ -71,6 +73,8 @@ export default function FloatingNav({ onSearchOpen }) {
         jackie: { visible: true, x: 16, y: 100 },
         botMarket: { visible: true, x: 16, y: 156 },
         botChat: { visible: true, x: null, y: null },
+        promptLibrary: { visible: true, x: 16, y: 212 },
+        conversations: { visible: true, x: 16, y: 268 },
         ...JSON.parse(localStorage.getItem(FLOATING_WIDGETS_KEY) || '{}')
       };
     } catch {
@@ -78,6 +82,8 @@ export default function FloatingNav({ onSearchOpen }) {
         jackie: { visible: true, x: 16, y: 100 },
         botMarket: { visible: true, x: 16, y: 156 },
         botChat: { visible: true, x: null, y: null },
+        promptLibrary: { visible: true, x: 16, y: 212 },
+        conversations: { visible: true, x: 16, y: 268 },
       };
     }
   });

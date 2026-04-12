@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bot, Cpu, MessageSquare, SlidersHorizontal, Eye, EyeOff } from 'lucide-react';
+import { Bot, Cpu, MessageSquare, BookText, Library, SlidersHorizontal, Eye, EyeOff } from 'lucide-react';
 
 const STORAGE_KEY = 'floating_widget_preferences';
 
@@ -7,12 +7,16 @@ const DEFAULT_WIDGETS = {
   jackie: { visible: true, x: 16, y: 100 },
   botMarket: { visible: true, x: 16, y: 156 },
   botChat: { visible: true, x: null, y: null },
+  promptLibrary: { visible: true, x: 16, y: 212 },
+  conversations: { visible: true, x: 16, y: 268 },
 };
 
 const WIDGET_META = [
   { id: 'jackie', label: 'Jackie', icon: Bot },
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
   { id: 'botChat', label: 'Bot Chat', icon: MessageSquare },
+  { id: 'promptLibrary', label: 'Prompt Library', icon: BookText },
+  { id: 'conversations', label: 'Conversations', icon: Library },
 ];
 
 export function useFloatingWidgetPrefs() {

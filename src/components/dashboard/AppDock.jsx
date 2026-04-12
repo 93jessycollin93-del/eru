@@ -60,6 +60,8 @@ const ALL_APPS = [
   { id: 'reputation', label: 'Reputation', emoji: '🏅', url: '/reputation', category: 'App Pages' },
   { id: 'tgapps', label: 'Telegram Apps', emoji: '✈️', url: '/tgapps', category: 'App Pages' },
   { id: 'jackie', label: 'Jackie AI', emoji: '🤖', url: '/jackie', category: 'App Pages' },
+  { id: 'jackie_prompts', label: 'Prompt Library', emoji: '📚', url: '/jackie', category: 'App Pages' },
+  { id: 'jackie_conversations', label: 'Conversations', emoji: '🗂️', url: '/jackie', category: 'App Pages' },
   { id: 'ailab', label: 'AI Lab', emoji: '🧪', url: '/ailab', category: 'App Pages' },
   { id: 'bot_marketplace', label: 'Bot Marketplace', emoji: '🤖', url: '/bot-marketplace', category: 'App Pages' },
   { id: 'apikeys', label: 'API Keys', emoji: '🔑', url: '/apikeys', category: 'App Pages' },
