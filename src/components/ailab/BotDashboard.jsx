@@ -58,8 +58,8 @@ export default function BotDashboard({ bots }) {
         ].map((item) => (
           <div key={item.label} className="bg-card border border-border rounded-xl p-2 text-center">
             <item.icon className={`w-3.5 h-3.5 ${item.color} mx-auto mb-1`} />
-            <p className={`text-base font-bold ${color}`}>{val}</p>
-            <p className="text-[9px] text-muted-foreground">{label}</p>
+            <p className={`text-base font-bold ${item.color}`}>{item.val}</p>
+            <p className="text-[9px] text-muted-foreground">{item.label}</p>
           </div>
         ))}
       </div>

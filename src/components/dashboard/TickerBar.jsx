@@ -10,7 +10,11 @@ export default function TickerBar() {
 
   useEffect(() => {
     if (status !== 'live' || prices.length === 0) return;
-    const signature = JSON.stringify(prices.map((item) => ({ symbol: item.symbol, price: item.price, change: item.change })));
+    const signature = JSON.stringify(prices.map((item) => ({
+      symbol: item.symbol,
+      price: Number((item.price ?? 0).toFixed(2)),
+      change: Number((item.change ?? 0).toFixed(2))
+    })));
     if (signature !== previousRef.current) {
       previousRef.current = signature;
       emit('market', 'priceChange', { prices });
