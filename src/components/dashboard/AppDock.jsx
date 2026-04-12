@@ -157,7 +157,7 @@ export default function AppDock() {
       {/* App Store modal overlay */}
       {showStore && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end" onClick={() => setShowStore(false)}>
-          <div className="w-full max-w-md mx-auto bg-card rounded-t-2xl border-t border-border max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md md:max-w-2xl mx-auto bg-card rounded-t-2xl border-t border-border max-h-[80dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <p className="font-semibold text-sm">App Store</p>
               <button onClick={() => setShowStore(false)} className="text-muted-foreground hover:text-foreground">
@@ -182,7 +182,7 @@ export default function AppDock() {
                 ))}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] px-4 py-3">
               <div className="grid grid-cols-4 gap-3">
                 {filteredStore.map(app => {
                   const isPinned = pinned.includes(app.id);

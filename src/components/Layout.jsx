@@ -83,7 +83,7 @@ export default function Layout() {
       <AnimatedBackground type={bg} opacity={bgOpacity} />
 
       {/* App shell — transparent so background shows through */}
-      <div className="max-w-md mx-auto flex flex-col relative z-10 w-full" style={{ minHeight: '100dvh' }}>
+      <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
         <CenteredBottomNav onSearchOpen={handleSearchOpen} />
         <main className="flex-1">

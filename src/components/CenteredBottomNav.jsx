@@ -442,7 +442,7 @@ export default function FloatingNav({ onSearchOpen }) {
       {/* Edit modal */}
       {editMode && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setEditMode(false)}>
-          <div className="w-full max-w-md bg-card text-foreground border-t border-border rounded-t-2xl max-h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md md:max-w-2xl bg-card text-foreground border-t border-border rounded-t-2xl max-h-[75dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <p className="font-semibold text-sm">Customize Nav Bar</p>
               <button onClick={() => {
@@ -454,7 +454,7 @@ export default function FloatingNav({ onSearchOpen }) {
               </button>
             </div>
             <p className="text-[10px] text-muted-foreground px-4 py-2 border-b border-border">Tap to add or remove pages and floating widgets.</p>
-            <div className="overflow-y-auto flex-1 px-4 py-3 space-y-4">
+            <div className="overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] flex-1 min-h-0 px-4 py-3 space-y-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Pages</p>
                 <div className="grid grid-cols-4 gap-3">
