@@ -79,7 +79,7 @@ export default function AgentRunner({ bots, globalPolicy = null }) {
   };
 
   return (
-    <div className="px-4 py-4 space-y-4">
+    <div className="space-y-4">
       <div className="bg-blue-400/5 border border-blue-400/20 rounded-xl p-3">
         <p className="text-xs font-semibold text-blue-400 mb-1">🤖 Autonomous Agent Runner</p>
         <p className="text-[10px] text-muted-foreground">Agents run on a timer — executing tasks without waiting for commands.</p>
@@ -139,7 +139,7 @@ export default function AgentRunner({ bots, globalPolicy = null }) {
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Live Agent Log</p>
             <button onClick={() => setLogs([])} className="text-[9px] text-muted-foreground">Clear</button>
           </div>
-          <div className="bg-card border border-border rounded-xl p-3 max-h-48 overflow-y-auto space-y-1.5">
+          <div className="bg-card border border-border rounded-xl p-3 max-h-48 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] space-y-1.5">
             {logs.map(log => (
               <div key={log.id} className="flex gap-2 text-[10px]">
                 <span className="text-muted-foreground flex-shrink-0">{log.time}</span>

@@ -698,7 +698,11 @@ export default function AILab() {
       )}
 
       {/* AGENTS */}
-      {tab === 'agents' && <AgentRunner bots={bots} globalPolicy={globalPolicy} />}
+      {tab === 'agents' && (
+        <div className="px-4 py-4 pb-24">
+          <AgentRunner bots={bots} globalPolicy={globalPolicy} />
+        </div>
+      )}
 
       {/* MEMORY */}
       {tab === 'memory' && <div><ProgrammingMemoryPanel /><KnowledgeMap bots={bots} /><BotMemoryChunkRelationshipMap bots={bots} /><TieredMemoryPanel bots={bots} /><MemoryViewer bots={bots} /></div>}
