@@ -110,7 +110,7 @@ export default function FloatingNav({ onSearchOpen }) {
   }, []);
 
   const pinnedPages = ALL_PAGES.filter(p => pinned.includes(p.id));
-  const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.widgetId]?.visible);
+  const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.id]?.visible);
   const navItems = [...pinnedPages, ...attachedWidgets];
 
   const savePinned = (next) => {
@@ -125,7 +125,7 @@ export default function FloatingNav({ onSearchOpen }) {
   const toggleFloatingWidget = (id) => {
     const next = {
       ...floatingWidgets,
-      [id]: { ...floatingWidgets[id], visible: !floatingWidgets?.[id]?.visible }
+      [id]: { ...(floatingWidgets[id] || {}), visible: !floatingWidgets?.[id]?.visible }
     };
     setFloatingWidgets(next);
     localStorage.setItem(FLOATING_WIDGETS_KEY, JSON.stringify(next));
@@ -400,7 +400,7 @@ export default function FloatingNav({ onSearchOpen }) {
                     );
                   })}
                 </div>
-                <p className="mt-2 text-[10px] text-muted-foreground">Jackie stays as its own separate round widget for quick access.</p>
+                <p className="mt-2 text-[10px] text-muted-foreground">These items attach directly to the nav bar when enabled here. Jackie stays as its own separate round widget.</p>
               </div>
             </div>
             <div className="px-4 py-3 border-t border-border flex-shrink-0 space-y-2">
