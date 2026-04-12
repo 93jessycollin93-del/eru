@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles } from 'lucide-react';
 import SquadAnalyticsPanel from './SquadAnalyticsPanel.jsx';
+import SquadKnowledgePanel from './SquadKnowledgePanel.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -79,14 +80,20 @@ export default function SquadBoard({ bots }) {
   const [runningId, setRunningId] = useState(null);
   const [runOutput, setRunOutput] = useState({});
   const [recommendGoal, setRecommendGoal] = useState('');
+  const [knowledgeItems, setKnowledgeItems] = useState([]);
+  const [knowledgeSearch, setKnowledgeSearch] = useState('');
 
   const activeBots = useMemo(() => bots.filter((bot) => (bot.status || 'active') === 'active'), [bots]);
   const selectableBots = useMemo(() => activeBots.filter((bot) => bot.id !== form.master_bot_id), [activeBots, form.master_bot_id]);
 
   const loadSquads = async () => {
     setLoading(true);
-    const rows = await base44.entities.BotSquad.list('-updated_date', 100);
+    const [rows, knowledge] = await Promise.all([
+      base44.entities.BotSquad.list('-updated_date', 100),
+      base44.entities.SquadKnowledge.list('-updated_date', 100),
+    ]);
     setSquads(rows);
+    setKnowledgeItems(knowledge);
     setLoading(false);
   };
 
@@ -154,12 +161,21 @@ export default function SquadBoard({ bots }) {
 
   const getMemoryScore = (goal, botId) => {
     const goalKeywords = extractMatchedKeywords(goal);
-    return (form.memory_pool || []).reduce((total, memory) => {
+    const localScore = (form.memory_pool || []).reduce((total, memory) => {
       const botMatch = (memory.bot_ids || []).includes(botId);
       if (!botMatch) return total;
       const sharedKeywords = (memory.keywords || []).filter((keyword) => goalKeywords.includes(keyword)).length;
       return total + (sharedKeywords > 0 ? sharedKeywords * 10 : 4);
     }, 0);
+
+    const globalScore = knowledgeItems.reduce((total, memory) => {
+      const botMatch = (memory.bot_ids || []).includes(botId);
+      if (!botMatch) return total;
+      const sharedKeywords = (memory.keywords || []).filter((keyword) => goalKeywords.includes(keyword)).length;
+      return total + (sharedKeywords > 0 ? sharedKeywords * 12 : 5);
+    }, 0);
+
+    return localScore + globalScore;
   };
 
   const recommendations = useMemo(() => {
@@ -192,7 +208,7 @@ export default function SquadBoard({ bots }) {
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, 4);
-  }, [activeBots, form.execution_history, form.master_bot_id, form.member_bot_ids, form.memory_pool, recommendGoal]);
+  }, [activeBots, form.execution_history, form.master_bot_id, form.member_bot_ids, form.memory_pool, knowledgeItems, recommendGoal]);
 
   const squadAnalytics = useMemo(() => {
     const histories = squads.flatMap((squad) => (squad.execution_history || []).map((entry) => ({ ...entry, squad })));
@@ -365,7 +381,18 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
       ...((squad.memory_pool || []).slice(0, 14)),
     ];
 
-    await base44.entities.BotSquad.update(squad.id, { execution_history: updatedHistory, memory_pool: updatedMemoryPool });
+    await Promise.all([
+      base44.entities.BotSquad.update(squad.id, { execution_history: updatedHistory, memory_pool: updatedMemoryPool }),
+      base44.entities.SquadKnowledge.create({
+        source_squad_id: squad.id,
+        source_squad_name: squad.name,
+        goal: task,
+        keywords: extractMatchedKeywords(task),
+        bot_ids: Array.from(new Set(successfulBotIds)),
+        result_summary: finalResponse.slice(0, 500),
+        final_output: finalResponse,
+      }),
+    ]);
     await loadSquads();
 
     setRunOutput((prev) => ({
@@ -537,6 +564,7 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
       </div>
 
       <SquadAnalyticsPanel analytics={squadAnalytics} />
+      <SquadKnowledgePanel knowledgeItems={knowledgeItems} search={knowledgeSearch} setSearch={setKnowledgeSearch} />
 
       <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Saved squads</p>

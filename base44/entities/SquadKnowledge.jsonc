@@ -1,0 +1,55 @@
+{
+  "name": "SquadKnowledge",
+  "type": "object",
+  "properties": {
+    "source_squad_id": {
+      "type": "string"
+    },
+    "source_squad_name": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "bot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "result_summary": {
+      "type": "string"
+    },
+    "final_output": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_squad_id",
+    "source_squad_name",
+    "goal",
+    "result_summary"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
