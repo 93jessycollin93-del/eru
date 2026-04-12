@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 function uniqueByGoal(items) {
   const seen = new Set();
@@ -79,6 +79,16 @@ Deno.serve(async (req) => {
       } else {
         await base44.entities.BotMemoryProfile.create(profilePayload);
       }
+
+      await base44.asServiceRole.entities.PerformanceMetric.create({
+        service: 'bot_retraining',
+        endpoint: 'retrainBotsFromKnowledge',
+        latency_ms: Math.max(1, relatedKnowledge.length * 100),
+        status_code: 200,
+        success: true,
+        timestamp: now,
+        user_email: user.email,
+      });
 
       updatedBots.push(bot.name);
     }
