@@ -46,7 +46,7 @@ export default function WelcomeScreen({ mode, onSend }) {
   const suggestions = SUGGESTIONS[mode];
 
   return (
-    <div className="flex flex-col items-center justify-center py-8 text-center space-y-4 px-2">
+    <div className="flex flex-col items-center justify-center py-6 text-center space-y-4 px-2">
       <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
         <meta.icon className="w-6 h-6 text-primary" />
       </div>
@@ -54,10 +54,10 @@ export default function WelcomeScreen({ mode, onSend }) {
         <p className="font-semibold text-base">{meta.title}</p>
         <p className="text-xs text-muted-foreground mt-1">{meta.desc}</p>
       </div>
-      <div className="w-full space-y-2 max-w-sm">
+      <div className="w-full space-y-2 max-w-sm pb-2">
         {suggestions.map(s => (
           <button key={s} onClick={() => onSend(s)}
-            className="w-full text-left px-4 py-2.5 rounded-xl bg-card border border-border text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all">
+            className="w-full text-left px-4 py-3 rounded-xl bg-card border border-border text-sm leading-5 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all break-words whitespace-normal">
             {s}
           </button>
         ))}
