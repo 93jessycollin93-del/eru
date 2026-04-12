@@ -352,15 +352,20 @@ export default function SquadBoard({ bots }) {
 
   const saveSquad = async (payloadOverride) => {
     const source = payloadOverride || form;
-    if (!source.name.trim() || !source.master_bot_id) return;
+    const safeName = (source?.name || '').trim();
+    const safeDescription = (source?.description || '').trim();
+    const safeSharedContext = (source?.shared_context || '').trim();
+    const safePipelineSteps = (source?.pipeline_steps || []).filter((step) => ((step?.title || '').trim()) || ((step?.instruction || '').trim()));
+
+    if (!safeName || !source?.master_bot_id) return;
     const payload = {
       ...source,
-      name: source.name.trim(),
-      description: source.description.trim(),
-      shared_context: source.shared_context.trim(),
-      pipeline_steps: source.pipeline_steps.filter((step) => step.title.trim() || step.instruction.trim()),
-      execution_history: source.execution_history || [],
-      memory_pool: source.memory_pool || [],
+      name: safeName,
+      description: safeDescription,
+      shared_context: safeSharedContext,
+      pipeline_steps: safePipelineSteps,
+      execution_history: source?.execution_history || [],
+      memory_pool: source?.memory_pool || [],
     };
 
     if (editingId) {
