@@ -102,7 +102,7 @@ Return ONLY a JSON object with these fields:
   };
 
   return (
-    <div className="px-4 py-4 space-y-4 overflow-y-auto min-h-0 pb-24">
+    <div className="px-4 py-4 space-y-4 pb-24">
       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
         <p className="text-xs font-semibold text-primary mb-1">🏭 AI Bot Factory</p>
         <p className="text-[10px] text-muted-foreground">Describe what you need and the system generates a complete, deployable bot configuration.</p>
