@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle } from 'lucide-react';
+import NavWalkthrough from './nav/NavWalkthrough';
+import { playSound, VIBRATE } from '../lib/soundEngine';
 
 const ALL_PAGES = [
   { id: 'home',       label: 'Home',         icon: Home,          to: '/' },
@@ -45,6 +47,7 @@ const ORIENTATION_KEY = 'floating_nav_orientation';
 const EXPANDED_KEY = 'floating_nav_expanded';
 const ROWS_KEY = 'floating_nav_rows';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
+const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
 
 const FLOATING_WIDGETS = [
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
@@ -99,6 +102,8 @@ export default function FloatingNav({ onSearchOpen }) {
   const navRef = useRef(null);
   const didDrag = useRef(false);
   const [unavailableWidget, setUnavailableWidget] = useState(null);
+  const [walkthroughOpen, setWalkthroughOpen] = useState(false);
+  const [walkthroughStep, setWalkthroughStep] = useState(0);
 
   useEffect(() => {
     const handleUnavailable = () => {
@@ -108,6 +113,16 @@ export default function FloatingNav({ onSearchOpen }) {
 
     window.addEventListener('bot-chat-unavailable', handleUnavailable);
     return () => window.removeEventListener('bot-chat-unavailable', handleUnavailable);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem(NAV_WALKTHROUGH_SEEN_KEY);
+      if (!seen) {
+        setWalkthroughOpen(true);
+        localStorage.setItem(NAV_WALKTHROUGH_SEEN_KEY, 'true');
+      }
+    } catch {}
   }, []);
 
   const pinnedPages = ALL_PAGES.filter(p => pinned.includes(p.id));
@@ -120,10 +135,14 @@ export default function FloatingNav({ onSearchOpen }) {
   };
 
   const togglePin = (id) => {
+    playSound('toggle');
+    VIBRATE.toggle();
     savePinned(pinned.includes(id) ? pinned.filter(p => p !== id) : [...pinned, id]);
   };
 
   const toggleFloatingWidget = (id) => {
+    playSound('toggle');
+    VIBRATE.toggle();
     const next = {
       ...floatingWidgets,
       [id]: { ...(floatingWidgets[id] || {}), visible: !floatingWidgets?.[id]?.visible }
@@ -171,6 +190,10 @@ export default function FloatingNav({ onSearchOpen }) {
 
   const onPointerMove = useCallback((e) => {
     if (!dragging.current) return;
+    if (!didDrag.current) {
+      playSound('whoosh');
+      VIBRATE.click();
+    }
     didDrag.current = true;
     const x = e.clientX - dragOffset.current.x;
     const y = e.clientY - dragOffset.current.y;
@@ -204,7 +227,11 @@ export default function FloatingNav({ onSearchOpen }) {
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
           <GripHorizontal className="w-3.5 h-3.5" />
           <button
-            onClick={toggleOrientation}
+            onClick={() => {
+              playSound('toggle');
+              VIBRATE.toggle();
+              toggleOrientation();
+            }}
             className="transition-colors hover:text-primary"
             title={orientation === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}
           >
@@ -215,14 +242,22 @@ export default function FloatingNav({ onSearchOpen }) {
             )}
           </button>
           <button
-            onClick={cycleRows}
+            onClick={() => {
+              playSound('toggle');
+              VIBRATE.toggle();
+              cycleRows();
+            }}
             className="transition-colors hover:text-primary text-[10px] font-bold w-3.5 h-3.5 flex items-center justify-center"
             title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
           >
             {rows}
           </button>
           <button
-            onClick={() => setEditMode(true)}
+            onClick={() => {
+              playSound('click');
+              VIBRATE.click();
+              setEditMode(true);
+            }}
             className="transition-colors hover:text-primary"
             title="Edit"
           >
@@ -240,6 +275,8 @@ export default function FloatingNav({ onSearchOpen }) {
                   const isJackiePanelLink = to?.startsWith('/jackie?panel=');
                   const handleWidgetClick = () => {
                     if (!widgetId) return;
+                    playSound('click');
+                    VIBRATE.click();
                     if (widgetId === 'botChat') {
                       window.dispatchEvent(new CustomEvent('open-bot-chat'));
                     } else {
@@ -248,6 +285,8 @@ export default function FloatingNav({ onSearchOpen }) {
                   };
                   const handlePanelNavigation = () => {
                     if (!isJackiePanelLink) return;
+                    playSound('click');
+                    VIBRATE.click();
                     navigate(to);
                   };
 
@@ -307,6 +346,8 @@ export default function FloatingNav({ onSearchOpen }) {
             const isJackiePanelLink = to?.startsWith('/jackie?panel=');
             const handleWidgetClick = () => {
               if (!widgetId) return;
+              playSound('click');
+              VIBRATE.click();
               if (widgetId === 'botChat') {
                 window.dispatchEvent(new CustomEvent('open-bot-chat'));
               } else {
@@ -315,6 +356,8 @@ export default function FloatingNav({ onSearchOpen }) {
             };
             const handlePanelNavigation = () => {
               if (!isJackiePanelLink) return;
+              playSound('click');
+              VIBRATE.click();
               navigate(to);
             };
 
@@ -369,6 +412,8 @@ export default function FloatingNav({ onSearchOpen }) {
         {/* Search button */}
         <button
           onClick={() => {
+            playSound('click');
+            VIBRATE.click();
             const result = onSearchOpen?.();
             if (result && typeof result.catch === 'function') {
               result.catch(() => {});
@@ -382,13 +427,29 @@ export default function FloatingNav({ onSearchOpen }) {
         </button>
       </div>
 
+      <NavWalkthrough
+        open={walkthroughOpen}
+        step={walkthroughStep}
+        setStep={setWalkthroughStep}
+        onClose={() => {
+          playSound('click');
+          VIBRATE.click();
+          setWalkthroughOpen(false);
+          setWalkthroughStep(0);
+        }}
+      />
+
       {/* Edit modal */}
       {editMode && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setEditMode(false)}>
           <div className="w-full max-w-md bg-card border-t border-border rounded-t-2xl max-h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <p className="font-semibold text-sm">Customize Nav Bar</p>
-              <button onClick={() => setEditMode(false)} className="text-muted-foreground hover:text-foreground">
+              <button onClick={() => {
+                playSound('click');
+                VIBRATE.click();
+                setEditMode(false);
+              }} className="text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -422,7 +483,20 @@ export default function FloatingNav({ onSearchOpen }) {
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Floating Widgets</p>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Floating Widgets</p>
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      VIBRATE.click();
+                      setWalkthroughStep(0);
+                      setWalkthroughOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
+                  >
+                    <HelpCircle className="w-3 h-3" /> Guide
+                  </button>
+                </div>
                 <div className="grid grid-cols-3 gap-3">
                   {FLOATING_WIDGETS.map(({ id, label, icon: Icon }) => {
                     const isVisible = floatingWidgets?.[id]?.visible;
@@ -450,14 +524,23 @@ export default function FloatingNav({ onSearchOpen }) {
             </div>
             <div className="px-4 py-3 border-t border-border flex-shrink-0 space-y-2">
               <div className="flex gap-2">
-                <button onClick={() => setEditMode(false)} className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold">
+                <button onClick={() => {
+                  playSound('click');
+                  VIBRATE.click();
+                  setEditMode(false);
+                }} className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold">
                   Done
                 </button>
                 <div className="flex gap-1 bg-secondary rounded-xl p-1">
                   {[1, 2, 3].map(r => (
                     <button
                       key={r}
-                      onClick={() => { setRows(r); localStorage.setItem(ROWS_KEY, JSON.stringify(r)); }}
+                      onClick={() => {
+                          playSound('toggle');
+                          VIBRATE.toggle();
+                          setRows(r);
+                          localStorage.setItem(ROWS_KEY, JSON.stringify(r));
+                        }}
                       className={`w-8 h-8 rounded text-xs font-medium transition-colors ${
                         rows === r ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                       }`}
