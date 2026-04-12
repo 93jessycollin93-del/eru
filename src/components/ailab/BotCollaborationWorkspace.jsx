@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BrainCircuit, CheckSquare, Loader2, MessageSquareShare, Square, Users } from 'lucide-react';
 import SpeechToTextInput from './SpeechToTextInput.jsx';
+import CollaborationLiveRoom from './CollaborationLiveRoom.jsx';
 import { base44 } from '@/api/base44Client';
 
 export default function BotCollaborationWorkspace({ bots }) {
@@ -10,6 +11,9 @@ export default function BotCollaborationWorkspace({ bots }) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [sessions, setSessions] = useState([]);
+  const [liveMessages, setLiveMessages] = useState([]);
+  const [guidance, setGuidance] = useState('');
+  const [guidanceNotes, setGuidanceNotes] = useState([]);
 
   const selectedBots = useMemo(() => bots.filter((bot) => selectedBotIds.includes(bot.id)), [bots, selectedBotIds]);
 
@@ -28,6 +32,9 @@ export default function BotCollaborationWorkspace({ bots }) {
     if (!goal.trim() || selectedBots.length < 2 || running) return;
     setRunning(true);
     setResult(null);
+    setGuidance('');
+    setGuidanceNotes([]);
+    setLiveMessages([{ role: 'system', label: 'Session started', content: `Starting collaboration for: ${goal}` }]);
 
     const planner = await base44.integrations.Core.InvokeLLM({
       prompt: `You are coordinating a team of AI bots for a complex task.
@@ -37,6 +44,8 @@ Bots available: ${selectedBots.map((bot) => `${bot.name} (${bot.role})`).join(',
 Assign one focused subtask to each bot. Return plain text in this format exactly:
 Bot Name: task`
     });
+
+    setLiveMessages((prev) => [...prev, { role: 'system', label: 'Delegation plan', content: planner }]);
 
     const planLines = planner.split('\n').filter(Boolean);
     const delegationPlan = selectedBots.map((bot, index) => {
@@ -51,25 +60,28 @@ Bot Name: task`
     const findings = [];
     for (const item of delegationPlan) {
       const bot = selectedBots.find((entry) => entry.id === item.bot_id);
+      const currentGuidance = guidanceNotes.length > 0 ? `\nLive guidance from the user:\n${guidanceNotes.map((note) => `- ${note}`).join('\n')}` : '';
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are ${bot.name}. ${bot.instructions || ''}
 Role: ${bot.role}
 Task goal: ${goal}
-Your delegated task: ${item.task}
+Your delegated task: ${item.task}${currentGuidance}
 
 Produce your best finding for the team. Be concrete, useful, and concise.`
       });
       findings.push({ ...item, finding: response });
+      setLiveMessages((prev) => [...prev, { role: 'bot', label: `${bot.name} finding`, content: response }]);
     }
 
     const feedback = [];
     for (const reviewer of selectedBots) {
       const peerSummary = findings.filter((item) => item.bot_id !== reviewer.id).map((item) => `${item.bot_name}: ${item.finding}`).join('\n\n');
+      const currentGuidance = guidanceNotes.length > 0 ? `\nUser guidance to consider:\n${guidanceNotes.map((note) => `- ${note}`).join('\n')}` : '';
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are ${reviewer.name}. ${reviewer.instructions || ''}
 Goal: ${goal}
 Other bots shared these findings:
-${peerSummary}
+${peerSummary}${currentGuidance}
 
 Give short peer feedback that improves quality, catches gaps, and increases accuracy.`
       });
@@ -78,6 +90,7 @@ Give short peer feedback that improves quality, catches gaps, and increases accu
         reviewer_bot_name: reviewer.name,
         feedback: response,
       });
+      setLiveMessages((prev) => [...prev, { role: 'bot', label: `${reviewer.name} feedback`, content: response }]);
     }
 
     const finalOutput = await base44.integrations.Core.InvokeLLM({
@@ -92,8 +105,12 @@ ${findings.map((item) => `${item.bot_name}: ${item.finding}`).join('\n\n')}
 Peer feedback:
 ${feedback.map((item) => `${item.reviewer_bot_name}: ${item.feedback}`).join('\n\n')}
 
+Live user guidance:
+${guidanceNotes.length > 0 ? guidanceNotes.map((note) => `- ${note}`).join('\n') : 'None'}
+
 Return the best final answer with clear sections: Summary, Key Findings, Recommended Next Step.`
     });
+    setLiveMessages((prev) => [...prev, { role: 'system', label: 'Final synthesis', content: finalOutput }]);
 
     const payload = {
       title: title.trim() || 'Bot Collaboration Session',
@@ -113,6 +130,14 @@ Return the best final answer with clear sections: Summary, Key Findings, Recomme
     setSelectedBotIds([]);
     setRunning(false);
     loadSessions();
+  };
+
+  const sendGuidance = () => {
+    if (!guidance.trim() || !running) return;
+    const note = guidance.trim();
+    setGuidanceNotes((prev) => [...prev, note]);
+    setLiveMessages((prev) => [...prev, { role: 'user', label: 'User guidance', content: note }]);
+    setGuidance('');
   };
 
   return (
@@ -170,6 +195,14 @@ Return the best final answer with clear sections: Summary, Key Findings, Recomme
           <Loader2 className="w-4 h-4 animate-spin text-primary" /> Bots are delegating, sharing findings, and reviewing each other.
         </div>
       )}
+
+      <CollaborationLiveRoom
+        messages={liveMessages}
+        guidance={guidance}
+        setGuidance={setGuidance}
+        onSendGuidance={sendGuidance}
+        running={running}
+      />
 
       {result && (
         <div className="space-y-3">
