@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck, GraduationCap } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -11,6 +11,7 @@ import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
 import BotTestingSuite from '../components/ailab/BotTestingSuite';
 import BotTestingLabWidget from '../components/ailab/BotTestingLabWidget';
+import BotTrainingPanel from '../components/ailab/BotTrainingPanel';
 import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
 import BotMonitoringDashboard from '../components/ailab/BotMonitoringDashboard';
@@ -248,6 +249,7 @@ export default function AILab() {
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'testing', label: 'Testing', icon: CheckSquare },
+    { id: 'training', label: 'Bot Training', icon: GraduationCap },
     { id: 'dashboard', label: 'Stats', icon: LayoutDashboard },
     { id: 'pinned', label: 'Cards', icon: Pin },
     { id: 'squad', label: 'Squad', icon: Network },
@@ -700,6 +702,9 @@ export default function AILab() {
 
       {/* TESTING */}
       {tab === 'testing' && <BotTestingSuite bots={bots} globalPolicy={globalPolicy} />}
+
+      {/* BOT TRAINING */}
+      {tab === 'training' && <BotTrainingPanel bots={bots} globalPolicy={globalPolicy} onBotsUpdated={loadBots} />}
 
       {/* DASHBOARD */}
       {tab === 'dashboard' && <div><BotMonitoringDashboard bots={bots} onBotsUpdated={loadBots} /><BotSpecialistRankingDashboard bots={bots} squads={squads} /><BotDashboard bots={bots} /></div>}
