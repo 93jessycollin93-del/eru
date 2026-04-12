@@ -55,30 +55,6 @@ export default function Layout() {
 
   const handleSearchOpen = useCallback(() => setSearchOpen(true), []);
 
-  useEffect(() => {
-    const handleWidgetToggle = (event) => {
-      const widgetId = event?.detail?.widgetId;
-      if (!widgetId) return;
-
-      if (widgetId === 'promptLibrary' || widgetId === 'conversations') {
-        if (window.location.pathname !== '/jackie') {
-          window.location.href = `/jackie?panel=${widgetId}`;
-          return;
-        }
-        window.dispatchEvent(new CustomEvent('open-jackie-panel', { detail: { panel: widgetId } }));
-        return;
-      }
-
-      if (widgetId === 'botMarket') {
-        window.location.href = '/bot-marketplace';
-        return;
-      }
-    };
-
-    window.addEventListener('toggle-widget-visibility', handleWidgetToggle);
-    return () => window.removeEventListener('toggle-widget-visibility', handleWidgetToggle);
-  }, []);
-
   // Global sound + haptic handler
 
   useEffect(() => {

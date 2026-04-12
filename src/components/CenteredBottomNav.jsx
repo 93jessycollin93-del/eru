@@ -32,10 +32,10 @@ const ALL_PAGES = [
 ];
 
 const WIDGET_NAV_ITEMS = [
-  { id: 'botMarket', label: 'Bot Market', icon: Cpu, widgetId: 'botMarket' },
+  { id: 'botMarket', label: 'Bot Market', icon: Cpu, to: '/bot-marketplace' },
   { id: 'botChat', label: 'Bot Chat', icon: MessageSquare, widgetId: 'botChat' },
-  { id: 'promptLibrary', label: 'Prompt Library', icon: BookText, widgetId: 'promptLibrary' },
-  { id: 'conversations', label: 'Conversations', icon: Library, widgetId: 'conversations' },
+  { id: 'promptLibrary', label: 'Prompt Library', icon: BookText, to: '/jackie?panel=promptLibrary' },
+  { id: 'conversations', label: 'Conversations', icon: Library, to: '/jackie?panel=conversations' },
 ];
 
 const DEFAULT_PINNED = ['home', 'markets', 'trade', 'nfts', 'portfolio'];
@@ -224,7 +224,7 @@ export default function FloatingNav({ onSearchOpen }) {
             {getPagesByRow().map((pageRow, rowIdx) => (
               <div key={rowIdx} className="flex gap-0.5">
                 {pageRow.map(({ id, label, icon: Icon, to, widgetId }) => {
-                  const active = to ? (pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
+                  const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
                   const handleWidgetClick = () => {
                     if (!widgetId) return;
                     if (widgetId === 'botChat') {
@@ -269,7 +269,7 @@ export default function FloatingNav({ onSearchOpen }) {
         ) : (
           // Vertical (unchanged)
           navItems.map(({ id, label, icon: Icon, to, widgetId }) => {
-            const active = to ? (pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
+            const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
             const handleWidgetClick = () => {
               if (!widgetId) return;
               if (widgetId === 'botChat') {
