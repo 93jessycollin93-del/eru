@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff } from 'lucide-react';
 
 const ALL_PAGES = [
@@ -55,6 +55,7 @@ const FLOATING_WIDGETS = [
 
 export default function FloatingNav({ onSearchOpen }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   const [pinned, setPinned] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || DEFAULT_PINNED; } catch { return DEFAULT_PINNED; }
@@ -236,6 +237,7 @@ export default function FloatingNav({ onSearchOpen }) {
               <div key={rowIdx} className="flex gap-0.5">
                 {pageRow.map(({ id, label, icon: Icon, to, widgetId }) => {
                   const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
+                  const isJackiePanelLink = to?.startsWith('/jackie?panel=');
                   const handleWidgetClick = () => {
                     if (!widgetId) return;
                     if (widgetId === 'botChat') {
@@ -244,8 +246,29 @@ export default function FloatingNav({ onSearchOpen }) {
                       window.dispatchEvent(new CustomEvent('toggle-widget-visibility', { detail: { widgetId } }));
                     }
                   };
+                  const handlePanelNavigation = () => {
+                    if (!isJackiePanelLink) return;
+                    navigate(to);
+                  };
 
                   if (to) {
+                    if (isJackiePanelLink) {
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={handlePanelNavigation}
+                          title={label}
+                          className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                            active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+                          <span className="text-[8px] font-medium leading-none">{label}</span>
+                        </button>
+                      );
+                    }
+
                     return (
                       <Link
                         key={id}
@@ -281,6 +304,7 @@ export default function FloatingNav({ onSearchOpen }) {
           // Vertical (unchanged)
           navItems.map(({ id, label, icon: Icon, to, widgetId }) => {
             const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
+            const isJackiePanelLink = to?.startsWith('/jackie?panel=');
             const handleWidgetClick = () => {
               if (!widgetId) return;
               if (widgetId === 'botChat') {
@@ -289,8 +313,29 @@ export default function FloatingNav({ onSearchOpen }) {
                 window.dispatchEvent(new CustomEvent('toggle-widget-visibility', { detail: { widgetId } }));
               }
             };
+            const handlePanelNavigation = () => {
+              if (!isJackiePanelLink) return;
+              navigate(to);
+            };
 
             if (to) {
+              if (isJackiePanelLink) {
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={handlePanelNavigation}
+                    title={label}
+                    className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                      active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+                    <span className="text-[8px] font-medium leading-none">{label}</span>
+                  </button>
+                );
+              }
+
               return (
                 <Link
                   key={id}
