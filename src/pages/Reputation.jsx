@@ -27,8 +27,8 @@ export default function Reputation() {
   const [rewardProfile, setRewardProfile] = useState(null);
 
   useEffect(() => {
-    if (!user?.email) return;
-    syncCollectorRewardProfile(user.email).then(setRewardProfile);
+    if (!user?.email || !base44.entities?.CollectorRewardProfile) return;
+    syncCollectorRewardProfile(user.email).then(setRewardProfile).catch(() => setRewardProfile(null));
   }, [user?.email]);
 
   const { current, next } = getLevelInfo(stats.xp);

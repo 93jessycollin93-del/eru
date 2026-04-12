@@ -79,7 +79,7 @@ const THINK_MODES = [
 
 export default function JackieAI() {
   const navigate = useNavigate();
-  const jackieProgressEntity = base44.entities?.JackieProgress;
+  const jackieProgressEntity = base44.entities?.JackieProgress || null;
   const [messages, setMessages] = useState([]);
   const [thinkMode, setThinkMode] = useState('default');
   const [userBots, setUserBots] = useState([]);
@@ -111,7 +111,7 @@ export default function JackieAI() {
       setApiKeyCapabilities({ webSearch: hasBotWeb, code: hasBotCode, squad: hasBotSquad });
     }).catch(() => {});
     if (jackieProgressEntity) {
-      jackieProgressEntity.list('-created_date', 1).then((rows) => setJackieProgress(rows[0] || null)).catch(() => {});
+      jackieProgressEntity.list('-created_date', 1).then((rows) => setJackieProgress(rows[0] || null)).catch(() => setJackieProgress(null));
     }
   }, []);
 
@@ -132,7 +132,7 @@ export default function JackieAI() {
   }, [mode, thinkMode, messages, workingContext, voice, userBots, apiKeyCount]);
 
   const updateJackieProgress = async (changes) => {
-    if (!jackieProgressEntity) return;
+    if (!jackieProgressEntity) return null;
 
     const current = jackieProgress || { xp: 0, level: 1, streak_days: 0, badges: [], messages_sent: 0, resources_opened: 0, feedback_sent: 0 };
     const today = new Date().toISOString().slice(0, 10);
