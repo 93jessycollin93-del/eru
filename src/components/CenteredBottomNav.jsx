@@ -251,7 +251,12 @@ export default function FloatingNav({ onSearchOpen }) {
 
         {/* Search button */}
         <button
-          onClick={onSearchOpen}
+          onClick={() => {
+            const result = onSearchOpen?.();
+            if (result && typeof result.catch === 'function') {
+              result.catch(() => {});
+            }
+          }}
           className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-muted-foreground hover:text-primary transition-colors"
           title="Search"
         >
