@@ -80,7 +80,7 @@ export default function VoiceSelector({ voice, setVoice }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1.5 w-[19rem] max-w-[calc(100vw-2rem)] bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute bottom-full left-0 mb-2 w-[19rem] max-w-[calc(100vw-2rem)] bg-card border border-border rounded-2xl shadow-xl z-[120] overflow-hidden">
           <div className="px-3 py-3 border-b border-border bg-card">
             <div className="flex items-center justify-between gap-2 mb-2">
               <p className="text-xs font-semibold text-foreground">Jackie Personas</p>

@@ -80,7 +80,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
 
   return (
     <div
-      className={`fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t border-border z-20 transition-all ${dragOver ? 'border-primary/50 bg-primary/5' : ''}`}
+      className={`fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t border-border z-[90] transition-all ${dragOver ? 'border-primary/50 bg-primary/5' : ''}`}
       onDrop={handleDrop}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}

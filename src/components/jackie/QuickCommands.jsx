@@ -18,7 +18,7 @@ const COMMANDS = [
 export default function QuickCommands({ onCommand, visible }) {
   if (!visible) return null;
   return (
-    <div className="px-4 py-2 border-t border-border/50 bg-background/80">
+    <div className="relative z-[80] px-4 py-2 border-t border-border/50 bg-background/80">
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {COMMANDS.map(c => (
           <button key={c.cmd} onClick={() => onCommand(c.cmd)}

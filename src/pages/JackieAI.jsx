@@ -325,7 +325,7 @@ export default function JackieAI() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-36">
+    <div className="flex flex-col min-h-screen bg-background pb-52">
       {/* Cross-system shortcuts */}
       <div className="flex gap-2 px-4 py-2 border-b border-border/50 bg-card/50 overflow-x-auto">
         <button onClick={() => navigate('/ailab')}
