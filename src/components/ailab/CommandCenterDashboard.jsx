@@ -3,7 +3,7 @@ import { AlertTriangle, Shield, Target, Users, MessageSquareText, Link2 } from '
 import { base44 } from '@/api/base44Client';
 import CommandCenterMissionBuilder from './CommandCenterMissionBuilder.jsx';
 import CommandCenterHierarchy from './CommandCenterHierarchy.jsx';
-import { COMMAND_BOT_SEEDS, DEMO_KNOWLEDGE, DEMO_MISSION } from './commandCenterData.js';
+import { COMMAND_BOT_SEEDS, DEMO_KNOWLEDGE, DEMO_MISSION } from './commandCenterData';
 
 const EMPTY_MISSION = { title: '', description: '', objective: '', priority: 'medium', success_criteria: '', deadline: '', mission_mode: 'semi_auto', knowledge_summary: '', assigned_commanders: [], assigned_squads: [] };
 
