@@ -51,7 +51,7 @@ export default function BotFarm() {
       setMaintenanceLogs(maintenanceRows || []);
       setSchemaReady(true);
     } catch (error) {
-      if (error?.message?.includes('Entity schema BotFarmBot not found')) {
+      if (error?.message?.includes('Entity schema BotFarm')) {
         setSchemaReady(false);
       } else {
         throw error;
@@ -66,7 +66,7 @@ export default function BotFarm() {
       existing = await base44.entities.BotFarmBot.list('-created_date', 1);
       setSchemaReady(true);
     } catch (error) {
-      if (error?.message?.includes('Entity schema BotFarmBot not found')) {
+      if (error?.message?.includes('Entity schema BotFarm')) {
         setSchemaReady(false);
         return;
       }
