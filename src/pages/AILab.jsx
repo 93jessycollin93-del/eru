@@ -691,7 +691,11 @@ export default function AILab() {
       )}
 
       {/* FACTORY */}
-      {tab === 'factory' && <BotFactory onSaveBot={loadBots} />}
+      {tab === 'factory' && (
+        <div className="px-4 py-4 pb-24">
+          <BotFactory onSaveBot={loadBots} />
+        </div>
+      )}
 
       {/* AGENTS */}
       {tab === 'agents' && <AgentRunner bots={bots} globalPolicy={globalPolicy} />}
