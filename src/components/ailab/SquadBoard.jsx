@@ -10,11 +10,13 @@ import SquadOptimizationPanel from './SquadOptimizationPanel.jsx';
 import SquadDeliveryPanel from './SquadDeliveryPanel.jsx';
 import SquadOutputChart from './SquadOutputChart.jsx';
 import SquadTemplateLibrary from './SquadTemplateLibrary.jsx';
+import StarterTemplateBrowser from './StarterTemplateBrowser.jsx';
 import SquadFormationBuilder from './SquadFormationBuilder.jsx';
 import MemoryBankPanel from './MemoryBankPanel.jsx';
 import SquadCostPanel from './SquadCostPanel.jsx';
 import { estimateSquadRunCost } from './squadCostEstimation';
 import { routeTaskToGroup } from './taskGroupRouting';
+import { STARTER_SQUAD_TEMPLATES } from './starterSquadTemplates';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -525,6 +527,62 @@ export default function SquadBoard({ bots }) {
     setRecommendGoal(template.description || '');
   };
 
+  const applyStarterTemplate = (template) => {
+    const findBotByRole = (role, excludeIds = []) => activeBots.find((bot) => bot.role === role && !excludeIds.includes(bot.id));
+    const masterBot = findBotByRole(template.recommended_roles?.master) || activeBots[0];
+    const usedIds = masterBot ? [masterBot.id] : [];
+    const memberBotIds = (template.recommended_roles?.members || [])
+      .map((role) => {
+        const match = findBotByRole(role, usedIds);
+        if (match) usedIds.push(match.id);
+        return match?.id;
+      })
+      .filter(Boolean);
+    const commanderBotIds = (template.recommended_roles?.commanders || [])
+      .map((role) => findBotByRole(role, [] )?.id)
+      .filter(Boolean)
+      .slice(0, 2);
+    const securityBotIds = (template.recommended_roles?.security || [])
+      .map((role) => findBotByRole(role, [])?.id)
+      .filter(Boolean)
+      .slice(0, 2);
+
+    const groupBotPool = Array.from(new Set([masterBot?.id, ...memberBotIds, ...commanderBotIds, ...securityBotIds].filter(Boolean)));
+    const nextTaskGroups = (template.task_groups || []).map((group) => ({
+      id: group.id,
+      name: group.name,
+      purpose: group.purpose,
+      task_instruction: group.task_instruction,
+      bot_ids: groupBotPool.filter((botId) => {
+        const bot = activeBots.find((item) => item.id === botId);
+        return group.role_targets?.includes(bot?.role);
+      }).slice(0, 5),
+    }));
+
+    setEditingId(null);
+    setCreationMode('manual');
+    setWizardStep(1);
+    setForm({
+      ...BLANK_SQUAD,
+      name: template.name,
+      description: template.description,
+      master_bot_id: masterBot?.id || '',
+      leader_bot_id: masterBot?.id || '',
+      member_bot_ids: memberBotIds,
+      commander_bot_ids: commanderBotIds,
+      security_bot_ids: securityBotIds,
+      task_groups: nextTaskGroups,
+      shared_context: template.shared_context || '',
+      pipeline_steps: (template.pipeline_steps || []).map((step) => ({
+        id: `step_${Date.now()}_${Math.random()}`,
+        title: step.title,
+        instruction: step.instruction,
+        assigned_bot_id: masterBot?.id || '',
+      })),
+    });
+    setRecommendGoal(template.description || '');
+  };
+
   const runSquad = async (squad) => {
     const task = runInput[squad.id]?.trim();
     if (!task) return;
@@ -972,8 +1030,9 @@ Prefer practical business/search terms and avoid vague words.`,
       </div>
 
       <SquadAnalyticsPanel analytics={squadAnalytics} />
+      <StarterTemplateBrowser templates={STARTER_SQUAD_TEMPLATES} onApply={applyStarterTemplate} />
       <MemoryBankPanel entries={memoryBankEntries} search={knowledgeSearch} setSearch={setKnowledgeSearch} pinnedIds={pinnedMemoryIds} onTogglePin={togglePinnedMemory} />
-      <SquadTemplateLibrary templates={templates} onClone={cloneTemplate} onRefresh={loadSquads} />
+      <SquadTemplateLibrary templates={templates} starterTemplates={STARTER_SQUAD_TEMPLATES} onClone={cloneTemplate} onApplyStarter={applyStarterTemplate} onRefresh={loadSquads} />
       <SquadKnowledgePanel knowledgeItems={knowledgeItems} search={knowledgeSearch} setSearch={setKnowledgeSearch} bots={bots} onRefresh={loadSquads} />
 
       <div className="space-y-3">

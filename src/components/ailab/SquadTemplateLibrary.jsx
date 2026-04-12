@@ -1,7 +1,7 @@
-import { CopyPlus, Library, Trash2 } from 'lucide-react';
+import { CopyPlus, Library, Sparkles, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-export default function SquadTemplateLibrary({ templates, onClone, onRefresh }) {
+export default function SquadTemplateLibrary({ templates, starterTemplates = [], onClone, onApplyStarter, onRefresh }) {
   const removeTemplate = async (templateId) => {
     await base44.entities.SquadTemplate.delete(templateId);
     onRefresh?.();
@@ -16,6 +16,26 @@ export default function SquadTemplateLibrary({ templates, onClone, onRefresh }) 
           <p className="text-[10px] text-muted-foreground">Reuse successful squad setups in new projects.</p>
         </div>
       </div>
+
+      {starterTemplates.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Starter templates</p>
+          </div>
+          {starterTemplates.map((template) => (
+            <div key={template.id} className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{template.name}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{template.description}</p>
+              </div>
+              <button onClick={() => onApplyStarter?.(template)} className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-background px-2.5 py-1.5 text-[10px] font-medium text-primary">
+                <CopyPlus className="w-3 h-3" /> Apply
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {templates.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No templates saved yet.</div>
