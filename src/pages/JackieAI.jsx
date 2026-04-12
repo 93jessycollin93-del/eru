@@ -99,7 +99,7 @@ export default function JackieAI() {
   const [workspaceCode, setWorkspaceCode] = useState('');
   const bottomRef = useRef(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+
 
   useEffect(() => {
     base44.entities.UserBot.list('-created_date', 20).then(b => setUserBots(b)).catch(() => {});
