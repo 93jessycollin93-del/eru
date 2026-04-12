@@ -15,6 +15,7 @@ import FoundryControlPanel from '../components/jackie/FoundryControlPanel';
 import InputBar from '../components/jackie/InputBar';
 import TelegramBotSetupPanel from '../components/jackie/TelegramBotSetupPanel';
 import CodeWorkspace from '../components/jackie/CodeWorkspace';
+import PromptLibraryPanel from '../components/jackie/PromptLibraryPanel.jsx';
 import { VOICES } from '../components/jackie/VoiceSelector.jsx';
 
 const PAGE_NAV_MAP = [
@@ -233,6 +234,16 @@ export default function JackieAI() {
     setInput(workingContext ? cmd + ' this:\n' + workingContext.slice(0, 2000) : cmd + ' the last output');
   };
 
+  const handleInjectPrompt = (content) => {
+    setInput(content);
+    setTab('main');
+  };
+
+  const handleAppendPrompt = (content) => {
+    setInput((prev) => prev ? `${prev}\n\n${content}` : content);
+    setTab('main');
+  };
+
   const BUILT_IN_PROGRAMMING_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, debugging, refactoring, language comparison, and systems design.";
 
   const buildFoundryPreview = (message) => {
@@ -424,6 +435,7 @@ export default function JackieAI() {
       {tab === 'assets' && (
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <JackieGamificationPanel progress={jackieProgress} />
+          <PromptLibraryPanel onInject={handleInjectPrompt} onAppend={handleAppendPrompt} />
           <EducationPanel onResourceOpen={() => updateJackieProgress({ xp: 5, resources_opened: 1 })} />
           <FeedbackPanel onSubmitted={() => updateJackieProgress({ xp: 15, feedback_sent: 1 })} />
           <IntegrationsPanel />
