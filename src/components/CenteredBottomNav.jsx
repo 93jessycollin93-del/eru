@@ -253,6 +253,7 @@ export default function FloatingNav({ onSearchOpen }) {
                   return (
                     <button
                       key={id}
+                      type="button"
                       onClick={handleWidgetClick}
                       title={label}
                       className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors text-muted-foreground hover:text-foreground"
@@ -297,6 +298,7 @@ export default function FloatingNav({ onSearchOpen }) {
             return (
               <button
                 key={id}
+                type="button"
                 onClick={handleWidgetClick}
                 title={label}
                 className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors text-muted-foreground hover:text-foreground"
