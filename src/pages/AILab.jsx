@@ -10,6 +10,7 @@ import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
 import BotTestingSuite from '../components/ailab/BotTestingSuite';
+import BotTestingLabWidget from '../components/ailab/BotTestingLabWidget';
 import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
 import BotMonitoringDashboard from '../components/ailab/BotMonitoringDashboard';
@@ -233,6 +234,7 @@ export default function AILab() {
 
   const TABS = [
     { id: 'my', label: 'My Bots', icon: Bot },
+    { id: 'test-lab', label: 'Test Lab', icon: FlaskConical },
     { id: 'build', label: editId ? 'Edit' : 'Build', icon: Plus },
     { id: 'factory', label: 'Factory', icon: Wand2 },
     { id: 'agents', label: 'Agents', icon: Zap },
@@ -419,7 +421,7 @@ export default function AILab() {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3 flex-wrap">
-                  <button onClick={() => { setTestBot(bot); setTestResponse(''); setTestInput(''); setTab('test'); }}
+                  <button onClick={() => { setTestBot(bot); setTestResponse(''); setTestInput(''); setTab('test-lab'); }}
                     className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-medium min-w-[90px]">
                     <Play className="w-3 h-3" /> Test
                   </button>
@@ -638,33 +640,38 @@ export default function AILab() {
         </div>
       )}
 
-      {/* TEST */}
-      {tab === 'test' && testBot && (
+      {/* TEST LAB */}
+      {tab === 'test-lab' && (
         <div className="px-4 py-4 space-y-4">
-          <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-            <span className="text-2xl">{ROLES.find(r => r.id === testBot.role)?.icon || '🤖'}</span>
-            <div>
-              <p className="font-semibold text-sm">{testBot.name}</p>
-              <p className="text-xs text-muted-foreground">Sandbox test — changes won't be saved</p>
-            </div>
-          </div>
-          {testResponse && (
-            <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs text-muted-foreground mb-2">{testBot.name} says:</p>
-              <p className="text-sm text-foreground leading-relaxed">{testResponse}</p>
+          <BotTestingLabWidget bots={bots} testCases={[]} testRuns={[]} globalPolicy={globalPolicy} />
+          {testBot && (
+            <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{ROLES.find(r => r.id === testBot.role)?.icon || '🤖'}</span>
+                <div>
+                  <p className="font-semibold text-sm">Focused manual test: {testBot.name}</p>
+                  <p className="text-xs text-muted-foreground">Quick sandbox check for the bot you selected.</p>
+                </div>
+              </div>
+              {testResponse && (
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs text-muted-foreground mb-2">{testBot.name} says:</p>
+                  <p className="text-sm text-foreground leading-relaxed">{testResponse}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input value={testInput} onChange={e => setTestInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && runTest()}
+                  placeholder="Test your bot..."
+                  className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none text-foreground" />
+                <button onClick={runTest} disabled={!testInput.trim() || testing}
+                  className="bg-primary text-primary-foreground rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-40">
+                  {testing ? '...' : 'Send'}
+                </button>
+              </div>
             </div>
           )}
-          <div className="flex gap-2">
-            <input value={testInput} onChange={e => setTestInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && runTest()}
-              placeholder="Test your bot..."
-              className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none text-foreground" />
-            <button onClick={runTest} disabled={!testInput.trim() || testing}
-              className="bg-primary text-primary-foreground rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-40">
-              {testing ? '...' : 'Send'}
-            </button>
-          </div>
-          <button onClick={() => setTab('my')} className="w-full text-sm text-muted-foreground py-2">← Back to My Bots</button>
+          <BotTestingSuite bots={bots} globalPolicy={globalPolicy} />
         </div>
       )}
 

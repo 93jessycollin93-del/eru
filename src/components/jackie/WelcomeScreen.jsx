@@ -5,7 +5,7 @@ const SUGGESTIONS = {
     'Help me plan a side project',
     'Explain blockchain consensus',
     'Brainstorm app ideas',
-    'Write a marketing strategy',
+    'Open the bot testing lab',
   ],
   code: [
     'Build a React todo component',

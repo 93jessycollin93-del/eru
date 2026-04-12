@@ -4,6 +4,7 @@ import { Bot, Pin, Zap, Plus, Check, Activity, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NewsFeedWidget from './NewsFeedWidget';
 import AIInsightsWidget from './AIInsightsWidget';
+import BotTestingLabWidget from '../ailab/BotTestingLabWidget';
 
 const QUICK_ACTIONS = [
   { label: 'AI Lab', to: '/ailab' },
@@ -177,10 +178,34 @@ function DashboardActionsWidget() {
   );
 }
 
+function BotTestingStationContainer() {
+  const [bots, setBots] = useState([]);
+  const [testCases, setTestCases] = useState([]);
+  const [testRuns, setTestRuns] = useState([]);
+  const [globalPolicy, setGlobalPolicy] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      base44.entities.UserBot.list('-updated_date', 20),
+      base44.entities.BotTestCase.list('-created_date', 200),
+      base44.entities.BotTestRun.list('-created_date', 300),
+      base44.entities.BotGlobalPolicy.list('-created_date', 1),
+    ]).then(([botRows, caseRows, runRows, policyRows]) => {
+      setBots(botRows || []);
+      setTestCases(caseRows || []);
+      setTestRuns(runRows || []);
+      setGlobalPolicy(policyRows?.[0] || null);
+    });
+  }, []);
+
+  return <BotTestingLabWidget bots={bots} testCases={testCases} testRuns={testRuns} globalPolicy={globalPolicy} />;
+}
+
 export default function WidgetLibrary({ prices = [] }) {
   return (
     <div className="space-y-4">
       <BotStatusWidget />
+      <BotTestingStationContainer />
       <MarketPinsWidget prices={prices} />
       <NewsFeedWidget />
       <AIInsightsWidget />

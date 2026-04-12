@@ -332,6 +332,10 @@ export default function JackieAI() {
           className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[10px] font-semibold flex-shrink-0 hover:bg-primary/20">
           <FlaskConical className="w-3 h-3" /> AI Lab ({userBots.length} bots)
         </button>
+        <button onClick={() => navigate('/ailab')}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary border border-border rounded-xl text-[10px] font-semibold flex-shrink-0 hover:border-primary/30 text-muted-foreground">
+          <Bot className="w-3 h-3" /> Bot Test Lab
+        </button>
         <button onClick={() => navigate('/apikeys')}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary border border-border rounded-xl text-[10px] font-semibold flex-shrink-0 hover:border-primary/30 text-muted-foreground">
           <Key className="w-3 h-3" /> API Keys ({apiKeyCount} active)
