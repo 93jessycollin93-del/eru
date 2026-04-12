@@ -5,9 +5,10 @@
     "bot_id": { "type": "string" },
     "task_id": { "type": "string" },
     "mission_id": { "type": "string" },
+    "squad_id": { "type": "string" },
     "flag_type": {
       "type": "string",
-      "enum": ["anomaly", "low_confidence", "contradiction", "integrity_drop", "unstable", "security_issue"]
+      "enum": ["anomaly", "low_confidence", "contradiction", "integrity_drop", "unstable", "security_issue", "overload", "poor_assignment"]
     },
     "severity": {
       "type": "string",

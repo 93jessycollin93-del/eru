@@ -15,10 +15,10 @@ export default function BotFarmOutputPanel({ outputs, risks, history }) {
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">{item.summary}</p>
               <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground sm:grid-cols-4">
-                <div>Fit <span className="text-foreground">{item.specialization_fit_score || 0}</span></div>
-                <div>Coordination <span className="text-foreground">{item.coordination_penalty || 0}</span></div>
-                <div>Management <span className="text-foreground">{item.management_boost || 0}</span></div>
-                <div>Contradiction <span className="text-foreground">{item.contradiction_risk || 0}</span></div>
+                <div>Assign <span className="text-foreground">{item.assignment_quality || 0}</span></div>
+                <div>Fit <span className="text-foreground">{item.specialization_fit || 0}</span></div>
+                <div>Load -<span className="text-foreground">{item.load_penalty || 0}</span></div>
+                <div>Coord -<span className="text-foreground">{item.coordination_penalty || 0}</span></div>
               </div>
             </div>
           ))}

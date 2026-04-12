@@ -15,10 +15,11 @@ export default function BotFarmSquadPanel({ squads, bots, missions }) {
                 </div>
                 <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[10px] text-primary">{squad.status}</span>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5 text-[10px] text-muted-foreground">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-6 text-[10px] text-muted-foreground">
                 <div>Members <span className="text-foreground">{memberCount}</span></div>
                 <div>Coordination <span className="text-foreground">{squad.coordination_quality}</span></div>
-                <div>Security overhead <span className="text-foreground">{squad.security_overhead}</span></div>
+                <div>Overhead <span className="text-foreground">{squad.coordination_overhead}</span></div>
+                <div>Reliability <span className="text-foreground">{squad.reliability_score}</span></div>
                 <div>Throughput <span className="text-foreground">{squad.throughput_score}</span></div>
                 <div>Mission <span className="text-foreground">{mission?.title || 'None'}</span></div>
               </div>

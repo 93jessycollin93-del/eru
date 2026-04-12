@@ -38,7 +38,7 @@ export default function BotFarmQueuePanel({ tasks, sortMode, setSortMode, onAssi
               <div>Risk <span className="text-foreground">{task.risk}</span></div>
               <div>Value <span className="text-foreground">{task.expected_output_value}</span></div>
               <div>Load <span className="text-foreground">{task.estimated_load}</span></div>
-              <div>Queue <span className="text-foreground">{task.queue_bucket}</span></div>
+              <div>Coord <span className="text-foreground">{task.coordination_cost}</span></div>
             </div>
             <div className="mt-3 flex justify-end">
               <button onClick={() => onAssignTask(task)} className="rounded-xl bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground">Auto Assign</button>

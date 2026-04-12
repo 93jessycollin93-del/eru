@@ -11,7 +11,7 @@ export default function BotFarmUpgradePanel({ upgrades, onUpgrade }) {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold text-foreground">{upgrade.name}</p>
-                <p className="text-[11px] text-muted-foreground">{upgrade.upgrade_type.replaceAll('_', ' ')} · level {upgrade.level}</p>
+                <p className="text-[11px] text-muted-foreground">{upgrade.upgrade_type.replaceAll('_', ' ')} · level {upgrade.level} · complexity {upgrade.complexity_cost}</p>
               </div>
               <button onClick={() => onUpgrade(upgrade)} className="rounded-xl bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground">Upgrade</button>
             </div>

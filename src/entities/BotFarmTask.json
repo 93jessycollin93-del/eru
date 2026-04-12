@@ -22,8 +22,11 @@
     "risk": { "type": "number", "default": 20 },
     "expected_output_value": { "type": "number", "default": 50 },
     "bot_fit_score": { "type": "number", "default": 60 },
+    "coordination_cost": { "type": "number", "default": 8 },
+    "required_specialization": { "type": "string" },
     "assigned_bot_id": { "type": "string" },
     "assigned_squad_id": { "type": "string" },
+    "assigned_commander_bot_id": { "type": "string" },
     "mission_id": { "type": "string" },
     "queue_bucket": {
       "type": "string",
@@ -31,7 +34,9 @@
       "default": "operations"
     },
     "estimated_load": { "type": "number", "default": 20 },
-    "progress": { "type": "number", "default": 0 }
+    "progress": { "type": "number", "default": 0 },
+    "actual_quality": { "type": "number", "default": 0 },
+    "blocked_reason": { "type": "string" }
   },
   "required": ["title", "work_type"],
   "rls": {

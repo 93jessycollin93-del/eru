@@ -9,6 +9,7 @@
     },
     "level": { "type": "number", "default": 1 },
     "effect_value": { "type": "number", "default": 5 },
+    "complexity_cost": { "type": "number", "default": 2 },
     "applied_to": {
       "type": "string",
       "enum": ["farm", "squad", "bot"],
