@@ -1,23 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Award, Flame, Shield, Sparkles, Crown } from 'lucide-react';
+import { Award, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { COLLECTOR_REWARD_BADGES, syncCollectorRewardProfile } from '@/lib/collectorRewards';
-
-const STATUS_ICON_MAP = {
-  seed: '🌱',
-  spark: '✨',
-  shield: '🛡️',
-  flame: '🔥',
-  crown: '👑',
-};
-
-const STATUS_LABEL_MAP = {
-  seed: 'Rising Collector',
-  spark: 'Active Collector',
-  shield: 'Trusted Trader',
-  flame: 'Elite Momentum',
-  crown: 'Platform Royalty',
-};
+import { COLLECTOR_REWARD_BADGES, COLLECTOR_STATUS_ICONS, COLLECTOR_STATUS_LABELS, syncCollectorRewardProfile } from '@/lib/collectorRewards';
 
 export default function CollectorRewardsPanel() {
   const { user } = useAuth();
@@ -43,10 +27,10 @@ export default function CollectorRewardsPanel() {
 
       <div className="rounded-xl border border-border bg-secondary/30 p-4 flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl border border-primary/20 bg-primary/10 flex items-center justify-center text-2xl">
-          {STATUS_ICON_MAP[profile?.status_icon || 'seed']}
+          {COLLECTOR_STATUS_ICONS[profile?.status_icon || 'seed']}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">{STATUS_LABEL_MAP[profile?.status_icon || 'seed']}</p>
+          <p className="text-sm font-semibold">{COLLECTOR_STATUS_LABELS[profile?.status_icon || 'seed']}</p>
           <p className="text-[11px] text-muted-foreground">Current streak: {profile?.login_streak || 1} days · Successful trades: {profile?.successful_trades || 0}</p>
           <p className="text-[11px] text-primary mt-1">Portfolio growth: {Number(profile?.portfolio_growth_pct || 0).toFixed(1)}%</p>
         </div>

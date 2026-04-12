@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Award, Zap, TrendingUp, MessageCircle, ShoppingBag, Shield, Lightbulb } from 'lucide-react';
 import ReputationBadge, { BADGES, LEVELS, getLevelInfo } from '../components/ReputationBadge';
+import CollectorReputationPill from '@/components/reputation/CollectorReputationPill';
+import CollectorBadgeStrip from '@/components/reputation/CollectorBadgeStrip';
 import { COLLECTOR_REWARD_BADGES, syncCollectorRewardProfile } from '@/lib/collectorRewards';
 
 // Demo stats for first-time users
@@ -55,6 +57,9 @@ export default function Reputation() {
             <p className="font-bold text-base truncate">{user?.full_name || 'Anonymous'}</p>
             <p className="text-sm text-primary font-medium">Level {current.level} · {current.label}</p>
             <p className="text-xs text-muted-foreground font-mono">{stats.xp} XP</p>
+            <div className="mt-2">
+              <CollectorReputationPill statusIcon={rewardProfile?.status_icon || 'seed'} />
+            </div>
           </div>
           <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-xl px-2 py-1">
             <Zap className="w-3.5 h-3.5 text-primary" />
@@ -128,6 +133,7 @@ export default function Reputation() {
                   </div>
                 ))}
               </div>
+              <CollectorBadgeStrip badgeIds={rewardProfile?.badge_ids || []} limit={6} />
             </div>
 
             <div>

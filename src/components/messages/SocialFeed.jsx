@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
+import CollectorReputationPill from '@/components/reputation/CollectorReputationPill';
+import CollectorBadgeStrip from '@/components/reputation/CollectorBadgeStrip';
 import { ImagePlus, Send, Repeat2, Package, BadgeDollarSign } from 'lucide-react';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 
 export default function SocialFeed() {
+  const { user } = useAuth();
   const { data: listings } = useRealtimeEntityList('StorefrontListing', { sort: '-updated_date', limit: 8 });
   const { data: jadeAssets } = useRealtimeEntityList('JadeAsset', { sort: '-updated_date', limit: 8 });
+  const { data: rewardProfiles } = useRealtimeEntityList('CollectorRewardProfile', { sort: '-updated_date', limit: 100 });
   const [posts, setPosts] = useState([
-    { id: '1', author: 'Collector Circle', type: 'discussion', text: 'What are you rotating into this week and why?', likes: 12 },
-    { id: '2', author: 'Trade Desk', type: 'offer', text: 'Looking to swap premium jade pieces for rare cards or TON offers.', likes: 7 },
+    { id: '1', author: 'Collector Circle', type: 'discussion', text: 'What are you rotating into this week and why?', likes: 12, email: 'collector-circle@platform' },
+    { id: '2', author: 'Trade Desk', type: 'offer', text: 'Looking to swap premium jade pieces for rare cards or TON offers.', likes: 7, email: 'trade-desk@platform' },
   ]);
   const [draft, setDraft] = useState('');
   const [mode, setMode] = useState('discussion');
@@ -20,9 +25,11 @@ export default function SocialFeed() {
 
   const handlePost = () => {
     if (!draft.trim()) return;
-    setPosts((prev) => [{ id: String(Date.now()), author: 'You', type: mode, text: draft.trim(), likes: 0 }, ...prev]);
+    setPosts((prev) => [{ id: String(Date.now()), author: user?.full_name || 'You', email: user?.email, type: mode, text: draft.trim(), likes: 0 }, ...prev]);
     setDraft('');
   };
+
+  const getRewardProfile = (email) => rewardProfiles.find((profile) => profile.user_email === email);
 
   return (
     <div className="space-y-4">
@@ -87,18 +94,25 @@ export default function SocialFeed() {
       </div>
 
       <div className="space-y-3">
-        {posts.map((post) => (
-          <div key={post.id} className="rounded-2xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div>
-                <p className="text-sm font-semibold">{post.author}</p>
-                <p className="text-[11px] text-muted-foreground capitalize">{post.type}</p>
+        {posts.map((post) => {
+          const rewardProfile = getRewardProfile(post.email);
+          return (
+            <div key={post.id} className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <p className="text-sm font-semibold">{post.author}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="text-[11px] text-muted-foreground capitalize">{post.type}</p>
+                    <CollectorReputationPill statusIcon={rewardProfile?.status_icon || 'seed'} size="sm" />
+                  </div>
+                  <CollectorBadgeStrip badgeIds={rewardProfile?.badge_ids || []} limit={3} />
+                </div>
+                <button className="text-[11px] text-muted-foreground">{post.likes} likes</button>
               </div>
-              <button className="text-[11px] text-muted-foreground">{post.likes} likes</button>
+              <p className="text-sm text-foreground leading-relaxed">{post.text}</p>
             </div>
-            <p className="text-sm text-foreground leading-relaxed">{post.text}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

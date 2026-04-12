@@ -1,5 +1,21 @@
 import { base44 } from '@/api/base44Client';
 
+export const COLLECTOR_STATUS_ICONS = {
+  seed: '🌱',
+  spark: '✨',
+  shield: '🛡️',
+  flame: '🔥',
+  crown: '👑',
+};
+
+export const COLLECTOR_STATUS_LABELS = {
+  seed: 'Rising Collector',
+  spark: 'Active Collector',
+  shield: 'Trusted Trader',
+  flame: 'Elite Momentum',
+  crown: 'Platform Royalty',
+};
+
 export const COLLECTOR_REWARD_BADGES = {
   growth_scout: {
     id: 'growth_scout',
