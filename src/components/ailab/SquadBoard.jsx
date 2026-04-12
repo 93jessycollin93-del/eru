@@ -11,6 +11,7 @@ import SquadDeliveryPanel from './SquadDeliveryPanel.jsx';
 import SquadOutputChart from './SquadOutputChart.jsx';
 import SquadTemplateLibrary from './SquadTemplateLibrary.jsx';
 import SquadFormationBuilder from './SquadFormationBuilder.jsx';
+import MemoryBankPanel from './MemoryBankPanel.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -106,6 +107,7 @@ export default function SquadBoard({ bots }) {
   const [knowledgeItems, setKnowledgeItems] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [knowledgeSearch, setKnowledgeSearch] = useState('');
+  const [pinnedMemoryIds, setPinnedMemoryIds] = useState([]);
   const [creationMode, setCreationMode] = useState('manual');
   const [wizardStep, setWizardStep] = useState(1);
   const [creatingInstant, setCreatingInstant] = useState(false);
@@ -268,6 +270,15 @@ export default function SquadBoard({ bots }) {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
   }, [form.description, knowledgeItems, recommendGoal]);
+
+  const memoryBankEntries = useMemo(() => {
+    if (!knowledgeSearch.trim()) return knowledgeItems;
+    const parts = knowledgeSearch.toLowerCase().split(' ').filter((word) => word.length > 1);
+    return knowledgeItems.filter((entry) => {
+      const text = [entry.goal, entry.result_summary, entry.source_squad_name, ...(entry.keywords || [])].join(' ').toLowerCase();
+      return parts.every((part) => text.includes(part));
+    });
+  }, [knowledgeItems, knowledgeSearch]);
 
   const wizardGoalAnalysis = useMemo(() => {
     const goal = recommendGoal.trim() || form.description.trim();
@@ -455,6 +466,10 @@ export default function SquadBoard({ bots }) {
     await loadSquads();
   };
 
+  const togglePinnedMemory = (entryId) => {
+    setPinnedMemoryIds((prev) => prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]);
+  };
+
   const saveAsTemplate = async (squad) => {
     await base44.entities.SquadTemplate.create({
       name: `${squad.name} template`,
@@ -512,14 +527,16 @@ export default function SquadBoard({ bots }) {
     const masterBot = bots.find((bot) => bot.id === squad.master_bot_id);
     setRunningId(squad.id);
 
+    const pinnedKnowledge = knowledgeItems.filter((item) => pinnedMemoryIds.includes(item.id));
     const matchingKnowledge = knowledgeItems
       .map((item) => ({ ...item, score: scoreKnowledgeMatch(task, item) }))
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 2);
+    const injectedKnowledge = [...pinnedKnowledge, ...matchingKnowledge.filter((item) => !pinnedMemoryIds.includes(item.id))].slice(0, 4);
 
-    const optimizationNote = matchingKnowledge.length > 0
-      ? `Knowledge base matches found: ${matchingKnowledge.map((item) => `${item.source_squad_name} (${item.goal})`).join(' | ')}`
+    const optimizationNote = injectedKnowledge.length > 0
+      ? `Knowledge injected: ${injectedKnowledge.map((item) => `${item.source_squad_name} (${item.goal})`).join(' | ')}`
       : 'No direct knowledge base match found.';
 
     const stepOutputs = [];
@@ -536,7 +553,7 @@ Squad request: ${task}
 Pipeline step: ${step.title}
 Step instruction: ${step.instruction}
 ${optimizationNote}
-${matchingKnowledge.map((item, index) => `Knowledge match ${index + 1}: ${item.result_summary}`).join('\n')}
+${injectedKnowledge.map((item, index) => `Memory bank entry ${index + 1}: ${item.result_summary}`).join('\n')}
 
 Provide a concise specialist response for this step.`
       });
@@ -556,7 +573,7 @@ Shared squad context: ${squad.shared_context || 'None'}
 Cross-department request: ${task}
 Squad description: ${squad.description || squad.name}
 ${optimizationNote}
-${matchingKnowledge.map((item, index) => `Relevant past success ${index + 1}: ${item.result_summary}`).join('\n')}
+${injectedKnowledge.map((item, index) => `Relevant memory bank success ${index + 1}: ${item.result_summary}`).join('\n')}
 Specialist pipeline outputs:
 ${stepOutputs.map((item) => `${item.step_title} — ${item.bot_name}: ${item.output}`).join('\n\n')}
 
@@ -935,6 +952,7 @@ Prefer practical business/search terms and avoid vague words.`,
       </div>
 
       <SquadAnalyticsPanel analytics={squadAnalytics} />
+      <MemoryBankPanel entries={memoryBankEntries} search={knowledgeSearch} setSearch={setKnowledgeSearch} pinnedIds={pinnedMemoryIds} onTogglePin={togglePinnedMemory} />
       <SquadTemplateLibrary templates={templates} onClone={cloneTemplate} onRefresh={loadSquads} />
       <SquadKnowledgePanel knowledgeItems={knowledgeItems} search={knowledgeSearch} setSearch={setKnowledgeSearch} bots={bots} onRefresh={loadSquads} />
 
@@ -1044,6 +1062,12 @@ Prefer practical business/search terms and avoid vague words.`,
               )}
 
               <div className="space-y-2 border-t border-border/60 pt-3">
+                {pinnedMemoryIds.length > 0 && (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pinned memory injection</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{pinnedMemoryIds.length} memory bank entr${pinnedMemoryIds.length === 1 ? 'y is' : 'ies are'} currently pinned into future squad execution.</p>
+                  </div>
+                )}
                 <textarea
                   value={runInput[squad.id] || ''}
                   onChange={(e) => setRunInput((prev) => ({ ...prev, [squad.id]: e.target.value }))}

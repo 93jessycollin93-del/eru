@@ -1,6 +1,6 @@
-import { Edit3, Trash2 } from 'lucide-react';
+import { Edit3, Pin, Trash2 } from 'lucide-react';
 
-export default function SquadKnowledgeRecordCard({ entry, editingId, draft, onEdit, onChange, onSave, onCancel, onDelete }) {
+export default function SquadKnowledgeRecordCard({ entry, editingId, draft, onEdit, onChange, onSave, onCancel, onDelete, onTogglePin, isPinned }) {
   const isEditing = editingId === entry.id;
 
   return (
@@ -15,6 +15,7 @@ export default function SquadKnowledgeRecordCard({ entry, editingId, draft, onEd
             </>
           ) : (
             <>
+              <button onClick={onTogglePin} className={isPinned ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}><Pin className="w-3.5 h-3.5" /></button>
               <button onClick={onEdit} className="text-muted-foreground hover:text-foreground"><Edit3 className="w-3.5 h-3.5" /></button>
               <button onClick={onDelete} className="text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
             </>
