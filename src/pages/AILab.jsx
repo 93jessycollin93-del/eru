@@ -23,6 +23,7 @@ import BotGlobalPolicyPanel from '../components/ailab/BotGlobalPolicyPanel';
 import PromptLibraryPanel from '../components/ailab/PromptLibraryPanel';
 import ModelProviderPanel from '../components/ailab/ModelProviderPanel';
 import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
+import { runRegressionSuite } from '../components/ailab/regressionTesting';
 import { base44 } from '@/api/base44Client';
 
 const ROLES = [
@@ -109,10 +110,15 @@ export default function AILab() {
 
   const save = async () => {
     if (!form.name) return;
+    let savedBot;
     if (editId) {
       await base44.entities.UserBot.update(editId, form);
+      savedBot = { ...bots.find((bot) => bot.id === editId), ...form, id: editId };
     } else {
-      await base44.entities.UserBot.create(form);
+      savedBot = await base44.entities.UserBot.create(form);
+    }
+    if (savedBot?.id) {
+      await runRegressionSuite({ bot: savedBot, instructions: savedBot.instructions || '', globalPolicy });
     }
     setForm(BLANK); setEditId(null); setTab('my'); loadBots();
   };

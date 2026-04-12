@@ -1,32 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { invokeSelectedModel } from './modelRouting';
-import { BarChart3, CheckCircle2, FlaskConical, Save, Sparkles } from 'lucide-react';
+import { BarChart3, CheckCircle2, FlaskConical, Save, Sparkles, Upload } from 'lucide-react';
+import { buildRegressionPrompt, scoreSimilarity, runRegressionSuite } from './regressionTesting';
 import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 
 const EMPTY_GOLDEN = { title: '', input: '', expected_output: '', min_similarity_score: 0.75 };
-
-async function scoreSimilarity(expectedOutput, actualOutput) {
-  return await base44.integrations.Core.InvokeLLM({
-    prompt: `You are grading a bot response.\nExpected output:\n${expectedOutput}\n\nActual output:\n${actualOutput}\n\nScore the semantic similarity from 0 to 1, where 1 means the actual output fully satisfies the expected output in meaning and logic. Return a short reason.`,
-    response_json_schema: {
-      type: 'object',
-      properties: {
-        similarity_score: { type: 'number' },
-        reason: { type: 'string' }
-      },
-      required: ['similarity_score', 'reason']
-    }
-  });
-}
-
-function buildPrompt(bot, instructions, input, globalPolicy) {
-  const policyBlock = globalPolicy?.is_active
-    ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}\nSafety guardrails: ${globalPolicy.safety_guardrails || 'None'}`
-    : '';
-
-  return `You are ${bot.name}. ${instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nUser: ${input}\n\n${bot.name}:`;
-}
 
 export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) {
   const [selectedBotId, setSelectedBotId] = useState('');
@@ -35,6 +14,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
   const [form, setForm] = useState(EMPTY_GOLDEN);
   const [running, setRunning] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState([]);
 
   const selectedBot = useMemo(() => bots.find((bot) => bot.id === selectedBotId) || null, [bots, selectedBotId]);
@@ -76,8 +56,8 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     const nextResults = [];
 
     for (const golden of goldens.filter((item) => item.is_active !== false)) {
-      const currentPrompt = buildPrompt(selectedBot, selectedBot.instructions || '', golden.input, globalPolicy);
-      const candidatePrompt = buildPrompt(selectedBot, candidateInstructions, golden.input, globalPolicy);
+      const currentPrompt = buildRegressionPrompt(selectedBot, selectedBot.instructions || '', golden.input, globalPolicy);
+      const candidatePrompt = buildRegressionPrompt(selectedBot, candidateInstructions, golden.input, globalPolicy);
 
       const currentOutput = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt: currentPrompt }).catch(() => 'Model unavailable');
       const candidateOutput = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt: candidatePrompt }).catch(() => 'Model unavailable');
@@ -102,6 +82,37 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     setRunning(false);
   };
 
+  const handleCsvUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedBot) return;
+    setUploading(true);
+    const text = await file.text();
+    const rows = text.split(/\r?\n/).filter(Boolean);
+    const headers = rows[0].split(',').map((item) => item.trim().toLowerCase());
+    const titleIndex = headers.indexOf('title');
+    const inputIndex = headers.indexOf('input');
+    const expectedIndex = headers.indexOf('expected_output');
+    const minIndex = headers.indexOf('min_similarity_score');
+
+    const records = rows.slice(1).map((row) => row.split(',')).filter((cols) => cols.length >= 3).map((cols) => ({
+      bot_id: selectedBot.id,
+      bot_name: selectedBot.name,
+      title: cols[titleIndex]?.trim() || 'Imported test',
+      input: cols[inputIndex]?.trim() || '',
+      expected_output: cols[expectedIndex]?.trim() || '',
+      min_similarity_score: Number(cols[minIndex]?.trim() || 0.75),
+      is_active: true,
+    })).filter((item) => item.input && item.expected_output);
+
+    if (records.length > 0) {
+      await base44.entities.BotTestCase.bulkCreate(records);
+      const rows = await base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 100);
+      setGoldens(rows);
+    }
+    setUploading(false);
+    event.target.value = '';
+  };
+
   const publishChanges = async () => {
     if (!selectedBot) return;
     setPublishing(true);
@@ -117,6 +128,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
       user_email: selectedBot.created_by,
     });
     await base44.entities.UserBot.update(selectedBot.id, { instructions: candidateInstructions });
+    await runRegressionSuite({ bot: { ...selectedBot, instructions: candidateInstructions }, instructions: candidateInstructions, globalPolicy });
     setPublishing(false);
     onBotsUpdated?.();
   };
@@ -164,9 +176,16 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
               <input value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Golden test title" className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
               <textarea value={form.input} onChange={(e) => setForm((prev) => ({ ...prev, input: e.target.value }))} placeholder="Golden input" className="min-h-[70px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
               <textarea value={form.expected_output} onChange={(e) => setForm((prev) => ({ ...prev, expected_output: e.target.value }))} placeholder="Expected outcome" className="min-h-[70px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
-              <button onClick={addGolden} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
-                <Sparkles className="w-3.5 h-3.5" /> Add golden test
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={addGolden} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+                  <Sparkles className="w-3.5 h-3.5" /> Add golden test
+                </button>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs font-semibold text-foreground">
+                  <Upload className="w-3.5 h-3.5" /> {uploading ? 'Uploading...' : 'Upload CSV'}
+                  <input type="file" accept=".csv" onChange={handleCsvUpload} className="hidden" />
+                </label>
+              </div>
+              <p className="text-[10px] text-muted-foreground">CSV columns: title,input,expected_output,min_similarity_score</p>
             </div>
 
             <div className="rounded-xl border border-border bg-background p-3 space-y-2">
