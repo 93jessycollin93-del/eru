@@ -1,9 +1,9 @@
 export default function SquadWizardProgress({ step, onStepChange }) {
   const steps = [
-    { id: 1, label: 'Goal' },
-    { id: 2, label: 'Master' },
-    { id: 3, label: 'Members' },
-    { id: 4, label: 'Pipeline' },
+    { id: 1, label: 'Goal analysis' },
+    { id: 2, label: 'Best master' },
+    { id: 3, label: 'Best members' },
+    { id: 4, label: 'Pipeline fit' },
   ];
 
   return (

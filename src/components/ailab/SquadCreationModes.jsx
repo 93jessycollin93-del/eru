@@ -28,7 +28,7 @@ const MODES = [
   {
     id: 'wizard',
     title: 'Guided wizard',
-    description: 'Go step by step through goal, lead bot, members, and pipeline.',
+    description: 'Analyze the goal, suggest the best master, select strong members, and optimize the pipeline.',
     icon: Route,
   },
 ];

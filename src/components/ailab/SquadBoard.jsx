@@ -5,6 +5,7 @@ import SquadAnalyticsPanel from './SquadAnalyticsPanel.jsx';
 import SquadKnowledgePanel from './SquadKnowledgePanel.jsx';
 import SquadCreationModes from './SquadCreationModes.jsx';
 import SquadWizardProgress from './SquadWizardProgress.jsx';
+import SquadOptimizationPanel from './SquadOptimizationPanel.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -73,6 +74,12 @@ function extractMatchedKeywords(goal) {
   return Array.from(new Set(Object.values(ROLE_KEYWORDS).flat().filter((word) => lowerGoal.includes(word))));
 }
 
+function scoreKnowledgeMatch(goal, entry) {
+  const goalWords = (goal || '').toLowerCase().split(/\s+/).filter((word) => word.length > 3);
+  const haystack = [entry.goal, entry.result_summary, ...(entry.keywords || [])].join(' ').toLowerCase();
+  return goalWords.reduce((total, word) => total + (haystack.includes(word) ? 8 : 0), 0) + ((entry.keywords || []).filter((keyword) => (goal || '').toLowerCase().includes(keyword.toLowerCase())).length * 12);
+}
+
 export default function SquadBoard({ bots }) {
   const [squads, setSquads] = useState([]);
   const [form, setForm] = useState(BLANK_SQUAD);
@@ -87,6 +94,7 @@ export default function SquadBoard({ bots }) {
   const [creationMode, setCreationMode] = useState('manual');
   const [wizardStep, setWizardStep] = useState(1);
   const [creatingInstant, setCreatingInstant] = useState(false);
+  const [wizardAnalysis, setWizardAnalysis] = useState(null);
 
   const activeBots = useMemo(() => bots.filter((bot) => (bot.status || 'active') === 'active'), [bots]);
   const selectableBots = useMemo(() => activeBots.filter((bot) => bot.id !== form.master_bot_id), [activeBots, form.master_bot_id]);
@@ -185,12 +193,11 @@ export default function SquadBoard({ bots }) {
     return localScore + globalScore;
   };
 
-  const recommendations = useMemo(() => {
-    const goal = recommendGoal.trim();
+  const rankedBots = useMemo(() => {
+    const goal = recommendGoal.trim() || form.description.trim();
     if (!goal) return [];
 
     return activeBots
-      .filter((bot) => bot.id !== form.master_bot_id && !form.member_bot_ids.includes(bot.id))
       .map((bot) => {
         const level = bot.level || Math.max(1, Math.floor((bot.xp || 0) / 100) + 1);
         const keywordMatches = getKeywordMatches(goal, bot.role);
@@ -213,9 +220,47 @@ export default function SquadBoard({ bots }) {
           reason: reasonBits.join(' · '),
         };
       })
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.score - a.score);
+  }, [activeBots, form.description, form.execution_history, form.memory_pool, knowledgeItems, recommendGoal]);
+
+  const recommendations = useMemo(() => {
+    return rankedBots
+      .filter((item) => item.bot.id !== form.master_bot_id && !form.member_bot_ids.includes(item.bot.id))
       .slice(0, 4);
-  }, [activeBots, form.execution_history, form.master_bot_id, form.member_bot_ids, form.memory_pool, knowledgeItems, recommendGoal]);
+  }, [form.master_bot_id, form.member_bot_ids, rankedBots]);
+
+  const wizardRecommendation = useMemo(() => {
+    if ((recommendGoal.trim() || form.description.trim()) === '' || rankedBots.length === 0) return null;
+    const master = rankedBots[0];
+    const members = rankedBots.slice(1, 4);
+    return {
+      masterBotId: master?.bot.id || '',
+      masterBotName: master?.bot.name || '',
+      memberBotIds: members.map((item) => item.bot.id),
+      memberBotNames: members.map((item) => item.bot.name),
+      reason: [master?.reason, members[0]?.reason, members[1]?.reason].filter(Boolean).join(' · '),
+    };
+  }, [form.description, rankedBots, recommendGoal]);
+
+  const proactiveKnowledgeMatches = useMemo(() => {
+    const goal = recommendGoal.trim() || form.description.trim();
+    if (!goal) return [];
+    return knowledgeItems
+      .map((item) => ({ ...item, score: scoreKnowledgeMatch(goal, item) }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+  }, [form.description, knowledgeItems, recommendGoal]);
+
+  const wizardGoalAnalysis = useMemo(() => {
+    const goal = recommendGoal.trim() || form.description.trim();
+    if (!goal) return null;
+    const keywords = extractMatchedKeywords(goal);
+    return {
+      summary: keywords.length > 0 ? `This goal is most aligned with ${keywords.join(', ')} workstreams and should use the highest-performing specialists in those areas.` : 'This goal is broad, so the wizard will prioritize the bots with the strongest overall past squad performance.',
+      keywords,
+    };
+  }, [form.description, recommendGoal]);
 
   const squadAnalytics = useMemo(() => {
     const histories = squads.flatMap((squad) => (squad.execution_history || []).map((entry) => ({ ...entry, squad })));
@@ -276,18 +321,23 @@ export default function SquadBoard({ bots }) {
 
   const buildAutomaticSquad = () => {
     const goal = recommendGoal.trim() || form.description.trim();
-    const suggestedMaster = recommendations[0]?.bot || activeBots[0];
-    const suggestedMembers = recommendations.slice(1, 4).map((item) => item.bot.id);
+    const suggestedMaster = wizardRecommendation ? rankedBots.find((item) => item.bot.id === wizardRecommendation.masterBotId)?.bot : recommendations[0]?.bot || activeBots[0];
+    const suggestedMembers = wizardRecommendation?.memberBotIds || recommendations.slice(1, 4).map((item) => item.bot.id);
     const keywords = extractMatchedKeywords(goal);
+    const matchedKnowledge = proactiveKnowledgeMatches[0];
 
     return {
       ...form,
       name: form.name.trim() || (goal ? `${goal.slice(0, 32)} squad` : 'Auto squad'),
       description: form.description.trim() || goal,
-      shared_context: form.shared_context.trim() || `Primary goal: ${goal || 'Coordinate specialists effectively.'}`,
+      shared_context: form.shared_context.trim() || `Primary goal: ${goal || 'Coordinate specialists effectively.'}${matchedKnowledge ? ` Reuse lessons from ${matchedKnowledge.source_squad_name}.` : ''}`,
       master_bot_id: form.master_bot_id || suggestedMaster?.id || '',
       member_bot_ids: form.member_bot_ids.length > 0 ? form.member_bot_ids : suggestedMembers,
-      pipeline_steps: form.pipeline_steps.length > 0 ? form.pipeline_steps : [
+      pipeline_steps: form.pipeline_steps.length > 0 ? form.pipeline_steps : matchedKnowledge ? [
+        { id: `step_${Date.now()}_1`, title: 'Reuse proven plan', instruction: `Review the successful pattern from ${matchedKnowledge.source_squad_name} for this goal: ${matchedKnowledge.goal}.`, assigned_bot_id: suggestedMaster?.id || '' },
+        { id: `step_${Date.now()}_2`, title: 'Adapt winning strategy', instruction: `Adapt this successful strategy to the current task: ${matchedKnowledge.result_summary}.`, assigned_bot_id: suggestedMembers[0] || '' },
+        { id: `step_${Date.now()}_3`, title: 'Deliver optimized output', instruction: 'Combine the proven structure with the current request and produce the best final answer.', assigned_bot_id: suggestedMaster?.id || '' },
+      ] : [
         { id: `step_${Date.now()}_1`, title: 'Analyze goal', instruction: `Break down the request and identify the key priorities: ${goal || 'general coordination'}.`, assigned_bot_id: suggestedMaster?.id || '' },
         { id: `step_${Date.now()}_2`, title: 'Specialist support', instruction: `Contribute specialist recommendations for: ${keywords.join(', ') || goal || 'the request'}.`, assigned_bot_id: suggestedMembers[0] || '' },
         { id: `step_${Date.now()}_3`, title: 'Final synthesis', instruction: 'Merge findings into one clear coordinated output.', assigned_bot_id: suggestedMaster?.id || '' },
@@ -324,7 +374,14 @@ export default function SquadBoard({ bots }) {
   const applyAutomaticSetup = () => {
     const autoSquad = buildAutomaticSquad();
     setForm(autoSquad);
+    setWizardAnalysis(wizardGoalAnalysis);
     setCreationMode('manual');
+  };
+
+  const applyWizardRecommendation = () => {
+    const autoSquad = buildAutomaticSquad();
+    setForm(autoSquad);
+    setWizardAnalysis(wizardGoalAnalysis);
   };
 
   const createInstantSquad = async () => {
@@ -370,6 +427,16 @@ export default function SquadBoard({ bots }) {
     const masterBot = bots.find((bot) => bot.id === squad.master_bot_id);
     setRunningId(squad.id);
 
+    const matchingKnowledge = knowledgeItems
+      .map((item) => ({ ...item, score: scoreKnowledgeMatch(task, item) }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+
+    const optimizationNote = matchingKnowledge.length > 0
+      ? `Knowledge base matches found: ${matchingKnowledge.map((item) => `${item.source_squad_name} (${item.goal})`).join(' | ')}`
+      : 'No direct knowledge base match found.';
+
     const stepOutputs = [];
     const successfulBotIds = [];
     for (const step of (squad.pipeline_steps || [])) {
@@ -383,6 +450,8 @@ Shared squad context: ${squad.shared_context || 'None'}
 Squad request: ${task}
 Pipeline step: ${step.title}
 Step instruction: ${step.instruction}
+${optimizationNote}
+${matchingKnowledge.map((item, index) => `Knowledge match ${index + 1}: ${item.result_summary}`).join('\n')}
 
 Provide a concise specialist response for this step.`
       });
@@ -401,6 +470,8 @@ Provide a concise specialist response for this step.`
 Shared squad context: ${squad.shared_context || 'None'}
 Cross-department request: ${task}
 Squad description: ${squad.description || squad.name}
+${optimizationNote}
+${matchingKnowledge.map((item, index) => `Relevant past success ${index + 1}: ${item.result_summary}`).join('\n')}
 Specialist pipeline outputs:
 ${stepOutputs.map((item) => `${item.step_title} — ${item.bot_name}: ${item.output}`).join('\n\n')}
 
@@ -511,6 +582,12 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
               <p className="text-xs font-semibold text-foreground">Guided wizard</p>
             </div>
             <SquadWizardProgress step={wizardStep} onStepChange={setWizardStep} />
+            <SquadOptimizationPanel
+              analysis={wizardGoalAnalysis || wizardAnalysis}
+              recommendation={wizardRecommendation}
+              knowledgeMatches={proactiveKnowledgeMatches}
+              onApplyRecommendation={applyWizardRecommendation}
+            />
           </div>
         )}
 
