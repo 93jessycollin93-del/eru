@@ -8,6 +8,7 @@ import SquadCreationModes from './SquadCreationModes.jsx';
 import SquadWizardProgress from './SquadWizardProgress.jsx';
 import SquadOptimizationPanel from './SquadOptimizationPanel.jsx';
 import SquadDeliveryPanel from './SquadDeliveryPanel.jsx';
+import SquadOutputChart from './SquadOutputChart.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -952,13 +953,17 @@ Prefer practical business/search terms and avoid vague words.`,
                     <p className="text-xs font-semibold text-foreground mb-1">Final squad response</p>
                     <p className="text-[11px] whitespace-pre-wrap text-muted-foreground leading-relaxed">{output.final}</p>
                   </div>
+                  <SquadOutputChart content={output.final} title="Final response chart" />
                   {output.steps?.length > 0 && (
                     <div className="space-y-2">
                       {output.steps.map((step, index) => (
-                        <div key={`${step.step_title}_${index}`} className="rounded-xl border border-border bg-secondary p-3">
-                          <p className="text-xs font-semibold text-foreground">{step.step_title}</p>
-                          <p className="mt-1 text-[10px] text-primary">{step.bot_name}</p>
-                          <p className="mt-1 text-[11px] whitespace-pre-wrap text-muted-foreground leading-relaxed">{step.output}</p>
+                        <div key={`${step.step_title}_${index}`} className="rounded-xl border border-border bg-secondary p-3 space-y-3">
+                          <div>
+                            <p className="text-xs font-semibold text-foreground">{step.step_title}</p>
+                            <p className="mt-1 text-[10px] text-primary">{step.bot_name}</p>
+                            <p className="mt-1 text-[11px] whitespace-pre-wrap text-muted-foreground leading-relaxed">{step.output}</p>
+                          </div>
+                          <SquadOutputChart content={step.output} title={`${step.step_title} chart`} />
                         </div>
                       ))}
                     </div>
