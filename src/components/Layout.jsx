@@ -61,6 +61,10 @@ export default function Layout() {
       if (!widgetId) return;
 
       if (widgetId === 'promptLibrary' || widgetId === 'conversations') {
+        if (window.location.pathname !== '/jackie') {
+          window.location.href = `/jackie?panel=${widgetId}`;
+          return;
+        }
         window.dispatchEvent(new CustomEvent('open-jackie-panel', { detail: { panel: widgetId } }));
         return;
       }

@@ -101,9 +101,36 @@ export default function JackieAI() {
   const [workspaceCode, setWorkspaceCode] = useState('');
   const bottomRef = useRef(null);
 
+  useEffect(() => {
+    const handleOpenPanel = (event) => {
+      const panel = event?.detail?.panel;
+      if (!panel) return;
+      setTab('assets');
+      requestAnimationFrame(() => {
+        const targetId = panel === 'promptLibrary' ? 'jackie-prompt-library' : panel === 'conversations' ? 'jackie-asset-manager' : null;
+        if (!targetId) return;
+        setTimeout(() => {
+          document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 250);
+      });
+    };
 
+    window.addEventListener('open-jackie-panel', handleOpenPanel);
+    return () => window.removeEventListener('open-jackie-panel', handleOpenPanel);
+  }, []);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedPanel = urlParams.get('panel');
+    if (requestedPanel === 'promptLibrary' || requestedPanel === 'conversations') {
+      setTab('assets');
+      setTimeout(() => {
+        const targetId = requestedPanel === 'promptLibrary' ? 'jackie-prompt-library' : 'jackie-asset-manager';
+        document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 350);
+      window.history.replaceState({}, '', '/jackie');
+    }
+
     base44.entities.UserBot.list('-created_date', 20).then(b => setUserBots(b)).catch(() => {});
     base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).then(keys => {
       setApiKeyCount(keys.length);
@@ -450,11 +477,15 @@ export default function JackieAI() {
       {tab === 'assets' && (
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <JackieGamificationPanel progress={jackieProgress} />
-          <PromptLibraryPanel onInject={handleInjectPrompt} onAppend={handleAppendPrompt} />
+          <div id="jackie-prompt-library" className="scroll-mt-24">
+            <PromptLibraryPanel onInject={handleInjectPrompt} onAppend={handleAppendPrompt} />
+          </div>
           <EducationPanel onResourceOpen={() => updateJackieProgress({ xp: 5, resources_opened: 1 })} />
           <FeedbackPanel onSubmitted={() => updateJackieProgress({ xp: 15, feedback_sent: 1 })} />
           <IntegrationsPanel />
-          <AssetManager onInject={handleInjectAsset} />
+          <div id="jackie-asset-manager" className="scroll-mt-24">
+            <AssetManager onInject={handleInjectAsset} />
+          </div>
         </div>
       )}
     </div>
