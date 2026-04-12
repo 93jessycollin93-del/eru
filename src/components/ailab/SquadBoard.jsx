@@ -12,6 +12,8 @@ import SquadOutputChart from './SquadOutputChart.jsx';
 import SquadTemplateLibrary from './SquadTemplateLibrary.jsx';
 import SquadFormationBuilder from './SquadFormationBuilder.jsx';
 import MemoryBankPanel from './MemoryBankPanel.jsx';
+import SquadCostPanel from './SquadCostPanel.jsx';
+import { estimateSquadRunCost } from './squadCostEstimation';
 import { routeTaskToGroup } from './taskGroupRouting';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
@@ -347,6 +349,8 @@ export default function SquadBoard({ bots }) {
 
     return { botRows, keywordRows };
   }, [bots, squads]);
+
+  const draftCostEstimate = useMemo(() => estimateSquadRunCost({ squad: form, bots, runGoal: recommendGoal || form.description || '' }), [bots, form, recommendGoal]);
 
   const buildAutomaticSquad = () => {
     const goal = recommendGoal.trim() || form.description.trim();
@@ -920,6 +924,8 @@ Prefer practical business/search terms and avoid vague words.`,
           </div>
         )}
 
+        <SquadCostPanel estimate={draftCostEstimate} />
+
         {creationMode === 'wizard' ? (
           <div className="flex gap-2">
             <button
@@ -981,6 +987,12 @@ Prefer practical business/search terms and avoid vague words.`,
           const memberBots = bots.filter((bot) => (squad.member_bot_ids || []).includes(bot.id));
           const output = runOutput[squad.id];
           const isRunning = runningId === squad.id;
+
+          const runCostEstimate = estimateSquadRunCost({
+            squad,
+            bots,
+            runGoal: runInput[squad.id] || squad.description || squad.name,
+          });
 
           return (
             <div key={squad.id} className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -1088,6 +1100,7 @@ Prefer practical business/search terms and avoid vague words.`,
                   placeholder="Give this squad a cross-department request..."
                   className="min-h-[72px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none resize-none"
                 />
+                <SquadCostPanel estimate={runCostEstimate} compact />
                 <button
                   onClick={() => runSquad(squad)}
                   disabled={isRunning || !(runInput[squad.id] || '').trim()}
