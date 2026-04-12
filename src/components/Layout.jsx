@@ -6,6 +6,7 @@ import JackieFloat from './JackieFloat';
 import CenteredBottomNav from './CenteredBottomNav';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
+import FloatingQuickActions from './FloatingQuickActions';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
 
@@ -89,6 +90,7 @@ export default function Layout() {
           <Outlet />
         </main>
         <JackieFloat prefs={prefs} updateWidget={updateWidget} />
+        <FloatingQuickActions />
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
         <BotWidget prefs={prefs} updateWidget={updateWidget} />
       </div>
