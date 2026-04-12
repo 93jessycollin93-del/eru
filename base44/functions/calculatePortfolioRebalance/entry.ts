@@ -1,106 +1,102 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-/**
- * Calculate portfolio rebalancing suggestions based on target allocation
- * Returns delta between current and target, with buy/sell recommendations
- */
+function round(value) {
+  return Number((value || 0).toFixed(2));
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const body = await req.json();
-    const { walletId, targetAllocation } = body;
-
-    if (!walletId || !targetAllocation) {
-      return Response.json({ error: 'Missing walletId or targetAllocation' }, { status: 400 });
-    }
-
     const user = await base44.auth.me();
+
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch current holdings
-    const holdings = await base44.asServiceRole.entities.WalletHolding.filter(
-      { wallet_id: walletId },
-      '-value_usd',
-      100
-    );
+    const body = await req.json();
+    const holdings = Array.isArray(body.holdings) ? body.holdings : [];
+    const targetAllocation = body.targetAllocation || {};
 
-    if (!holdings || holdings.length === 0) {
-      return Response.json({ error: 'No holdings found' }, { status: 404 });
+    if (holdings.length === 0) {
+      return Response.json({ error: 'No holdings provided' }, { status: 400 });
     }
 
-    // Calculate current allocation
-    const totalValue = holdings.reduce((sum, h) => sum + (h.value_usd || 0), 0);
-    const currentAllocation = {};
+    const totals = {};
+    let portfolioValue = 0;
 
-    holdings.forEach((h) => {
-      const percent = totalValue > 0 ? (h.value_usd / totalValue) * 100 : 0;
-      currentAllocation[h.token_symbol] = {
-        value: h.value_usd,
-        percent,
-        balance: h.balance_decimal,
-        symbol: h.token_symbol,
-      };
+    holdings.forEach((item) => {
+      const symbol = String(item.symbol || '').toUpperCase();
+      const value = Number(item.value_usd || 0);
+      if (!symbol || value <= 0) return;
+      totals[symbol] = (totals[symbol] || 0) + value;
+      portfolioValue += value;
     });
 
-    // Calculate deltas
     const recommendations = [];
-    const allTokens = new Set([
-      ...Object.keys(currentAllocation),
-      ...Object.keys(targetAllocation),
-    ]);
+    const buys = [];
+    const sells = [];
+    const allTokens = [...new Set([...Object.keys(totals), ...Object.keys(targetAllocation).map((key) => key.toUpperCase())])];
 
-    for (const token of allTokens) {
-      const currentPercent = currentAllocation[token]?.percent || 0;
-      const targetPercent = targetAllocation[token] || 0;
-      const delta = targetPercent - currentPercent;
+    allTokens.forEach((token) => {
+      const currentValue = totals[token] || 0;
+      const currentPercent = portfolioValue > 0 ? (currentValue / portfolioValue) * 100 : 0;
+      const targetPercent = Number(targetAllocation[token] ?? targetAllocation[token.toUpperCase()] ?? 0);
+      const targetValue = (portfolioValue * targetPercent) / 100;
+      const difference = targetValue - currentValue;
+      const action = difference > 0 ? 'buy' : difference < 0 ? 'sell' : 'hold';
+      const recommendation = {
+        token,
+        current_percent: round(currentPercent),
+        target_percent: round(targetPercent),
+        current_value: round(currentValue),
+        target_value: round(targetValue),
+        amount_usd: round(Math.abs(difference)),
+        action,
+      };
 
-      if (Math.abs(delta) > 1) {
-        // Only recommend if delta > 1%
-        const targetValue = (totalValue * targetPercent) / 100;
-        const currentValue = currentAllocation[token]?.value || 0;
-        const netChange = targetValue - currentValue;
+      recommendations.push(recommendation);
+      if (difference > 0.01) buys.push({ token, remaining: difference });
+      if (difference < -0.01) sells.push({ token, remaining: Math.abs(difference) });
+    });
 
-        recommendations.push({
-          token,
-          current_percent: currentPercent.toFixed(2),
-          target_percent: targetPercent.toFixed(2),
-          delta_percent: delta.toFixed(2),
-          current_value: currentValue.toFixed(2),
-          target_value: targetValue.toFixed(2),
-          action: delta > 0 ? 'buy' : 'sell',
-          amount_usd: Math.abs(netChange).toFixed(2),
-          priority: Math.abs(delta) > 10 ? 'high' : 'medium',
-        });
-      }
-    }
+    const tradePlan = [];
+    sells.forEach((sell) => {
+      buys.forEach((buy) => {
+        if (sell.remaining <= 0 || buy.remaining <= 0) return;
+        const amount = Math.min(sell.remaining, buy.remaining);
+        sell.remaining -= amount;
+        buy.remaining -= amount;
+        tradePlan.push(`Sell about $${round(amount)} of ${sell.token} and move it into ${buy.token}`);
+      });
+    });
 
-    // Sort by priority and delta
-    recommendations.sort((a, b) => {
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      const diff = priorityOrder[a.priority] - priorityOrder[b.priority];
-      return diff !== 0 ? diff : Math.abs(parseFloat(b.delta_percent)) - Math.abs(parseFloat(a.delta_percent));
+    const filteredRecommendations = recommendations.filter((item) => item.amount_usd > 0.01);
+    const suggestion = await base44.entities.RebalancingSuggestion.create({
+      user_email: user.email,
+      status: 'pending',
+      actions: filteredRecommendations.map((item) => ({
+        asset: item.token,
+        current_percentage: item.current_percent,
+        target_percentage: item.target_percent,
+        action: item.action,
+        percentage_change: round(item.target_percent - item.current_percent),
+      })),
+      total_deviation: round(filteredRecommendations.reduce((sum, item) => sum + Math.abs(item.target_percent - item.current_percent), 0)),
+      priority: filteredRecommendations.length > 4 ? 'high' : filteredRecommendations.length > 2 ? 'medium' : 'low',
+      triggered_by_assets: filteredRecommendations.map((item) => item.token),
+      notes: tradePlan.join(' | '),
     });
 
     return Response.json({
       success: true,
-      wallet_id: walletId,
-      portfolio_value: totalValue.toFixed(2),
-      current_allocation: currentAllocation,
-      target_allocation: targetAllocation,
-      recommendations,
-      total_buy_amount: recommendations
-        .filter((r) => r.action === 'buy')
-        .reduce((sum, r) => sum + parseFloat(r.amount_usd), 0)
-        .toFixed(2),
-      total_sell_amount: recommendations
-        .filter((r) => r.action === 'sell')
-        .reduce((sum, r) => sum + parseFloat(r.amount_usd), 0)
-        .toFixed(2),
+      suggestion_id: suggestion.id,
+      portfolio_value: round(portfolioValue),
+      recommendations: filteredRecommendations,
+      total_buy_amount: round(filteredRecommendations.filter((item) => item.action === 'buy').reduce((sum, item) => sum + item.amount_usd, 0)),
+      total_sell_amount: round(filteredRecommendations.filter((item) => item.action === 'sell').reduce((sum, item) => sum + item.amount_usd, 0)),
+      trade_plan: tradePlan,
     });
   } catch (error) {
-    console.error('Calculate rebalance error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });

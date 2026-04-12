@@ -7,6 +7,8 @@ import DiversificationToolsPanel from '../components/portfolio/DiversificationTo
 import PerformanceBenchmarkPanel from '../components/portfolio/PerformanceBenchmarkPanel';
 import RebalancingPlanner from '../components/portfolio/RebalancingPlanner';
 import InvestmentJournalPanel from '../components/portfolio/InvestmentJournalPanel';
+import TargetAllocationPanel from '../components/portfolio/TargetAllocationPanel';
+import { buildCombinedPortfolioData } from '../lib/portfolioRebalance';
 
 export default function Portfolio() {
   const [tab, setTab] = useState('inventory');
@@ -18,8 +20,9 @@ export default function Portfolio() {
   const { data: listings, loading: listingsLoading } = useRealtimeEntityList('StorefrontListing', { query: jadeQuery, sort: '-updated_date', limit: 100, enabled: !!user?.email });
   const { data: transactions, loading: transactionsLoading } = useRealtimeEntityList('Transaction', { query: buyerQuery, sort: '-created_date', limit: 50, enabled: !!user?.email });
   const { data: reputationRows, loading: reputationLoading } = useRealtimeEntityList('Reputation', { query: jadeQuery, sort: '-updated_date', limit: 1, enabled: !!user?.email });
+  const { data: walletHoldings, loading: walletHoldingsLoading } = useRealtimeEntityList('WalletHolding', { query: jadeQuery, sort: '-last_updated', limit: 200, enabled: !!user?.email });
   const reputation = reputationRows?.[0] || null;
-  const loading = jadeLoading || cardsLoading || listingsLoading || transactionsLoading || reputationLoading;
+  const loading = jadeLoading || cardsLoading || listingsLoading || transactionsLoading || reputationLoading || walletHoldingsLoading;
 
   if (loading) return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -36,6 +39,7 @@ export default function Portfolio() {
     { label: 'Listed', value: listings.length, icon: TrendingUp, color: 'text-green-400' },
     { label: 'Level', value: reputation?.level || 1, icon: Trophy, color: 'text-primary' },
   ];
+  const combinedHoldings = buildCombinedPortfolioData({ walletHoldings, jadeAssets, cards, transactions });
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -144,6 +148,7 @@ export default function Portfolio() {
         {/* ANALYSIS */}
         {tab === 'analysis' && (
           <div className="space-y-3">
+            <TargetAllocationPanel holdings={combinedHoldings} />
             <RebalancingPlanner />
             <ScenarioAnalysisPanel />
             <DiversificationToolsPanel />
