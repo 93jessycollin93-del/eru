@@ -8,7 +8,7 @@ export default function CollectorRewardsPanel() {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    if (!user?.email || !base44.entities?.CollectorRewardProfile) return;
+    if (!user?.email) return;
     syncCollectorRewardProfile(user.email).then(setProfile).catch(() => setProfile(null));
   }, [user?.email]);
 

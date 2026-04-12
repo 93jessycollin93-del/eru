@@ -27,7 +27,7 @@ export default function Reputation() {
   const [rewardProfile, setRewardProfile] = useState(null);
 
   useEffect(() => {
-    if (!user?.email || !base44.entities?.CollectorRewardProfile) return;
+    if (!user?.email) return;
     syncCollectorRewardProfile(user.email).then(setRewardProfile).catch(() => setRewardProfile(null));
   }, [user?.email]);
 

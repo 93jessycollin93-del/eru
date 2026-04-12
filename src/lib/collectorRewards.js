@@ -102,14 +102,18 @@ function daysBetween(previousDateKey, currentDateKey) {
 }
 
 export async function syncCollectorRewardProfile(userEmail) {
-  if (!userEmail || !base44.entities?.CollectorRewardProfile) return null;
+  if (!userEmail) return null;
+
+  const rewardEntity = base44.entities['CollectorRewardProfile'];
 
   const [existingProfiles, jadeAssets, cards, transactions] = await Promise.all([
-    base44.entities.CollectorRewardProfile.filter({ user_email: userEmail }, '-updated_date', 1),
+    rewardEntity.filter({ user_email: userEmail }, '-updated_date', 1),
     base44.entities.JadeAsset.filter({ created_by: userEmail }, '-updated_date', 200),
     base44.entities.Card.filter({ created_by: userEmail }, '-updated_date', 200),
     base44.entities.Transaction.filter({ buyer_email: userEmail }, '-updated_date', 200),
-  ]).catch(() => [[], [], [], []]);
+  ]).catch(() => [null, [], [], []]);
+
+  if (!existingProfiles) return null;
 
   const existing = existingProfiles[0] || null;
   const currentPortfolioValue = calculatePortfolioValue(jadeAssets, cards, transactions);
@@ -144,9 +148,9 @@ export async function syncCollectorRewardProfile(userEmail) {
   };
 
   if (existing) {
-    await base44.entities.CollectorRewardProfile.update(existing.id, payload);
+    await rewardEntity.update(existing.id, payload);
     return { ...existing, ...payload };
   }
 
-  return base44.entities.CollectorRewardProfile.create(payload);
+  return rewardEntity.create(payload);
 }
