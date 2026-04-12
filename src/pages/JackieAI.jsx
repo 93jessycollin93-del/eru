@@ -3,6 +3,7 @@ import { Bot, FlaskConical, Key, ArrowRight, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import JackieHeader from '../components/jackie/JackieHeader';
+import ConversationSidebar from '../components/jackie/ConversationSidebar.jsx';
 import MessageBubble from '../components/jackie/MessageBubble';
 import WelcomeScreen from '../components/jackie/WelcomeScreen';
 import QuickCommands from '../components/jackie/QuickCommands';
@@ -335,6 +336,12 @@ export default function JackieAI() {
     setPendingFiles([]);
   };
 
+  const loadConversation = (conversationMessages) => {
+    setMessages(Array.isArray(conversationMessages) ? conversationMessages : []);
+    setWorkingContext('');
+    setTab('main');
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
       {/* Cross-system shortcuts */}
@@ -370,53 +377,61 @@ export default function JackieAI() {
 
       {tab === 'main' && (
         <>
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            {messages.length === 0 ? (
-              <WelcomeScreen mode={mode} onSend={(s) => setInput(s)} />
-            ) : (
-              messages.map((m, i) => (
-                <MessageBubble
-                  key={i}
-                  message={m}
-                  onSave={handleSave}
-                  onRefine={handleRefine}
-                  onInject={handleInjectAsset}
+          <div className="flex flex-1 flex-col md:flex-row min-h-0">
+            <ConversationSidebar
+              messages={messages}
+              onLoadConversation={loadConversation}
+              onNewConversation={clearChat}
+            />
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              {messages.length === 0 ? (
+                <WelcomeScreen mode={mode} onSend={(s) => setInput(s)} />
+              ) : (
+                messages.map((m, i) => (
+                  <MessageBubble
+                    key={i}
+                    message={m}
+                    onSave={handleSave}
+                    onRefine={handleRefine}
+                    onInject={handleInjectAsset}
+                  />
+                ))
+              )}
+
+              {foundryPreview && (
+                <FoundryControlPanel
+                  preview={foundryPreview}
+                  onConfirm={applyFoundryPreview}
+                  onDiscard={discardFoundryPreview}
+                  busy={applyingFoundry}
                 />
-              ))
-            )}
+              )}
 
-            {foundryPreview && (
-              <FoundryControlPanel
-                preview={foundryPreview}
-                onConfirm={applyFoundryPreview}
-                onDiscard={discardFoundryPreview}
-                busy={applyingFoundry}
-              />
-            )}
+              {(mode === 'code' || workspaceCode) && (
+                <CodeWorkspace
+                  content={workspaceCode || workingContext}
+                  onInject={setWorkspaceCode}
+                  onSave={handleSave}
+                />
+              )}
 
-            {(mode === 'code' || workspaceCode) && (
-              <CodeWorkspace
-                content={workspaceCode || workingContext}
-                onInject={setWorkspaceCode}
-                onSave={handleSave}
-              />
-            )}
+              <TelegramBotSetupPanel onOpenManagement={() => navigate('/telegram-bots')} />
 
-            <TelegramBotSetupPanel onOpenManagement={() => navigate('/telegram-bots')} />
-
-            {loading && (
-              <div className="flex justify-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-3 h-3 text-primary" />
+              {loading && (
+                <div className="flex justify-start gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-3 h-3 text-primary" />
+                  </div>
+                  <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 </div>
-                <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
+              )}
+              <div ref={bottomRef} />
+            </div>
           </div>
 
           <QuickCommands visible={showCommands} onCommand={handleQuickCommand} />

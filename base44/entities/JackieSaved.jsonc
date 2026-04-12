@@ -17,6 +17,7 @@
         "bot",
         "strategy",
         "prompt",
+        "conversation",
         "general"
       ]
     },
