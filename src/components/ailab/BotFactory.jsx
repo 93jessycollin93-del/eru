@@ -21,9 +21,26 @@ const downloadJson = (filename, data) => {
   URL.revokeObjectURL(url);
 };
 
+const extractJsonObject = (content) => {
+  if (typeof content !== 'string') return content;
+  const trimmed = content.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {}
+
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    return JSON.parse(trimmed.slice(start, end + 1));
+  }
+
+  throw new Error(trimmed);
+};
+
 export default function BotFactory({ onSaveBot }) {
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [modelConfig, setModelConfig] = useState({ provider: 'base44', model: '', api_label: '' });
@@ -32,6 +49,7 @@ export default function BotFactory({ onSaveBot }) {
     if (!prompt.trim()) return;
     setLoading(true);
     setResult(null);
+    setError('');
     setSaved(false);
 
     const content = await invokeSelectedModel({
@@ -52,8 +70,13 @@ Return ONLY a JSON object with these fields:
 }`,
     });
 
-    const res = typeof content === 'string' ? JSON.parse(content) : content;
-    setResult(res);
+    try {
+      const res = extractJsonObject(content);
+      setResult(res);
+    } catch (err) {
+      setError(err.message || 'The selected model returned an invalid response.');
+    }
+
     setLoading(false);
   };
 
@@ -111,6 +134,11 @@ Return ONLY a JSON object with these fields:
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm disabled:opacity-40">
           {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating architecture…</> : <><Wand2 className="w-4 h-4" /> Generate Bot</>}
         </button>
+        {error && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive whitespace-pre-wrap">
+            {error}
+          </div>
+        )}
       </div>
 
       {/* Result */}
