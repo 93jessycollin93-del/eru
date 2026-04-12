@@ -1,6 +1,7 @@
 import { BarChart2, Zap, Star, Clock, TrendingUp } from 'lucide-react';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import BotSkillTreePanel from './BotSkillTreePanel';
 
 const COLORS = ['hsl(160 100% 45%)', 'hsl(210 100% 60%)', 'hsl(50 100% 55%)', 'hsl(280 80% 65%)', 'hsl(350 100% 60%)'];
 
@@ -8,7 +9,8 @@ export default function BotDashboard({ bots }) {
   const { data: automations, loading: automationsLoading } = useRealtimeEntityList('BotAutomation', { sort: '-created_date', limit: 50 });
   const { data: memories, loading: memoriesLoading } = useRealtimeEntityList('BotMemory', { sort: '-created_date', limit: 200 });
   const { data: improvements, loading: improvementsLoading } = useRealtimeEntityList('BotImprovement', { sort: '-created_date', limit: 50 });
-  const loading = automationsLoading || memoriesLoading || improvementsLoading;
+  const { data: squads, loading: squadsLoading } = useRealtimeEntityList('BotSquad', { sort: '-updated_date', limit: 100 });
+  const loading = automationsLoading || memoriesLoading || improvementsLoading || squadsLoading;
 
   // XP per bot
   const xpData = [...bots].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 8).map(b => ({
@@ -136,7 +138,9 @@ export default function BotDashboard({ bots }) {
         </div>
       )}
 
-      {xpData.length === 0 && interactionData.length === 0 && (
+      {bots.length > 0 && <BotSkillTreePanel bots={bots} squads={squads} />}
+
+      {xpData.length === 0 && interactionData.length === 0 && bots.length === 0 && (
         <div className="text-center py-10 text-muted-foreground">
           <BarChart2 className="w-10 h-10 mx-auto mb-3 opacity-20" />
           <p className="text-sm">No data yet</p>
