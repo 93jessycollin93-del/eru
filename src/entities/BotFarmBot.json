@@ -5,8 +5,13 @@
     "bot_id": { "type": "string" },
     "name": { "type": "string" },
     "role": { "type": "string" },
+    "role_type": {
+      "type": "string",
+      "enum": ["leader", "commander", "task", "security"]
+    },
     "farm_group": { "type": "string" },
     "squad_id": { "type": "string" },
+    "commander_code": { "type": "string" },
     "specialty": {
       "type": "string",
       "enum": ["data_gathering", "analysis", "summarization", "monitoring", "verification", "communications", "security", "sorting", "research", "reporting", "command_support"]
@@ -46,7 +51,7 @@
     "max_concurrent_tasks": { "type": "number", "default": 1 },
     "system_health": { "type": "number", "default": 88 }
   },
-  "required": ["bot_id", "name", "role", "specialty"],
+  "required": ["bot_id", "name", "role", "role_type", "specialty"],
   "rls": {
     "create": { "created_by": "{{user.email}}" },
     "read": { "created_by": "{{user.email}}" },

@@ -10,6 +10,12 @@
       "default": []
     },
     "leader_bot_id": { "type": "string" },
+    "commander_bot_id": { "type": "string" },
+    "security_bot_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
     "member_bot_ids": {
       "type": "array",
       "items": { "type": "string" },

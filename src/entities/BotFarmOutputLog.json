@@ -11,6 +11,10 @@
     },
     "quality_score": { "type": "number", "default": 75 },
     "value_score": { "type": "number", "default": 50 },
+    "specialization_fit_score": { "type": "number", "default": 0 },
+    "coordination_penalty": { "type": "number", "default": 0 },
+    "management_boost": { "type": "number", "default": 0 },
+    "contradiction_risk": { "type": "number", "default": 0 },
     "summary": { "type": "string" }
   },
   "required": ["output_type", "summary"],

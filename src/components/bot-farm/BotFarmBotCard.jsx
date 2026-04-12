@@ -50,7 +50,7 @@ export default function BotFarmBotCard({ bot, onAssign, onRest, onRepair, onQuar
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => onAssign(bot)} className="rounded-xl bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground">Assign</button>
+        <button onClick={() => onAssign(bot)} className="rounded-xl bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground">Assign Best Task</button>
         <button onClick={() => onRest(bot)} className="rounded-xl border border-border px-3 py-2 text-[11px] text-muted-foreground">Rest</button>
         <button onClick={() => onRepair(bot)} className="rounded-xl border border-border px-3 py-2 text-[11px] text-muted-foreground inline-flex items-center gap-1"><Wrench className="w-3 h-3" /> Repair</button>
         <button onClick={() => onQuarantine(bot)} className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-[11px] text-red-300">Quarantine</button>

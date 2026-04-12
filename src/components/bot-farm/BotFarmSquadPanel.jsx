@@ -1,7 +1,7 @@
 export default function BotFarmSquadPanel({ squads, bots, missions }) {
   return (
     <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
-      <p className="text-sm font-semibold text-foreground">Squad Breakdown</p>
+      <p className="text-sm font-semibold text-foreground">Squad Command Layer</p>
       <div className="space-y-3">
         {squads.map((squad) => {
           const memberCount = bots.filter((bot) => (squad.member_bot_ids || []).includes(bot.id)).length;
@@ -15,9 +15,10 @@ export default function BotFarmSquadPanel({ squads, bots, missions }) {
                 </div>
                 <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[10px] text-primary">{squad.status}</span>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 text-[10px] text-muted-foreground">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5 text-[10px] text-muted-foreground">
                 <div>Members <span className="text-foreground">{memberCount}</span></div>
                 <div>Coordination <span className="text-foreground">{squad.coordination_quality}</span></div>
+                <div>Security overhead <span className="text-foreground">{squad.security_overhead}</span></div>
                 <div>Throughput <span className="text-foreground">{squad.throughput_score}</span></div>
                 <div>Mission <span className="text-foreground">{mission?.title || 'None'}</span></div>
               </div>
