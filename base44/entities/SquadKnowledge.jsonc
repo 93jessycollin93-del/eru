@@ -18,6 +18,29 @@
       },
       "default": []
     },
+    "ai_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "strategy",
+        "operations",
+        "research",
+        "marketing",
+        "sales",
+        "product",
+        "support",
+        "finance",
+        "security",
+        "general"
+      ],
+      "default": "general"
+    },
     "bot_ids": {
       "type": "array",
       "items": {

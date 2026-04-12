@@ -505,10 +505,42 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
       ...((squad.execution_history || []).slice(0, 9)),
     ];
 
+    const generatedTags = await base44.integrations.Core.InvokeLLM({
+      prompt: `Analyze this squad run result and extract search-friendly metadata.
+
+Goal: ${task}
+Squad name: ${squad.name}
+Final output:\n${finalResponse}
+
+Return:
+- 6 to 10 concise keywords
+- 1 category from: strategy, operations, research, marketing, sales, product, support, finance, security, general
+
+Prefer practical business/search terms and avoid vague words.`,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          ai_keywords: {
+            type: 'array',
+            items: { type: 'string' }
+          },
+          category: {
+            type: 'string'
+          }
+        },
+        required: ['ai_keywords', 'category']
+      }
+    });
+
+    const mergedKeywords = Array.from(new Set([
+      ...extractMatchedKeywords(task),
+      ...((generatedTags?.ai_keywords || []).map((item) => item.trim()).filter(Boolean)),
+    ])).slice(0, 12);
+
     const updatedMemoryPool = [
       {
         goal: task,
-        keywords: extractMatchedKeywords(task),
+        keywords: mergedKeywords,
         bot_ids: Array.from(new Set(successfulBotIds)),
         result_summary: finalResponse.slice(0, 500),
         created_at: now,
@@ -522,7 +554,9 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
         source_squad_id: squad.id,
         source_squad_name: squad.name,
         goal: task,
-        keywords: extractMatchedKeywords(task),
+        keywords: mergedKeywords,
+        ai_keywords: generatedTags?.ai_keywords || [],
+        category: generatedTags?.category || 'general',
         bot_ids: Array.from(new Set(successfulBotIds)),
         result_summary: finalResponse.slice(0, 500),
         final_output: finalResponse,
