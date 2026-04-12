@@ -820,7 +820,7 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
       </div>
 
       <SquadAnalyticsPanel analytics={squadAnalytics} />
-      <SquadKnowledgePanel knowledgeItems={knowledgeItems} search={knowledgeSearch} setSearch={setKnowledgeSearch} />
+      <SquadKnowledgePanel knowledgeItems={knowledgeItems} search={knowledgeSearch} setSearch={setKnowledgeSearch} bots={bots} onRefresh={loadSquads} />
 
       <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Saved squads</p>

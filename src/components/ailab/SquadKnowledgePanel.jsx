@@ -1,27 +1,62 @@
+import { useMemo, useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Database, Search } from 'lucide-react';
+import SquadKnowledgeMetrics from './SquadKnowledgeMetrics';
+import SquadKnowledgeRecordCard from './SquadKnowledgeRecordCard';
 
 function getMatches(entry, query) {
   const text = [entry.goal, entry.result_summary, entry.source_squad_name, ...(entry.keywords || [])].join(' ').toLowerCase();
   return query.toLowerCase().split(' ').filter((word) => word.length > 2 && text.includes(word)).length;
 }
 
-export default function SquadKnowledgePanel({ knowledgeItems, search, setSearch }) {
-  const filtered = !search.trim()
-    ? knowledgeItems.slice(0, 6)
-    : [...knowledgeItems]
-        .map((entry) => ({ entry, matches: getMatches(entry, search) }))
-        .filter((item) => item.matches > 0)
-        .sort((a, b) => b.matches - a.matches)
-        .map((item) => item.entry)
-        .slice(0, 6);
+export default function SquadKnowledgePanel({ knowledgeItems, search, setSearch, bots = [], onRefresh }) {
+  const [editingId, setEditingId] = useState(null);
+  const [draft, setDraft] = useState({ goal: '', source_squad_name: '', result_summary: '', keywords: '' });
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return knowledgeItems;
+    return [...knowledgeItems]
+      .map((entry) => ({ entry, matches: getMatches(entry, search) }))
+      .filter((item) => item.matches > 0)
+      .sort((a, b) => b.matches - a.matches)
+      .map((item) => item.entry);
+  }, [knowledgeItems, search]);
+
+  const handleEdit = (entry) => {
+    setEditingId(entry.id);
+    setDraft({
+      goal: entry.goal || '',
+      source_squad_name: entry.source_squad_name || '',
+      result_summary: entry.result_summary || '',
+      keywords: (entry.keywords || []).join(', '),
+    });
+  };
+
+  const handleSave = async () => {
+    if (!editingId) return;
+    await base44.entities.SquadKnowledge.update(editingId, {
+      goal: draft.goal,
+      source_squad_name: draft.source_squad_name,
+      result_summary: draft.result_summary,
+      keywords: draft.keywords.split(',').map((item) => item.trim()).filter(Boolean),
+    });
+    setEditingId(null);
+    onRefresh?.();
+  };
+
+  const handleDelete = async (entryId) => {
+    await base44.entities.SquadKnowledge.delete(entryId);
+    if (editingId === entryId) setEditingId(null);
+    onRefresh?.();
+  };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
       <div className="flex items-center gap-2">
         <Database className="w-4 h-4 text-primary" />
         <div>
-          <p className="text-xs font-semibold text-foreground">Squad knowledge base</p>
-          <p className="text-[10px] text-muted-foreground">Search successful outcomes from any squad before running a new pipeline.</p>
+          <p className="text-xs font-semibold text-foreground">SquadKnowledge Manager</p>
+          <p className="text-[10px] text-muted-foreground">Search, edit, delete, and analyze stored execution knowledge and successful matches.</p>
         </div>
       </div>
 
@@ -30,32 +65,29 @@ export default function SquadKnowledgePanel({ knowledgeItems, search, setSearch 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search goals, summaries, or keywords"
+          placeholder="Search goals, summaries, squad names, or keywords"
           className="w-full bg-transparent text-xs text-foreground outline-none"
         />
       </div>
+
+      <SquadKnowledgeMetrics knowledgeItems={filtered} bots={bots} />
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No matching knowledge yet.</div>
       ) : (
         <div className="space-y-2">
           {filtered.map((entry) => (
-            <div key={entry.id} className="rounded-xl border border-border bg-background p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold text-foreground">{entry.goal}</p>
-                <span className="text-[9px] text-primary">{entry.source_squad_name}</span>
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground line-clamp-3">{entry.result_summary}</p>
-              {(entry.keywords || []).length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {entry.keywords.slice(0, 5).map((keyword) => (
-                    <span key={keyword} className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] text-primary">
-                      {keyword}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SquadKnowledgeRecordCard
+              key={entry.id}
+              entry={entry}
+              editingId={editingId}
+              draft={draft}
+              onEdit={() => handleEdit(entry)}
+              onChange={(field, value) => setDraft((prev) => ({ ...prev, [field]: value }))}
+              onSave={handleSave}
+              onCancel={() => setEditingId(null)}
+              onDelete={() => handleDelete(entry.id)}
+            />
           ))}
         </div>
       )}
