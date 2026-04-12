@@ -82,10 +82,18 @@ export default function BotFarm() {
 
     const createdBots = await base44.entities.BotFarmBot.bulkCreate(
       DEMO_BOTS.map((bot, index) => {
-        if (bot.role.includes('leader')) return { ...bot, squad_id: leaderSquad?.id };
-        if (bot.role.includes('commander')) return { ...bot, squad_id: commanderSquads[index % Math.max(1, commanderSquads.length)]?.id };
-        if (bot.role.includes('security')) return { ...bot, squad_id: securitySquad?.id };
-        return { ...bot, squad_id: taskSquads[index % Math.max(1, taskSquads.length)]?.id };
+        const roleType = bot.role.includes('leader')
+          ? 'leader'
+          : bot.role.includes('commander')
+            ? 'commander'
+            : bot.role.includes('security')
+              ? 'security'
+              : 'task';
+
+        if (roleType === 'leader') return { ...bot, role_type: roleType, squad_id: leaderSquad?.id };
+        if (roleType === 'commander') return { ...bot, role_type: roleType, squad_id: commanderSquads[index % Math.max(1, commanderSquads.length)]?.id };
+        if (roleType === 'security') return { ...bot, role_type: roleType, squad_id: securitySquad?.id };
+        return { ...bot, role_type: roleType, squad_id: taskSquads[index % Math.max(1, taskSquads.length)]?.id };
       })
     );
 
