@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles } from 'lucide-react';
+import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles, Wand2, Bot, Zap, Route } from 'lucide-react';
 import SquadAnalyticsPanel from './SquadAnalyticsPanel.jsx';
 import SquadKnowledgePanel from './SquadKnowledgePanel.jsx';
+import SquadCreationModes from './SquadCreationModes.jsx';
+import SquadWizardProgress from './SquadWizardProgress.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -82,6 +84,9 @@ export default function SquadBoard({ bots }) {
   const [recommendGoal, setRecommendGoal] = useState('');
   const [knowledgeItems, setKnowledgeItems] = useState([]);
   const [knowledgeSearch, setKnowledgeSearch] = useState('');
+  const [creationMode, setCreationMode] = useState('manual');
+  const [wizardStep, setWizardStep] = useState(1);
+  const [creatingInstant, setCreatingInstant] = useState(false);
 
   const activeBots = useMemo(() => bots.filter((bot) => (bot.status || 'active') === 'active'), [bots]);
   const selectableBots = useMemo(() => activeBots.filter((bot) => bot.id !== form.master_bot_id), [activeBots, form.master_bot_id]);
@@ -105,6 +110,8 @@ export default function SquadBoard({ bots }) {
     setForm(BLANK_SQUAD);
     setEditingId(null);
     setRecommendGoal('');
+    setCreationMode('manual');
+    setWizardStep(1);
   };
 
   const toggleMember = (botId) => {
@@ -267,16 +274,41 @@ export default function SquadBoard({ bots }) {
     return { botRows, keywordRows };
   }, [bots, squads]);
 
-  const saveSquad = async () => {
-    if (!form.name.trim() || !form.master_bot_id) return;
-    const payload = {
+  const buildAutomaticSquad = () => {
+    const goal = recommendGoal.trim() || form.description.trim();
+    const suggestedMaster = recommendations[0]?.bot || activeBots[0];
+    const suggestedMembers = recommendations.slice(1, 4).map((item) => item.bot.id);
+    const keywords = extractMatchedKeywords(goal);
+
+    return {
       ...form,
-      name: form.name.trim(),
-      description: form.description.trim(),
-      shared_context: form.shared_context.trim(),
-      pipeline_steps: form.pipeline_steps.filter((step) => step.title.trim() || step.instruction.trim()),
+      name: form.name.trim() || (goal ? `${goal.slice(0, 32)} squad` : 'Auto squad'),
+      description: form.description.trim() || goal,
+      shared_context: form.shared_context.trim() || `Primary goal: ${goal || 'Coordinate specialists effectively.'}`,
+      master_bot_id: form.master_bot_id || suggestedMaster?.id || '',
+      member_bot_ids: form.member_bot_ids.length > 0 ? form.member_bot_ids : suggestedMembers,
+      pipeline_steps: form.pipeline_steps.length > 0 ? form.pipeline_steps : [
+        { id: `step_${Date.now()}_1`, title: 'Analyze goal', instruction: `Break down the request and identify the key priorities: ${goal || 'general coordination'}.`, assigned_bot_id: suggestedMaster?.id || '' },
+        { id: `step_${Date.now()}_2`, title: 'Specialist support', instruction: `Contribute specialist recommendations for: ${keywords.join(', ') || goal || 'the request'}.`, assigned_bot_id: suggestedMembers[0] || '' },
+        { id: `step_${Date.now()}_3`, title: 'Final synthesis', instruction: 'Merge findings into one clear coordinated output.', assigned_bot_id: suggestedMaster?.id || '' },
+      ],
       execution_history: form.execution_history || [],
       memory_pool: form.memory_pool || [],
+      status: form.status || 'draft',
+    };
+  };
+
+  const saveSquad = async (payloadOverride) => {
+    const source = payloadOverride || form;
+    if (!source.name.trim() || !source.master_bot_id) return;
+    const payload = {
+      ...source,
+      name: source.name.trim(),
+      description: source.description.trim(),
+      shared_context: source.shared_context.trim(),
+      pipeline_steps: source.pipeline_steps.filter((step) => step.title.trim() || step.instruction.trim()),
+      execution_history: source.execution_history || [],
+      memory_pool: source.memory_pool || [],
     };
 
     if (editingId) {
@@ -289,8 +321,23 @@ export default function SquadBoard({ bots }) {
     resetForm();
   };
 
+  const applyAutomaticSetup = () => {
+    const autoSquad = buildAutomaticSquad();
+    setForm(autoSquad);
+    setCreationMode('manual');
+  };
+
+  const createInstantSquad = async () => {
+    setCreatingInstant(true);
+    const autoSquad = buildAutomaticSquad();
+    await saveSquad(autoSquad);
+    setCreatingInstant(false);
+  };
+
   const editSquad = (squad) => {
     setEditingId(squad.id);
+    setCreationMode('manual');
+    setWizardStep(1);
     setForm({
       name: squad.name || '',
       description: squad.description || '',
@@ -415,152 +462,249 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
       <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
         <div>
           <p className="text-xs font-semibold text-foreground">{editingId ? 'Edit squad' : 'New squad'}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Choose a master bot, add squad members, then define shared context and pipeline steps.</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Choose how to create a squad: manual, automatic setup, instant auto create, or guided wizard.</p>
         </div>
 
-        <input
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          placeholder="Squad name"
-          className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none"
-        />
+        <SquadCreationModes mode={creationMode} onChange={setCreationMode} />
 
-        <textarea
-          value={form.description}
-          onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-          placeholder="What kind of requests this squad handles"
-          className="min-h-[72px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none resize-none"
-        />
-
-        <textarea
-          value={form.shared_context}
-          onChange={(e) => setForm((prev) => ({ ...prev, shared_context: e.target.value }))}
-          placeholder="Shared context for all bots in this squad"
-          className="min-h-[90px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none resize-none"
-        />
-
-        <div className="space-y-2 rounded-xl border border-border bg-background p-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <p className="text-xs font-semibold text-foreground">Recommend specialists</p>
-          </div>
-          <input
-            value={recommendGoal}
-            onChange={(e) => setRecommendGoal(e.target.value)}
-            placeholder="Describe the squad goal to get recommended bots"
-            className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none"
-          />
-          {recommendations.length > 0 && (
-            <div className="grid gap-2 md:grid-cols-2">
-              {recommendations.map((item) => (
-                <RecommendationCard key={item.bot.id} item={item} onAdd={addRecommendedBot} />
-              ))}
+        {creationMode === 'automatic' && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold text-foreground">Automatic squad setup</p>
             </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Master bot</p>
-          <div className="grid gap-2 md:grid-cols-2">
-            {activeBots.map((bot) => (
-              <button
-                key={bot.id}
-                onClick={() => setForm((prev) => ({
-                  ...prev,
-                  master_bot_id: bot.id,
-                  member_bot_ids: prev.member_bot_ids.filter((id) => id !== bot.id),
-                }))}
-                className={`rounded-xl border p-0 text-left ${form.master_bot_id === bot.id ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}
-              >
-                <BotBadge bot={bot} active={form.master_bot_id === bot.id} />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Squad members</p>
-            <span className="text-[10px] text-muted-foreground">{form.member_bot_ids.length} selected</span>
-          </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            {selectableBots.map((bot) => {
-              const active = form.member_bot_ids.includes(bot.id);
-              return (
-                <button
-                  key={bot.id}
-                  onClick={() => toggleMember(bot.id)}
-                  className={`rounded-xl border p-0 text-left ${active ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}
-                >
-                  <BotBadge bot={bot} active={active} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-3 rounded-xl border border-border bg-background p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold text-foreground">Pipeline</p>
-              <p className="text-[10px] text-muted-foreground">Define reusable specialist steps for complex requests.</p>
-            </div>
+            <p className="text-[10px] text-muted-foreground">Describe the goal, then apply a suggested squad with recommended bots and starter pipeline steps.</p>
+            {recommendGoal.trim() === '' && form.description.trim() === '' && (
+              <p className="text-[10px] text-muted-foreground">Tip: add a squad description or recommendation goal first for better results.</p>
+            )}
             <button
-              onClick={addStep}
-              className="inline-flex items-center gap-1 rounded-xl border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary"
+              onClick={applyAutomaticSetup}
+              disabled={recommendations.length === 0 && !activeBots.length}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
             >
-              <Plus className="w-3 h-3" /> Add step
+              <Bot className="w-3.5 h-3.5" /> Apply automatic setup
             </button>
           </div>
+        )}
 
-          {(form.pipeline_steps || []).length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No pipeline steps yet.</div>
-          ) : form.pipeline_steps.map((step, index) => (
-            <div key={step.id} className="space-y-2 rounded-xl border border-border bg-secondary/20 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold text-foreground">Step {index + 1}</p>
-                <button onClick={() => removeStep(step.id)} className="text-destructive">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <input
-                value={step.title}
-                onChange={(e) => updateStep(step.id, { title: e.target.value })}
-                placeholder="Step title"
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
-              />
-              <textarea
-                value={step.instruction}
-                onChange={(e) => updateStep(step.id, { instruction: e.target.value })}
-                placeholder="What should happen in this step"
-                className="min-h-[72px] w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none resize-none"
-              />
-              <select
-                value={step.assigned_bot_id}
-                onChange={(e) => updateStep(step.id, { assigned_bot_id: e.target.value })}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
-              >
-                <option value="">Assign to master by default</option>
-                {activeBots.filter((bot) => bot.id === form.master_bot_id || form.member_bot_ids.includes(bot.id)).map((bot) => (
-                  <option key={bot.id} value={bot.id}>{bot.name}</option>
-                ))}
-              </select>
+        {creationMode === 'instant' && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold text-foreground">Instant auto create</p>
             </div>
-          ))}
-        </div>
+            <p className="text-[10px] text-muted-foreground">This creates a ready-to-run squad immediately from your goal and the best available bots.</p>
+            <button
+              onClick={createInstantSquad}
+              disabled={creatingInstant || (!recommendGoal.trim() && !form.description.trim()) || !activeBots.length}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+            >
+              <Zap className="w-3.5 h-3.5" /> {creatingInstant ? 'Creating…' : 'Create instantly'}
+            </button>
+          </div>
+        )}
 
-        <div className="flex gap-2">
-          <button
-            onClick={saveSquad}
-            disabled={!form.name.trim() || !form.master_bot_id}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
-          >
-            <Save className="w-3.5 h-3.5" /> {editingId ? 'Update squad' : 'Save squad'}
-          </button>
-          {editingId && (
-            <button onClick={resetForm} className="rounded-xl border border-border px-3 py-2.5 text-xs text-muted-foreground">Cancel</button>
-          )}
-        </div>
+        {creationMode === 'wizard' && (
+          <div className="rounded-xl border border-border bg-background p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <Route className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold text-foreground">Guided wizard</p>
+            </div>
+            <SquadWizardProgress step={wizardStep} onStepChange={setWizardStep} />
+          </div>
+        )}
+
+        {(creationMode !== 'wizard' || wizardStep >= 1) && (
+          <input
+            value={form.name}
+            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="Squad name"
+            className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none"
+          />
+        )}
+
+        {(creationMode !== 'wizard' || wizardStep >= 1) && (
+          <textarea
+            value={form.description}
+            onChange={(e) => {
+              setForm((prev) => ({ ...prev, description: e.target.value }));
+              setRecommendGoal(e.target.value);
+            }}
+            placeholder="What kind of requests this squad handles"
+            className="min-h-[72px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none resize-none"
+          />
+        )}
+
+        {(creationMode !== 'wizard' || wizardStep >= 1) && (
+          <textarea
+            value={form.shared_context}
+            onChange={(e) => setForm((prev) => ({ ...prev, shared_context: e.target.value }))}
+            placeholder="Shared context for all bots in this squad"
+            className="min-h-[90px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none resize-none"
+          />
+        )}
+
+        {(creationMode !== 'wizard' || wizardStep === 1 || wizardStep > 1) && (
+          <div className="space-y-2 rounded-xl border border-border bg-background p-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold text-foreground">Recommend specialists</p>
+            </div>
+            <input
+              value={recommendGoal}
+              onChange={(e) => setRecommendGoal(e.target.value)}
+              placeholder="Describe the squad goal to get recommended bots"
+              className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none"
+            />
+            {recommendations.length > 0 && (
+              <div className="grid gap-2 md:grid-cols-2">
+                {recommendations.map((item) => (
+                  <RecommendationCard key={item.bot.id} item={item} onAdd={addRecommendedBot} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {(creationMode !== 'wizard' || wizardStep >= 2) && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Master bot</p>
+            <div className="grid gap-2 md:grid-cols-2">
+              {activeBots.map((bot) => (
+                <button
+                  key={bot.id}
+                  onClick={() => setForm((prev) => ({
+                    ...prev,
+                    master_bot_id: bot.id,
+                    member_bot_ids: prev.member_bot_ids.filter((id) => id !== bot.id),
+                  }))}
+                  className={`rounded-xl border p-0 text-left ${form.master_bot_id === bot.id ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}
+                >
+                  <BotBadge bot={bot} active={form.master_bot_id === bot.id} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(creationMode !== 'wizard' || wizardStep >= 3) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Squad members</p>
+              <span className="text-[10px] text-muted-foreground">{form.member_bot_ids.length} selected</span>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {selectableBots.map((bot) => {
+                const active = form.member_bot_ids.includes(bot.id);
+                return (
+                  <button
+                    key={bot.id}
+                    onClick={() => toggleMember(bot.id)}
+                    className={`rounded-xl border p-0 text-left ${active ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}
+                  >
+                    <BotBadge bot={bot} active={active} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {(creationMode !== 'wizard' || wizardStep >= 4) && (
+          <div className="space-y-3 rounded-xl border border-border bg-background p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-foreground">Pipeline</p>
+                <p className="text-[10px] text-muted-foreground">Define reusable specialist steps for complex requests.</p>
+              </div>
+              <button
+                onClick={addStep}
+                className="inline-flex items-center gap-1 rounded-xl border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary"
+              >
+                <Plus className="w-3 h-3" /> Add step
+              </button>
+            </div>
+
+            {(form.pipeline_steps || []).length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No pipeline steps yet.</div>
+            ) : form.pipeline_steps.map((step, index) => (
+              <div key={step.id} className="space-y-2 rounded-xl border border-border bg-secondary/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold text-foreground">Step {index + 1}</p>
+                  <button onClick={() => removeStep(step.id)} className="text-destructive">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <input
+                  value={step.title}
+                  onChange={(e) => updateStep(step.id, { title: e.target.value })}
+                  placeholder="Step title"
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
+                />
+                <textarea
+                  value={step.instruction}
+                  onChange={(e) => updateStep(step.id, { instruction: e.target.value })}
+                  placeholder="What should happen in this step"
+                  className="min-h-[72px] w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none resize-none"
+                />
+                <select
+                  value={step.assigned_bot_id}
+                  onChange={(e) => updateStep(step.id, { assigned_bot_id: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
+                >
+                  <option value="">Assign to master by default</option>
+                  {activeBots.filter((bot) => bot.id === form.master_bot_id || form.member_bot_ids.includes(bot.id)).map((bot) => (
+                    <option key={bot.id} value={bot.id}>{bot.name}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {creationMode === 'wizard' ? (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setWizardStep((prev) => Math.max(1, prev - 1))}
+              disabled={wizardStep === 1}
+              className="rounded-xl border border-border px-3 py-2.5 text-xs text-muted-foreground disabled:opacity-40"
+            >
+              Back
+            </button>
+            {wizardStep < 4 ? (
+              <button
+                onClick={() => setWizardStep((prev) => Math.min(4, prev + 1))}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                onClick={saveSquad}
+                disabled={!form.name.trim() || !form.master_bot_id}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+              >
+                <Save className="w-3.5 h-3.5" /> {editingId ? 'Update squad' : 'Finish wizard'}
+              </button>
+            )}
+            {editingId && (
+              <button onClick={resetForm} className="rounded-xl border border-border px-3 py-2.5 text-xs text-muted-foreground">Cancel</button>
+            )}
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={saveSquad}
+              disabled={!form.name.trim() || !form.master_bot_id}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+            >
+              <Save className="w-3.5 h-3.5" /> {editingId ? 'Update squad' : 'Save squad'}
+            </button>
+            {editingId && (
+              <button onClick={resetForm} className="rounded-xl border border-border px-3 py-2.5 text-xs text-muted-foreground">Cancel</button>
+            )}
+          </div>
+        )}
       </div>
 
       <SquadAnalyticsPanel analytics={squadAnalytics} />
