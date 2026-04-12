@@ -10,7 +10,7 @@ export default function BotFarmHeader({ metrics }) {
             <p className="text-sm font-semibold text-foreground">Bot Farm Operations Layer</p>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            A separate managed workforce with hard capacity, hierarchy pressure, maintenance, risk control, and measurable output quality.
+            Scale now creates real power and real strain: more bots raise throughput, but also coordination overhead, failure pressure, and leadership/security demand.
           </p>
         </div>
 
@@ -36,7 +36,7 @@ export default function BotFarmHeader({ metrics }) {
       <div className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
         <Activity className="w-3.5 h-3.5 text-primary" />
         <span>
-          Queue depth {metrics.task_queue_depth} · Mission progress {metrics.mission_progress}% · Scaling complexity {metrics.scaling_complexity}
+          Queue depth {metrics.task_queue_depth} · Mission progress {metrics.mission_progress}% · Scale power {metrics.scale_power} · Net strain {metrics.net_strain}
         </span>
       </div>
     </div>

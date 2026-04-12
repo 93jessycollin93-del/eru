@@ -125,6 +125,7 @@ export default function BotFarm() {
 
   const findSquadForBot = (bot) => squads.find((squad) => squad.id === bot.squad_id);
   const getUpgradeEffect = () => upgrades.reduce((sum, item) => sum + (item.effect_value || 0) * (item.level || 1), 0) / Math.max(1, upgrades.length || 1);
+  const getScalePressure = () => Math.round((bots.length * 0.9) + (squads.length * 2.4) + (tasks.filter((task) => ['assigned', 'active', 'review'].includes(task.status)).length * 1.1) + (upgrades.length * 1.8));
   const getCommanderBoost = (task) => {
     const commander = bots.find((bot) => bot.id === task.assigned_commander_bot_id);
     return commander ? Math.round(((commander.coordination_efficiency || 0) + (commander.confidence || 0)) / 20) : 0;
@@ -149,8 +150,9 @@ export default function BotFarm() {
     const chosen = ranked[0];
     if (!chosen) return;
 
-    const nextLoad = Math.min(100, (chosen.bot.load || 0) + (task.estimated_load || 15));
-    const nextFatigue = Math.min(100, (chosen.bot.fatigue || 0) + Math.max(10, Math.round((task.estimated_load || 15) * 0.55)));
+    const scalePressure = getScalePressure();
+    const nextLoad = Math.min(100, (chosen.bot.load || 0) + (task.estimated_load || 15) + Math.round(scalePressure * 0.08));
+    const nextFatigue = Math.min(100, (chosen.bot.fatigue || 0) + Math.max(10, Math.round((task.estimated_load || 15) * 0.55) + Math.round(scalePressure * 0.05)));
     const nextStatus = nextLoad > 82 || nextFatigue > 76 ? 'overloaded' : 'active';
     const nextRisk = chosen.bot.integrity < 72 || chosen.assignmentQuality < 62 || nextStatus === 'overloaded' ? 'medium' : chosen.bot.risk_level;
 
@@ -303,12 +305,14 @@ export default function BotFarm() {
       if (!bot) return;
 
       const commanderBoost = getCommanderBoost(task);
-      const quality = computeOutputQuality(bot, task, squad, upgradeEffect, commanderBoost);
+      const scalePressure = getScalePressure();
+      const leadershipLift = Math.round(Math.max(0, (metrics.leadership_buffer || 0) - (metrics.coordination_overhead || 0) * 0.2));
+      const quality = computeOutputQuality(bot, task, squad, upgradeEffect, commanderBoost) - Math.round(scalePressure * 0.06) + Math.round(leadershipLift * 0.08);
       const assignmentQuality = computeAssignmentQuality(bot, task, squad, commanderBoost);
-      const loadPenalty = Math.max(0, (bot.load || 0) - 65);
-      const coordinationPenalty = Math.max(0, (task.coordination_cost || 0) + (squad?.coordination_overhead || 0) - 12);
-      const nextProgress = Math.min(100, (task.progress || 0) + Math.max(8, Math.round((quality - coordinationPenalty) * 0.12)));
-      const nextStatus = nextProgress >= 100 ? 'complete' : quality < 50 ? 'blocked' : 'active';
+      const loadPenalty = Math.max(0, (bot.load || 0) - 65) + Math.round(scalePressure * 0.05);
+      const coordinationPenalty = Math.max(0, (task.coordination_cost || 0) + (squad?.coordination_overhead || 0) - 12) + Math.round(scalePressure * 0.04);
+      const nextProgress = Math.min(100, (task.progress || 0) + Math.max(6, Math.round((quality - coordinationPenalty) * 0.1)));
+      const nextStatus = nextProgress >= 100 ? 'complete' : quality < 50 || scalePressure > 55 && assignmentQuality < 64 ? 'blocked' : 'active';
 
       await Promise.all([
         base44.entities.BotFarmTask.update(task.id, {
@@ -318,8 +322,8 @@ export default function BotFarm() {
           blocked_reason: nextStatus === 'blocked' ? 'Low effective output quality under current load/coordination state.' : undefined,
         }),
         base44.entities.BotFarmBot.update(bot.id, {
-          fatigue: Math.min(100, (bot.fatigue || 0) + 6),
-          load: Math.min(100, (bot.load || 0) + 4),
+          fatigue: Math.min(100, (bot.fatigue || 0) + 6 + Math.round(scalePressure * 0.03)),
+          load: Math.min(100, (bot.load || 0) + 4 + Math.round(scalePressure * 0.04)),
           output_quality: quality,
           status: quality < 45 ? 'overloaded' : bot.status === 'recovering' ? 'idle' : bot.status,
         }),
@@ -371,6 +375,7 @@ export default function BotFarm() {
         progress,
         success_probability: successProbability,
         status: progress >= 100 ? 'complete' : successProbability < 45 ? 'blocked' : 'active',
+        coordination_complexity: Math.min(100, (mission.coordination_complexity || 0) + Math.round(getScalePressure() * 0.04)),
       });
     }));
 

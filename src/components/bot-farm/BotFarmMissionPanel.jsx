@@ -15,11 +15,13 @@ export default function BotFarmMissionPanel({ missions, squads, bots }) {
                 </div>
                 <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[10px] text-primary">{mission.status}</span>
               </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-4 text-[10px] text-muted-foreground">
+              <div className="mt-3 grid gap-2 sm:grid-cols-6 text-[10px] text-muted-foreground">
                 <div>Priority <span className="text-foreground">{mission.priority}</span></div>
                 <div>Expected <span className="text-foreground">{mission.expected_output_quality}%</span></div>
                 <div>Actual <span className="text-foreground">{mission.actual_output_quality}%</span></div>
                 <div>Success <span className="text-foreground">{mission.success_probability}%</span></div>
+                <div>Complexity <span className="text-foreground">{mission.coordination_complexity}</span></div>
+                <div>Security <span className="text-foreground">{mission.security_pressure}</span></div>
               </div>
               <div className="mt-2 text-[10px] text-muted-foreground">Leader <span className="text-foreground">{leader?.name || 'Unassigned'}</span> · Squads <span className="text-foreground">{linkedSquads.map((item) => item.name).join(', ') || 'None'}</span></div>
             </div>

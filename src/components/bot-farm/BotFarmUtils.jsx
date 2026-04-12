@@ -84,13 +84,23 @@ export function summarizeFarmMetrics(bots, tasks, missions, risks, outputs, squa
   const maintenanceBots = bots.filter((bot) => bot.status === 'maintenance').length;
   const averageQuality = outputs.length ? Math.round(outputs.reduce((sum, item) => sum + (item.quality_score || 0), 0) / outputs.length) : 0;
   const missionProgress = missions.length ? Math.round(missions.reduce((sum, mission) => sum + (mission.progress || 0), 0) / missions.length) : 0;
-  const systemEfficiency = bots.length ? Math.round(bots.reduce((sum, bot) => sum + (bot.efficiency || 0) + (bot.coordination_efficiency || 0) - ((bot.fatigue || 0) * 0.2), 0) / (bots.length * 2)) : 0;
   const queueDepth = tasks.filter((task) => ['pending', 'assigned', 'active', 'blocked', 'review'].includes(task.status)).length;
   const usedCapacity = bots.reduce((sum, bot) => sum + (bot.load || 0), 0);
   const totalCapacity = bots.reduce((sum, bot) => sum + ((bot.max_concurrent_tasks || 1) * 50), 0);
   const farmCapacity = totalCapacity ? Math.round((usedCapacity / totalCapacity) * 100) : 0;
-  const complexityLoad = upgrades.reduce((sum, item) => sum + (item.complexity_cost || 0) * (item.level || 1), 0);
+  const rawScalePower = bots.length * 1.6 + squads.length * 4.5 + upgrades.reduce((sum, item) => sum + ((item.effect_value || 0) * (item.level || 1)), 0);
+  const coordinationOverhead = squads.reduce((sum, squad) => sum + (squad.coordination_overhead || 0), 0) + Math.round(bots.length * 0.9) + Math.round(queueDepth * 1.4);
+  const failurePressure = overloadedBots * 8 + maintenanceBots * 6 + risks.length * 5 + Math.max(0, farmCapacity - 72);
+  const leadershipCoverage = bots.filter((bot) => getRoleBand(bot) === 'leader').reduce((sum, bot) => sum + (bot.coordination_efficiency || 0), 0);
+  const commanderCoverage = bots.filter((bot) => getRoleBand(bot) === 'commander').reduce((sum, bot) => sum + (bot.coordination_efficiency || 0), 0);
+  const securityCoverage = bots.filter((bot) => getRoleBand(bot) === 'security').reduce((sum, bot) => sum + ((bot.integrity || 0) + (bot.confidence || 0)) * 0.5, 0);
+  const leadershipBuffer = Math.round((leadershipCoverage * 0.12) + (commanderCoverage * 0.08) + (securityCoverage * 0.05));
+  const complexityLoad = upgrades.reduce((sum, item) => sum + (item.complexity_cost || 0) * (item.level || 1), 0) + Math.round(rawScalePower * 0.22);
   const squadReliability = squads.length ? Math.round(squads.reduce((sum, squad) => sum + (squad.reliability_score || 0), 0) / squads.length) : 0;
+  const systemEfficiencyBase = bots.length ? Math.round(bots.reduce((sum, bot) => sum + (bot.efficiency || 0) + (bot.coordination_efficiency || 0) - ((bot.fatigue || 0) * 0.2), 0) / (bots.length * 2)) : 0;
+  const netStrain = Math.max(0, coordinationOverhead + failurePressure + complexityLoad - leadershipBuffer);
+  const systemEfficiency = Math.max(0, Math.min(100, systemEfficiencyBase + Math.round(rawScalePower * 0.08) - Math.round(netStrain * 0.22)));
+
   return {
     total_bots: bots.length,
     active_bots: activeBots,
@@ -99,7 +109,7 @@ export function summarizeFarmMetrics(bots, tasks, missions, risks, outputs, squa
     maintenance_bots: maintenanceBots,
     output_rate: outputs.reduce((sum, item) => sum + (item.value_score || 0), 0),
     mission_progress: missionProgress,
-    system_efficiency: Math.max(0, systemEfficiency - Math.round(complexityLoad * 0.6)),
+    system_efficiency: systemEfficiency,
     integrity_warning_count: bots.filter((bot) => (bot.integrity || 0) < 70).length,
     security_alert_count: risks.filter((risk) => risk.severity === 'critical').length,
     task_queue_depth: queueDepth,
@@ -107,6 +117,11 @@ export function summarizeFarmMetrics(bots, tasks, missions, risks, outputs, squa
     capacity_usage: farmCapacity,
     squad_reliability: squadReliability,
     management_tradeoff: complexityLoad,
+    scale_power: Math.round(rawScalePower),
+    coordination_overhead: coordinationOverhead,
+    failure_pressure: failurePressure,
+    leadership_buffer: leadershipBuffer,
+    net_strain: Math.round(netStrain),
   };
 }
 

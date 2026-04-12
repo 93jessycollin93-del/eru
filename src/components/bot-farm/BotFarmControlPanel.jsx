@@ -14,9 +14,15 @@ export default function BotFarmControlPanel({ roleSummary, metrics, onRunCycle }
       </div>
 
       <div className="grid gap-2 sm:grid-cols-3 text-[11px] text-muted-foreground">
+        <div className="rounded-xl border border-border bg-background p-3">Scale power <span className="text-foreground">{metrics.scale_power}</span></div>
+        <div className="rounded-xl border border-border bg-background p-3">Coord overhead <span className="text-foreground">{metrics.coordination_overhead}</span></div>
+        <div className="rounded-xl border border-border bg-background p-3">Failure pressure <span className="text-foreground">{metrics.failure_pressure}</span></div>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3 text-[11px] text-muted-foreground">
+        <div className="rounded-xl border border-border bg-background p-3">Leadership buffer <span className="text-foreground">{metrics.leadership_buffer}</span></div>
+        <div className="rounded-xl border border-border bg-background p-3">Net strain <span className="text-foreground">{metrics.net_strain}</span></div>
         <div className="rounded-xl border border-border bg-background p-3">Capacity usage <span className="text-foreground">{metrics.capacity_usage}%</span></div>
-        <div className="rounded-xl border border-border bg-background p-3">Avg. quality <span className="text-foreground">{metrics.average_output_quality}%</span></div>
-        <div className="rounded-xl border border-border bg-background p-3">Complexity cost <span className="text-foreground">{metrics.management_tradeoff}</span></div>
       </div>
 
       <button onClick={onRunCycle} className="w-full rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground">
