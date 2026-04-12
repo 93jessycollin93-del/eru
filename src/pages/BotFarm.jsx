@@ -184,22 +184,26 @@ export default function BotFarm() {
     history: shouldLoadHistory,
     maintenanceLogs: shouldLoadMaintenanceLogs,
   }) => {
-    const loaders = [];
+    const requests = [
+      shouldLoadBots ? base44.entities.BotFarmBot.list('-updated_date', 100).then((rows) => ['bots', rows || []]) : null,
+      shouldLoadSquads ? base44.entities.BotFarmSquad.list('-updated_date', 50).then((rows) => ['squads', rows || []]) : null,
+      shouldLoadTasks ? base44.entities.BotFarmTask.list('-updated_date', 100).then((rows) => ['tasks', rows || []]) : null,
+      shouldLoadMissions ? base44.entities.BotFarmMission.list('-updated_date', 50).then((rows) => ['missions', rows || []]) : null,
+      shouldLoadOutputs ? base44.entities.BotFarmOutputLog.list('-updated_date', 100).then((rows) => ['outputs', rows || []]) : null,
+      shouldLoadRisks ? base44.entities.BotFarmRiskFlag.list('-updated_date', 100).then((rows) => ['risks', rows || []]) : null,
+      shouldLoadUpgrades ? base44.entities.BotFarmUpgrade.list('-updated_date', 30).then((rows) => ['upgrades', rows || []]) : null,
+      shouldLoadHistory ? base44.entities.BotFarmActivityHistory.list('-updated_date', 80).then((rows) => ['history', rows || []]) : null,
+      shouldLoadMaintenanceLogs ? base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80).then((rows) => ['maintenanceLogs', rows || []]) : null,
+    ].filter(Boolean);
 
-    if (shouldLoadBots) loaders.push(base44.entities.BotFarmBot.list('-updated_date', 100).then((rows) => ['bots', rows || []]));
-    if (shouldLoadSquads) loaders.push(base44.entities.BotFarmSquad.list('-updated_date', 50).then((rows) => ['squads', rows || []]));
-    if (shouldLoadTasks) loaders.push(base44.entities.BotFarmTask.list('-updated_date', 100).then((rows) => ['tasks', rows || []]));
-    if (shouldLoadMissions) loaders.push(base44.entities.BotFarmMission.list('-updated_date', 50).then((rows) => ['missions', rows || []]));
-    if (shouldLoadOutputs) loaders.push(base44.entities.BotFarmOutputLog.list('-updated_date', 100).then((rows) => ['outputs', rows || []]));
-    if (shouldLoadRisks) loaders.push(base44.entities.BotFarmRiskFlag.list('-updated_date', 100).then((rows) => ['risks', rows || []]));
-    if (shouldLoadUpgrades) loaders.push(base44.entities.BotFarmUpgrade.list('-updated_date', 30).then((rows) => ['upgrades', rows || []]));
-    if (shouldLoadHistory) loaders.push(base44.entities.BotFarmActivityHistory.list('-updated_date', 80).then((rows) => ['history', rows || []]));
-    if (shouldLoadMaintenanceLogs) loaders.push(base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80).then((rows) => ['maintenanceLogs', rows || []]));
+    if (!requests.length) return;
 
-    if (!loaders.length) return;
-
-    const results = await Promise.all(loaders);
+    const results = await Promise.all(requests);
     applyLoadedData(Object.fromEntries(results));
+  };
+
+  const prependHistoryEntry = (entry) => {
+    setHistory((current) => [entry, ...current].slice(0, 80));
   };
 
   const assignTaskToBot = async (task, botOverride) => {
@@ -273,7 +277,7 @@ export default function BotFarm() {
   };
 
   const handleRest = async (bot) => {
-    await Promise.all([
+    const [updatedBot, createdLog] = await Promise.all([
       base44.entities.BotFarmBot.update(bot.id, {
         fatigue: Math.max(0, (bot.fatigue || 0) - 28),
         load: Math.max(0, (bot.load || 0) - 18),
@@ -288,11 +292,12 @@ export default function BotFarm() {
         recovery_gain: 28,
       })
     ]);
-    await refreshAfterMutation({ bots: true, maintenanceLogs: true });
+    setBots((current) => current.map((item) => item.id === bot.id ? updatedBot : item));
+    setMaintenanceLogs((current) => [createdLog, ...current].slice(0, 80));
   };
 
   const handleRepair = async (bot) => {
-    await Promise.all([
+    const [updatedBot, createdLog] = await Promise.all([
       base44.entities.BotFarmBot.update(bot.id, {
         integrity: Math.min(100, (bot.integrity || 0) + 18),
         system_health: Math.min(100, (bot.system_health || 0) + 16),
@@ -307,11 +312,12 @@ export default function BotFarm() {
         recovery_gain: 18,
       })
     ]);
-    await refreshAfterMutation({ bots: true, maintenanceLogs: true });
+    setBots((current) => current.map((item) => item.id === bot.id ? updatedBot : item));
+    setMaintenanceLogs((current) => [createdLog, ...current].slice(0, 80));
   };
 
   const handleRecover = async (bot) => {
-    await Promise.all([
+    const [updatedBot, createdLog] = await Promise.all([
       base44.entities.BotFarmBot.update(bot.id, {
         fatigue: Math.max(0, (bot.fatigue || 0) - 12),
         load: Math.max(0, (bot.load || 0) - 10),
@@ -328,11 +334,12 @@ export default function BotFarm() {
         recovery_gain: 12,
       })
     ]);
-    await refreshAfterMutation({ bots: true, maintenanceLogs: true });
+    setBots((current) => current.map((item) => item.id === bot.id ? updatedBot : item));
+    setMaintenanceLogs((current) => [createdLog, ...current].slice(0, 80));
   };
 
   const handleQuarantine = async (bot) => {
-    await Promise.all([
+    const [updatedBot, createdRisk] = await Promise.all([
       base44.entities.BotFarmBot.update(bot.id, {
         status: 'quarantined',
         communication_status: 'offline',
@@ -346,24 +353,31 @@ export default function BotFarm() {
         details: `${bot.name} was quarantined due to operational risk.`
       })
     ]);
-    await refreshAfterMutation({ bots: true, risks: true, history: true });
+    setBots((current) => current.map((item) => item.id === bot.id ? updatedBot : item));
+    setRisks((current) => [createdRisk, ...current].slice(0, 100));
   };
 
   const handleUpgrade = async (upgrade) => {
-    await Promise.all([
+    const nextLevel = (upgrade.level || 1) + 1;
+    const nextEffectValue = (upgrade.effect_value || 0) + 4;
+    const nextComplexityCost = (upgrade.complexity_cost || 0) + 1;
+
+    const [updatedUpgrade, createdHistoryEntry] = await Promise.all([
       base44.entities.BotFarmUpgrade.update(upgrade.id, {
-        level: (upgrade.level || 1) + 1,
-        effect_value: (upgrade.effect_value || 0) + 4,
-        complexity_cost: (upgrade.complexity_cost || 0) + 1,
+        level: nextLevel,
+        effect_value: nextEffectValue,
+        complexity_cost: nextComplexityCost,
       }),
       base44.entities.BotFarmActivityHistory.create({
         actor_type: 'system',
         event_type: 'upgrade_expanded',
-        summary: `${upgrade.name} advanced to level ${(upgrade.level || 1) + 1}, increasing both capacity and management complexity.`,
-        impact_score: (upgrade.effect_value || 0) + 4,
+        summary: `${upgrade.name} advanced to level ${nextLevel}, increasing both capacity and management complexity.`,
+        impact_score: nextEffectValue,
       })
     ]);
-    await refreshAfterMutation({ upgrades: true, history: true });
+
+    setUpgrades((current) => current.map((item) => item.id === upgrade.id ? updatedUpgrade : item));
+    prependHistoryEntry(createdHistoryEntry);
   };
 
   const runOperationalCycle = async () => {
