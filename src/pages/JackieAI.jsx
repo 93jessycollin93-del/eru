@@ -15,7 +15,7 @@ import FoundryControlPanel from '../components/jackie/FoundryControlPanel';
 import InputBar from '../components/jackie/InputBar';
 import TelegramBotSetupPanel from '../components/jackie/TelegramBotSetupPanel';
 import CodeWorkspace from '../components/jackie/CodeWorkspace';
-import { VOICES } from '../components/jackie/VoiceSelector';
+import { VOICES } from '../components/jackie/VoiceSelector.jsx';
 
 const PAGE_NAV_MAP = [
   { keywords: ['ai lab', 'ailab', 'lab', 'bots', 'bot lab'], path: '/ailab' },

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Send, Zap, Mic, MicOff, ImagePlus, Video, FileCode, X, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import VoiceSelector from './VoiceSelector';
+import VoiceSelector from './VoiceSelector.jsx';
 
 export default function InputBar({ input, setInput, onSend, loading, mode, onToggleCommands, showCommands, voice, setVoice, onFilesReady }) {
   const [listening, setListening] = useState(false);
