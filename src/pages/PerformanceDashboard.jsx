@@ -57,11 +57,11 @@ export default function PerformanceDashboard() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    if (autoRefresh) {
-      intervalRef.current = setInterval(load, 15000);
-    } else {
+    if (!autoRefresh) {
       clearInterval(intervalRef.current);
+      return undefined;
     }
+    intervalRef.current = setInterval(load, 15000);
     return () => clearInterval(intervalRef.current);
   }, [autoRefresh]);
 

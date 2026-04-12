@@ -1,8 +1,8 @@
 import { base44 } from '@/api/base44Client';
 import { BellRing, Slack, NotebookPen } from 'lucide-react';
 
-const SLACK_CONNECTOR_ID = '69d36031ad616ab7e397c32c';
-const NOTION_CONNECTOR_ID = '69d35dff4263aa71b212065f';
+const SLACK_CONNECTOR_ID = '69db73abc7ef44b228d18b2b';
+const NOTION_CONNECTOR_ID = '69db736f69df0c20be35bfae';
 
 export default function SquadDeliveryPanel({ squad, onRefresh }) {
   const deliveryTargets = squad.delivery_targets || [];

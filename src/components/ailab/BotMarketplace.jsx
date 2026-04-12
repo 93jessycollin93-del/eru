@@ -226,19 +226,20 @@ export default function BotMarketplace({ onInstalled, compact = false, showPageL
       )}
 
       <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Bot className="w-4 h-4 text-primary" />
-              <p className="text-sm font-semibold">Bot Marketplace</p>
+        <div className="grid gap-3 md:grid-cols-[1.3fr,0.7fr] md:items-start">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Bot className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold">Bot Marketplace</p>
+              </div>
+              <p className="text-xs text-muted-foreground">Discover, install, rate, review, and share pre-built AI bots by category and industry.</p>
             </div>
-            <p className="text-xs text-muted-foreground">Discover, install, rate, review, and share pre-built AI bots by category and industry.</p>
-          </div>
-          {showPageLink && (
-            <Link to="/bot-marketplace" className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">
-              <Sparkles className="w-3.5 h-3.5" /> Open full marketplace
-            </Link>
-          )}
+            {showPageLink && (
+              <Link to="/bot-marketplace" className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">
+                <Sparkles className="w-3.5 h-3.5" /> Open full marketplace
+              </Link>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">

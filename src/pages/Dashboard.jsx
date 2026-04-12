@@ -63,7 +63,7 @@ export default function Dashboard() {
             activeBots={<WidgetLibrary prices={prices} sections={['bot-status']} />}
             quickStats={<AnalyticsWidget />}
           />
-          <WidgetLibrary prices={prices} sections={['bot-testing', 'market-pins', 'news-feed', 'ai-insights', 'dashboard-actions']} />
+          <WidgetLibrary prices={prices} sections={['market-pins', 'news-feed', 'ai-insights', 'dashboard-actions']} />
           <AppDock />
           <NotificationCenter />
           <AlertManager />

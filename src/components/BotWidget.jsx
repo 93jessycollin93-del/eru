@@ -22,7 +22,7 @@ export default function BotWidget({ prefs, updateWidget }) {
   useEffect(() => {
     const fetchBot = async () => {
       const allBots = await base44.entities.UserBot.list('-created_date', 100);
-      const assigned = allBots.find(b => b.status === 'active' && (b.page_assignments || []).includes(pathname));
+      const assigned = allBots.find((item) => item.status === 'active' && (item.page_assignments || []).includes(pathname));
       if (!assigned) {
         setBot(null);
         setConnectedBots([]);
@@ -31,9 +31,10 @@ export default function BotWidget({ prefs, updateWidget }) {
       }
       setBot(assigned);
       setMessages([{ role: 'bot', text: `Hi! I'm ${assigned.name}. ${assigned.description || 'How can I help?'}` }]);
-      const cids = assigned.connected_bot_ids || [];
-      setConnectedBots(cids.length > 0 ? allBots.filter(b => cids.includes(b.id)) : []);
+      const linkedIds = assigned.connected_bot_ids || [];
+      setConnectedBots(linkedIds.length > 0 ? allBots.filter((item) => linkedIds.includes(item.id)) : []);
     };
+
     setOpen(false);
     fetchBot();
   }, [pathname]);
