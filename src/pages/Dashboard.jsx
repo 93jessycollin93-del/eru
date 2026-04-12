@@ -11,6 +11,7 @@ import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
 import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
 import AnalyticsWidget from '../components/dashboard/AnalyticsWidget';
+import CollectorLeaderboard from '../components/dashboard/CollectorLeaderboard';
 import AlertManager from '../components/AlertManager';
 import ExportButton from '../components/dashboard/ExportButton';
 import NotificationCenter from '../components/notifications/NotificationCenter';
@@ -58,6 +59,7 @@ export default function Dashboard() {
           <AppDock />
           <NotificationCenter />
           <AlertManager />
+          <CollectorLeaderboard />
           <AnalyticsWidget />
           <ScreenVisualizer />
           <DataVisualizer />
