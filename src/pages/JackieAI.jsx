@@ -79,7 +79,7 @@ const THINK_MODES = [
 
 export default function JackieAI() {
   const navigate = useNavigate();
-  const jackieProgressEntity = base44.entities['JackieProgress'];
+  const jackieProgressEntity = base44.entities?.JackieProgress || null;
   const [messages, setMessages] = useState([]);
   const [thinkMode, setThinkMode] = useState('default');
   const [userBots, setUserBots] = useState([]);

@@ -226,9 +226,11 @@ export default function AILab() {
         })
       : '';
     const prompt = `You are ${testBot.name}. ${PROGRAMMING_MEMORY_PROMPT}\n${testBot.instructions || ''}\n${templatePrompt ? `Prompt template:\n${templatePrompt}\n` : ''}Personality: ${testBot.personality || 'helpful'}\nResponse style: ${testBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testInput}\n\n${testBot.name}:`;
-    const res = await invokeSelectedModel({ provider: testBot.model_provider, model: testBot.model_name, prompt });
+    const res = await invokeSelectedModel({ provider: testBot.model_provider, model: testBot.model_name, prompt }).catch(() => 'This bot needs its model connection set up before it can be tested here.');
     setTestResponse(res);
-    await awardXP(testBot, 10);
+    if (res !== 'This bot needs its model connection set up before it can be tested here.') {
+      await awardXP(testBot, 10);
+    }
     setTesting(false);
   };
 

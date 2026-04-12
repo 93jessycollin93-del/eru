@@ -27,7 +27,7 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
     setManualLoading(true);
     const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}` : '';
     const prompt = `You are ${selectedBot.name}. ${selectedBot.instructions || ''}\nPersonality: ${selectedBot.personality || 'helpful'}\nResponse style: ${selectedBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${manualPrompt}\n\n${selectedBot.name}:`;
-    const result = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt });
+    const result = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt }).catch(() => 'This bot needs its model connection set up before it can be tested here.');
     setManualResponse(result);
     setManualLoading(false);
   };
