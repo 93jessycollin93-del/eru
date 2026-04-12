@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BrainCircuit, CheckSquare, Loader2, MessageSquareShare, Square, Users } from 'lucide-react';
+import SpeechToTextInput from './SpeechToTextInput.jsx';
 import { base44 } from '@/api/base44Client';
 
 export default function BotCollaborationWorkspace({ bots }) {
@@ -128,11 +129,12 @@ Return the best final answer with clear sections: Summary, Key Findings, Recomme
           placeholder="Session title"
           className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none text-foreground"
         />
-        <textarea
+        <SpeechToTextInput
           value={goal}
-          onChange={(e) => setGoal(e.target.value)}
+          onChange={setGoal}
           placeholder="Describe the complex task you want the bots to solve together..."
-          className="min-h-[90px] w-full rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm outline-none resize-none text-foreground"
+          multiline
+          minHeightClass="min-h-[90px]"
         />
         <div className="space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Choose collaborating bots</p>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bot, FlaskConical, Play, MessageSquare, ArrowRight, CheckCircle2, AlertTriangle, Paperclip, X } from 'lucide-react';
 import { invokeSelectedModel } from './modelRouting';
+import SpeechToTextInput from './SpeechToTextInput.jsx';
 import { base44 } from '@/api/base44Client';
 
 export default function BotTestingLabWidget({ bots = [], testCases = [], testRuns = [], globalPolicy }) {
@@ -93,7 +94,11 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
           <option value="">Choose bot</option>
           {bots.map((bot) => <option key={bot.id} value={bot.id}>{bot.name}</option>)}
         </select>
-        <input value={manualPrompt} onChange={(e) => setManualPrompt(e.target.value)} placeholder="Ask a quick test question..." className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none" />
+        <SpeechToTextInput
+          value={manualPrompt}
+          onChange={setManualPrompt}
+          placeholder="Ask a quick test question..."
+        />
         <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
           <Paperclip className="w-3.5 h-3.5" /> Attach images or files
           <input type="file" multiple onChange={(e) => setManualFiles(Array.from(e.target.files || []))} className="hidden" />
