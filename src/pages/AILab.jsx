@@ -19,6 +19,7 @@ import BotMonitoringDashboard from '../components/ailab/BotMonitoringDashboard';
 import BotSpecialistRankingDashboard from '../components/ailab/BotSpecialistRankingDashboard';
 import PinnedCards from '../components/ailab/PinnedCards';
 import SquadBoard from '../components/ailab/SquadBoard';
+import CommandCenterDashboard from '../components/ailab/CommandCenterDashboard.jsx';
 import BotCollaborationWorkspace from '../components/ailab/BotCollaborationWorkspace';
 import BotGlobalPolicyPanel from '../components/ailab/BotGlobalPolicyPanel';
 import PromptLibraryPanel from '../components/ailab/PromptLibraryPanel';
@@ -104,7 +105,7 @@ export default function AILab() {
 
   const loadBots = async () => {
     setLoading(true);
-    const data = await base44.entities.UserBot.list('-created_date', 50);
+    const data = await base44.entities.UserBot.list('-created_date', 100);
     setBots(data);
     setLoading(false);
   };
@@ -720,7 +721,7 @@ export default function AILab() {
       {tab === 'pinned' && <PinnedCards bots={bots} />}
 
       {/* SQUAD */}
-      {tab === 'squad' && <SquadBoard bots={bots} />}
+      {tab === 'squad' && <div><CommandCenterDashboard /><SquadBoard bots={bots} /></div>}
 
       {/* POLICY */}
       {tab === 'policy' && <BotGlobalPolicyPanel />}
