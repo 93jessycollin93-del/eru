@@ -3,6 +3,7 @@ import { useRealPrices } from '../hooks/useRealPrices';
 import TickerBar from '../components/dashboard/TickerBar';
 import { WifiOff, Loader2 } from 'lucide-react';
 import { useFeatureTracking, trackFeatureInteraction } from '../hooks/useFeatureTracking';
+import AssetComparisonDashboard from '../components/markets/AssetComparisonDashboard';
 
 function PriceRow({ asset, onClick, selected }) {
   const prevRef = useRef(asset.price);
@@ -113,23 +114,27 @@ export default function Markets() {
       )}
 
       {/* Heatmap */}
-      <div className="px-4 py-3">
-        <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-2">Top Movers</p>
-        <div className="grid grid-cols-3 gap-1.5 mb-4">
-          {prices.slice(0, 6).map(p => {
-            const ch = p.change ?? 0;
-            return (
-              <div key={p.symbol} onClick={() => setSelected(p)}
-                className="rounded-lg p-2 cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: ch >= 0 ? `hsl(160 100% ${Math.min(45, 25 + Math.abs(ch) * 3)}% / 0.25)` : `hsl(350 100% ${Math.min(60, 25 + Math.abs(ch) * 3)}% / 0.25)` }}>
-                <p className="text-xs font-mono font-medium text-foreground">{p.symbol}</p>
-                <p className={`text-xs font-mono ${ch >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {ch >= 0 ? '+' : ''}{ch.toFixed(2)}%
-                </p>
-              </div>
-            );
-          })}
+      <div className="px-4 py-3 space-y-4">
+        <div>
+          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-2">Top Movers</p>
+          <div className="grid grid-cols-3 gap-1.5 mb-4">
+            {prices.slice(0, 6).map(p => {
+              const ch = p.change ?? 0;
+              return (
+                <div key={p.symbol} onClick={() => setSelected(p)}
+                  className="rounded-lg p-2 cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ background: ch >= 0 ? `hsl(160 100% ${Math.min(45, 25 + Math.abs(ch) * 3)}% / 0.25)` : `hsl(350 100% ${Math.min(60, 25 + Math.abs(ch) * 3)}% / 0.25)` }}>
+                  <p className="text-xs font-mono font-medium text-foreground">{p.symbol}</p>
+                  <p className={`text-xs font-mono ${ch >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {ch >= 0 ? '+' : ''}{ch.toFixed(2)}%
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
+
+        <AssetComparisonDashboard prices={prices} />
       </div>
 
       <div className="border-t border-border">
