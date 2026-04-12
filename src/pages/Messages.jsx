@@ -1,153 +1,119 @@
-import { useState } from 'react';
-import { Search, Plus, Send, Trash2 } from 'lucide-react';
-import InvestmentCollaborationPanel from '../components/messages/InvestmentCollaborationPanel';
-import StrategyWorkspace from '../components/messages/StrategyWorkspace';
+import { useMemo, useState } from 'react';
+import { Search, Users, Radio } from 'lucide-react';
+import SocialFeed from '../components/messages/SocialFeed';
+import ChatDirectory from '../components/messages/ChatDirectory';
+import ChatRoom from '../components/messages/ChatRoom';
+import CreateChatPanel from '../components/messages/CreateChatPanel';
 
-const THREADS = [
-  { id: 1, from: 'TON Support', subject: 'Transaction Confirmed', preview: 'Your swap of 50 TON → USDT has been completed...', time: '2m ago', unread: true, color: '#00e676' },
-  { id: 2, from: 'NFT Marketplace', subject: 'Offer Received', preview: 'Someone made an offer on TON Punk #1337...', time: '1h ago', unread: true, color: '#7c4dff' },
-  { id: 3, from: 'System', subject: 'Security Alert', preview: 'New login detected from a new device...', time: '3h ago', unread: false, color: '#ff5252' },
-  { id: 4, from: 'Collectables', subject: 'Order Shipped', preview: 'Your Charizard PSA 9 is on its way...', time: '1d ago', unread: false, color: '#ffeb3b' },
+const INITIAL_CHATS = [
+  {
+    id: 'global',
+    name: 'Global Collectors Chat',
+    description: 'Open market discussion, portfolio talk, listings, and trade flow.',
+    visibility: 'open',
+    voice_enabled: false,
+    members: ['You', 'Alex', 'Maya', 'TON Whale'],
+    messages: [
+      { id: 'm1', author: 'Alex', text: 'Who is watching the premium jade listings today?' },
+      { id: 'm2', author: 'Maya', text: 'I posted a new trade idea in the feed for rare cards vs TON.' },
+    ],
+  },
+  {
+    id: 'friends',
+    name: 'Friends Portfolio Room',
+    description: 'Invite-only room for trade setups, private notes, and voice chat.',
+    visibility: 'private',
+    voice_enabled: true,
+    members: ['You', 'Alex', 'Maya'],
+    messages: [
+      { id: 'm3', author: 'You', text: 'Let’s compare our allocation changes before tonight.' },
+      { id: 'm4', author: 'Alex', text: 'Voice room is ready if you want to walk through the listings live.' },
+    ],
+  },
 ];
 
-const PALETTE = ['#00e676','#7c4dff','#ff5252','#ffeb3b','#2196f3','#ff9800','#e91e63'];
-
 export default function Messages() {
-  const [selected, setSelected] = useState(null);
-  const [compose, setCompose] = useState(false);
-  const [reply, setReply] = useState('');
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
-  const [color, setColor] = useState('#00e676');
-  const [showPalette, setShowPalette] = useState(false);
-  const [threads, setThreads] = useState(THREADS);
-  const [checkedIds, setCheckedIds] = useState(new Set());
+  const [tab, setTab] = useState('feed');
+  const [search, setSearch] = useState('');
+  const [chats, setChats] = useState(INITIAL_CHATS);
+  const [activeChatId, setActiveChatId] = useState('global');
 
-  const toggleCheck = (e, id) => {
-    e.stopPropagation();
-    setCheckedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const visibleChats = useMemo(() => chats.filter((chat) => [chat.name, chat.description].join(' ').toLowerCase().includes(search.toLowerCase())), [chats, search]);
+  const activeChat = visibleChats.find((chat) => chat.id === activeChatId) || chats.find((chat) => chat.id === activeChatId) || chats[0];
+
+  const createChat = (form) => {
+    const newChat = {
+      id: String(Date.now()),
+      name: form.name,
+      description: form.description,
+      visibility: form.visibility,
+      voice_enabled: form.voice_enabled,
+      members: ['You'],
+      messages: [{ id: `welcome-${Date.now()}`, author: 'System', text: `${form.visibility === 'open' ? 'Open' : 'Private'} chat created.` }],
+    };
+    setChats((prev) => [newChat, ...prev]);
+    setActiveChatId(newChat.id);
+    setTab('chats');
   };
 
-  const deleteSelected = () => {
-    setThreads(prev => prev.filter(t => !checkedIds.has(t.id)));
-    setCheckedIds(new Set());
+  const sendMessage = (chatId, payload) => {
+    setChats((prev) => prev.map((chat) => chat.id === chatId ? {
+      ...chat,
+      messages: [...chat.messages, { id: String(Date.now()), ...payload }],
+    } : chat));
   };
 
-  if (compose) return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <button onClick={() => setCompose(false)} className="text-muted-foreground text-sm">Cancel</button>
-        <h3 className="font-medium">New Message</h3>
-        <button onClick={() => { setThreads(p => [{id:Date.now(),from:'You',subject,preview:body.slice(0,60),time:'just now',unread:false,color},...p]); setCompose(false); }}
-          className="text-primary text-sm font-semibold">Send</button>
-      </div>
-      <div className="px-4 py-4 space-y-3">
-        <div className="flex items-center gap-2 border-b border-border pb-3">
-          <button onClick={() => setShowPalette(p => !p)} className="rounded-full w-5 h-5 flex-shrink-0" style={{background:color}}/>
-          {showPalette && (
-            <div className="flex gap-1.5 flex-wrap">
-              {PALETTE.map(c => <button key={c} onClick={() => {setColor(c);setShowPalette(false);}} className="w-5 h-5 rounded-full" style={{background:c}}/>)}
-            </div>
-          )}
-          {!showPalette && <span className="text-xs text-muted-foreground">Label color</span>}
-        </div>
-        <div className="border-b border-border pb-3">
-          <input placeholder="Subject" value={subject} onChange={e => setSubject(e.target.value)}
-            className="w-full bg-transparent text-foreground text-sm outline-none font-medium placeholder:text-muted-foreground"/>
-        </div>
-        <textarea placeholder="Write your message..." value={body} onChange={e => setBody(e.target.value)}
-          className="w-full bg-transparent text-foreground text-sm outline-none placeholder:text-muted-foreground min-h-[200px] resize-none"/>
-      </div>
-    </div>
-  );
-
-  if (selected) return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
-      <div className="px-4 py-3 border-b border-border flex items-center gap-3">
-        <button onClick={() => setSelected(null)} className="text-muted-foreground text-sm">← Back</button>
-        <div className="flex-1">
-          <p className="font-medium text-sm">{selected.from}</p>
-          <p className="text-xs text-muted-foreground">{selected.subject}</p>
-        </div>
-      </div>
-      <div className="flex-1 px-4 py-4">
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full" style={{background:selected.color}}/>
-            <span className="text-xs text-muted-foreground">{selected.time}</span>
-          </div>
-          <p className="text-sm text-foreground leading-relaxed">{selected.preview} This is the full message content. All correspondence is encrypted and stored securely. Please do not share sensitive information in messages.</p>
-        </div>
-      </div>
-      <div className="px-4 pb-4 flex items-center gap-2">
-        <input value={reply} onChange={e => setReply(e.target.value)} placeholder="Reply..."
-          className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"/>
-        <button className="bg-primary text-primary-foreground rounded-xl p-2.5">
-          <Send className="w-4 h-4"/>
-        </button>
-      </div>
-    </div>
-  );
+  const inviteToChat = (chatId) => {
+    setChats((prev) => prev.map((chat) => chat.id === chatId ? {
+      ...chat,
+      members: chat.members.includes('New Friend') ? chat.members : [...chat.members, 'New Friend'],
+      messages: [...chat.messages, { id: String(Date.now()), author: 'System', text: 'New Friend has been invited to the chat.' }],
+    } : chat));
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        {checkedIds.size > 0 ? (
-          <>
-            <span className="text-sm text-muted-foreground">{checkedIds.size} selected</span>
-            <button onClick={deleteSelected} className="flex items-center gap-1.5 bg-destructive text-destructive-foreground rounded-lg px-3 py-1.5 text-sm">
-              <Trash2 className="w-3.5 h-3.5"/>
-              Delete
-            </button>
-          </>
-        ) : (
-          <>
-            <h2 className="text-lg font-semibold">Messages</h2>
-            <button onClick={() => setCompose(true)} className="bg-primary text-primary-foreground rounded-lg p-1.5">
-              <Plus className="w-4 h-4"/>
-            </button>
-          </>
-        )}
-      </div>
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 border-b border-border space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Community Social</h2>
+            <p className="text-xs text-muted-foreground">Collectors can post, chat, invite friends, and talk live in private rooms.</p>
+          </div>
+          <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold text-primary">
+            <Radio className="w-3 h-3" /> Live social
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2">
-          <Search className="w-4 h-4 text-muted-foreground"/>
-          <input placeholder="Search messages..." className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"/>
+          <Search className="w-4 h-4 text-muted-foreground" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats and social activity..." className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground" />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={() => setTab('feed')} className={`rounded-xl px-3 py-2 text-xs font-medium ${tab === 'feed' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>Feed</button>
+          <button onClick={() => setTab('chats')} className={`rounded-xl px-3 py-2 text-xs font-medium ${tab === 'chats' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>Chats</button>
+          <button onClick={() => setTab('create')} className={`rounded-xl px-3 py-2 text-xs font-medium ${tab === 'create' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>Create Room</button>
         </div>
       </div>
-      <InvestmentCollaborationPanel />
-      <StrategyWorkspace />
-      <div className="divide-y divide-border px-0">
-        {threads.map(t => (
-          <div key={t.id} className="flex items-center px-4 py-3 gap-3 hover:bg-secondary/40 transition-colors">
-            <input
-              type="checkbox"
-              checked={checkedIds.has(t.id)}
-              onChange={e => toggleCheck(e, t.id)}
-              onClick={e => e.stopPropagation()}
-              className="w-4 h-4 accent-primary flex-shrink-0 cursor-pointer"
-            />
-            <div className="flex items-center flex-1 min-w-0 gap-3 cursor-pointer" onClick={() => setSelected(t)}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-              style={{background:`${t.color}20`, color:t.color, border:`1px solid ${t.color}40`}}>
-              {t.from.slice(0,1)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <p className={`text-sm ${t.unread ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground'}`}>{t.from}</p>
-                <p className="text-xs text-muted-foreground">{t.time}</p>
+
+      <div className="px-4 py-4 space-y-4">
+        {tab === 'feed' && <SocialFeed />}
+
+        {tab === 'chats' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold text-primary">Chat modes</p>
               </div>
-              <p className={`text-xs truncate ${t.unread ? 'text-foreground' : 'text-muted-foreground'}`}>{t.subject}</p>
-              <p className="text-xs text-muted-foreground truncate">{t.preview}</p>
+              <p className="text-xs text-muted-foreground">Global chat is open to everyone, while personal group chats can be open to join or locked to invites only, with optional voice room controls.</p>
             </div>
-              {t.unread && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0"/>}
-            </div>
+            <ChatDirectory chats={visibleChats} activeChatId={activeChat?.id} onSelectChat={setActiveChatId} onCreateChat={() => setTab('create')} />
+            {activeChat && <ChatRoom chat={activeChat} onSendMessage={sendMessage} onInvite={inviteToChat} />}
           </div>
-        ))}
+        )}
+
+        {tab === 'create' && <CreateChatPanel onCreate={createChat} />}
       </div>
     </div>
   );
