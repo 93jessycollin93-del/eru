@@ -94,10 +94,16 @@ export default function BotWidget({ prefs, updateWidget }) {
   const botChatPrefs = prefs?.botChat;
 
   useEffect(() => {
-    const handleOpen = () => setOpen(true);
+    const handleOpen = () => {
+      if (!bot) {
+        window.dispatchEvent(new CustomEvent('bot-chat-unavailable'));
+        return;
+      }
+      setOpen(true);
+    };
     window.addEventListener('open-bot-chat', handleOpen);
     return () => window.removeEventListener('open-bot-chat', handleOpen);
-  }, []);
+  }, [bot]);
 
   const handleMouseDown = (e) => {
     setDragging(true);

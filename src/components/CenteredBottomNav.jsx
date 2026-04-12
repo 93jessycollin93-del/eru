@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff } from 'lucide-react';
 
@@ -97,6 +97,17 @@ export default function FloatingNav({ onSearchOpen }) {
   const dragOffset = useRef({ x: 0, y: 0 });
   const navRef = useRef(null);
   const didDrag = useRef(false);
+  const [unavailableWidget, setUnavailableWidget] = useState(null);
+
+  useEffect(() => {
+    const handleUnavailable = () => {
+      setUnavailableWidget('botChat');
+      window.setTimeout(() => setUnavailableWidget(null), 1800);
+    };
+
+    window.addEventListener('bot-chat-unavailable', handleUnavailable);
+    return () => window.removeEventListener('bot-chat-unavailable', handleUnavailable);
+  }, []);
 
   const pinnedPages = ALL_PAGES.filter(p => pinned.includes(p.id));
   const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.widgetId]?.visible);
@@ -256,7 +267,7 @@ export default function FloatingNav({ onSearchOpen }) {
                       type="button"
                       onClick={handleWidgetClick}
                       title={label}
-                      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors text-muted-foreground hover:text-foreground"
+                      className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${unavailableWidget === id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
                       <span className="text-[8px] font-medium leading-none">{label}</span>
@@ -301,7 +312,7 @@ export default function FloatingNav({ onSearchOpen }) {
                 type="button"
                 onClick={handleWidgetClick}
                 title={label}
-                className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors text-muted-foreground hover:text-foreground"
+                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${unavailableWidget === id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
                 <span className="text-[8px] font-medium leading-none">{label}</span>
