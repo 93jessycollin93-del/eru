@@ -49,6 +49,7 @@ import WalletManager from './pages/WalletManager';
 import TransactionHistory from './pages/TransactionHistory';
 import BotMarketplace from './pages/BotMarketplace';
 import SquadPerformance from './pages/SquadPerformance';
+import SquadKnowledgeTrends from './pages/SquadKnowledgeTrends';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -121,6 +122,7 @@ const AuthenticatedApp = () => {
         <Route path="/transactions" element={<TransactionHistory />} />
         <Route path="/bot-marketplace" element={<BotMarketplace />} />
         <Route path="/squad-performance" element={<SquadPerformance />} />
+        <Route path="/squad-knowledge-trends" element={<SquadKnowledgeTrends />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
