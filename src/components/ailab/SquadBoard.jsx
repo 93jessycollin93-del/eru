@@ -10,6 +10,7 @@ import SquadOptimizationPanel from './SquadOptimizationPanel.jsx';
 import SquadDeliveryPanel from './SquadDeliveryPanel.jsx';
 import SquadOutputChart from './SquadOutputChart.jsx';
 import SquadTemplateLibrary from './SquadTemplateLibrary.jsx';
+import SquadFormationBuilder from './SquadFormationBuilder.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -26,6 +27,15 @@ const BLANK_SQUAD = {
   description: '',
   master_bot_id: '',
   member_bot_ids: [],
+  leader_bot_id: '',
+  commander_bot_ids: [],
+  security_bot_ids: [],
+  task_groups: [
+    { id: 'group_1', name: 'Group 1', purpose: '', task_instruction: '', bot_ids: [] },
+    { id: 'group_2', name: 'Group 2', purpose: '', task_instruction: '', bot_ids: [] },
+    { id: 'group_3', name: 'Group 3', purpose: '', task_instruction: '', bot_ids: [] },
+    { id: 'group_4', name: 'Group 4', purpose: '', task_instruction: '', bot_ids: [] },
+  ],
   shared_context: '',
   pipeline_steps: [],
   execution_history: [],
@@ -340,6 +350,15 @@ export default function SquadBoard({ bots }) {
       shared_context: form.shared_context.trim() || `Primary goal: ${goal || 'Coordinate specialists effectively.'}${matchedKnowledge ? ` Reuse lessons from ${matchedKnowledge.source_squad_name}.` : ''}`,
       master_bot_id: form.master_bot_id || suggestedMaster?.id || '',
       member_bot_ids: form.member_bot_ids.length > 0 ? form.member_bot_ids : suggestedMembers,
+      leader_bot_id: form.leader_bot_id || suggestedMaster?.id || '',
+      commander_bot_ids: form.commander_bot_ids?.length ? form.commander_bot_ids : rankedBots.slice(1, 3).map((item) => item.bot.id),
+      security_bot_ids: form.security_bot_ids?.length ? form.security_bot_ids : rankedBots.filter((item) => item.bot.role === 'security').slice(0, 2).map((item) => item.bot.id),
+      task_groups: form.task_groups?.some((group) => (group.bot_ids || []).length > 0 || group.task_instruction) ? form.task_groups : [
+        { id: 'group_1', name: 'Group 1', purpose: 'Primary execution', task_instruction: goal || 'Main task execution', bot_ids: rankedBots.slice(0, 5).map((item) => item.bot.id) },
+        { id: 'group_2', name: 'Group 2', purpose: 'Support execution', task_instruction: goal || 'Main task execution', bot_ids: rankedBots.slice(5, 10).map((item) => item.bot.id) },
+        { id: 'group_3', name: 'Group 3', purpose: 'Special analysis', task_instruction: `Analyze and extend: ${goal || 'current objective'}`, bot_ids: rankedBots.slice(10, 15).map((item) => item.bot.id) },
+        { id: 'group_4', name: 'Group 4', purpose: 'Delivery and QA', task_instruction: `Validate and finalize: ${goal || 'current objective'}`, bot_ids: rankedBots.slice(15, 20).map((item) => item.bot.id) },
+      ],
       pipeline_steps: form.pipeline_steps.length > 0 ? form.pipeline_steps : matchedKnowledge ? [
         { id: `step_${Date.now()}_1`, title: 'Reuse proven plan', instruction: `Review the successful pattern from ${matchedKnowledge.source_squad_name} for this goal: ${matchedKnowledge.goal}.`, assigned_bot_id: suggestedMaster?.id || '' },
         { id: `step_${Date.now()}_2`, title: 'Adapt winning strategy', instruction: `Adapt this successful strategy to the current task: ${matchedKnowledge.result_summary}.`, assigned_bot_id: suggestedMembers[0] || '' },
@@ -412,6 +431,10 @@ export default function SquadBoard({ bots }) {
       description: squad.description || '',
       master_bot_id: squad.master_bot_id || '',
       member_bot_ids: squad.member_bot_ids || [],
+      leader_bot_id: squad.leader_bot_id || squad.master_bot_id || '',
+      commander_bot_ids: squad.commander_bot_ids || [],
+      security_bot_ids: squad.security_bot_ids || [],
+      task_groups: squad.task_groups || BLANK_SQUAD.task_groups,
       shared_context: squad.shared_context || '',
       pipeline_steps: (squad.pipeline_steps || []).map((step) => ({
         id: step.id || `step_${Date.now()}_${Math.random()}`,
@@ -440,6 +463,10 @@ export default function SquadBoard({ bots }) {
       source_squad_name: squad.name,
       master_bot_id: squad.master_bot_id,
       member_bot_ids: squad.member_bot_ids || [],
+      leader_bot_id: squad.leader_bot_id || squad.master_bot_id || '',
+      commander_bot_ids: squad.commander_bot_ids || [],
+      security_bot_ids: squad.security_bot_ids || [],
+      task_groups: squad.task_groups || [],
       shared_context: squad.shared_context || '',
       pipeline_steps: (squad.pipeline_steps || []).map((step) => ({
         id: step.id || `step_${Date.now()}_${Math.random()}`,
@@ -460,6 +487,10 @@ export default function SquadBoard({ bots }) {
       description: template.description || '',
       master_bot_id: template.master_bot_id || '',
       member_bot_ids: template.member_bot_ids || [],
+      leader_bot_id: template.leader_bot_id || template.master_bot_id || '',
+      commander_bot_ids: template.commander_bot_ids || [],
+      security_bot_ids: template.security_bot_ids || [],
+      task_groups: template.task_groups || BLANK_SQUAD.task_groups,
       shared_context: template.shared_context || '',
       pipeline_steps: (template.pipeline_steps || []).map((step) => ({
         id: `step_${Date.now()}_${Math.random()}`,
@@ -781,25 +812,28 @@ Prefer practical business/search terms and avoid vague words.`,
         )}
 
         {(creationMode !== 'wizard' || wizardStep >= 3) && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Squad members</p>
-              <span className="text-[10px] text-muted-foreground">{form.member_bot_ids.length} selected</span>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Squad members</p>
+                <span className="text-[10px] text-muted-foreground">{form.member_bot_ids.length} selected</span>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {selectableBots.map((bot) => {
+                  const active = form.member_bot_ids.includes(bot.id);
+                  return (
+                    <button
+                      key={bot.id}
+                      onClick={() => toggleMember(bot.id)}
+                      className={`rounded-xl border p-0 text-left ${active ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}
+                    >
+                      <BotBadge bot={bot} active={active} />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {selectableBots.map((bot) => {
-                const active = form.member_bot_ids.includes(bot.id);
-                return (
-                  <button
-                    key={bot.id}
-                    onClick={() => toggleMember(bot.id)}
-                    className={`rounded-xl border p-0 text-left ${active ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}
-                  >
-                    <BotBadge bot={bot} active={active} />
-                  </button>
-                );
-              })}
-            </div>
+            <SquadFormationBuilder bots={activeBots} form={form} setForm={setForm} />
           </div>
         )}
 
@@ -930,13 +964,13 @@ Prefer practical business/search terms and avoid vague words.`,
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-[1fr,1fr]">
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
                   <div className="mb-2 flex items-center gap-2">
                     <Crown className="w-4 h-4 text-primary" />
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Master bot</p>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Leader bot</p>
                   </div>
-                  {masterBot ? <BotBadge bot={masterBot} active /> : <p className="text-xs text-muted-foreground">Master bot unavailable</p>}
+                  {masterBot ? <BotBadge bot={masterBot} active /> : <p className="text-xs text-muted-foreground">Leader bot unavailable</p>}
                 </div>
                 <div className="rounded-xl border border-border bg-background p-3">
                   <div className="mb-2 flex items-center gap-2">
@@ -947,7 +981,37 @@ Prefer practical business/search terms and avoid vague words.`,
                     {memberBots.map((bot) => <BotBadge key={bot.id} bot={bot} />)}
                   </div>
                 </div>
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Commander bots</p>
+                  <div className="grid gap-2">
+                    {(squad.commander_bot_ids || []).map((id) => bots.find((bot) => bot.id === id)).filter(Boolean).map((bot) => <BotBadge key={bot.id} bot={bot} />)}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Security bots</p>
+                  <div className="grid gap-2">
+                    {(squad.security_bot_ids || []).map((id) => bots.find((bot) => bot.id === id)).filter(Boolean).map((bot) => <BotBadge key={bot.id} bot={bot} />)}
+                  </div>
+                </div>
               </div>
+
+              {(squad.task_groups || []).length > 0 && (
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="mb-3 text-[10px] uppercase tracking-wider text-muted-foreground">Task groups</p>
+                  <div className="space-y-3">
+                    {(squad.task_groups || []).map((group) => (
+                      <div key={group.id} className="rounded-xl border border-border bg-secondary/20 p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-foreground">{group.name || 'Task group'}</p>
+                          <span className="text-[10px] text-muted-foreground">{(group.bot_ids || []).length}/5 bots</span>
+                        </div>
+                        {group.purpose && <p className="text-[10px] text-primary">Purpose: {group.purpose}</p>}
+                        {group.task_instruction && <p className="text-[11px] text-muted-foreground whitespace-pre-wrap">{group.task_instruction}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {squad.shared_context && (
                 <div className="rounded-xl border border-border bg-background p-3">
