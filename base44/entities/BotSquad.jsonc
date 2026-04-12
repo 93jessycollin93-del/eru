@@ -1,0 +1,73 @@
+{
+  "name": "BotSquad",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "master_bot_id": {
+      "type": "string"
+    },
+    "member_bot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "shared_context": {
+      "type": "string"
+    },
+    "pipeline_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "assigned_bot_id": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "paused"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "name",
+    "master_bot_id"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
