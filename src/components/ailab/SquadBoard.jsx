@@ -21,6 +21,7 @@ const BLANK_SQUAD = {
   shared_context: '',
   pipeline_steps: [],
   execution_history: [],
+  memory_pool: [],
   status: 'draft',
 };
 
@@ -151,6 +152,16 @@ export default function SquadBoard({ bots }) {
     }, 0);
   };
 
+  const getMemoryScore = (goal, botId) => {
+    const goalKeywords = extractMatchedKeywords(goal);
+    return (form.memory_pool || []).reduce((total, memory) => {
+      const botMatch = (memory.bot_ids || []).includes(botId);
+      if (!botMatch) return total;
+      const sharedKeywords = (memory.keywords || []).filter((keyword) => goalKeywords.includes(keyword)).length;
+      return total + (sharedKeywords > 0 ? sharedKeywords * 10 : 4);
+    }, 0);
+  };
+
   const recommendations = useMemo(() => {
     const goal = recommendGoal.trim();
     if (!goal) return [];
@@ -161,12 +172,14 @@ export default function SquadBoard({ bots }) {
         const level = bot.level || Math.max(1, Math.floor((bot.xp || 0) / 100) + 1);
         const keywordMatches = getKeywordMatches(goal, bot.role);
         const historyScore = getHistoryScore(goal, bot.id);
+        const memoryScore = getMemoryScore(goal, bot.id);
         const xpScore = Math.min(30, Math.floor((bot.xp || 0) / 20));
         const roleScore = keywordMatches * 12;
-        const score = roleScore + xpScore + historyScore + level * 2;
+        const score = roleScore + xpScore + historyScore + memoryScore + level * 2;
         const reasonBits = [];
         if (keywordMatches > 0) reasonBits.push(`role fits ${keywordMatches} goal keywords`);
         if (historyScore > 0) reasonBits.push('performed well on earlier squad runs');
+        if (memoryScore > 0) reasonBits.push('boosted by shared squad memory');
         if (xpScore > 0) reasonBits.push(`strong experience score from ${bot.xp || 0} XP`);
         if (reasonBits.length === 0) reasonBits.push('good general-purpose backup specialist');
 
@@ -179,7 +192,7 @@ export default function SquadBoard({ bots }) {
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, 4);
-  }, [activeBots, form.execution_history, form.master_bot_id, form.member_bot_ids, recommendGoal]);
+  }, [activeBots, form.execution_history, form.master_bot_id, form.member_bot_ids, form.memory_pool, recommendGoal]);
 
   const squadAnalytics = useMemo(() => {
     const histories = squads.flatMap((squad) => (squad.execution_history || []).map((entry) => ({ ...entry, squad })));
@@ -247,6 +260,7 @@ export default function SquadBoard({ bots }) {
       shared_context: form.shared_context.trim(),
       pipeline_steps: form.pipeline_steps.filter((step) => step.title.trim() || step.instruction.trim()),
       execution_history: form.execution_history || [],
+      memory_pool: form.memory_pool || [],
     };
 
     if (editingId) {
@@ -274,6 +288,7 @@ export default function SquadBoard({ bots }) {
         assigned_bot_id: step.assigned_bot_id || '',
       })),
       execution_history: squad.execution_history || [],
+      memory_pool: squad.memory_pool || [],
       status: squad.status || 'draft',
     });
     setRecommendGoal(squad.description || '');
@@ -329,16 +344,28 @@ ${stepOutputs.map((item) => `${item.step_title} — ${item.bot_name}: ${item.out
 Create a final coordinated answer with these sections: Executive Summary, Department Findings, Recommended Pipeline Next Steps.`
     });
 
+    const now = new Date().toISOString();
     const updatedHistory = [
       {
         goal: task,
-        created_at: new Date().toISOString(),
+        created_at: now,
         successful_bot_ids: Array.from(new Set(successfulBotIds)),
       },
       ...((squad.execution_history || []).slice(0, 9)),
     ];
 
-    await base44.entities.BotSquad.update(squad.id, { execution_history: updatedHistory });
+    const updatedMemoryPool = [
+      {
+        goal: task,
+        keywords: extractMatchedKeywords(task),
+        bot_ids: Array.from(new Set(successfulBotIds)),
+        result_summary: finalResponse.slice(0, 500),
+        created_at: now,
+      },
+      ...((squad.memory_pool || []).slice(0, 14)),
+    ];
+
+    await base44.entities.BotSquad.update(squad.id, { execution_history: updatedHistory, memory_pool: updatedMemoryPool });
     await loadSquads();
 
     setRunOutput((prev) => ({
