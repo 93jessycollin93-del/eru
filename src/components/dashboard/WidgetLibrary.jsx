@@ -201,15 +201,15 @@ function BotTestingStationContainer() {
   return <BotTestingLabWidget bots={bots} testCases={testCases} testRuns={testRuns} globalPolicy={globalPolicy} />;
 }
 
-export default function WidgetLibrary({ prices = [] }) {
+export default function WidgetLibrary({ prices = [], sections = ['bot-status', 'bot-testing', 'market-pins', 'news-feed', 'ai-insights', 'dashboard-actions'] }) {
   return (
     <div className="space-y-4">
-      <BotStatusWidget />
-      <BotTestingStationContainer />
-      <MarketPinsWidget prices={prices} />
-      <NewsFeedWidget />
-      <AIInsightsWidget />
-      <DashboardActionsWidget />
+      {sections.includes('bot-status') && <BotStatusWidget />}
+      {sections.includes('bot-testing') && <BotTestingStationContainer />}
+      {sections.includes('market-pins') && <MarketPinsWidget prices={prices} />}
+      {sections.includes('news-feed') && <NewsFeedWidget />}
+      {sections.includes('ai-insights') && <AIInsightsWidget />}
+      {sections.includes('dashboard-actions') && <DashboardActionsWidget />}
     </div>
   );
 }

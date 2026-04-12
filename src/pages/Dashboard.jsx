@@ -13,6 +13,7 @@ import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
 import AnalyticsWidget from '../components/dashboard/AnalyticsWidget';
 import CollectorLeaderboard from '../components/dashboard/CollectorLeaderboard';
 import CollectorRewardsPanel from '../components/dashboard/CollectorRewardsPanel';
+import DashboardPanelManager from '../components/dashboard/DashboardPanelManager';
 import AlertManager from '../components/AlertManager';
 import ExportButton from '../components/dashboard/ExportButton';
 import NotificationCenter from '../components/notifications/NotificationCenter';
@@ -56,13 +57,16 @@ export default function Dashboard() {
         <div className="px-4 mt-4 space-y-4 pb-4">
           <TelegramFirstBanner />
           <WidgetRulesPanel />
-          <WidgetLibrary prices={prices} />
+          <DashboardPanelManager
+            collectorRewards={<CollectorRewardsPanel />}
+            activeBots={<WidgetLibrary prices={prices} sections={['bot-status']} />}
+            quickStats={<AnalyticsWidget />}
+          />
+          <WidgetLibrary prices={prices} sections={['bot-testing', 'market-pins', 'news-feed', 'ai-insights', 'dashboard-actions']} />
           <AppDock />
           <NotificationCenter />
           <AlertManager />
-          <CollectorRewardsPanel />
           <CollectorLeaderboard />
-          <AnalyticsWidget />
           <ScreenVisualizer />
           <DataVisualizer />
           <FinanceModule />
