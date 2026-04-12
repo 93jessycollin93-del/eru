@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import BotFarmHeader from '../components/bot-farm/BotFarmHeader';
 import BotFarmMetricGrid from '../components/bot-farm/BotFarmMetricGrid';
@@ -27,7 +27,19 @@ export default function BotFarm() {
   const [schemaReady, setSchemaReady] = useState(true);
   const [sortMode, setSortMode] = useState('priority');
 
-  const loadAll = async () => {
+  const applyLoadedData = useCallback((data) => {
+    if (data.bots) setBots(data.bots);
+    if (data.squads) setSquads(data.squads);
+    if (data.tasks) setTasks(data.tasks);
+    if (data.missions) setMissions(data.missions);
+    if (data.outputs) setOutputs(data.outputs);
+    if (data.risks) setRisks(data.risks);
+    if (data.upgrades) setUpgrades(data.upgrades);
+    if (data.history) setHistory(data.history);
+    if (data.maintenanceLogs) setMaintenanceLogs(data.maintenanceLogs);
+  }, []);
+
+  const loadAll = useCallback(async () => {
     try {
       const [botRows, squadRows, taskRows, missionRows, outputRows, riskRows, upgradeRows, historyRows, maintenanceRows] = await Promise.all([
         base44.entities.BotFarmBot.list('-updated_date', 100),
@@ -40,15 +52,17 @@ export default function BotFarm() {
         base44.entities.BotFarmActivityHistory.list('-updated_date', 80),
         base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80),
       ]);
-      setBots(botRows || []);
-      setSquads(squadRows || []);
-      setTasks(taskRows || []);
-      setMissions(missionRows || []);
-      setOutputs(outputRows || []);
-      setRisks(riskRows || []);
-      setUpgrades(upgradeRows || []);
-      setHistory(historyRows || []);
-      setMaintenanceLogs(maintenanceRows || []);
+      applyLoadedData({
+        bots: botRows || [],
+        squads: squadRows || [],
+        tasks: taskRows || [],
+        missions: missionRows || [],
+        outputs: outputRows || [],
+        risks: riskRows || [],
+        upgrades: upgradeRows || [],
+        history: historyRows || [],
+        maintenanceLogs: maintenanceRows || [],
+      });
       setSchemaReady(true);
     } catch (error) {
       if (error?.message?.includes('Entity schema BotFarm')) {
@@ -58,7 +72,7 @@ export default function BotFarm() {
       }
     }
     setLoading(false);
-  };
+  }, [applyLoadedData]);
 
   const seedIfNeeded = async () => {
     let existing;
@@ -146,7 +160,7 @@ export default function BotFarm() {
 
   useEffect(() => {
     seedIfNeeded().then(loadAll);
-  }, []);
+  }, [loadAll]);
 
   const roleSummary = useMemo(() => buildRoleSummary(bots), [bots]);
   const metrics = useMemo(() => summarizeFarmMetrics(bots, tasks, missions, risks, outputs, squads, upgrades), [bots, tasks, missions, risks, outputs, squads, upgrades]);
@@ -157,6 +171,35 @@ export default function BotFarm() {
   const getCommanderBoost = (task) => {
     const commander = bots.find((bot) => bot.id === task.assigned_commander_bot_id);
     return commander ? Math.round(((commander.coordination_efficiency || 0) + (commander.confidence || 0)) / 20) : 0;
+  };
+
+  const refreshAfterMutation = async ({
+    bots: shouldLoadBots,
+    squads: shouldLoadSquads,
+    tasks: shouldLoadTasks,
+    missions: shouldLoadMissions,
+    outputs: shouldLoadOutputs,
+    risks: shouldLoadRisks,
+    upgrades: shouldLoadUpgrades,
+    history: shouldLoadHistory,
+    maintenanceLogs: shouldLoadMaintenanceLogs,
+  }) => {
+    const loaders = [];
+
+    if (shouldLoadBots) loaders.push(base44.entities.BotFarmBot.list('-updated_date', 100).then((rows) => ['bots', rows || []]));
+    if (shouldLoadSquads) loaders.push(base44.entities.BotFarmSquad.list('-updated_date', 50).then((rows) => ['squads', rows || []]));
+    if (shouldLoadTasks) loaders.push(base44.entities.BotFarmTask.list('-updated_date', 100).then((rows) => ['tasks', rows || []]));
+    if (shouldLoadMissions) loaders.push(base44.entities.BotFarmMission.list('-updated_date', 50).then((rows) => ['missions', rows || []]));
+    if (shouldLoadOutputs) loaders.push(base44.entities.BotFarmOutputLog.list('-updated_date', 100).then((rows) => ['outputs', rows || []]));
+    if (shouldLoadRisks) loaders.push(base44.entities.BotFarmRiskFlag.list('-updated_date', 100).then((rows) => ['risks', rows || []]));
+    if (shouldLoadUpgrades) loaders.push(base44.entities.BotFarmUpgrade.list('-updated_date', 30).then((rows) => ['upgrades', rows || []]));
+    if (shouldLoadHistory) loaders.push(base44.entities.BotFarmActivityHistory.list('-updated_date', 80).then((rows) => ['history', rows || []]));
+    if (shouldLoadMaintenanceLogs) loaders.push(base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80).then((rows) => ['maintenanceLogs', rows || []]));
+
+    if (!loaders.length) return;
+
+    const results = await Promise.all(loaders);
+    applyLoadedData(Object.fromEntries(results));
   };
 
   const assignTaskToBot = async (task, botOverride) => {
@@ -226,7 +269,7 @@ export default function BotFarm() {
       });
     }
 
-    await loadAll();
+    await refreshAfterMutation({ tasks: true, bots: true, squads: true, risks: true, history: true });
   };
 
   const handleRest = async (bot) => {
@@ -245,7 +288,7 @@ export default function BotFarm() {
         recovery_gain: 28,
       })
     ]);
-    await loadAll();
+    await refreshAfterMutation({ bots: true, maintenanceLogs: true });
   };
 
   const handleRepair = async (bot) => {
@@ -264,7 +307,7 @@ export default function BotFarm() {
         recovery_gain: 18,
       })
     ]);
-    await loadAll();
+    await refreshAfterMutation({ bots: true, maintenanceLogs: true });
   };
 
   const handleRecover = async (bot) => {
@@ -285,7 +328,7 @@ export default function BotFarm() {
         recovery_gain: 12,
       })
     ]);
-    await loadAll();
+    await refreshAfterMutation({ bots: true, maintenanceLogs: true });
   };
 
   const handleQuarantine = async (bot) => {
@@ -303,7 +346,7 @@ export default function BotFarm() {
         details: `${bot.name} was quarantined due to operational risk.`
       })
     ]);
-    await loadAll();
+    await refreshAfterMutation({ bots: true, risks: true, history: true });
   };
 
   const handleUpgrade = async (upgrade) => {
@@ -320,7 +363,7 @@ export default function BotFarm() {
         impact_score: (upgrade.effect_value || 0) + 4,
       })
     ]);
-    await loadAll();
+    await refreshAfterMutation({ upgrades: true, history: true });
   };
 
   const runOperationalCycle = async () => {
@@ -414,7 +457,7 @@ export default function BotFarm() {
       impact_score: metrics.average_output_quality || 0,
     });
 
-    await loadAll();
+    await refreshAfterMutation({ tasks: true, bots: true, missions: true, outputs: true, risks: true, history: true });
   };
 
   return (
