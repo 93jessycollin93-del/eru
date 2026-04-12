@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles } from 'lucide-react';
+import SquadAnalyticsPanel from './SquadAnalyticsPanel.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -61,6 +62,11 @@ function RecommendationCard({ item, onAdd }) {
       </div>
     </div>
   );
+}
+
+function extractMatchedKeywords(goal) {
+  const lowerGoal = (goal || '').toLowerCase();
+  return Array.from(new Set(Object.values(ROLE_KEYWORDS).flat().filter((word) => lowerGoal.includes(word))));
 }
 
 export default function SquadBoard({ bots }) {
@@ -174,6 +180,63 @@ export default function SquadBoard({ bots }) {
       .sort((a, b) => b.score - a.score)
       .slice(0, 4);
   }, [activeBots, form.execution_history, form.master_bot_id, form.member_bot_ids, recommendGoal]);
+
+  const squadAnalytics = useMemo(() => {
+    const histories = squads.flatMap((squad) => (squad.execution_history || []).map((entry) => ({ ...entry, squad })));
+    const totalRuns = histories.length;
+    if (totalRuns === 0) {
+      return { botRows: [], keywordRows: [] };
+    }
+
+    const botRows = bots
+      .map((bot) => {
+        const successes = histories.filter((entry) => (entry.successful_bot_ids || []).includes(bot.id));
+        if (successes.length === 0) return null;
+        const keywordCounts = {};
+        successes.forEach((entry) => {
+          extractMatchedKeywords(entry.goal).forEach((keyword) => {
+            keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+          });
+        });
+
+        return {
+          bot,
+          successes: successes.length,
+          successRate: Math.round((successes.length / totalRuns) * 100),
+          topKeywords: Object.entries(keywordCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([keyword]) => keyword),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.successRate - a.successRate || b.successes - a.successes)
+      .slice(0, 8);
+
+    const keywordMap = {};
+    histories.forEach((entry) => {
+      const keywords = extractMatchedKeywords(entry.goal);
+      keywords.forEach((keyword) => {
+        if (!keywordMap[keyword]) keywordMap[keyword] = { count: 0, bots: {} };
+        keywordMap[keyword].count += 1;
+        (entry.successful_bot_ids || []).forEach((botId) => {
+          keywordMap[keyword].bots[botId] = (keywordMap[keyword].bots[botId] || 0) + 1;
+        });
+      });
+    });
+
+    const keywordRows = Object.entries(keywordMap)
+      .map(([keyword, value]) => {
+        const [topBotId] = Object.entries(value.bots).sort((a, b) => b[1] - a[1])[0] || [];
+        const topBot = bots.find((bot) => bot.id === topBotId);
+        return {
+          keyword,
+          count: value.count,
+          topBotName: topBot?.name || 'Unknown',
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    return { botRows, keywordRows };
+  }, [bots, squads]);
 
   const saveSquad = async () => {
     if (!form.name.trim() || !form.master_bot_id) return;
@@ -445,6 +508,8 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
           )}
         </div>
       </div>
+
+      <SquadAnalyticsPanel analytics={squadAnalytics} />
 
       <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Saved squads</p>
