@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles, Wand2, Bot, Zap, Route, BarChart3, ExternalLink } from 'lucide-react';
+import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles, Wand2, Bot, Zap, Route, BarChart3, ExternalLink, CopyPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SquadAnalyticsPanel from './SquadAnalyticsPanel.jsx';
 import SquadKnowledgePanel from './SquadKnowledgePanel.jsx';
@@ -9,6 +9,7 @@ import SquadWizardProgress from './SquadWizardProgress.jsx';
 import SquadOptimizationPanel from './SquadOptimizationPanel.jsx';
 import SquadDeliveryPanel from './SquadDeliveryPanel.jsx';
 import SquadOutputChart from './SquadOutputChart.jsx';
+import SquadTemplateLibrary from './SquadTemplateLibrary.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -93,6 +94,7 @@ export default function SquadBoard({ bots }) {
   const [runOutput, setRunOutput] = useState({});
   const [recommendGoal, setRecommendGoal] = useState('');
   const [knowledgeItems, setKnowledgeItems] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [knowledgeSearch, setKnowledgeSearch] = useState('');
   const [creationMode, setCreationMode] = useState('manual');
   const [wizardStep, setWizardStep] = useState(1);
@@ -104,12 +106,14 @@ export default function SquadBoard({ bots }) {
 
   const loadSquads = async () => {
     setLoading(true);
-    const [rows, knowledge] = await Promise.all([
+    const [rows, knowledge, templateRows] = await Promise.all([
       base44.entities.BotSquad.list('-updated_date', 100),
       base44.entities.SquadKnowledge.list('-updated_date', 100),
+      base44.entities.SquadTemplate.list('-updated_date', 100),
     ]);
     setSquads(rows);
     setKnowledgeItems(knowledge);
+    setTemplates(templateRows);
     setLoading(false);
   };
 
@@ -426,6 +430,48 @@ export default function SquadBoard({ bots }) {
     await base44.entities.BotSquad.delete(id);
     if (editingId === id) resetForm();
     await loadSquads();
+  };
+
+  const saveAsTemplate = async (squad) => {
+    await base44.entities.SquadTemplate.create({
+      name: `${squad.name} template`,
+      description: squad.description || '',
+      source_squad_id: squad.id,
+      source_squad_name: squad.name,
+      master_bot_id: squad.master_bot_id,
+      member_bot_ids: squad.member_bot_ids || [],
+      shared_context: squad.shared_context || '',
+      pipeline_steps: (squad.pipeline_steps || []).map((step) => ({
+        id: step.id || `step_${Date.now()}_${Math.random()}`,
+        title: step.title || '',
+        instruction: step.instruction || '',
+        assigned_bot_id: step.assigned_bot_id || '',
+      })),
+    });
+    await loadSquads();
+  };
+
+  const cloneTemplate = (template) => {
+    setEditingId(null);
+    setCreationMode('manual');
+    setWizardStep(1);
+    setForm({
+      name: `${template.name} copy`,
+      description: template.description || '',
+      master_bot_id: template.master_bot_id || '',
+      member_bot_ids: template.member_bot_ids || [],
+      shared_context: template.shared_context || '',
+      pipeline_steps: (template.pipeline_steps || []).map((step) => ({
+        id: `step_${Date.now()}_${Math.random()}`,
+        title: step.title || '',
+        instruction: step.instruction || '',
+        assigned_bot_id: step.assigned_bot_id || '',
+      })),
+      execution_history: [],
+      memory_pool: [],
+      status: 'draft',
+    });
+    setRecommendGoal(template.description || '');
   };
 
   const runSquad = async (squad) => {
@@ -855,6 +901,7 @@ Prefer practical business/search terms and avoid vague words.`,
       </div>
 
       <SquadAnalyticsPanel analytics={squadAnalytics} />
+      <SquadTemplateLibrary templates={templates} onClone={cloneTemplate} onRefresh={loadSquads} />
       <SquadKnowledgePanel knowledgeItems={knowledgeItems} search={knowledgeSearch} setSearch={setKnowledgeSearch} bots={bots} onRefresh={loadSquads} />
 
       <div className="space-y-3">
@@ -877,6 +924,7 @@ Prefer practical business/search terms and avoid vague words.`,
                   <p className="mt-1 text-[10px] text-muted-foreground">{squad.description || 'No description'}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <button onClick={() => saveAsTemplate(squad)} className="rounded-lg border border-primary/20 bg-primary/10 px-2 py-1 text-[10px] text-primary inline-flex items-center gap-1"><CopyPlus className="w-3 h-3" /> Template</button>
                   <button onClick={() => editSquad(squad)} className="rounded-lg border border-border px-2 py-1 text-[10px] text-muted-foreground">Edit</button>
                   <button onClick={() => deleteSquad(squad.id)} className="text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
