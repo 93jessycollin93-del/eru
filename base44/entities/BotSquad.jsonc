@@ -42,6 +42,28 @@
       },
       "default": []
     },
+    "execution_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "successful_bot_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        }
+      },
+      "default": []
+    },
     "status": {
       "type": "string",
       "enum": [

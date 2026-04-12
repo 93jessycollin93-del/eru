@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Network, Save, Trash2, Plus, Play, Users, Crown } from 'lucide-react';
+import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles } from 'lucide-react';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
+const ROLE_KEYWORDS = {
+  trader: ['market', 'finance', 'pricing', 'revenue', 'forecast', 'trade', 'sales'],
+  social: ['community', 'social', 'brand', 'content', 'campaign', 'engagement', 'customer'],
+  security: ['security', 'risk', 'audit', 'compliance', 'breach', 'permissions', 'vulnerability'],
+  game_helper: ['game', 'player', 'quest', 'balance', 'arena', 'cards'],
+  assistant: ['plan', 'strategy', 'operations', 'project', 'workflow'],
+  custom: [],
+};
 const BLANK_STEP = { id: '', title: '', instruction: '', assigned_bot_id: '' };
 const BLANK_SQUAD = {
   name: '',
@@ -11,6 +19,7 @@ const BLANK_SQUAD = {
   member_bot_ids: [],
   shared_context: '',
   pipeline_steps: [],
+  execution_history: [],
   status: 'draft',
 };
 
@@ -28,6 +37,32 @@ function BotBadge({ bot, active }) {
   );
 }
 
+function RecommendationCard({ item, onAdd }) {
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-base">{ROLE_EMOJI[item.bot.role] || '🤖'}</span>
+            <p className="text-xs font-semibold text-foreground">{item.bot.name}</p>
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground capitalize">{item.bot.role} · Level {item.level} · {item.bot.xp || 0} XP</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">{item.reason}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-bold text-primary">{item.score}</p>
+          <button
+            onClick={() => onAdd(item.bot.id)}
+            className="mt-2 rounded-lg border border-primary/20 bg-background px-2 py-1 text-[10px] font-medium text-primary"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SquadBoard({ bots }) {
   const [squads, setSquads] = useState([]);
   const [form, setForm] = useState(BLANK_SQUAD);
@@ -36,6 +71,7 @@ export default function SquadBoard({ bots }) {
   const [runInput, setRunInput] = useState({});
   const [runningId, setRunningId] = useState(null);
   const [runOutput, setRunOutput] = useState({});
+  const [recommendGoal, setRecommendGoal] = useState('');
 
   const activeBots = useMemo(() => bots.filter((bot) => (bot.status || 'active') === 'active'), [bots]);
   const selectableBots = useMemo(() => activeBots.filter((bot) => bot.id !== form.master_bot_id), [activeBots, form.master_bot_id]);
@@ -54,6 +90,7 @@ export default function SquadBoard({ bots }) {
   const resetForm = () => {
     setForm(BLANK_SQUAD);
     setEditingId(null);
+    setRecommendGoal('');
   };
 
   const toggleMember = (botId) => {
@@ -62,6 +99,14 @@ export default function SquadBoard({ bots }) {
       member_bot_ids: prev.member_bot_ids.includes(botId)
         ? prev.member_bot_ids.filter((id) => id !== botId)
         : [...prev.member_bot_ids, botId],
+    }));
+  };
+
+  const addRecommendedBot = (botId) => {
+    if (botId === form.master_bot_id) return;
+    setForm((prev) => ({
+      ...prev,
+      member_bot_ids: prev.member_bot_ids.includes(botId) ? prev.member_bot_ids : [...prev.member_bot_ids, botId],
     }));
   };
 
@@ -86,6 +131,50 @@ export default function SquadBoard({ bots }) {
     }));
   };
 
+  const getKeywordMatches = (goal, role) => {
+    const lowerGoal = goal.toLowerCase();
+    return (ROLE_KEYWORDS[role] || []).filter((word) => lowerGoal.includes(word)).length;
+  };
+
+  const getHistoryScore = (goal, botId) => {
+    return (form.execution_history || []).reduce((total, item) => {
+      const goalText = (item.goal || '').toLowerCase();
+      const goalMatch = goalText && goal.toLowerCase().split(' ').some((word) => word.length > 3 && goalText.includes(word));
+      const successMatch = (item.successful_bot_ids || []).includes(botId);
+      return total + (goalMatch && successMatch ? 18 : successMatch ? 8 : 0);
+    }, 0);
+  };
+
+  const recommendations = useMemo(() => {
+    const goal = recommendGoal.trim();
+    if (!goal) return [];
+
+    return activeBots
+      .filter((bot) => bot.id !== form.master_bot_id && !form.member_bot_ids.includes(bot.id))
+      .map((bot) => {
+        const level = bot.level || Math.max(1, Math.floor((bot.xp || 0) / 100) + 1);
+        const keywordMatches = getKeywordMatches(goal, bot.role);
+        const historyScore = getHistoryScore(goal, bot.id);
+        const xpScore = Math.min(30, Math.floor((bot.xp || 0) / 20));
+        const roleScore = keywordMatches * 12;
+        const score = roleScore + xpScore + historyScore + level * 2;
+        const reasonBits = [];
+        if (keywordMatches > 0) reasonBits.push(`role fits ${keywordMatches} goal keywords`);
+        if (historyScore > 0) reasonBits.push('performed well on earlier squad runs');
+        if (xpScore > 0) reasonBits.push(`strong experience score from ${bot.xp || 0} XP`);
+        if (reasonBits.length === 0) reasonBits.push('good general-purpose backup specialist');
+
+        return {
+          bot,
+          level,
+          score,
+          reason: reasonBits.join(' · '),
+        };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
+  }, [activeBots, form.execution_history, form.master_bot_id, form.member_bot_ids, recommendGoal]);
+
   const saveSquad = async () => {
     if (!form.name.trim() || !form.master_bot_id) return;
     const payload = {
@@ -94,6 +183,7 @@ export default function SquadBoard({ bots }) {
       description: form.description.trim(),
       shared_context: form.shared_context.trim(),
       pipeline_steps: form.pipeline_steps.filter((step) => step.title.trim() || step.instruction.trim()),
+      execution_history: form.execution_history || [],
     };
 
     if (editingId) {
@@ -120,8 +210,10 @@ export default function SquadBoard({ bots }) {
         instruction: step.instruction || '',
         assigned_bot_id: step.assigned_bot_id || '',
       })),
+      execution_history: squad.execution_history || [],
       status: squad.status || 'draft',
     });
+    setRecommendGoal(squad.description || '');
   };
 
   const deleteSquad = async (id) => {
@@ -135,10 +227,10 @@ export default function SquadBoard({ bots }) {
     if (!task) return;
 
     const masterBot = bots.find((bot) => bot.id === squad.master_bot_id);
-    const memberBots = bots.filter((bot) => (squad.member_bot_ids || []).includes(bot.id));
     setRunningId(squad.id);
 
     const stepOutputs = [];
+    const successfulBotIds = [];
     for (const step of (squad.pipeline_steps || [])) {
       const assignedBot = bots.find((bot) => bot.id === step.assigned_bot_id) || masterBot;
       if (!assignedBot) continue;
@@ -157,8 +249,10 @@ Provide a concise specialist response for this step.`
       stepOutputs.push({
         step_title: step.title,
         bot_name: assignedBot.name,
+        bot_id: assignedBot.id,
         output: stepResult,
       });
+      successfulBotIds.push(assignedBot.id);
     }
 
     const finalResponse = await base44.integrations.Core.InvokeLLM({
@@ -171,6 +265,18 @@ ${stepOutputs.map((item) => `${item.step_title} — ${item.bot_name}: ${item.out
 
 Create a final coordinated answer with these sections: Executive Summary, Department Findings, Recommended Pipeline Next Steps.`
     });
+
+    const updatedHistory = [
+      {
+        goal: task,
+        created_at: new Date().toISOString(),
+        successful_bot_ids: Array.from(new Set(successfulBotIds)),
+      },
+      ...((squad.execution_history || []).slice(0, 9)),
+    ];
+
+    await base44.entities.BotSquad.update(squad.id, { execution_history: updatedHistory });
+    await loadSquads();
 
     setRunOutput((prev) => ({
       ...prev,
@@ -186,7 +292,7 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
     <div className="px-4 py-4 space-y-4">
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
         <p className="text-xs font-semibold text-primary mb-1">Squads</p>
-        <p className="text-[10px] text-muted-foreground">Group specialist bots, define shared context, and create reusable cross-department pipelines.</p>
+        <p className="text-[10px] text-muted-foreground">Group specialist bots, define shared context, create reusable pipelines, and get smart member recommendations.</p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
@@ -215,6 +321,26 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
           placeholder="Shared context for all bots in this squad"
           className="min-h-[90px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none resize-none"
         />
+
+        <div className="space-y-2 rounded-xl border border-border bg-background p-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <p className="text-xs font-semibold text-foreground">Recommend specialists</p>
+          </div>
+          <input
+            value={recommendGoal}
+            onChange={(e) => setRecommendGoal(e.target.value)}
+            placeholder="Describe the squad goal to get recommended bots"
+            className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none"
+          />
+          {recommendations.length > 0 && (
+            <div className="grid gap-2 md:grid-cols-2">
+              {recommendations.map((item) => (
+                <RecommendationCard key={item.bot.id} item={item} onAdd={addRecommendedBot} />
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Master bot</p>
