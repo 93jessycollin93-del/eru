@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import { playSound, VIBRATE } from '../lib/soundEngine';
 
@@ -20,6 +20,7 @@ const ALL_PAGES = [
   { id: 'jackie',     label: 'Jackie AI',     icon: Bot,           to: '/jackie' },
   { id: 'ailab',      label: 'AI Lab',        icon: FlaskConical,  to: '/ailab' },
   { id: 'botmarket',  label: 'Bot Market',    icon: Cpu,           to: '/bot-marketplace' },
+  { id: 'botfarm',    label: 'Bot Farm',      icon: Factory,       to: '/bot-farm' },
   { id: 'apikeys',    label: 'API Keys',      icon: KeyRound,      to: '/apikeys' },
   { id: 'builder',    label: 'Builder',       icon: Wand2,         to: '/builder' },
   { id: 'pipeline',   label: 'Pipeline',      icon: Layers,        to: '/pipeline' },

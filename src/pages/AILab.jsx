@@ -729,7 +729,7 @@ export default function AILab() {
       {tab === 'pinned' && <PinnedCards bots={bots} />}
 
       {/* SQUAD */}
-      {tab === 'squad' && <div><CommandCenterDashboard /><SquadBoard bots={bots} /></div>}
+      {tab === 'squad' && <div><CommandCenterDashboard /><SquadBoard bots={bots} /><div className="px-4 pb-4"><a href="/bot-farm" className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-medium text-primary">Open Bot Farm</a></div></div>}
 
       {/* POLICY */}
       {tab === 'policy' && <BotGlobalPolicyPanel />}

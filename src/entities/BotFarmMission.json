@@ -1,0 +1,34 @@
+{
+  "name": "BotFarmMission",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "objective": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["planned", "active", "blocked", "review", "complete", "failed"],
+      "default": "planned"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "default": "medium"
+    },
+    "assigned_squad_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "progress": { "type": "number", "default": 0 },
+    "mission_value": { "type": "number", "default": 100 },
+    "coordination_complexity": { "type": "number", "default": 40 },
+    "security_pressure": { "type": "number", "default": 20 }
+  },
+  "required": ["title", "objective"],
+  "rls": {
+    "create": { "created_by": "{{user.email}}" },
+    "read": { "created_by": "{{user.email}}" },
+    "update": { "created_by": "{{user.email}}" },
+    "delete": { "created_by": "{{user.email}}" }
+  }
+}

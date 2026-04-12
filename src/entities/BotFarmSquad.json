@@ -1,0 +1,35 @@
+{
+  "name": "BotFarmSquad",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "farm_group": { "type": "string" },
+    "specialization_focus": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "leader_bot_id": { "type": "string" },
+    "member_bot_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "coordination_quality": { "type": "number", "default": 78 },
+    "security_overhead": { "type": "number", "default": 8 },
+    "current_mission_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["idle", "assigned", "active", "strained", "maintenance"],
+      "default": "idle"
+    },
+    "throughput_score": { "type": "number", "default": 72 }
+  },
+  "required": ["name"],
+  "rls": {
+    "create": { "created_by": "{{user.email}}" },
+    "read": { "created_by": "{{user.email}}" },
+    "update": { "created_by": "{{user.email}}" },
+    "delete": { "created_by": "{{user.email}}" }
+  }
+}
