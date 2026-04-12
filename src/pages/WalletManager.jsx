@@ -236,6 +236,10 @@ export default function WalletManager() {
         </div>
 
         {/* Info */}
+        <a href="/economy" className="block rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-semibold text-foreground">Open Economy</p>
+          <p className="mt-1 text-xs text-muted-foreground">View live ERC-20 balances, send tokens, and review wallet-linked token activity.</p>
+        </a>
         <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 flex gap-3">
           <TrendingUp className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-muted-foreground">

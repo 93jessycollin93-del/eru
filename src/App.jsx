@@ -36,6 +36,7 @@ import StorefrontHub from './pages/StorefrontHub';
 import StorefrontAnalytics from './pages/StorefrontAnalytics';
 import CreatureLab from './pages/CreatureLab';
 import AdminEconomyDashboard from './pages/AdminEconomyDashboard';
+import Economy from './pages/Economy';
 import PerformanceDashboard from './pages/PerformanceDashboard';
 import BotPerformanceHistory from './pages/BotPerformanceHistory';
 import ActivityAuditLog from './pages/ActivityAuditLog';
@@ -109,6 +110,7 @@ const AuthenticatedApp = () => {
         <Route path="/storefront" element={<StorefrontHub />} />
         <Route path="/storefront-analytics" element={<StorefrontAnalytics />} />
         <Route path="/admin/economy" element={<AdminEconomyDashboard />} />
+        <Route path="/economy" element={<Economy />} />
         <Route path="/performance" element={<PerformanceDashboard />} />
         <Route path="/bot-performance-history" element={<BotPerformanceHistory />} />
         <Route path="/audit" element={<ActivityAuditLog />} />

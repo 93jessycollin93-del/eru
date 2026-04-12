@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { Buffer } from 'buffer';
 
 /**
  * WEBHOOK AUTHENTICATION LAYER
@@ -11,9 +12,9 @@ import crypto from 'crypto';
  */
 
 const WEBHOOK_SECRETS = {
-  stripe: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test_stripe',
-  crypto: process.env.CRYPTO_WEBHOOK_SECRET || 'whsec_test_crypto',
-  wallet: process.env.WALLET_WEBHOOK_SECRET || 'whsec_test_wallet',
+  stripe: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_STRIPE_WEBHOOK_SECRET) || 'whsec_test_stripe',
+  crypto: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CRYPTO_WEBHOOK_SECRET) || 'whsec_test_crypto',
+  wallet: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WALLET_WEBHOOK_SECRET) || 'whsec_test_wallet',
 };
 
 const TIMESTAMP_TOLERANCE_SECONDS = 300; // 5 minutes

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
+import { Buffer } from 'buffer';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+const ENCRYPTION_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ENCRYPTION_KEY) || crypto.randomBytes(32).toString('hex');
 const ALGORITHM = 'aes-256-gcm';
 
 /**

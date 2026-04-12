@@ -15,6 +15,11 @@ const BLANK_CONFIG = {
   blockchain_provider: '',
   rpc_url: '',
   contract_address: '',
+  token_contract_address: '',
+  token_name: '',
+  token_symbol: '',
+  token_chain_id: 0,
+  token_decimals: 18,
   market_data_source: 'coingecko', // 'coingecko' | 'none'
   token_system_enabled: false,
   admin_notes: '',
@@ -163,8 +168,17 @@ export default function AdminBlockchain() {
             </div>
           </label>
           {config.token_system_enabled && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-yellow-400/10 border border-yellow-400/20 rounded-xl text-xs text-yellow-400">
-              <AlertTriangle className="w-3.5 h-3.5" /> Deploy an ERC-20 contract and paste its address above. Token activity will only appear after real deployment.
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-3 py-2 bg-yellow-400/10 border border-yellow-400/20 rounded-xl text-xs text-yellow-400">
+                <AlertTriangle className="w-3.5 h-3.5" /> Deploy an ERC-20 contract and configure its live details below. No simulated balances or fake activity are used.
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input value={config.token_name} onChange={e => set('token_name', e.target.value)} placeholder="Token name" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs outline-none text-foreground" />
+                <input value={config.token_symbol} onChange={e => set('token_symbol', e.target.value.toUpperCase())} placeholder="Token symbol" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs outline-none text-foreground" />
+                <input value={config.token_contract_address} onChange={e => set('token_contract_address', e.target.value)} placeholder="ERC-20 contract address" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs font-mono outline-none text-foreground sm:col-span-2" />
+                <input type="number" value={config.token_chain_id} onChange={e => set('token_chain_id', Number(e.target.value))} placeholder="Chain ID" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs outline-none text-foreground" />
+                <input type="number" value={config.token_decimals} onChange={e => set('token_decimals', Number(e.target.value))} placeholder="Decimals" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs outline-none text-foreground" />
+              </div>
             </div>
           )}
         </section>

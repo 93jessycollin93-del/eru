@@ -11,9 +11,6 @@ export default function AdminEconomyDashboard() {
   const [transactions, setTransactions] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Admin-only check
-  if (user && user.role !== 'admin') {
     return (
       <div className="p-4 flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -77,6 +74,18 @@ export default function AdminEconomyDashboard() {
     const interval = setInterval(fetchEconomyData, 30000); // Refresh every 30s
     return () => clearInterval(interval);
   }, []);
+
+  if (user && user.role !== 'admin') {
+    return (
+      <div className="p-4 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-foreground font-semibold">Access Denied</p>
+          <p className="text-muted-foreground text-sm mt-1">Only admins can view economy dashboard.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
