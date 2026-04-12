@@ -89,6 +89,7 @@ export default function CommandCenterDashboard() {
   };
 
   useEffect(() => {
+    loadAll().catch(() => {});
     seedIfNeeded().then(loadAll);
   }, []);
 
