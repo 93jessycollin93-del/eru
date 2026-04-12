@@ -117,7 +117,7 @@ export default function GlobalSearch({ open, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]"
+        className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[75dvh] min-h-0"
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
@@ -154,7 +154,7 @@ export default function GlobalSearch({ open, onClose }) {
 
         {/* Results */}
         {searched && !loading && (
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] flex-1 min-h-0">
             {results.length === 0 ? (
               <div className="text-center py-10">
                 <Search className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />

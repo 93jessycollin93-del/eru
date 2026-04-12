@@ -55,7 +55,7 @@ export default function FloatingQuickActions() {
     <>
       {open && (
         <div className="fixed inset-0 z-[65] bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)}>
-          <div className="absolute inset-x-4 bottom-24 mx-auto max-w-sm rounded-3xl border border-border bg-card/95 p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-x-4 bottom-24 mx-auto max-w-sm max-h-[70dvh] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] rounded-3xl border border-border bg-card/95 p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-foreground">Quick Actions</p>

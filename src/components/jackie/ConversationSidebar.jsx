@@ -92,7 +92,7 @@ export default function ConversationSidebar({ messages, onLoadConversation, onNe
         </div>
       </div>
 
-      <div className="max-h-[18rem] md:max-h-[calc(100vh-14rem)] overflow-y-auto px-4 pb-4 space-y-2">
+      <div className="max-h-[18rem] md:max-h-[calc(100dvh-14rem)] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] px-4 pb-4 space-y-2">
         {loading ? (
           <div className="py-8 text-center text-xs text-muted-foreground">Loading conversations...</div>
         ) : conversations.length === 0 ? (

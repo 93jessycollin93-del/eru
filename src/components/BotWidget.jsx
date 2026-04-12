@@ -150,7 +150,7 @@ export default function BotWidget({ prefs, updateWidget }) {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-0 right-0 left-0 z-50 max-w-md mx-auto flex flex-col bg-card border-t border-l border-r border-border rounded-t-2xl shadow-2xl" style={{ height: '60vh' }}>
+        <div className="fixed bottom-0 right-0 left-0 z-50 max-w-md mx-auto flex flex-col bg-card border-t border-l border-r border-border rounded-t-2xl shadow-2xl min-h-0" style={{ height: '60dvh' }}>
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
             <span className="text-xl">{ROLE_ICONS[bot.role] || '🤖'}</span>
@@ -177,7 +177,7 @@ export default function BotWidget({ prefs, updateWidget }) {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] px-4 py-3 space-y-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground'}`}>
