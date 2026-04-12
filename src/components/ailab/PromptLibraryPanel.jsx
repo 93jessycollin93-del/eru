@@ -92,7 +92,7 @@ export default function PromptLibraryPanel({ bots }) {
           <BookCopy className="w-4 h-4 text-primary" />
           <p className="text-sm font-semibold text-foreground">Prompt Library</p>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">Save reusable prompts, version them, and define template variables like {{user_name}} and {{context}} for multiple bots.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Save reusable prompts, version them, and define template variables like {'{{user_name}}'} and {'{{context}}'} for multiple bots.</p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
