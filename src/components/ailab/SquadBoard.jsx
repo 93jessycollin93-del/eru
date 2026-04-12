@@ -488,7 +488,13 @@ export default function SquadBoard({ bots }) {
       leader_bot_id: squad.leader_bot_id || squad.master_bot_id || '',
       commander_bot_ids: squad.commander_bot_ids || [],
       security_bot_ids: squad.security_bot_ids || [],
-      task_groups: squad.task_groups || [],
+      task_groups: (squad.task_groups || []).map((group) => ({
+        id: group.id || `group_${Date.now()}_${Math.random()}`,
+        name: group.name || '',
+        purpose: group.purpose || '',
+        task_instruction: group.task_instruction || '',
+        bot_ids: group.bot_ids || [],
+      })),
       shared_context: squad.shared_context || '',
       pipeline_steps: (squad.pipeline_steps || []).map((step) => ({
         id: step.id || `step_${Date.now()}_${Math.random()}`,
@@ -795,6 +801,23 @@ Prefer practical business/search terms and avoid vague words.`,
             >
               <Bot className="w-3.5 h-3.5" /> Apply automatic setup
             </button>
+            {templates.length > 0 && (
+              <div className="rounded-xl border border-primary/20 bg-background p-3 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Saved library templates</p>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {templates.slice(0, 4).map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => cloneTemplate(template)}
+                      className="rounded-xl border border-border bg-secondary/40 p-3 text-left hover:border-primary/30"
+                    >
+                      <p className="text-xs font-semibold text-foreground">{template.name}</p>
+                      <p className="mt-1 text-[10px] text-muted-foreground line-clamp-2">{template.description || 'Reusable squad template'}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import { CopyPlus, Library, Sparkles, Trash2 } from 'lucide-react';
+import { CopyPlus, Library, Network, Sparkles, Trash2, Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 export default function SquadTemplateLibrary({ templates, starterTemplates = [], onClone, onApplyStarter, onRefresh }) {
@@ -42,19 +42,32 @@ export default function SquadTemplateLibrary({ templates, starterTemplates = [],
       ) : (
         <div className="space-y-2">
           {templates.map((template) => (
-            <div key={template.id} className="rounded-xl border border-border bg-background p-3 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{template.name}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">{template.description || 'No description'}</p>
-                <p className="mt-1 text-[10px] text-primary">From: {template.source_squad_name || 'Custom template'}</p>
+            <div key={template.id} className="rounded-xl border border-border bg-background p-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{template.name}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{template.description || 'No description'}</p>
+                  <p className="mt-1 text-[10px] text-primary">From: {template.source_squad_name || 'Custom template'}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => onClone(template)} className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[10px] font-medium text-primary">
+                    <CopyPlus className="w-3 h-3" /> Use
+                  </button>
+                  <button onClick={() => removeTemplate(template.id)} className="text-destructive">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => onClone(template)} className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[10px] font-medium text-primary">
-                  <CopyPlus className="w-3 h-3" /> Clone
-                </button>
-                <button onClick={() => removeTemplate(template.id)} className="text-destructive">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+              <div className="flex flex-wrap gap-2 text-[10px]">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2 py-1 text-muted-foreground">
+                  <Users className="w-3 h-3" /> {(template.member_bot_ids || []).length + (template.master_bot_id ? 1 : 0)} bots
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2 py-1 text-muted-foreground">
+                  <Network className="w-3 h-3" /> {(template.pipeline_steps || []).length} pipeline steps
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2 py-1 text-muted-foreground">
+                  {(template.task_groups || []).length} task groups
+                </span>
               </div>
             </div>
           ))}
