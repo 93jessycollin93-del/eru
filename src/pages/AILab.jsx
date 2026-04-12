@@ -14,6 +14,7 @@ import BotTestingLabWidget from '../components/ailab/BotTestingLabWidget';
 import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
 import BotMonitoringDashboard from '../components/ailab/BotMonitoringDashboard';
+import BotSpecialistRankingDashboard from '../components/ailab/BotSpecialistRankingDashboard';
 import PinnedCards from '../components/ailab/PinnedCards';
 import SquadBoard from '../components/ailab/SquadBoard';
 import BotCollaborationWorkspace from '../components/ailab/BotCollaborationWorkspace';
@@ -89,9 +90,11 @@ export default function AILab() {
   const [sortBy, setSortBy] = useState('newest');
   const [globalPolicy, setGlobalPolicy] = useState(null);
   const [promptTemplates, setPromptTemplates] = useState([]);
+  const [squads, setSquads] = useState([]);
 
   useEffect(() => {
     loadBots();
+    base44.entities.BotSquad.list('-updated_date', 100).then(setSquads).catch(() => {});
     base44.entities.BotGlobalPolicy.list('-created_date', 1).then((rows) => setGlobalPolicy(rows?.[0] || null)).catch(() => {});
     base44.entities.PromptTemplate.list('-updated_date', 100).then(setPromptTemplates).catch(() => {});
   }, []);
@@ -699,7 +702,7 @@ export default function AILab() {
       {tab === 'testing' && <BotTestingSuite bots={bots} globalPolicy={globalPolicy} />}
 
       {/* DASHBOARD */}
-      {tab === 'dashboard' && <div><BotMonitoringDashboard bots={bots} onBotsUpdated={loadBots} /><BotDashboard bots={bots} /></div>}
+      {tab === 'dashboard' && <div><BotMonitoringDashboard bots={bots} onBotsUpdated={loadBots} /><BotSpecialistRankingDashboard bots={bots} squads={squads} /><BotDashboard bots={bots} /></div>}
 
       {/* PINNED CARDS */}
       {tab === 'pinned' && <PinnedCards bots={bots} />}
