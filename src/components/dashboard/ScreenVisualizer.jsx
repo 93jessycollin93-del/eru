@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Tv2, X, Music, Film, Globe, Star, History } from 'lucide-react';
+import { Tv2, X, Music, Film, Globe, Star, History, ChevronDown, ChevronRight } from 'lucide-react';
 
 const QUICK_LINKS = [
   { label: 'YouTube', url: 'https://www.youtube.com/embed/jfKfPfyJRdk', icon: '▶️', category: 'Video' },
@@ -25,6 +25,8 @@ export default function ScreenVisualizer() {
   const [activeUrl, setActiveUrl] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
+  const [bookmarksCollapsed, setBookmarksCollapsed] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -112,40 +114,46 @@ export default function ScreenVisualizer() {
 
         <div className="grid gap-3 px-3 py-3 border-b border-border md:grid-cols-2">
           <div className="rounded-xl bg-secondary/50 border border-border p-3">
-            <div className="flex items-center gap-2 mb-2">
+            <button onClick={() => setBookmarksCollapsed(!bookmarksCollapsed)} className="flex w-full items-center gap-2 mb-2 text-left">
               <Star className="w-3.5 h-3.5 text-primary" />
-              <p className="text-[11px] font-semibold text-foreground">Bookmarks</p>
-            </div>
-            <div className="space-y-2">
-              {bookmarks.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground">No bookmarks yet.</p>
-              ) : bookmarks.map((item) => (
-                <div key={item} className="flex items-center gap-2">
-                  <button onClick={() => load(item)} className="flex-1 truncate rounded-lg bg-background px-2 py-1.5 text-left text-[10px] text-foreground border border-border">
-                    {item}
-                  </button>
-                  <button onClick={() => removeBookmark(item)} className="p-1 rounded hover:bg-background">
-                    <X className="w-3 h-3 text-muted-foreground" />
-                  </button>
-                </div>
-              ))}
-            </div>
+              <p className="text-[11px] font-semibold text-foreground flex-1">Bookmarks</p>
+              {bookmarksCollapsed ? <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
+            {!bookmarksCollapsed && (
+              <div className="space-y-2">
+                {bookmarks.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">No bookmarks yet.</p>
+                ) : bookmarks.map((item) => (
+                  <div key={item} className="flex items-center gap-2">
+                    <button onClick={() => load(item)} className="flex-1 truncate rounded-lg bg-background px-2 py-1.5 text-left text-[10px] text-foreground border border-border">
+                      {item}
+                    </button>
+                    <button onClick={() => removeBookmark(item)} className="p-1 rounded hover:bg-background">
+                      <X className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl bg-secondary/50 border border-border p-3">
-            <div className="flex items-center gap-2 mb-2">
+            <button onClick={() => setHistoryCollapsed(!historyCollapsed)} className="flex w-full items-center gap-2 mb-2 text-left">
               <History className="w-3.5 h-3.5 text-primary" />
-              <p className="text-[11px] font-semibold text-foreground">History</p>
-            </div>
-            <div className="space-y-2">
-              {historyItems.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground">No history yet.</p>
-              ) : historyItems.map((item) => (
-                <button key={item} onClick={() => load(item)} className="w-full truncate rounded-lg bg-background px-2 py-1.5 text-left text-[10px] text-foreground border border-border">
-                  {item}
-                </button>
-              ))}
-            </div>
+              <p className="text-[11px] font-semibold text-foreground flex-1">History</p>
+              {historyCollapsed ? <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
+            {!historyCollapsed && (
+              <div className="space-y-2">
+                {historyItems.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">No history yet.</p>
+                ) : historyItems.map((item) => (
+                  <button key={item} onClick={() => load(item)} className="w-full truncate rounded-lg bg-background px-2 py-1.5 text-left text-[10px] text-foreground border border-border">
+                    {item}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
