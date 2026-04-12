@@ -1,0 +1,70 @@
+{
+  "name": "BotMemoryProfile",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "identity_summary": {
+      "type": "string"
+    },
+    "historical_strategies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string"
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "strategy_summary": {
+            "type": "string"
+          },
+          "source_squad_name": {
+            "type": "string"
+          },
+          "captured_at": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "present_state_summary": {
+      "type": "string"
+    },
+    "memory_prompt_block": {
+      "type": "string"
+    },
+    "last_retrained_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
