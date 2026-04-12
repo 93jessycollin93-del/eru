@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Award, Zap, TrendingUp, MessageCircle, ShoppingBag, Shield, Lightbulb } from 'lucide-react';
 import ReputationBadge, { BADGES, LEVELS, getLevelInfo } from '../components/ReputationBadge';
+import { COLLECTOR_REWARD_BADGES, syncCollectorRewardProfile } from '@/lib/collectorRewards';
 
 // Demo stats for first-time users
 const DEMO_STATS = { xp: 340, thinkers_actions: 12, marketplace_sales: 1, reviews_submitted: 2, ideas_listed: 3 };
@@ -21,6 +22,12 @@ export default function Reputation() {
   const { user } = useAuth();
   const [stats] = useState(DEMO_STATS);
   const [tab, setTab] = useState('overview');
+  const [rewardProfile, setRewardProfile] = useState(null);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    syncCollectorRewardProfile(user.email).then(setRewardProfile);
+  }, [user?.email]);
 
   const { current, next } = getLevelInfo(stats.xp);
   const progressPct = next
@@ -112,6 +119,14 @@ export default function Reputation() {
                     <p className="text-xs text-center text-muted-foreground w-14 leading-tight">{BADGES[id]?.label}</p>
                   </div>
                 ))}
+                {(rewardProfile?.badge_ids || []).map(id => (
+                  <div key={id} className="flex flex-col items-center gap-1">
+                    <div className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl bg-primary/10 border border-primary/20">
+                      {COLLECTOR_REWARD_BADGES[id]?.emoji}
+                    </div>
+                    <p className="text-xs text-center text-muted-foreground w-16 leading-tight">{COLLECTOR_REWARD_BADGES[id]?.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -124,6 +139,28 @@ export default function Reputation() {
                     {l.level}. {l.label}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">Collector Reward Status</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Portfolio Growth</p>
+                  <p className="font-semibold">{Number(rewardProfile?.portfolio_growth_pct || 0).toFixed(1)}%</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Login Streak</p>
+                  <p className="font-semibold">{rewardProfile?.login_streak || 1} days</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Successful Trades</p>
+                  <p className="font-semibold">{rewardProfile?.successful_trades || 0}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Status Icon</p>
+                  <p className="font-semibold">{rewardProfile?.status_icon || 'seed'}</p>
+                </div>
               </div>
             </div>
           </>
