@@ -5,6 +5,7 @@ import { DashboardEventsProvider } from '../context/DashboardEventsContext';
 import DataVisualizer from '../components/dashboard/DataVisualizer';
 import WidgetLibrary from '../components/dashboard/WidgetLibrary';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import ThemeToggle from '../components/ThemeToggle';
 import AppDock from '../components/dashboard/AppDock';
 import FinanceModule from '../components/dashboard/FinanceModule';
 import PortfolioSummary from '../components/dashboard/PortfolioSummary';
@@ -44,11 +45,12 @@ export default function Dashboard() {
   return (
     <DashboardEventsProvider>
       <div className="flex flex-col min-h-screen bg-background pb-20">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Dashboard</h2>
+        <div className="px-4 py-3 border-b border-border bg-card/80 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">Dashboard</h2>
           <ExportButton appData={appData} />
         </div>
-        <div className="px-4 py-2 flex justify-end">
+        <div className="px-4 py-2 flex justify-end gap-2 bg-background">
+          <ThemeToggle />
           <LanguageSwitcher />
         </div>
         <TickerBar />

@@ -97,6 +97,7 @@ export const TYPOGRAPHY_PACKS = {
 
 // ─── DEFAULTS ────────────────────────────────────────────────────────────────
 const DEFAULTS = {
+  colorMode: 'dark',
   bg: 'none',
   bgOpacity: 0.4,
   motionIntensity: 1,
@@ -129,6 +130,7 @@ function save(key, val) { localStorage.setItem('vse_' + key, JSON.stringify(val)
 const ThemeCtx = createContext(null);
 
 export function ThemeProvider({ children }) {
+  const [colorMode,      setColorModeRaw]= useState(() => load('colorMode'));
   const [bg,             setBgRaw]       = useState(() => load('bg'));
   const [bgOpacity,      setBgOpacity]   = useState(() => load('bgOpacity'));
   const [motionIntensity,setMotionInt]   = useState(() => load('motionIntensity'));
@@ -171,18 +173,30 @@ export function ThemeProvider({ children }) {
   // Apply CSS variables from color wheel
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty('--primary',    `${primaryHue} ${primarySat}% ${primaryLight}%`);
-    root.style.setProperty('--accent',     `${primaryHue} ${primarySat}% ${primaryLight}%`);
-    root.style.setProperty('--ring',       `${primaryHue} ${primarySat}% ${primaryLight}%`);
-    root.style.setProperty('--background', `${bgHue} 25% 6%`);
-    root.style.setProperty('--card',       `${cardHue} 22% 9%`);
-    root.style.setProperty('--border',     `${borderHue} 18% 16%`);
-    root.style.setProperty('--muted',      `${bgHue} 18% 12%`);
-    root.style.setProperty('--popover',    `${cardHue} 22% 9%`);
-    root.style.setProperty('--sidebar-background', `${bgHue} 25% 6%`);
-    root.style.setProperty('--sidebar-primary',     `${primaryHue} ${primarySat}% ${primaryLight}%`);
-    root.style.setProperty('--sidebar-border',      `${borderHue} 18% 16%`);
-  }, [primaryHue, bgHue, cardHue, borderHue, primarySat, primaryLight]);
+    const isLight = colorMode === 'light';
+    root.style.setProperty('--primary', `${primaryHue} ${primarySat}% ${primaryLight}%`);
+    root.style.setProperty('--accent', `${primaryHue} ${primarySat}% ${primaryLight}%`);
+    root.style.setProperty('--ring', `${primaryHue} ${primarySat}% ${primaryLight}%`);
+    root.style.setProperty('--background', isLight ? `${bgHue} 30% 96%` : `${bgHue} 25% 6%`);
+    root.style.setProperty('--foreground', isLight ? `${bgHue} 20% 12%` : `220 20% 92%`);
+    root.style.setProperty('--card', isLight ? `${cardHue} 25% 100%` : `${cardHue} 22% 9%`);
+    root.style.setProperty('--card-foreground', isLight ? `${bgHue} 20% 12%` : `220 20% 92%`);
+    root.style.setProperty('--popover', isLight ? `${cardHue} 25% 100%` : `${cardHue} 22% 9%`);
+    root.style.setProperty('--popover-foreground', isLight ? `${bgHue} 20% 12%` : `220 20% 92%`);
+    root.style.setProperty('--secondary', isLight ? `${bgHue} 22% 92%` : `230 18% 14%`);
+    root.style.setProperty('--secondary-foreground', isLight ? `${bgHue} 16% 28%` : `220 15% 75%`);
+    root.style.setProperty('--muted', isLight ? `${bgHue} 22% 92%` : `${bgHue} 18% 12%`);
+    root.style.setProperty('--muted-foreground', isLight ? `${bgHue} 12% 42%` : `220 12% 50%`);
+    root.style.setProperty('--border', isLight ? `${borderHue} 18% 84%` : `${borderHue} 18% 16%`);
+    root.style.setProperty('--input', isLight ? `${borderHue} 18% 84%` : `${borderHue} 18% 16%`);
+    root.style.setProperty('--sidebar-background', isLight ? `${bgHue} 30% 96%` : `${bgHue} 25% 6%`);
+    root.style.setProperty('--sidebar-foreground', isLight ? `${bgHue} 20% 12%` : `220 20% 92%`);
+    root.style.setProperty('--sidebar-primary', `${primaryHue} ${primarySat}% ${primaryLight}%`);
+    root.style.setProperty('--sidebar-primary-foreground', isLight ? `0 0% 100%` : `0 0% 5%`);
+    root.style.setProperty('--sidebar-accent', isLight ? `${bgHue} 22% 92%` : `230 18% 14%`);
+    root.style.setProperty('--sidebar-accent-foreground', isLight ? `${bgHue} 20% 12%` : `220 20% 92%`);
+    root.style.setProperty('--sidebar-border', isLight ? `${borderHue} 18% 84%` : `${borderHue} 18% 16%`);
+  }, [colorMode, primaryHue, bgHue, cardHue, borderHue, primarySat, primaryLight]);
 
   // Apply UI scale
   useEffect(() => {
@@ -204,9 +218,12 @@ export function ThemeProvider({ children }) {
   }, [glowIntensity]);
 
   const setUiScale = (val) => { setUiScaleRaw(val); save('uiScale', val); };
+  const setColorMode = (mode) => { setColorModeRaw(mode); save('colorMode', mode); };
+  const toggleColorMode = () => setColorMode(colorMode === 'dark' ? 'light' : 'dark');
 
   const resetAll = () => {
     Object.entries(DEFAULTS).forEach(([k, v]) => save(k, v));
+    setColorModeRaw(DEFAULTS.colorMode);
     setBgRaw(DEFAULTS.bg);
     setBgOpacity(DEFAULTS.bgOpacity);
     setMotionInt(DEFAULTS.motionIntensity);
@@ -229,6 +246,7 @@ export function ThemeProvider({ children }) {
   };
 
   const value = {
+    colorMode, setColorMode, toggleColorMode,
     // background
     bg, setBg, bgOpacity, setBgOpacity: setter('bgOpacity', setBgOpacity),
     // motion
