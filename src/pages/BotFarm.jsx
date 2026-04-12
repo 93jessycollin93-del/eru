@@ -24,34 +24,54 @@ export default function BotFarm() {
   const [history, setHistory] = useState([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [schemaReady, setSchemaReady] = useState(true);
   const [sortMode, setSortMode] = useState('priority');
 
   const loadAll = async () => {
-    const [botRows, squadRows, taskRows, missionRows, outputRows, riskRows, upgradeRows, historyRows, maintenanceRows] = await Promise.all([
-      base44.entities.BotFarmBot.list('-updated_date', 100),
-      base44.entities.BotFarmSquad.list('-updated_date', 50),
-      base44.entities.BotFarmTask.list('-updated_date', 100),
-      base44.entities.BotFarmMission.list('-updated_date', 50),
-      base44.entities.BotFarmOutputLog.list('-updated_date', 100),
-      base44.entities.BotFarmRiskFlag.list('-updated_date', 100),
-      base44.entities.BotFarmUpgrade.list('-updated_date', 30),
-      base44.entities.BotFarmActivityHistory.list('-updated_date', 80),
-      base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80),
-    ]);
-    setBots(botRows || []);
-    setSquads(squadRows || []);
-    setTasks(taskRows || []);
-    setMissions(missionRows || []);
-    setOutputs(outputRows || []);
-    setRisks(riskRows || []);
-    setUpgrades(upgradeRows || []);
-    setHistory(historyRows || []);
-    setMaintenanceLogs(maintenanceRows || []);
+    try {
+      const [botRows, squadRows, taskRows, missionRows, outputRows, riskRows, upgradeRows, historyRows, maintenanceRows] = await Promise.all([
+        base44.entities.BotFarmBot.list('-updated_date', 100),
+        base44.entities.BotFarmSquad.list('-updated_date', 50),
+        base44.entities.BotFarmTask.list('-updated_date', 100),
+        base44.entities.BotFarmMission.list('-updated_date', 50),
+        base44.entities.BotFarmOutputLog.list('-updated_date', 100),
+        base44.entities.BotFarmRiskFlag.list('-updated_date', 100),
+        base44.entities.BotFarmUpgrade.list('-updated_date', 30),
+        base44.entities.BotFarmActivityHistory.list('-updated_date', 80),
+        base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80),
+      ]);
+      setBots(botRows || []);
+      setSquads(squadRows || []);
+      setTasks(taskRows || []);
+      setMissions(missionRows || []);
+      setOutputs(outputRows || []);
+      setRisks(riskRows || []);
+      setUpgrades(upgradeRows || []);
+      setHistory(historyRows || []);
+      setMaintenanceLogs(maintenanceRows || []);
+      setSchemaReady(true);
+    } catch (error) {
+      if (error?.message?.includes('Entity schema BotFarmBot not found')) {
+        setSchemaReady(false);
+      } else {
+        throw error;
+      }
+    }
     setLoading(false);
   };
 
   const seedIfNeeded = async () => {
-    const existing = await base44.entities.BotFarmBot.list('-created_date', 1);
+    let existing;
+    try {
+      existing = await base44.entities.BotFarmBot.list('-created_date', 1);
+      setSchemaReady(true);
+    } catch (error) {
+      if (error?.message?.includes('Entity schema BotFarmBot not found')) {
+        setSchemaReady(false);
+        return;
+      }
+      throw error;
+    }
     if ((existing || []).length > 0) return;
 
     const createdSquads = await base44.entities.BotFarmSquad.bulkCreate(DEMO_SQUADS);
@@ -395,6 +415,10 @@ export default function BotFarm() {
         <BotFarmHeader metrics={metrics} />
         {loading ? (
           <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        ) : !schemaReady ? (
+          <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
+            Bot Farm is waiting for its data models to finish registering. Refresh in a moment and it should load normally.
+          </div>
         ) : (
           <>
             <BotFarmMetricGrid metrics={metrics} />
