@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // ─── BACKGROUND ENVIRONMENTS ─────────────────────────────────────────────────
 export const BG_ENVS = {

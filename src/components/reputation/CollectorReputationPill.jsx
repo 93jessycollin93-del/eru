@@ -1,4 +1,4 @@
-import { COLLECTOR_STATUS_LABELS, COLLECTOR_STATUS_ICONS } from '@/lib/collectorRewards';
+import { COLLECTOR_STATUS_LABELS, COLLECTOR_STATUS_ICONS } from '../../lib/collectorRewards';
 
 export default function CollectorReputationPill({ statusIcon = 'seed', size = 'md' }) {
   const sizeClasses = {

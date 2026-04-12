@@ -1,4 +1,4 @@
-import { COLLECTOR_REWARD_BADGES } from '@/lib/collectorRewards';
+import { COLLECTOR_REWARD_BADGES } from '../../lib/collectorRewards';
 
 export default function CollectorBadgeStrip({ badgeIds = [], limit = 3 }) {
   const visibleBadges = badgeIds.slice(0, limit);
