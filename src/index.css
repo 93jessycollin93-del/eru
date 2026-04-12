@@ -51,7 +51,7 @@
   * { @apply border-border outline-ring/50; }
   html, body, #root {
     width: 100%;
-    height: 100vh;
+    min-height: 100%;
     margin: 0;
     padding: 0;
     background-color: hsl(var(--background));
@@ -60,6 +60,8 @@
     @apply text-foreground;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
   .font-mono { font-family: 'JetBrains Mono', monospace; }
 }
