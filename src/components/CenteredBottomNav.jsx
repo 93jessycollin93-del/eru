@@ -41,7 +41,6 @@ const ROWS_KEY = 'floating_nav_rows';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 
 const FLOATING_WIDGETS = [
-  { id: 'jackie', label: 'Jackie', icon: Bot },
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
   { id: 'botChat', label: 'Bot Chat', icon: MessageSquare },
   { id: 'promptLibrary', label: 'Prompt Library', icon: BookText },
@@ -334,6 +333,7 @@ export default function FloatingNav({ onSearchOpen }) {
                     );
                   })}
                 </div>
+                <p className="mt-2 text-[10px] text-muted-foreground">Jackie stays as its own separate round widget for quick access.</p>
               </div>
             </div>
             <div className="px-4 py-3 border-t border-border flex-shrink-0 space-y-2">
@@ -355,7 +355,7 @@ export default function FloatingNav({ onSearchOpen }) {
                   ))}
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">Pages: {pinned.length} · Widgets: {Object.values(floatingWidgets).filter((item) => item?.visible).length}</p>
+              <p className="text-[10px] text-muted-foreground text-center">Pages: {pinned.length} · Widgets: {FLOATING_WIDGETS.filter(({ id }) => floatingWidgets?.[id]?.visible).length}</p>
             </div>
           </div>
         </div>

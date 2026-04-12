@@ -6,7 +6,7 @@ import JackieFloat from './JackieFloat';
 import CenteredBottomNav from './CenteredBottomNav';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
-import FloatingWidgetManager, { useFloatingWidgetPrefs } from './FloatingWidgetManager';
+import { useFloatingWidgetPrefs } from './FloatingWidgetManager';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
 
@@ -18,9 +18,6 @@ export default function Layout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const { prefs, updateWidget } = useFloatingWidgetPrefs();
 
-  const toggleWidget = (id) => {
-    updateWidget(id, { visible: !prefs?.[id]?.visible });
-  };
 
   // Global sound + haptic handler
   useEffect(() => {
@@ -55,7 +52,6 @@ export default function Layout() {
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
-        <FloatingWidgetManager prefs={prefs} onToggle={toggleWidget} />
         <JackieFloat prefs={prefs} updateWidget={updateWidget} />
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
         <BotWidget prefs={prefs} updateWidget={updateWidget} />

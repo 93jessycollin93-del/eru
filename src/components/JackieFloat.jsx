@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Bot, Cpu, GripVertical } from 'lucide-react';
+import { Bot, GripVertical } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function JackieFloat({ prefs, updateWidget }) {
@@ -9,8 +9,6 @@ export default function JackieFloat({ prefs, updateWidget }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   const jackiePrefs = prefs?.jackie;
-  const marketPrefs = prefs?.botMarket;
-
   const widgets = useMemo(() => ([
     {
       id: 'jackie',
@@ -23,18 +21,7 @@ export default function JackieFloat({ prefs, updateWidget }) {
       iconClass: 'text-primary-foreground',
       onClick: () => navigate('/jackie'),
     },
-    {
-      id: 'botMarket',
-      hidden: pathname === '/bot-marketplace' || !marketPrefs?.visible,
-      x: marketPrefs?.x ?? 16,
-      y: marketPrefs?.y ?? 156,
-      title: 'Open Bot Marketplace',
-      icon: Cpu,
-      className: 'bg-card border-primary/30',
-      iconClass: 'text-primary',
-      onClick: () => navigate('/bot-marketplace'),
-    },
-  ]), [pathname, jackiePrefs, marketPrefs, navigate]);
+  ]), [pathname, jackiePrefs, navigate]);
 
   const handleMouseDown = (id) => (e) => {
     setDraggingId(id);
