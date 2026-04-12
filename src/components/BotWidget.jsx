@@ -93,6 +93,12 @@ export default function BotWidget({ prefs, updateWidget }) {
 
   const botChatPrefs = prefs?.botChat;
 
+  useEffect(() => {
+    const handleOpen = () => setOpen(true);
+    window.addEventListener('open-bot-chat', handleOpen);
+    return () => window.removeEventListener('open-bot-chat', handleOpen);
+  }, []);
+
   const handleMouseDown = (e) => {
     setDragging(true);
     const rect = e.currentTarget.getBoundingClientRect();

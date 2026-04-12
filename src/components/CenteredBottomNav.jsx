@@ -28,8 +28,14 @@ const ALL_PAGES = [
   { id: 'storefront', label: 'Storefront',    icon: Store,         to: '/storefront' },
   { id: 'sfanalytics',label: 'SF Analytics',  icon: BarChart,      to: '/storefront-analytics' },
   { id: 'economy',    label: 'Economy',       icon: Award,         to: '/admin/economy' },
-
   { id: 'settings',   label: 'Settings',      icon: Settings,      to: '/settings' },
+];
+
+const WIDGET_NAV_ITEMS = [
+  { id: 'botMarket', label: 'Bot Market', icon: Cpu, widgetId: 'botMarket' },
+  { id: 'botChat', label: 'Bot Chat', icon: MessageSquare, widgetId: 'botChat' },
+  { id: 'promptLibrary', label: 'Prompt Library', icon: BookText, widgetId: 'promptLibrary' },
+  { id: 'conversations', label: 'Conversations', icon: Library, widgetId: 'conversations' },
 ];
 
 const DEFAULT_PINNED = ['home', 'markets', 'trade', 'nfts', 'portfolio'];
@@ -93,6 +99,8 @@ export default function FloatingNav({ onSearchOpen }) {
   const didDrag = useRef(false);
 
   const pinnedPages = ALL_PAGES.filter(p => pinned.includes(p.id));
+  const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.widgetId]?.visible);
+  const navItems = [...pinnedPages, ...attachedWidgets];
 
   const savePinned = (next) => {
     setPinned(next);
@@ -131,11 +139,11 @@ export default function FloatingNav({ onSearchOpen }) {
 
   // Distribute pinned pages across rows
   const getPagesByRow = () => {
-    const pages = pinnedPages.length;
+    const pages = navItems.length;
     const perRow = Math.ceil(pages / rows);
     const rowArray = [];
     for (let i = 0; i < rows; i++) {
-      rowArray.push(pinnedPages.slice(i * perRow, (i + 1) * perRow));
+      rowArray.push(navItems.slice(i * perRow, (i + 1) * perRow));
     }
     return rowArray;
   };
@@ -215,20 +223,43 @@ export default function FloatingNav({ onSearchOpen }) {
           <div className="flex flex-col gap-0.5">
             {getPagesByRow().map((pageRow, rowIdx) => (
               <div key={rowIdx} className="flex gap-0.5">
-                {pageRow.map(({ id, label, icon: Icon, to }) => {
-                  const active = pathname === to || (to !== '/' && pathname.startsWith(to));
+                {pageRow.map(({ id, label, icon: Icon, to, widgetId }) => {
+                  const active = to ? (pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
+                  const handleWidgetClick = () => {
+                    if (!widgetId) return;
+                    if (widgetId === 'botChat') {
+                      window.dispatchEvent(new CustomEvent('open-bot-chat'));
+                    } else {
+                      window.dispatchEvent(new CustomEvent('toggle-widget-visibility', { detail: { widgetId } }));
+                    }
+                  };
+
+                  if (to) {
+                    return (
+                      <Link
+                        key={id}
+                        to={to}
+                        title={label}
+                        className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                          active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+                        <span className="text-[8px] font-medium leading-none">{label}</span>
+                      </Link>
+                    );
+                  }
+
                   return (
-                    <Link
+                    <button
                       key={id}
-                      to={to}
+                      onClick={handleWidgetClick}
                       title={label}
-                      className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
-                        active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-                      }`}
+                      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors text-muted-foreground hover:text-foreground"
                     >
                       <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
                       <span className="text-[8px] font-medium leading-none">{label}</span>
-                    </Link>
+                    </button>
                   );
                 })}
               </div>
@@ -236,20 +267,43 @@ export default function FloatingNav({ onSearchOpen }) {
           </div>
         ) : (
           // Vertical (unchanged)
-          pinnedPages.map(({ id, label, icon: Icon, to }) => {
-            const active = pathname === to || (to !== '/' && pathname.startsWith(to));
+          navItems.map(({ id, label, icon: Icon, to, widgetId }) => {
+            const active = to ? (pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
+            const handleWidgetClick = () => {
+              if (!widgetId) return;
+              if (widgetId === 'botChat') {
+                window.dispatchEvent(new CustomEvent('open-bot-chat'));
+              } else {
+                window.dispatchEvent(new CustomEvent('toggle-widget-visibility', { detail: { widgetId } }));
+              }
+            };
+
+            if (to) {
+              return (
+                <Link
+                  key={id}
+                  to={to}
+                  title={label}
+                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                    active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+                  <span className="text-[8px] font-medium leading-none">{label}</span>
+                </Link>
+              );
+            }
+
             return (
-              <Link
+              <button
                 key={id}
-                to={to}
+                onClick={handleWidgetClick}
                 title={label}
-                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
-                  active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors text-muted-foreground hover:text-foreground"
               >
                 <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
                 <span className="text-[8px] font-medium leading-none">{label}</span>
-              </Link>
+              </button>
             );
           })
         )}
