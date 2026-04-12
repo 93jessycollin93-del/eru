@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles, Wand2, Bot, Zap, Route } from 'lucide-react';
+import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles, Wand2, Bot, Zap, Route, BarChart3, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import SquadAnalyticsPanel from './SquadAnalyticsPanel.jsx';
 import SquadKnowledgePanel from './SquadKnowledgePanel.jsx';
 import SquadCreationModes from './SquadCreationModes.jsx';
 import SquadWizardProgress from './SquadWizardProgress.jsx';
 import SquadOptimizationPanel from './SquadOptimizationPanel.jsx';
+import SquadDeliveryPanel from './SquadDeliveryPanel.jsx';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -479,11 +481,21 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
     });
 
     const now = new Date().toISOString();
+    const stepsTotal = (squad.pipeline_steps || []).length;
+    const stepsCompleted = stepOutputs.length;
+    const successRate = stepsTotal > 0 ? Math.round((stepsCompleted / stepsTotal) * 100) : 100;
+    const estimatedRoi = Math.max(10, Math.min(250, successRate + (successfulBotIds.length * 8) + (matchingKnowledge.length * 12)));
     const updatedHistory = [
       {
         goal: task,
         created_at: now,
         successful_bot_ids: Array.from(new Set(successfulBotIds)),
+        run_label: `${squad.name} run`,
+        success_rate: successRate,
+        estimated_roi: estimatedRoi,
+        pipeline_steps_completed: stepsCompleted,
+        pipeline_steps_total: stepsTotal,
+        final_output: finalResponse,
       },
       ...((squad.execution_history || []).slice(0, 9)),
     ];
@@ -511,6 +523,17 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
         final_output: finalResponse,
       }),
     ]);
+
+    if (squad.delivery_enabled && (squad.delivery_targets || []).length > 0) {
+      await base44.functions.invoke('deliverSquadOutput', {
+        squadId: squad.id,
+        squadName: squad.name,
+        goal: task,
+        finalOutput: finalResponse,
+        deliveryTargets: squad.delivery_targets || [],
+      });
+    }
+
     await loadSquads();
 
     setRunOutput((prev) => ({
@@ -526,8 +549,15 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
-        <p className="text-xs font-semibold text-primary mb-1">Squads</p>
-        <p className="text-[10px] text-muted-foreground">Group specialist bots, define shared context, create reusable pipelines, and get smart member recommendations.</p>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-primary mb-1">Squads</p>
+            <p className="text-[10px] text-muted-foreground">Group specialist bots, define shared context, create reusable pipelines, and get smart member recommendations.</p>
+          </div>
+          <Link to="/squad-performance" className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-background px-3 py-2 text-[11px] font-medium text-primary">
+            <BarChart3 className="w-3.5 h-3.5" /> Performance <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
@@ -837,6 +867,8 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
                   <p className="text-[11px] whitespace-pre-wrap text-muted-foreground">{squad.shared_context}</p>
                 </div>
               )}
+
+              <SquadDeliveryPanel squad={squad} onRefresh={loadSquads} />
 
               {(squad.pipeline_steps || []).length > 0 && (
                 <div className="rounded-xl border border-border bg-background p-3">

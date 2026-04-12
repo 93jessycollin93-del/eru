@@ -1,0 +1,56 @@
+{
+  "name": "SquadDeliveryLog",
+  "type": "object",
+  "properties": {
+    "squad_id": {
+      "type": "string"
+    },
+    "squad_name": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "target": {
+      "type": "string",
+      "enum": [
+        "slack",
+        "notion"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "failed"
+      ],
+      "default": "sent"
+    },
+    "message": {
+      "type": "string"
+    },
+    "delivered_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "squad_id",
+    "squad_name",
+    "target",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

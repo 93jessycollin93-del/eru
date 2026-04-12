@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Star, Download, MessageSquare, Search, Send, X, Filter, Tag, Bot, Sparkles } from 'lucide-react';
+import { Star, Download, MessageSquare, Search, Send, X, Filter, Tag, Bot, Sparkles, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -208,8 +208,14 @@ export default function BotMarketplace({ onInstalled, compact = false, showPageL
       const matchesCategory = category === 'All' || mapRoleToCategory(bot.role) === category;
       const matchesIndustry = industry === 'All' || detectIndustry(bot) === industry;
       return matchesSearch && matchesCategory && matchesIndustry;
+    }).sort((a, b) => {
+      const aRatings = ratings.filter((item) => item.bot_id === a.id);
+      const bRatings = ratings.filter((item) => item.bot_id === b.id);
+      const aScore = (a.usage_count || 0) + aRatings.length * 5;
+      const bScore = (b.usage_count || 0) + bRatings.length * 5;
+      return bScore - aScore;
     });
-  }, [bots, search, category, industry]);
+  }, [bots, search, category, industry, ratings]);
 
   return (
     <div className="px-4 py-4 space-y-4">
@@ -233,6 +239,21 @@ export default function BotMarketplace({ onInstalled, compact = false, showPageL
               <Sparkles className="w-3.5 h-3.5" /> Open full marketplace
             </Link>
           )}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
+              <p className="text-[10px] text-muted-foreground">Public bots</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{bots.length}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
+              <p className="text-[10px] text-muted-foreground">Reviews</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{ratings.length}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
+              <div className="flex items-center justify-center gap-1 text-muted-foreground"><TrendingUp className="w-3.5 h-3.5" /><p className="text-[10px]">Trending</p></div>
+              <p className="mt-1 text-lg font-semibold text-foreground">{filtered.slice(0, 3).length}</p>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2">

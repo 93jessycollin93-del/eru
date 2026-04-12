@@ -59,6 +59,24 @@
               "type": "string"
             },
             "default": []
+          },
+          "run_label": {
+            "type": "string"
+          },
+          "success_rate": {
+            "type": "number"
+          },
+          "estimated_roi": {
+            "type": "number"
+          },
+          "pipeline_steps_completed": {
+            "type": "number"
+          },
+          "pipeline_steps_total": {
+            "type": "number"
+          },
+          "final_output": {
+            "type": "string"
           }
         }
       },
@@ -95,6 +113,28 @@
         }
       },
       "default": []
+    },
+    "delivery_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "delivery_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "slack",
+          "notion"
+        ]
+      },
+      "default": []
+    },
+    "delivery_condition": {
+      "type": "string",
+      "enum": [
+        "manual_toggle"
+      ],
+      "default": "manual_toggle"
     },
     "status": {
       "type": "string",

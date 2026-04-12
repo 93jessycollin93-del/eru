@@ -13,7 +13,7 @@ export default function BotMarketplaceShell({ onInstalled, embedded = false }) {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">Discover, install, and share AI bot templates</h2>
-              <p className="text-sm text-muted-foreground">Browse public bots by industry and functionality, install proven templates, and use ratings and reviews to find the best ones.</p>
+              <p className="text-sm text-muted-foreground">Browse public bots by industry and functionality, install proven templates, use ratings and reviews, and spot trending bot packs faster.</p>
             </div>
           </div>
           {embedded && (
