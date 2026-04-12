@@ -12,6 +12,7 @@ import SquadOutputChart from './SquadOutputChart.jsx';
 import SquadTemplateLibrary from './SquadTemplateLibrary.jsx';
 import SquadFormationBuilder from './SquadFormationBuilder.jsx';
 import MemoryBankPanel from './MemoryBankPanel.jsx';
+import { routeTaskToGroup } from './taskGroupRouting';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚙️' };
 const ROLE_KEYWORDS = {
@@ -541,9 +542,17 @@ export default function SquadBoard({ bots }) {
 
     const stepOutputs = [];
     const successfulBotIds = [];
+    const groupLoad = Object.fromEntries((squad.task_groups || []).map((group) => [group.id, 0]));
     for (const step of (squad.pipeline_steps || [])) {
-      const assignedBot = bots.find((bot) => bot.id === step.assigned_bot_id) || masterBot;
+      const routedGroup = routeTaskToGroup(`${task} ${step.title} ${step.instruction}`, squad.task_groups || [], groupLoad);
+      const routedBot = routedGroup
+        ? bots.find((bot) => (routedGroup.bot_ids || []).includes(bot.id))
+        : null;
+      const assignedBot = routedBot || bots.find((bot) => bot.id === step.assigned_bot_id) || masterBot;
       if (!assignedBot) continue;
+      if (routedGroup) {
+        groupLoad[routedGroup.id] = (groupLoad[routedGroup.id] || 0) + 1;
+      }
 
       const stepResult = await base44.integrations.Core.InvokeLLM({
         prompt: `You are ${assignedBot.name}. ${assignedBot.instructions || ''}
@@ -552,6 +561,9 @@ Shared squad context: ${squad.shared_context || 'None'}
 Squad request: ${task}
 Pipeline step: ${step.title}
 Step instruction: ${step.instruction}
+Routed task group: ${routedGroup?.name || 'Default squad routing'}
+Group purpose: ${routedGroup?.purpose || 'General execution'}
+Group instruction: ${routedGroup?.task_instruction || 'No extra group instruction'}
 ${optimizationNote}
 ${injectedKnowledge.map((item, index) => `Memory bank entry ${index + 1}: ${item.result_summary}`).join('\n')}
 
@@ -562,6 +574,8 @@ Provide a concise specialist response for this step.`
         step_title: step.title,
         bot_name: assignedBot.name,
         bot_id: assignedBot.id,
+        routed_group_id: routedGroup?.id || '',
+        routed_group_name: routedGroup?.name || '',
         output: stepResult,
       });
       successfulBotIds.push(assignedBot.id);
@@ -1097,6 +1111,7 @@ Prefer practical business/search terms and avoid vague words.`,
                           <div>
                             <p className="text-xs font-semibold text-foreground">{step.step_title}</p>
                             <p className="mt-1 text-[10px] text-primary">{step.bot_name}</p>
+                            {step.routed_group_name && <p className="mt-1 text-[10px] text-muted-foreground">Routed to: {step.routed_group_name}</p>}
                             <p className="mt-1 text-[11px] whitespace-pre-wrap text-muted-foreground leading-relaxed">{step.output}</p>
                           </div>
                           <SquadOutputChart content={step.output} title={`${step.step_title} chart`} />
