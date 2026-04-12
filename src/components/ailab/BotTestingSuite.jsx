@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, FlaskConical, Play, Plus } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FlaskConical, Play, Plus, Paperclip, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { invokeSelectedModel } from './modelRouting';
 
@@ -9,6 +9,8 @@ const EMPTY_CASE = {
   input: '',
   expected_output: '',
   min_similarity_score: 0.75,
+  input_file_urls: [],
+  input_file_names: [],
 };
 
 async function scoreSimilarity(expectedOutput, actualOutput) {
@@ -33,6 +35,7 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
   const [form, setForm] = useState(EMPTY_CASE);
   const [runningBotId, setRunningBotId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]);
 
   const load = async () => {
     const [caseRows, runRows] = await Promise.all([
@@ -51,12 +54,19 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
     const bot = bots.find((item) => item.id === form.bot_id);
     if (!bot) return;
     setSaving(true);
+    const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
+      const response = await base44.integrations.Core.UploadFile({ file });
+      return { url: response.file_url, name: file.name };
+    }));
     await base44.entities.BotTestCase.create({
       ...form,
       bot_name: bot.name,
       min_similarity_score: Number(form.min_similarity_score),
+      input_file_urls: uploadedFiles.map((item) => item.url),
+      input_file_names: uploadedFiles.map((item) => item.name),
     });
     setForm(EMPTY_CASE);
+    setPendingFiles([]);
     setSaving(false);
     load();
   };
@@ -71,9 +81,9 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
 
     for (const testCase of cases) {
       const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}` : '';
-      const prompt = `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testCase.input}\n\n${bot.name}:`;
-      const actualOutput = await invokeSelectedModel({ provider: bot.model_provider, model: bot.model_name, prompt });
-      const scored = await scoreSimilarity(testCase.expected_output, actualOutput);
+      const prompt = `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testCase.input}\nAttached files: ${(testCase.input_file_names || []).length > 0 ? testCase.input_file_names.join(', ') : 'None'}\n\n${bot.name}:`;
+      const actualOutput = await invokeSelectedModel({ provider: bot.model_provider, model: bot.model_name, prompt, file_urls: testCase.input_file_urls || [] });
+      const scored = await scoreSimilarity(testCase.expected_output, actualOutput, testCase.input_file_names || []);
       const previousForCase = previousRuns.find((item) => item.test_case_id === testCase.id);
       const similarity = Number(scored.similarity_score || 0);
       const passed = similarity >= Number(testCase.min_similarity_score || 0.75);
@@ -94,6 +104,8 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
         regression_flag: regressionFlag,
         regression_reason: regressionReason,
         run_group: runGroup,
+        input_file_urls: testCase.input_file_urls || [],
+        input_file_names: testCase.input_file_names || [],
       });
     }
 
@@ -130,9 +142,25 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
         </select>
         <input value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Test case name" className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
         <textarea value={form.input} onChange={(e) => setForm((prev) => ({ ...prev, input: e.target.value }))} placeholder="Bot input" className="min-h-[90px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+          <Paperclip className="w-3.5 h-3.5" /> Upload screenshots or documents for this test
+          <input type="file" multiple onChange={(e) => setPendingFiles(Array.from(e.target.files || []))} className="hidden" />
+        </label>
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {pendingFiles.map((file) => (
+              <div key={file.name} className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[10px] text-muted-foreground">
+                {file.name}
+                <button onClick={() => setPendingFiles((prev) => prev.filter((item) => item.name !== file.name))} className="text-muted-foreground">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <textarea value={form.expected_output} onChange={(e) => setForm((prev) => ({ ...prev, expected_output: e.target.value }))} placeholder="Expected output" className="min-h-[90px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
         <input type="number" step="0.05" min="0" max="1" value={form.min_similarity_score} onChange={(e) => setForm((prev) => ({ ...prev, min_similarity_score: e.target.value }))} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
-        <button onClick={createCase} disabled={!form.bot_id || !form.title || !form.input || !form.expected_output || saving} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
+        <button onClick={createCase} disabled={!form.bot_id || !form.title || (!form.input && pendingFiles.length === 0) || !form.expected_output || saving} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
           <Plus className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Add test case'}
         </button>
       </div>
@@ -164,6 +192,7 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
                       <div>
                         <p className="text-xs font-semibold text-foreground">{run.test_title}</p>
                         <p className="text-[11px] text-muted-foreground mt-1">Similarity {Math.round((run.similarity_score || 0) * 100)}%</p>
+                        {(run.input_file_names || []).length > 0 && <p className="text-[10px] text-muted-foreground mt-1">Files: {run.input_file_names.join(', ')}</p>}
                       </div>
                       {run.passed ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-400/10 px-2 py-1 text-[10px] font-semibold text-green-400"><CheckCircle2 className="w-3 h-3" /> Pass</span>

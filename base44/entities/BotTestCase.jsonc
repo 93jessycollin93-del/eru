@@ -24,6 +24,20 @@
     "is_active": {
       "type": "boolean",
       "default": true
+    },
+    "input_file_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "input_file_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
     }
   },
   "required": [

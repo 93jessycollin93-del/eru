@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bot, FlaskConical, Play, MessageSquare, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Bot, FlaskConical, Play, MessageSquare, ArrowRight, CheckCircle2, AlertTriangle, Paperclip, X } from 'lucide-react';
 import { invokeSelectedModel } from './modelRouting';
+import { base44 } from '@/api/base44Client';
 
 export default function BotTestingLabWidget({ bots = [], testCases = [], testRuns = [], globalPolicy }) {
   const [selectedBotId, setSelectedBotId] = useState('');
   const [manualPrompt, setManualPrompt] = useState('');
   const [manualResponse, setManualResponse] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
+  const [manualFiles, setManualFiles] = useState([]);
 
   const selectedBot = bots.find((bot) => bot.id === selectedBotId) || bots[0];
 
@@ -23,11 +25,15 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
   }), [bots, testCases, testRuns]);
 
   const runManualTest = async () => {
-    if (!selectedBot || !manualPrompt.trim()) return;
+    if (!selectedBot || (!manualPrompt.trim() && manualFiles.length === 0)) return;
     setManualLoading(true);
     const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}` : '';
-    const prompt = `You are ${selectedBot.name}. ${selectedBot.instructions || ''}\nPersonality: ${selectedBot.personality || 'helpful'}\nResponse style: ${selectedBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${manualPrompt}\n\n${selectedBot.name}:`;
-    const result = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt }).catch(() => 'This bot needs its model connection set up before it can be tested here.');
+    const uploadedUrls = await Promise.all(manualFiles.map(async (file) => {
+      const response = await base44.integrations.Core.UploadFile({ file });
+      return response.file_url;
+    }));
+    const prompt = `You are ${selectedBot.name}. ${selectedBot.instructions || ''}\nPersonality: ${selectedBot.personality || 'helpful'}\nResponse style: ${selectedBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${manualPrompt || 'Analyze the attached files.'}\nAttached files: ${manualFiles.length > 0 ? manualFiles.map((file) => file.name).join(', ') : 'None'}\n\n${selectedBot.name}:`;
+    const result = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt, file_urls: uploadedUrls }).catch(() => 'This bot needs its model connection set up before it can be tested here.');
     setManualResponse(result);
     setManualLoading(false);
   };
@@ -88,6 +94,22 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
           {bots.map((bot) => <option key={bot.id} value={bot.id}>{bot.name}</option>)}
         </select>
         <input value={manualPrompt} onChange={(e) => setManualPrompt(e.target.value)} placeholder="Ask a quick test question..." className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none" />
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+          <Paperclip className="w-3.5 h-3.5" /> Attach images or files
+          <input type="file" multiple onChange={(e) => setManualFiles(Array.from(e.target.files || []))} className="hidden" />
+        </label>
+        {manualFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {manualFiles.map((file) => (
+              <div key={file.name} className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[10px] text-muted-foreground">
+                {file.name}
+                <button onClick={() => setManualFiles((prev) => prev.filter((item) => item.name !== file.name))} className="text-muted-foreground">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2 flex-wrap">
           <button onClick={runManualTest} disabled={!selectedBot || !manualPrompt.trim() || manualLoading} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40">
             <Play className="w-3.5 h-3.5" /> {manualLoading ? 'Testing...' : 'Run manual test'}
