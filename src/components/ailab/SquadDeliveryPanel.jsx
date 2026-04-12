@@ -42,18 +42,18 @@ export default function SquadDeliveryPanel({ squad, onRefresh }) {
         <BellRing className="w-4 h-4 text-primary" />
         <div>
           <p className="text-xs font-semibold text-foreground">Delivery automation</p>
-          <p className="text-[10px] text-muted-foreground">Manual toggle delivery after pipeline completion.</p>
+          <p className="text-[10px] text-muted-foreground">Automatically sync completed run summaries and detected chart points.</p>
         </div>
       </div>
 
       <div className="grid gap-2 md:grid-cols-2">
         <button onClick={() => updateTargets('slack')} className={`rounded-xl border p-3 text-left ${deliveryTargets.includes('slack') ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}>
-          <div className="flex items-center gap-2"><Slack className="w-4 h-4 text-primary" /><p className="text-xs font-semibold text-foreground">Slack delivery</p></div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Send final pipeline output to Slack.</p>
+          <div className="flex items-center gap-2"><Slack className="w-4 h-4 text-primary" /><p className="text-xs font-semibold text-foreground">Slack sync</p></div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Push run summaries and chart data to Slack when a run completes.</p>
         </button>
         <button onClick={() => updateTargets('notion')} className={`rounded-xl border p-3 text-left ${deliveryTargets.includes('notion') ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}>
-          <div className="flex items-center gap-2"><NotebookPen className="w-4 h-4 text-primary" /><p className="text-xs font-semibold text-foreground">Notion delivery</p></div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Create a page entry in Notion.</p>
+          <div className="flex items-center gap-2"><NotebookPen className="w-4 h-4 text-primary" /><p className="text-xs font-semibold text-foreground">Notion sync</p></div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Create a Notion page with the summary and chart points after each run.</p>
         </button>
       </div>
 
