@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, Plus, Trash2, Check, Loader2, Smartphone } from 'lucide-react';
+import { Bell, Plus, Trash2, Check, Loader2, Smartphone, Send, Link as LinkIcon } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { useDashboardEvents } from '@/context/DashboardEventsContext';
+import { getTelegramAccount } from '@/lib/telegramConnector';
 
 export default function AlertManager() {
   const [alerts, setAlerts] = useState([]);
@@ -11,6 +12,8 @@ export default function AlertManager() {
   const [formData, setFormData] = useState({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '', push_notification_enabled: true });
   const [creating, setCreating] = useState(false);
   const [pulse, setPulse] = useState(false);
+  const [holdings, setHoldings] = useState([]);
+  const [telegramAccount, setTelegramAccount] = useState(null);
   const { subscribe, emit, rules } = useDashboardEvents();
   const activeRules = useMemo(() => rules.filter((rule) => rule.enabled && rule.target === 'alerts'), [rules]);
 
@@ -37,7 +40,7 @@ export default function AlertManager() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribe('alert-manager', (dashboardEvent) => {
+    const unsubscribe = subscribe('alert-manager', async (dashboardEvent) => {
       const matched = activeRules.some((rule) => rule.source === dashboardEvent.source && rule.event === dashboardEvent.event);
       if (!matched) return;
       setPulse(true);
@@ -46,7 +49,7 @@ export default function AlertManager() {
       if (dashboardEvent.source === 'market' && dashboardEvent.event === 'priceChange') {
         const matchedAlerts = alerts.filter((alert) => {
           const marketItem = (dashboardEvent.payload?.prices || []).find((price) => price.symbol === alert.asset_symbol);
-          if (!marketItem || alert.is_active === false) return false;
+          if (!marketItem || alert.is_active === false || alert.notification_sent) return false;
           if (alert.trigger_basis === 'percent_change') {
             return alert.alert_type === 'above'
               ? marketItem.change >= alert.percent_change
@@ -58,15 +61,16 @@ export default function AlertManager() {
         });
 
         if (matchedAlerts.length > 0) {
-          matchedAlerts.forEach((alert) => {
+          await Promise.all(matchedAlerts.map((alert) =>
             base44.entities.PriceAlert.update(alert.id, {
               triggered_at: new Date().toISOString(),
-              notification_sent: !!alert.push_notification_enabled,
-              push_notification_status: alert.push_notification_enabled ? 'sent' : 'pending'
-            });
-          });
+              notification_sent: true,
+              push_notification_status: alert.push_notification_enabled ? 'sent' : 'disabled'
+            })
+          ));
           emit('alerts', 'thresholdTriggered', { matchedAlerts });
           toast.success(`${matchedAlerts.length} alert rule${matchedAlerts.length > 1 ? 's' : ''} matched live market data`);
+          await base44.functions.invoke('checkPriceAlerts', {});
         }
       }
     });
@@ -80,8 +84,14 @@ export default function AlertManager() {
         setLoading(false);
         return;
       }
-      const data = await base44.entities.PriceAlert.filter({ created_by: user.email });
+      const [data, walletHoldings, tgAccount] = await Promise.all([
+        base44.entities.PriceAlert.filter({ created_by: user.email }),
+        base44.entities.WalletHolding.filter({ created_by: user.email }, '-value_usd', 100),
+        getTelegramAccount(user.email),
+      ]);
       setAlerts(data || []);
+      setHoldings(walletHoldings || []);
+      setTelegramAccount(tgAccount || null);
     } catch (error) {
       console.error('Error fetching alerts:', error);
     } finally {
@@ -101,13 +111,14 @@ export default function AlertManager() {
       await base44.entities.PriceAlert.create({
         asset_symbol: formData.asset_symbol.toUpperCase(),
         alert_type: formData.alert_type,
-        threshold_price: formData.threshold_price ? parseFloat(formData.threshold_price) : null,
+        threshold_price: formData.threshold_price ? parseFloat(formData.threshold_price) : 0,
         trigger_basis: formData.trigger_basis,
         percent_change: formData.percent_change ? parseFloat(formData.percent_change) : null,
         note: formData.note,
         is_active: true,
         push_notification_enabled: formData.push_notification_enabled,
-        push_notification_status: formData.push_notification_enabled ? 'ready' : 'pending',
+        push_notification_status: formData.push_notification_enabled ? 'ready' : 'disabled',
+        telegram_notification_enabled: !!telegramAccount?.is_verified && !!telegramAccount?.notifications_enabled,
         user_email: user.email,
       });
       setFormData({ asset_symbol: '', alert_type: 'above', threshold_price: '', trigger_basis: 'price', percent_change: '', note: '', push_notification_enabled: true });
@@ -179,13 +190,22 @@ export default function AlertManager() {
 
       {showForm && (
         <div className="mb-4 p-3 bg-secondary rounded-lg border border-border/50 space-y-2">
-          <input
-            type="text"
-            placeholder="BTC, ETH, DOGE..."
+          {!telegramAccount?.is_verified && (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[11px] text-muted-foreground">
+              <LinkIcon className="w-3.5 h-3.5 text-primary" />
+              Link Telegram in your account settings to receive price alerts away from the dashboard.
+            </div>
+          )}
+          <select
             value={formData.asset_symbol}
             onChange={e => setFormData({ ...formData, asset_symbol: e.target.value })}
-            className="w-full px-3 py-2 bg-card border border-border rounded text-xs text-foreground placeholder-muted-foreground"
-          />
+            className="w-full px-3 py-2 bg-card border border-border rounded text-xs text-foreground"
+          >
+            <option value="">Select a holding</option>
+            {[...new Set(holdings.map((holding) => holding.token_symbol).filter(Boolean))].map((symbol) => (
+              <option key={symbol} value={symbol}>{symbol}</option>
+            ))}
+          </select>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <select
               value={formData.trigger_basis}
@@ -234,8 +254,15 @@ export default function AlertManager() {
                 onChange={e => setFormData({ ...formData, push_notification_enabled: e.target.checked })}
                 className="accent-primary"
               />
-              Enable push notification status tracking
+              Enable in-app notification
             </label>
+            <div className="sm:col-span-2 flex items-center justify-between gap-3 px-3 py-2 bg-card border border-border rounded text-xs text-foreground">
+              <div className="flex items-center gap-2 min-w-0">
+                <Send className="w-3.5 h-3.5 text-primary" />
+                <span className="truncate">Telegram delivery {telegramAccount?.is_verified ? 'available' : 'not linked'}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">{telegramAccount?.notifications_enabled ? 'enabled' : 'off'}</span>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -259,14 +286,18 @@ export default function AlertManager() {
         <p className="text-xs text-muted-foreground text-center py-4">No alerts yet. Create one to monitor asset thresholds.</p>
       ) : (
         <>
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="bg-secondary rounded-lg border border-border px-3 py-2">
               <p className="text-[10px] text-muted-foreground">Active alerts</p>
               <p className="text-sm font-semibold">{alerts.filter(a => a.is_active).length}</p>
             </div>
             <div className="bg-secondary rounded-lg border border-border px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">Push ready</p>
+              <p className="text-[10px] text-muted-foreground">In-app on</p>
               <p className="text-sm font-semibold">{alerts.filter(a => a.push_notification_enabled).length}</p>
+            </div>
+            <div className="bg-secondary rounded-lg border border-border px-3 py-2">
+              <p className="text-[10px] text-muted-foreground">Telegram on</p>
+              <p className="text-sm font-semibold">{alerts.filter(a => a.telegram_notification_enabled).length}</p>
             </div>
             <div className="bg-secondary rounded-lg border border-border px-3 py-2">
               <p className="text-[10px] text-muted-foreground">Triggered</p>
@@ -282,15 +313,19 @@ export default function AlertManager() {
                     {alert.asset_symbol} <span className="text-muted-foreground text-[9px]">{alert.alert_type === 'above' ? '↑' : '↓'}</span>
                   </p>
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{alert.push_notification_status || 'ready'}</span>
+                  {alert.telegram_notification_enabled && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">telegram</span>}
                 </div>
                 <p className="text-[10px] text-muted-foreground">
                   {alert.trigger_basis === 'percent_change'
                     ? `${alert.percent_change}% 24h change`
                     : `$${Number(alert.threshold_price || 0).toFixed(2)}`}
                 </p>
+                {typeof alert.last_price_usd === 'number' && (
+                  <p className="text-[10px] text-muted-foreground/80">Last seen: ${Number(alert.last_price_usd).toLocaleString()} · 24h {Number(alert.last_percent_change || 0).toFixed(2)}%</p>
+                )}
                 {alert.note && <p className="text-[10px] text-muted-foreground/70 mt-0.5">{alert.note}</p>}
                 <p className="text-[10px] text-muted-foreground/70 mt-1">
-                  Push: {alert.push_notification_enabled ? 'On' : 'Off'}{alert.triggered_at ? ` · Last trigger ${new Date(alert.triggered_at).toLocaleString()}` : ''}
+                  In-app: {alert.push_notification_enabled ? 'On' : 'Off'} · Telegram: {alert.telegram_notification_enabled ? 'On' : 'Off'}{alert.triggered_at ? ` · Last trigger ${new Date(alert.triggered_at).toLocaleString()}` : ''}
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
@@ -300,6 +335,21 @@ export default function AlertManager() {
                   className={`p-1.5 rounded transition-colors ${alert.push_notification_enabled ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}
                 >
                   <Smartphone className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!telegramAccount?.is_verified || !telegramAccount?.notifications_enabled) {
+                      toast.error('Link Telegram and enable alerts first');
+                      return;
+                    }
+                    const nextValue = !alert.telegram_notification_enabled;
+                    await base44.entities.PriceAlert.update(alert.id, { telegram_notification_enabled: nextValue });
+                    setAlerts((prev) => prev.map((item) => item.id === alert.id ? { ...item, telegram_notification_enabled: nextValue } : item));
+                  }}
+                  className={`p-1.5 rounded transition-colors ${alert.telegram_notification_enabled ? 'bg-blue-500/10 text-blue-400' : 'bg-secondary text-muted-foreground'}`}
+                  title="Toggle Telegram delivery"
+                >
+                  <Send className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => handleToggleAlert(alert.id, alert.is_active)}
