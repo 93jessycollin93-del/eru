@@ -13,6 +13,9 @@ import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
 import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
 import CollectorLeaderboard from '../components/dashboard/CollectorLeaderboard';
+import SharedDashboardCollabBar from '../components/dashboard/SharedDashboardCollabBar';
+import SharedDashboardPresence from '../components/dashboard/SharedDashboardPresence';
+import SharedDashboardComments from '../components/dashboard/SharedDashboardComments';
 import CollectorRewardsPanel from '../components/dashboard/CollectorRewardsPanel';
 import DashboardPanelManager from '../components/dashboard/DashboardPanelManager';
 import AlertManager from '../components/AlertManager';
@@ -58,6 +61,8 @@ export default function Dashboard() {
         <QuickActions />
         <div className="px-4 mt-4 space-y-4 pb-4">
           <TelegramFirstBanner />
+          <SharedDashboardCollabBar />
+          <SharedDashboardPresence />
           <WidgetRulesPanel />
           <DashboardPanelManager
             collectorRewards={<CollectorRewardsPanel />}
@@ -81,6 +86,7 @@ export default function Dashboard() {
           <NotificationCenter />
           <AlertManager />
           <CollectorLeaderboard />
+          <SharedDashboardComments />
           <FinanceModule />
         </div>
       </div>

@@ -1,0 +1,47 @@
+{
+  "name": "SharedDashboardComment",
+  "type": "object",
+  "properties": {
+    "dashboard_key": {
+      "type": "string"
+    },
+    "widget_id": {
+      "type": "string"
+    },
+    "widget_label": {
+      "type": "string"
+    },
+    "data_point_label": {
+      "type": "string"
+    },
+    "comment_text": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "resolved"
+      ],
+      "default": "open"
+    }
+  },
+  "required": [
+    "dashboard_key",
+    "comment_text"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

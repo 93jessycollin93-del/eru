@@ -1,0 +1,49 @@
+{
+  "name": "SharedDashboardState",
+  "type": "object",
+  "properties": {
+    "dashboard_key": {
+      "type": "string"
+    },
+    "layout_name": {
+      "type": "string"
+    },
+    "panel_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "hidden_panel_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "active_editor_email": {
+      "type": "string"
+    },
+    "last_edited_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "dashboard_key"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
