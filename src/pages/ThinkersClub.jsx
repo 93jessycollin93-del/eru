@@ -29,6 +29,23 @@ export default function ThinkersClub() {
     { id: 3, author: 'Stoic_Dev', text: 'Perhaps free will is an emergent property of complexity, not a fundamental force.', time: 'just now' },
   ]);
 
+  const engageChallenge = (challenge) => {
+    setActiveServer({
+      id: `challenge-${challenge.id}`,
+      name: challenge.title,
+      desc: challenge.prompt,
+      members: challenge.votes,
+      color: DIFF_COLOR[challenge.difficulty] || '#7c4dff',
+      channels: ['#challenge-room', '#arguments', '#counterpoints'],
+      hot: true,
+    });
+    setActiveChannel('#challenge-room');
+    setMessages([
+      { id: 1, author: 'Challenge Host', text: challenge.prompt, time: 'just now' },
+      { id: 2, author: 'Moderator', text: `Welcome to ${challenge.title}. Share your position, question assumptions, and build on others’ ideas.`, time: 'just now' },
+    ]);
+  };
+
   const sendMessage = () => {
     if (!msg.trim()) return;
     setMessages(p => [...p, { id: Date.now(), author: 'You', text: msg, time: 'just now' }]);
@@ -171,7 +188,7 @@ export default function ThinkersClub() {
                 <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{c.category}</span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground"><Star className="w-3 h-3" />{c.votes}</span>
               </div>
-              <button className="text-primary text-xs font-medium hover:underline">Engage →</button>
+              <button onClick={() => engageChallenge(c)} className="text-primary text-xs font-medium hover:underline">Engage →</button>
             </div>
           </div>
         ))}
