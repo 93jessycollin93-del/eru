@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck, GraduationCap, Rocket } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck, GraduationCap, Rocket, Users } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -28,6 +28,7 @@ import BotGlobalPolicyPanel from '../components/ailab/BotGlobalPolicyPanel';
 import PromptLibraryPanel from '../components/ailab/PromptLibraryPanel';
 import ModelProviderPanel from '../components/ailab/ModelProviderPanel';
 import BotInstructionArchitect from '../components/ailab/BotInstructionArchitect';
+import SharedWorkspacePanel from '../components/ailab/SharedWorkspacePanel';
 import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
 import { runRegressionSuite } from '../components/ailab/regressionTesting';
 import { base44 } from '@/api/base44Client';
@@ -284,6 +285,7 @@ export default function AILab() {
     { id: 'squad', label: 'Squad', icon: Network },
     { id: 'policy', label: 'Policy', icon: ShieldCheck },
     { id: 'prompts', label: 'Prompts', icon: Sparkles },
+    { id: 'workspace', label: 'Workspace', icon: Users },
     { id: 'discover', label: 'Discover', icon: Sparkles },
   ];
 
@@ -767,6 +769,9 @@ export default function AILab() {
 
       {/* PROMPTS */}
       {tab === 'prompts' && <PromptLibraryPanel bots={bots} onBotsUpdated={loadBots} />}
+
+      {/* WORKSPACE */}
+      {tab === 'workspace' && <SharedWorkspacePanel bots={bots} promptTemplates={promptTemplates} />}
 
       {/* DISCOVER */}
       {tab === 'discover' && <div className="px-4 py-4"><BotMarketplaceShell onInstalled={loadBots} embedded /></div>}
