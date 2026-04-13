@@ -39,9 +39,9 @@ export default function BotDataSourcesPanel({ value = [], onChange }) {
   const sources = Array.isArray(value) ? value : [];
 
   const addSource = () => {
-    onChange([...
-      sources,
-      EMPTY_SOURCE
+    onChange([
+      ...sources,
+      EMPTY_SOURCE,
     ]);
   };
 
