@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { invokeSelectedModel } from './modelRouting';
 import { BarChart3, CheckCircle2, FlaskConical, Save, Sparkles, Upload } from 'lucide-react';
 import { buildRegressionPrompt, scoreSimilarity, runRegressionSuite } from './regressionTesting';
+import BotTrainingInsightsPanel from './BotTrainingInsightsPanel';
 import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 
 const EMPTY_GOLDEN = { title: '', input: '', expected_output: '', min_similarity_score: 0.75 };
@@ -16,6 +17,8 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
   const [publishing, setPublishing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState([]);
+  const [insights, setInsights] = useState(null);
+  const [generatingInsights, setGeneratingInsights] = useState(false);
 
   const selectedBot = useMemo(() => bots.find((bot) => bot.id === selectedBotId) || null, [bots, selectedBotId]);
 
@@ -24,6 +27,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
       setGoldens([]);
       setCandidateInstructions('');
       setResults([]);
+      setInsights(null);
       return;
     }
 
@@ -32,6 +36,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
       setGoldens(rows);
     });
     setResults([]);
+    setInsights(null);
   }, [selectedBot]);
 
   const addGolden = async () => {
@@ -135,6 +140,37 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     }
     setUploading(false);
     event.target.value = '';
+  };
+
+  const generateInsights = async () => {
+    if (!selectedBot || !candidateInstructions.trim()) return;
+    setGeneratingInsights(true);
+    const response = await base44.functions.invoke('generateBotTrainingInsights', {
+      bot: selectedBot,
+      currentInstructions: selectedBot.instructions || '',
+      candidateInstructions,
+      goldens,
+      results,
+    });
+    setInsights(response.data);
+    setGeneratingInsights(false);
+  };
+
+  const importGeneratedTests = async () => {
+    if (!selectedBot || !insights?.generated_test_cases?.length) return;
+    await base44.entities.BotTestCase.bulkCreate(
+      insights.generated_test_cases.map((item) => ({
+        bot_id: selectedBot.id,
+        bot_name: selectedBot.name,
+        title: item.title,
+        input: item.input,
+        expected_output: item.expected_output,
+        min_similarity_score: Number(item.min_similarity_score || 0.75),
+        is_active: true,
+      }))
+    );
+    const rows = await base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 50);
+    setGoldens(rows);
   };
 
   const publishChanges = async () => {
@@ -249,6 +285,15 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
           </>
         )}
       </div>
+
+      {selectedBot && (
+        <BotTrainingInsightsPanel
+          insights={insights}
+          loading={generatingInsights}
+          onGenerate={generateInsights}
+          onImport={importGeneratedTests}
+        />
+      )}
 
       {summary && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
