@@ -40,17 +40,19 @@ function ColorWheel({ colors, size = 44 }) {
   );
 }
 
-function SliderRow({ label, value, min=0, max=2, step=0.05, onChange, locked, suffix='' }) {
+function SliderRow({ label, value = 0, min=0, max=2, step=0.05, onChange = () => {}, locked = false, suffix='' }) {
+  const safeValue = Number.isFinite(value) ? value : min;
+
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{label}</span>
         <div className="flex items-center gap-1.5">
           {locked && <Lock className="w-3 h-3 text-muted-foreground/50" />}
-          <span className="text-xs font-mono text-foreground">{value.toFixed(2)}{suffix}</span>
+          <span className="text-xs font-mono text-foreground">{safeValue.toFixed(2)}{suffix}</span>
         </div>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value}
+      <input type="range" min={min} max={max} step={step} value={safeValue}
         onChange={e => !locked && onChange(parseFloat(e.target.value))}
         disabled={locked}
         className="w-full accent-primary h-1.5 rounded-full disabled:opacity-40"
@@ -189,7 +191,17 @@ function ThemesTab() {
 // ─── TAB: BACKGROUNDS ────────────────────────────────────────────────────────
 function BackgroundsTab() {
   const theme = useTheme() || {};
-  const { bg, setBg, bgOpacity, setBgOpacity, particleDensity, setParticleDensity, lowPowerMode, setLowPowerMode, isLocked = () => false } = theme;
+  const {
+    bg = 'none',
+    setBg = () => {},
+    bgOpacity = 0.4,
+    setBgOpacity = () => {},
+    particleDensity = 1,
+    setParticleDensity = () => {},
+    lowPowerMode = false,
+    setLowPowerMode = () => {},
+    isLocked = () => false
+  } = theme;
   const [preview, setPreview] = useState(null);
   const [cat, setCat] = useState('all');
 
@@ -251,7 +263,17 @@ function BackgroundsTab() {
 
 // ─── TAB: MOTION ─────────────────────────────────────────────────────────────
 function MotionTab() {
-  const { motionIntensity, setMotionIntensity, animSpeed, setAnimSpeed, glowIntensity, setGlowIntensity, blurLevel, setBlurLevel, isLocked } = useTheme();
+  const {
+    motionIntensity = 1,
+    setMotionIntensity = () => {},
+    animSpeed = 1,
+    setAnimSpeed = () => {},
+    glowIntensity = 1,
+    setGlowIntensity = () => {},
+    blurLevel = 1,
+    setBlurLevel = () => {},
+    isLocked = () => false,
+  } = useTheme() || {};
   return (
     <div className="space-y-4">
       <SectionHeader icon={Zap} label="Motion & Interaction" sub="Global animation rules and feedback" />
@@ -296,7 +318,7 @@ const DASH_WIDGETS = [
 ];
 
 function LayoutTab() {
-  const { uiScale, setUiScale } = useTheme();
+  const { uiScale = 1, setUiScale = () => {} } = useTheme() || {};
   const [activeWidgets, setActiveWidgets] = useState(['portfolio', 'markets', 'ideas']);
 
   const pct = Math.round(uiScale * 100);
@@ -364,7 +386,17 @@ function LayoutTab() {
 
 // ─── TAB: DISPLAY ────────────────────────────────────────────────────────────
 function DisplayTab() {
-  const { brightness, setBrightness, contrast, setContrast, saturation, setSaturation, typography, setTypography, isLocked } = useTheme();
+  const {
+    brightness = 1,
+    setBrightness = () => {},
+    contrast = 1,
+    setContrast = () => {},
+    saturation = 1,
+    setSaturation = () => {},
+    typography = 'modern',
+    setTypography = () => {},
+    isLocked = () => false,
+  } = useTheme() || {};
 
   return (
     <div className="space-y-4">
@@ -395,7 +427,7 @@ function DisplayTab() {
 
 // ─── TAB: CONTROL ────────────────────────────────────────────────────────────
 function ControlTab() {
-  const { lockedSettings, setLockedSettings, resetAll } = useTheme();
+  const { lockedSettings = [], setLockedSettings = () => {}, resetAll = () => {} } = useTheme() || {};
   const [showReset, setShowReset] = useState(false);
 
   const LOCKABLE = [
