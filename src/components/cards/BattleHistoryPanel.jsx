@@ -1,5 +1,6 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { History, Swords, Shield, Crown } from 'lucide-react';
+import BattleReplayViewer from './BattleReplayViewer';
 
 export default function BattleHistoryPanel({ matches, selectedMatch, onSelect, loading }) {
   return (
@@ -100,6 +101,8 @@ export default function BattleHistoryPanel({ matches, selectedMatch, onSelect, l
                 </div>
               </div>
             </div>
+
+            <BattleReplayViewer match={selectedMatch} />
 
             <div className="rounded-xl border border-border bg-secondary/30 p-3">
               <p className="text-xs font-semibold">Turn-by-turn log</p>
