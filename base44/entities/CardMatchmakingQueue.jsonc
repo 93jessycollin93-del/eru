@@ -1,0 +1,96 @@
+{
+  "name": "CardMatchmakingQueue",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "searching",
+        "matched",
+        "cancelled"
+      ],
+      "default": "searching"
+    },
+    "elo_rating": {
+      "type": "number"
+    },
+    "collection_strength": {
+      "type": "number"
+    },
+    "deck_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "power": {
+            "type": "number"
+          },
+          "guard": {
+            "type": "number"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "ability_value": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    },
+    "deck_strength": {
+      "type": "number",
+      "default": 0
+    },
+    "matched_opponent_email": {
+      "type": "string"
+    },
+    "matched_room_key": {
+      "type": "string"
+    },
+    "queue_mode": {
+      "type": "string",
+      "enum": [
+        "pvp_ladder"
+      ],
+      "default": "pvp_ladder"
+    }
+  },
+  "required": [
+    "user_email",
+    "status",
+    "elo_rating"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

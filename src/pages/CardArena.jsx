@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { fetchUserGold, awardGold } from '@/lib/economyApi';
 import { STARTER_CARDS, ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 
@@ -18,9 +18,18 @@ const TOURNAMENT_ROUNDS = [
 const TABS = [
   { id: 'collection', label: 'Collection', icon: Package },
   { id: 'deck',       label: 'Deck',       icon: Layers },
+  { id: 'lobby',      label: 'Lobby',      icon: Radar },
   { id: 'tournament', label: 'Tournament', icon: Trophy },
   { id: 'history',    label: 'History',    icon: History },
   { id: 'market',     label: 'Market',     icon: ShoppingCart },
+];
+
+const JACKIE_NAMES = ['Jackie Scout', 'Jackie Duelist', 'Jackie Prime', 'Jackie Oracle'];
+const TUTORIAL_STEPS = [
+  'Build a 5-card deck before ladder play.',
+  'Play your strongest tempo card first to build board pressure.',
+  'Use burn and poison to finish weakened opponents.',
+  'Guard and shield cards help you win close board races.'
 ];
 
 export default function CardArena() {
@@ -39,11 +48,22 @@ export default function CardArena() {
   const [selectedBattle, setSelectedBattle] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [playerProfile, setPlayerProfile] = useState(null);
+  const [queueEntry, setQueueEntry] = useState(null);
+  const [matchRoom, setMatchRoom] = useState(null);
+  const [battleMode, setBattleMode] = useState('tournament');
+  const [activeOpponentDeck, setActiveOpponentDeck] = useState(null);
+  const [activeOpponentName, setActiveOpponentName] = useState('');
+  const [activeOpponentFaction, setActiveOpponentFaction] = useState('');
+  const [activeDifficulty, setActiveDifficulty] = useState(1);
+  const [campaignLevel, setCampaignLevel] = useState(1);
 
   useEffect(() => {
     loadCards();
     loadGold();
     loadBattleHistory();
+    loadPlayerProfile();
+    loadQueueState();
   }, []);
 
   const loadGold = async () => {
@@ -71,8 +91,10 @@ export default function CardArena() {
 
   const saveGold = async (amount) => {
     setGold(amount);
-    // Backend handles persistence via awardGold/deductGold
   };
+
+  const deckStrength = useMemo(() => deck.reduce((sum, card) => sum + card.power + card.guard + (card.cost || 0), 0), [deck]);
+  const collectionStrength = useMemo(() => cards.reduce((sum, card) => sum + (card.power || 0) + (card.guard || 0), 0), [cards]);
 
   const serializeDeck = (deckCards = []) => deckCards.map((card) => ({
     name: card.name,
@@ -85,6 +107,40 @@ export default function CardArena() {
     ability_value: card.ability_value || 0,
   }));
 
+  const hydrateDeckSnapshot = (deckCards = []) => deckCards.map((card, index) => ({
+    ...card,
+    id: `${card.name}-${index}-${card.rarity}`,
+    card_type: card.card_type || 'unit',
+  }));
+
+  const loadPlayerProfile = async () => {
+    const me = await base44.auth.me();
+    const profiles = await base44.entities.CardPlayerProfile.list('-created_date', 20);
+    const existing = profiles.find((profile) => profile.user_email === me.email);
+    if (existing) {
+      setPlayerProfile(existing);
+      setCampaignLevel(existing.ai_campaign_level_unlocked || 1);
+      return;
+    }
+
+    const created = await base44.entities.CardPlayerProfile.create({
+      user_email: me.email,
+      display_name: me.full_name || me.email.split('@')[0],
+      collection_strength: collectionStrength,
+      favorite_deck_power: deckStrength,
+    });
+    setPlayerProfile(created);
+    setCampaignLevel(created.ai_campaign_level_unlocked || 1);
+  };
+
+  const loadQueueState = async () => {
+    const me = await base44.auth.me();
+    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 50);
+    const roomRows = await base44.entities.CardMatchmakingRoom.list('-created_date', 50);
+    setQueueEntry(queueRows.find((row) => row.user_email === me.email && row.status === 'searching') || null);
+    setMatchRoom(roomRows.find((room) => (room.player_one_email === me.email || room.player_two_email === me.email) && room.status !== 'completed') || null);
+  };
+
   const loadBattleHistory = async () => {
     setHistoryLoading(true);
     const history = await base44.entities.CardBattleHistory.list('-created_date', 50);
@@ -94,12 +150,16 @@ export default function CardArena() {
   };
 
   const saveBattleHistory = async (won, round, battleData) => {
+    const eloBefore = playerProfile?.elo_rating || 1000;
+    const eloDelta = battleMode === 'pvp_ladder' ? (won ? 18 : -14) : battleMode === 'jackie_ai' ? (won ? 8 : -5) : 0;
+    const eloAfter = Math.max(800, eloBefore + eloDelta);
+
     const saved = await base44.entities.CardBattleHistory.create({
-      mode: 'tournament',
+      mode: battleMode,
       result: won ? 'win' : 'loss',
-      opponent_name: currentRound?.name || round?.name,
-      opponent_faction: battleData?.opponentFaction || round?.faction,
-      difficulty: round?.difficulty || 1,
+      opponent_name: activeOpponentName || currentRound?.name || round?.name,
+      opponent_faction: battleData?.opponentFaction || activeOpponentFaction || round?.faction,
+      difficulty: activeDifficulty || round?.difficulty || 1,
       round_number: tournamentRound,
       turns_played: battleData?.turnsPlayed || 0,
       player_board_power: battleData?.playerBoardPower || 0,
@@ -109,7 +169,53 @@ export default function CardArena() {
       player_deck_snapshot: serializeDeck(battleData?.playerDeck || deck),
       opponent_deck_snapshot: serializeDeck(battleData?.aiDeck || []),
       turn_log: battleData?.turnLog || [],
+      room_key: matchRoom?.room_key,
+      player_elo_before: eloBefore,
+      player_elo_after: eloAfter,
+      campaign_level: battleMode === 'ai_campaign' ? campaignLevel : undefined,
+      card_outcomes: (battleData?.playerDeck || deck).map((card) => ({
+        card_id: card.id,
+        card_name: card.name,
+        result: won ? 'win' : 'loss',
+        mode: battleMode,
+      })),
     });
+
+    const usageRows = (battleData?.playerDeck || deck).map((card) => ({
+      card_id: card.id,
+      card_name: card.name,
+      battle_history_id: saved.id,
+      mode: battleMode,
+      result: won ? 'win' : 'loss',
+      opponent_name: activeOpponentName || currentRound?.name || round?.name,
+    }));
+
+    await Promise.all([
+      ...usageRows.map((row) => base44.entities.CardUsageHistory.create(row)),
+      playerProfile ? base44.entities.CardPlayerProfile.update(playerProfile.id, {
+        elo_rating: eloAfter,
+        collection_strength: collectionStrength,
+        matches_played: (playerProfile.matches_played || 0) + 1,
+        wins: (playerProfile.wins || 0) + (won ? 1 : 0),
+        losses: (playerProfile.losses || 0) + (won ? 0 : 1),
+        training_matches_played: (playerProfile.training_matches_played || 0) + (battleMode === 'training' ? 1 : 0),
+        tutorial_completed: battleMode === 'tutorial' ? true : playerProfile.tutorial_completed,
+        ai_campaign_best_level: battleMode === 'ai_campaign' && won ? Math.max(playerProfile.ai_campaign_best_level || 0, campaignLevel) : (playerProfile.ai_campaign_best_level || 0),
+        ai_campaign_level_unlocked: battleMode === 'ai_campaign' && won ? Math.min(100, Math.max(playerProfile.ai_campaign_level_unlocked || 1, campaignLevel + 1)) : (playerProfile.ai_campaign_level_unlocked || 1),
+        favorite_deck_power: deckStrength,
+      }).then(async () => {
+        const refreshed = await base44.entities.CardPlayerProfile.list('-created_date', 20);
+        const me = await base44.auth.me();
+        const current = refreshed.find((profile) => profile.user_email === me.email) || null;
+        setPlayerProfile(current);
+        setCampaignLevel(current?.ai_campaign_level_unlocked || 1);
+      }) : Promise.resolve(),
+      matchRoom?.id ? base44.entities.CardMatchmakingRoom.update(matchRoom.id, { status: 'completed', winner_email: won ? (await base44.auth.me()).email : matchRoom.player_two_email || 'jackie_ai' }) : Promise.resolve(),
+      queueEntry?.id ? base44.entities.CardMatchmakingQueue.update(queueEntry.id, { status: 'cancelled' }) : Promise.resolve(),
+    ]);
+
+    setQueueEntry(null);
+    setMatchRoom(null);
     setBattleHistory((prev) => [saved, ...prev].slice(0, 50));
     setSelectedBattle(saved);
   };
@@ -124,9 +230,108 @@ export default function CardArena() {
   };
 
   const startTournament = () => {
+    setBattleMode('tournament');
+    setActiveOpponentName(TOURNAMENT_ROUNDS[0].name);
+    setActiveOpponentFaction(TOURNAMENT_ROUNDS[0].faction);
+    setActiveDifficulty(TOURNAMENT_ROUNDS[0].difficulty);
+    setActiveOpponentDeck(null);
     setTournamentRound(1);
     setRoundResults([]);
     setCurrentRound(TOURNAMENT_ROUNDS[0]);
+    setBattling(true);
+  };
+
+  const startTraining = () => {
+    setBattleMode('training');
+    setActiveOpponentName('Training Dummy');
+    setActiveOpponentFaction('Stone Legion');
+    setActiveDifficulty(1);
+    setActiveOpponentDeck(null);
+    setBattling(true);
+    setTab('lobby');
+  };
+
+  const startTutorial = () => {
+    setBattleMode('tutorial');
+    setActiveOpponentName('Coach Jackie');
+    setActiveOpponentFaction('Dawn Conclave');
+    setActiveDifficulty(1);
+    setActiveOpponentDeck(null);
+    setBattling(true);
+    setTab('lobby');
+  };
+
+  const startJackieAi = (level = 1) => {
+    setBattleMode(level > 1 ? 'ai_campaign' : 'jackie_ai');
+    setCampaignLevel(level);
+    setActiveOpponentName(JACKIE_NAMES[level % JACKIE_NAMES.length]);
+    setActiveOpponentFaction(level % 2 === 0 ? 'Void Syndicate' : 'Dawn Conclave');
+    setActiveDifficulty(Math.min(10, Math.max(1, Math.ceil(level / 10))));
+    setActiveOpponentDeck(null);
+    setBattling(true);
+    setTab('lobby');
+  };
+
+  const findPvpMatch = async () => {
+    const me = await base44.auth.me();
+    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 50);
+    const activeRows = queueRows.filter((row) => row.status === 'searching' && row.user_email !== me.email);
+    const myElo = playerProfile?.elo_rating || 1000;
+    const bestMatch = activeRows
+      .map((row) => ({
+        row,
+        score: Math.abs((row.elo_rating || 1000) - myElo) + Math.abs((row.collection_strength || 0) - collectionStrength) + Math.abs((row.deck_strength || 0) - deckStrength),
+      }))
+      .sort((a, b) => a.score - b.score)[0];
+
+    const myQueue = await base44.entities.CardMatchmakingQueue.create({
+      user_email: me.email,
+      display_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
+      elo_rating: myElo,
+      collection_strength: collectionStrength,
+      deck_snapshot: serializeDeck(deck),
+      deck_strength: deckStrength,
+      status: 'searching',
+      queue_mode: 'pvp_ladder',
+    });
+    setQueueEntry(myQueue);
+
+    if (bestMatch?.row) {
+      const roomKey = `room-${Date.now()}`;
+      const room = await base44.entities.CardMatchmakingRoom.create({
+        room_key: roomKey,
+        mode: 'pvp_ladder',
+        status: 'ready',
+        player_one_email: me.email,
+        player_one_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
+        player_two_email: bestMatch.row.user_email,
+        player_two_name: bestMatch.row.display_name,
+        player_one_elo: myElo,
+        player_two_elo: bestMatch.row.elo_rating,
+        player_one_deck_strength: deckStrength,
+        player_two_deck_strength: bestMatch.row.deck_strength,
+        player_one_deck_snapshot: serializeDeck(deck),
+        player_two_deck_snapshot: bestMatch.row.deck_snapshot || [],
+      });
+      await Promise.all([
+        base44.entities.CardMatchmakingQueue.update(myQueue.id, { status: 'matched', matched_opponent_email: bestMatch.row.user_email, matched_room_key: roomKey }),
+        base44.entities.CardMatchmakingQueue.update(bestMatch.row.id, { status: 'matched', matched_opponent_email: me.email, matched_room_key: roomKey }),
+      ]);
+      setMatchRoom(room);
+      setBattleMode('pvp_ladder');
+      setActiveOpponentName(bestMatch.row.display_name || 'Matched Rival');
+      setActiveOpponentFaction(bestMatch.row.deck_snapshot?.[0]?.faction || 'Ember Clan');
+      setActiveDifficulty(2);
+      setActiveOpponentDeck(hydrateDeckSnapshot(bestMatch.row.deck_snapshot || []));
+      setBattling(true);
+      return;
+    }
+
+    setBattleMode('pvp_ladder');
+    setActiveOpponentName('Jackie Match Proxy');
+    setActiveOpponentFaction('Void Syndicate');
+    setActiveDifficulty(2);
+    setActiveOpponentDeck(null);
     setBattling(true);
   };
 
@@ -135,6 +340,11 @@ export default function CardArena() {
     const newResults = [...roundResults, { round: tournamentRound, won }];
     setRoundResults(newResults);
     await saveBattleHistory(won, round, battleData);
+
+    if (battleMode === 'pvp_ladder' || battleMode === 'training' || battleMode === 'tutorial' || battleMode === 'jackie_ai' || battleMode === 'ai_campaign') {
+      setBattling(false);
+      return;
+    }
 
     if (won) {
       // Award gold via secure backend endpoint
@@ -296,6 +506,103 @@ export default function CardArena() {
           </div>
         )}
 
+        {tab === 'lobby' && (
+          <div className="space-y-4">
+            <div className="bg-gradient-to-br from-cyan-900/30 to-slate-900/20 border border-cyan-500/30 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Radar className="w-5 h-5 text-cyan-300" />
+                <h3 className="text-base font-bold text-cyan-200">Match Lobby</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">Queue for PvP by ELO and collection strength, or test your deck against Jackie AI, training, and tutorial battles.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border border-border bg-card p-3 text-center">
+                <p className="text-lg font-bold text-primary">{playerProfile?.elo_rating || 1000}</p>
+                <p className="text-[10px] text-muted-foreground">ELO</p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-3 text-center">
+                <p className="text-lg font-bold text-red-400">{deckStrength}</p>
+                <p className="text-[10px] text-muted-foreground">Deck Strength</p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-3 text-center">
+                <p className="text-lg font-bold text-blue-400">{collectionStrength}</p>
+                <p className="text-[10px] text-muted-foreground">Collection</p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-3 text-center">
+                <p className="text-lg font-bold text-yellow-400">{playerProfile?.ai_campaign_level_unlocked || 1}/100</p>
+                <p className="text-[10px] text-muted-foreground">Campaign</p>
+              </div>
+            </div>
+
+            {!battling && (
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border border-primary/30 bg-card p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-semibold">PvP Ladder</p>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Find a rival based on ELO, deck strength, and collection power.</p>
+                  <button onClick={findPvpMatch} disabled={deck.length < 3} className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40">Find Match</button>
+                  {queueEntry && <p className="text-[10px] text-primary">Searching or matched in ladder queue.</p>}
+                </div>
+
+                <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-purple-300" />
+                    <p className="text-sm font-semibold">Jackie AI</p>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Quick AI duel, tutorial, and training sandbox for testing decks.</p>
+                  <div className="grid gap-2">
+                    <button onClick={() => startJackieAi(1)} className="w-full rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white">Play Jackie AI</button>
+                    <button onClick={startTraining} className="w-full rounded-xl border border-border bg-secondary px-4 py-2.5 text-sm font-semibold"><Dumbbell className="w-4 h-4 inline mr-2" />Training</button>
+                    <button onClick={startTutorial} className="w-full rounded-xl border border-border bg-secondary px-4 py-2.5 text-sm font-semibold"><GraduationCap className="w-4 h-4 inline mr-2" />Tutorial</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-amber-200">AI Campaign</p>
+                  <p className="text-[11px] text-muted-foreground">Beat 100 Jackie stages with saved progression.</p>
+                </div>
+                <p className="text-xs text-amber-300">Unlocked: {playerProfile?.ai_campaign_level_unlocked || 1}/100</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {Array.from({ length: Math.min(10, playerProfile?.ai_campaign_level_unlocked || 1) }).map((_, index) => {
+                  const level = index + 1;
+                  return (
+                    <button key={level} onClick={() => startJackieAi(level)} className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold hover:border-amber-400/40">
+                      Level {level}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {battling && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-widest">{battleMode.replace('_', ' ')}</p>
+                  <p className="text-xs text-muted-foreground">vs {activeOpponentName}</p>
+                </div>
+                <BattleView
+                  playerCards={[...deck]}
+                  opponentName={activeOpponentName}
+                  difficulty={activeDifficulty}
+                  opponentFaction={activeOpponentFaction}
+                  opponentDeck={activeOpponentDeck}
+                  mode={battleMode}
+                  tutorialSteps={battleMode === 'tutorial' ? TUTORIAL_STEPS : []}
+                  onBattleEnd={handleBattleEnd}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === 'tournament' && (
           <div className="space-y-4">
             {tournamentRound === 0 && (
@@ -343,6 +650,7 @@ export default function CardArena() {
                   opponentName={currentRound.name}
                   difficulty={currentRound.difficulty}
                   opponentFaction={currentRound.faction}
+                  mode="tournament"
                   onBattleEnd={handleBattleEnd}
                 />
               </div>

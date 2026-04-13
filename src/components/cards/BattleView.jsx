@@ -12,10 +12,10 @@ function calcCardEffect(card, comboCount, opponentEl) {
   return { boardPower: Math.round(basePower * comboMult), abVal: Math.round(abVal) };
 }
 
-export default function BattleView({ playerCards, opponentName, difficulty, opponentFaction, onBattleEnd }) {
-  const [aiDeck] = useState(() => generateAIDeck(difficulty, opponentFaction));
+export default function BattleView({ playerCards, opponentName, difficulty, opponentFaction, onBattleEnd, opponentDeck, mode = 'tournament', tutorialSteps = [] }) {
+  const [aiDeck] = useState(() => opponentDeck?.length ? opponentDeck : generateAIDeck(difficulty, opponentFaction));
   const [playerHand, setPlayerHand] = useState([...playerCards]);
-  const [aiHand, setAiHand] = useState([...generateAIDeck(difficulty, opponentFaction)]);
+  const [aiHand, setAiHand] = useState([...(opponentDeck?.length ? opponentDeck : generateAIDeck(difficulty, opponentFaction))]);
   const [playerBoard, setPlayerBoard] = useState(0);
   const [aiBoard, setAiBoard] = useState(0);
   const [playerHP, setPlayerHP] = useState(25);
@@ -27,6 +27,7 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
   const [lastPlayed, setLastPlayed] = useState(null);
   const [result, setResult] = useState(null);
   const [turnLog, setTurnLog] = useState([]);
+  const [tutorialIndex, setTutorialIndex] = useState(0);
 
   const addLog = (msg, nextTurn = turn, actor = 'system', snapshot = {}) => {
     setLog(p => [msg, ...p].slice(0, 8));
@@ -160,6 +161,7 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
       aiHP,
       turnLog,
       playerDeck: playerCards,
+      mode,
     }), 1200);
   };
 
@@ -201,9 +203,17 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
       </div>
 
       {/* Phase indicator */}
-      <div className="text-center">
+      <div className="text-center space-y-2">
         {phase === 'player' && <p className="text-xs text-primary font-semibold animate-pulse">▶ Your Turn — Play a card (Turn {turn}/5)</p>}
         {phase === 'ai' && <p className="text-xs text-red-400 font-semibold animate-pulse">⏳ {opponentName} is thinking...</p>}
+        {mode === 'tutorial' && tutorialSteps[tutorialIndex] && (
+          <button
+            onClick={() => setTutorialIndex((prev) => Math.min(prev + 1, tutorialSteps.length - 1))}
+            className="mx-auto block rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[10px] text-primary"
+          >
+            Tutorial: {tutorialSteps[tutorialIndex]}
+          </button>
+        )}
         {phase === 'result' && result && (
           <motion.p initial={{ scale: 0.8 }} animate={{ scale: 1 }}
             className={`text-sm font-bold ${result.won ? 'text-green-400' : 'text-red-400'}`}>

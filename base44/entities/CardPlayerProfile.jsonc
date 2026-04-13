@@ -1,0 +1,69 @@
+{
+  "name": "CardPlayerProfile",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "elo_rating": {
+      "type": "number",
+      "default": 1000
+    },
+    "collection_strength": {
+      "type": "number",
+      "default": 0
+    },
+    "matches_played": {
+      "type": "number",
+      "default": 0
+    },
+    "wins": {
+      "type": "number",
+      "default": 0
+    },
+    "losses": {
+      "type": "number",
+      "default": 0
+    },
+    "tutorial_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "training_matches_played": {
+      "type": "number",
+      "default": 0
+    },
+    "ai_campaign_level_unlocked": {
+      "type": "number",
+      "default": 1
+    },
+    "ai_campaign_best_level": {
+      "type": "number",
+      "default": 0
+    },
+    "favorite_deck_power": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

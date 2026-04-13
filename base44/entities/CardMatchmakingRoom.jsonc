@@ -1,55 +1,55 @@
 {
-  "name": "CardBattleHistory",
+  "name": "CardMatchmakingRoom",
   "type": "object",
   "properties": {
+    "room_key": {
+      "type": "string"
+    },
     "mode": {
       "type": "string",
       "enum": [
-        "tournament",
-        "quick_match",
         "pvp_ladder",
         "ai_campaign",
         "training",
         "tutorial",
         "jackie_ai"
       ],
-      "default": "tournament"
+      "default": "pvp_ladder"
     },
-    "result": {
+    "status": {
       "type": "string",
       "enum": [
-        "win",
-        "loss"
-      ]
+        "pending",
+        "ready",
+        "completed"
+      ],
+      "default": "pending"
     },
-    "opponent_name": {
+    "player_one_email": {
       "type": "string"
     },
-    "opponent_faction": {
+    "player_two_email": {
       "type": "string"
     },
-    "difficulty": {
+    "player_one_name": {
+      "type": "string"
+    },
+    "player_two_name": {
+      "type": "string"
+    },
+    "player_one_elo": {
       "type": "number"
     },
-    "round_number": {
+    "player_two_elo": {
       "type": "number"
     },
-    "turns_played": {
+    "player_one_deck_strength": {
       "type": "number"
     },
-    "player_board_power": {
+    "player_two_deck_strength": {
       "type": "number"
     },
-    "opponent_board_power": {
-      "type": "number"
-    },
-    "player_hp_end": {
-      "type": "number"
-    },
-    "opponent_hp_end": {
-      "type": "number"
-    },
-    "player_deck_snapshot": {
+    "player_one_deck_snapshot": {
       "type": "array",
       "items": {
         "type": "object",
@@ -82,7 +82,7 @@
       },
       "default": []
     },
-    "opponent_deck_snapshot": {
+    "player_two_deck_snapshot": {
       "type": "array",
       "items": {
         "type": "object",
@@ -115,84 +115,17 @@
       },
       "default": []
     },
-    "turn_log": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "turn": {
-            "type": "number"
-          },
-          "actor": {
-            "type": "string",
-            "enum": [
-              "player",
-              "opponent",
-              "system"
-            ]
-          },
-          "message": {
-            "type": "string"
-          },
-          "player_hp": {
-            "type": "number"
-          },
-          "opponent_hp": {
-            "type": "number"
-          },
-          "player_board": {
-            "type": "number"
-          },
-          "opponent_board": {
-            "type": "number"
-          }
-        }
-      },
-      "default": []
-    },
-    "room_key": {
+    "winner_email": {
       "type": "string"
-    },
-    "player_elo_before": {
-      "type": "number"
-    },
-    "player_elo_after": {
-      "type": "number"
     },
     "campaign_level": {
       "type": "number"
-    },
-    "card_outcomes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "card_id": {
-            "type": "string"
-          },
-          "card_name": {
-            "type": "string"
-          },
-          "result": {
-            "type": "string",
-            "enum": [
-              "win",
-              "loss"
-            ]
-          },
-          "mode": {
-            "type": "string"
-          }
-        }
-      },
-      "default": []
     }
   },
   "required": [
+    "room_key",
     "mode",
-    "result",
-    "opponent_name",
-    "turn_log"
+    "status"
   ],
   "rls": {
     "create": {

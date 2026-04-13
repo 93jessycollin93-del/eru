@@ -1,0 +1,56 @@
+{
+  "name": "CardUsageHistory",
+  "type": "object",
+  "properties": {
+    "card_id": {
+      "type": "string"
+    },
+    "card_name": {
+      "type": "string"
+    },
+    "battle_history_id": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "tournament",
+        "quick_match",
+        "pvp_ladder",
+        "ai_campaign",
+        "training",
+        "tutorial",
+        "jackie_ai"
+      ]
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "win",
+        "loss"
+      ]
+    },
+    "opponent_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "card_name",
+    "mode",
+    "result"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
