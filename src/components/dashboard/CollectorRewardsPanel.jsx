@@ -9,7 +9,14 @@ export default function CollectorRewardsPanel() {
 
   useEffect(() => {
     if (!user?.email) return;
-    syncCollectorRewardProfile(user.email).then(setProfile).catch(() => setProfile(null));
+    syncCollectorRewardProfile(user.email).then(setProfile).catch(() => setProfile({
+      user_email: user.email,
+      portfolio_growth_pct: 0,
+      login_streak: 1,
+      successful_trades: 0,
+      status_icon: 'seed',
+      badge_ids: [],
+    }));
   }, [user?.email]);
 
   return (

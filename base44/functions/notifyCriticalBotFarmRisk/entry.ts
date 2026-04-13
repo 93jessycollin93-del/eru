@@ -1,7 +1,6 @@
-/* global Deno */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const handler = async (req) => {
+Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -37,6 +36,4 @@ const handler = async (req) => {
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-};
-
-globalThis.Deno.serve(handler);
+});

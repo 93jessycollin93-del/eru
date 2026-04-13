@@ -105,6 +105,18 @@ export async function syncCollectorRewardProfile(userEmail) {
   if (!userEmail) return null;
 
   const rewardEntity = base44.entities['CollectorRewardProfile'];
+  if (!rewardEntity) {
+    return {
+      user_email: userEmail,
+      current_portfolio_value: 0,
+      portfolio_growth_pct: 0,
+      successful_trades: 0,
+      login_streak: 1,
+      last_login_date: getDateKey(),
+      status_icon: 'seed',
+      badge_ids: [],
+    };
+  }
 
   const [existingProfiles, jadeAssets, cards, transactions] = await Promise.all([
     rewardEntity.filter({ user_email: userEmail }, '-updated_date', 1),
@@ -113,7 +125,18 @@ export async function syncCollectorRewardProfile(userEmail) {
     base44.entities.Transaction.filter({ buyer_email: userEmail }, '-updated_date', 200),
   ]).catch(() => [null, [], [], []]);
 
-  if (!existingProfiles) return null;
+  if (!existingProfiles) {
+    return {
+      user_email: userEmail,
+      current_portfolio_value: calculatePortfolioValue(jadeAssets, cards, transactions),
+      portfolio_growth_pct: 0,
+      successful_trades: transactions.filter((item) => item.status === 'verified').length,
+      login_streak: 1,
+      last_login_date: getDateKey(),
+      status_icon: 'seed',
+      badge_ids: [],
+    };
+  }
 
   const existing = existingProfiles[0] || null;
   const currentPortfolioValue = calculatePortfolioValue(jadeAssets, cards, transactions);
