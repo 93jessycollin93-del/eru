@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { BookCopy, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
+import { BookCopy, RotateCcw, Save, Sparkles, Trash2, Wand2, Loader2 } from 'lucide-react';
+import { invokeSelectedModel } from './modelRouting';
 
 const EMPTY_VARIABLE = { key: '', label: '', default_value: '', required: false };
 const EMPTY_FORM = { name: '', description: '', content: '', variables: [], linked_bot_ids: [] };
@@ -9,12 +10,14 @@ function applyVariables(content, variables, runtimeValues = {}) {
   return (content || '').replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key) => runtimeValues[key] ?? variables.find((item) => item.key === key)?.default_value ?? `{{${key}}}`);
 }
 
-export default function PromptLibraryPanel({ bots }) {
+export default function PromptLibraryPanel({ bots, onBotsUpdated }) {
   const [templates, setTemplates] = useState([]);
   const [versions, setVersions] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [draftVariable, setDraftVariable] = useState(EMPTY_VARIABLE);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [architectLoading, setArchitectLoading] = useState(false);
+  const [architectError, setArchitectError] = useState('');
 
   const load = async () => {
     const [templateRows, versionRows] = await Promise.all([
@@ -83,6 +86,54 @@ export default function PromptLibraryPanel({ bots }) {
     await base44.entities.PromptTemplate.delete(id);
     setSelectedTemplateId('');
     load();
+  };
+
+  const improveSelectedTemplate = async () => {
+    if (!selectedTemplate) return;
+    setArchitectLoading(true);
+    setArchitectError('');
+
+    const linkedBots = (bots || []).filter((bot) => (selectedTemplate.linked_bot_ids || []).includes(bot.id));
+    const primaryBot = linkedBots[0];
+
+    const prompt = `You are an AI prompt architect refining a reusable bot prompt template.
+Return ONLY JSON with keys: content, description, notes.
+
+Template name: ${selectedTemplate.name}
+Template description: ${selectedTemplate.description || 'None'}
+Current content: ${selectedTemplate.content || ''}
+Current variables: ${JSON.stringify(selectedTemplate.variables || [])}
+Linked bot role: ${primaryBot?.role || 'assistant'}
+Linked bot personality: ${primaryBot?.personality || 'None'}
+Linked bot instructions: ${primaryBot?.instructions || 'None'}
+Linked bot model provider: ${primaryBot?.model_provider || 'base44'}
+Linked bot model: ${primaryBot?.model_name || 'automatic'}
+
+Improve the template for clarity, stronger behavioral alignment, and better prompt effectiveness while preserving the original intent.`;
+
+    try {
+      const response = await invokeSelectedModel({
+        provider: primaryBot?.model_provider || 'base44',
+        model: primaryBot?.model_name || 'automatic',
+        prompt,
+      });
+      const parsed = JSON.parse(response.trim().slice(response.indexOf('{'), response.lastIndexOf('}') + 1));
+      await base44.entities.PromptTemplate.update(selectedTemplate.id, {
+        content: parsed.content || selectedTemplate.content,
+        description: parsed.description || selectedTemplate.description,
+      });
+      await saveNewVersion({
+        ...selectedTemplate,
+        content: parsed.content || selectedTemplate.content,
+        variables: selectedTemplate.variables || [],
+        current_version: selectedTemplate.current_version,
+      });
+      onBotsUpdated?.();
+    } catch (error) {
+      setArchitectError(error.message || 'Unable to improve this template right now.');
+    }
+
+    setArchitectLoading(false);
   };
 
   return (
@@ -164,14 +215,22 @@ export default function PromptLibraryPanel({ bots }) {
           <p className="text-xs font-semibold text-foreground">Version history</p>
           {selectedTemplate ? (
             <>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button onClick={() => saveNewVersion(selectedTemplate)} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
                   <Save className="w-3.5 h-3.5" /> New version
+                </button>
+                <button onClick={improveSelectedTemplate} disabled={architectLoading} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary disabled:opacity-40">
+                  {architectLoading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Improving</> : <><Wand2 className="w-3.5 h-3.5" /> AI improve</>}
                 </button>
                 <button onClick={() => removeTemplate(selectedTemplate.id)} className="inline-flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive">
                   <Trash2 className="w-3.5 h-3.5" /> Delete
                 </button>
               </div>
+              {architectError && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  {architectError}
+                </div>
+              )}
               {templateVersions.map((version) => (
                 <div key={version.id} className="rounded-xl border border-border bg-background p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">

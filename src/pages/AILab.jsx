@@ -27,6 +27,7 @@ import BotCollaborationWorkspace from '../components/ailab/BotCollaborationWorks
 import BotGlobalPolicyPanel from '../components/ailab/BotGlobalPolicyPanel';
 import PromptLibraryPanel from '../components/ailab/PromptLibraryPanel';
 import ModelProviderPanel from '../components/ailab/ModelProviderPanel';
+import BotInstructionArchitect from '../components/ailab/BotInstructionArchitect';
 import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
 import { runRegressionSuite } from '../components/ailab/regressionTesting';
 import { base44 } from '@/api/base44Client';
@@ -228,6 +229,22 @@ export default function AILab() {
       return new Date(b.created_date || 0) - new Date(a.created_date || 0);
     });
   }, [bots, search, roleFilter, statusFilter, levelFilter, sortBy]);
+
+  const selectedPromptTemplate = useMemo(
+    () => promptTemplates.find((template) => template.id === form.prompt_template_id),
+    [promptTemplates, form.prompt_template_id]
+  );
+
+  const applyArchitectDraft = (draft) => {
+    setForm((prev) => ({
+      ...prev,
+      name: draft.name || prev.name,
+      description: draft.description || prev.description,
+      role: draft.role || prev.role,
+      personality: draft.personality || prev.personality,
+      instructions: draft.instructions || prev.instructions,
+    }));
+  };
 
   const runTest = async () => {
     if (!testInput.trim() || !testBot) return;
@@ -535,6 +552,7 @@ export default function AILab() {
           </div>
 
           <ModelProviderPanel value={form} onChange={(next) => setForm((prev) => ({ ...prev, ...next }))} />
+          <BotInstructionArchitect form={form} selectedTemplate={selectedPromptTemplate} onApply={applyArchitectDraft} />
 
           <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
             <label className="text-xs text-muted-foreground">Prompt Template</label>
@@ -552,7 +570,7 @@ export default function AILab() {
               <option value="">No prompt template</option>
               {promptTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
             </select>
-            {promptTemplates.find((template) => template.id === form.prompt_template_id)?.variables?.map((variable) => (
+            {selectedPromptTemplate?.variables?.map((variable) => (
               <input
                 key={variable.key}
                 value={form.prompt_template_values?.[variable.key] || ''}
@@ -567,6 +585,12 @@ export default function AILab() {
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
               />
             ))}
+            {selectedPromptTemplate?.content && (
+              <div className="rounded-xl border border-border bg-background p-3">
+                <p className="text-[10px] font-semibold text-foreground">Current template preview</p>
+                <p className="mt-1 whitespace-pre-wrap text-[11px] text-muted-foreground">{selectedPromptTemplate.content}</p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
