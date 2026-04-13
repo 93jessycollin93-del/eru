@@ -29,6 +29,7 @@ import PromptLibraryPanel from '../components/ailab/PromptLibraryPanel';
 import ModelProviderPanel from '../components/ailab/ModelProviderPanel';
 import BotInstructionArchitect from '../components/ailab/BotInstructionArchitect';
 import SharedWorkspacePanel from '../components/ailab/SharedWorkspacePanel';
+import BotDataSourcesPanel from '../components/ailab/BotDataSourcesPanel';
 import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
 import { runRegressionSuite } from '../components/ailab/regressionTesting';
 import { base44 } from '@/api/base44Client';
@@ -68,7 +69,7 @@ const PAGE_OPTIONS = [
 
 const PROGRAMMING_MEMORY_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, teaching, comparing languages, debugging, refactoring, architecture decisions, and multi-step technical problem solving. When a request involves software or systems work, proactively apply this knowledge instead of waiting to be asked.";
 
-const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '', model_provider: 'base44', model_name: '', api_label: '', prompt_template_id: '', prompt_template_name: '', prompt_template_values: {} };
+const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '', model_provider: 'base44', model_name: '', api_label: '', prompt_template_id: '', prompt_template_name: '', prompt_template_values: {}, data_sources: [] };
 
 const downloadJson = (filename, data) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -164,7 +165,7 @@ export default function AILab() {
   };
 
   const startEdit = (bot) => {
-    setForm({ name: bot.name, description: bot.description || '', role: bot.role, personality: bot.personality || '', instructions: bot.instructions || PROGRAMMING_MEMORY_PROMPT, response_style: bot.response_style || 'detailed', memory_enabled: bot.memory_enabled !== false, is_public: !!bot.is_public, status: bot.status || 'active', model_provider: bot.model_provider || 'base44', model_name: bot.model_name || '', api_label: bot.api_label || '', prompt_template_id: bot.prompt_template_id || '', prompt_template_values: bot.prompt_template_values || {} });
+    setForm({ name: bot.name, description: bot.description || '', role: bot.role, personality: bot.personality || '', instructions: bot.instructions || PROGRAMMING_MEMORY_PROMPT, response_style: bot.response_style || 'detailed', memory_enabled: bot.memory_enabled !== false, is_public: !!bot.is_public, status: bot.status || 'active', model_provider: bot.model_provider || 'base44', model_name: bot.model_name || '', api_label: bot.api_label || '', prompt_template_id: bot.prompt_template_id || '', prompt_template_values: bot.prompt_template_values || {}, data_sources: bot.data_sources || [] });
     setEditId(bot.id);
     setTab('build');
   };
@@ -554,6 +555,7 @@ export default function AILab() {
           </div>
 
           <ModelProviderPanel value={form} onChange={(next) => setForm((prev) => ({ ...prev, ...next }))} />
+          <BotDataSourcesPanel value={form.data_sources} onChange={(data_sources) => setForm((prev) => ({ ...prev, data_sources }))} />
           <BotInstructionArchitect form={form} selectedTemplate={selectedPromptTemplate} onApply={applyArchitectDraft} />
 
           <div className="space-y-2 rounded-2xl border border-border bg-card p-4">

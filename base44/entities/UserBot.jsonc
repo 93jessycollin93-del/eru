@@ -129,6 +129,39 @@
         }
       },
       "default": []
+    },
+    "data_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "connector_name": {
+            "type": "string"
+          },
+          "resource_label": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "sheet_name": {
+            "type": "string"
+          },
+          "access_level": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
     }
   },
   "required": [

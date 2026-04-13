@@ -65,7 +65,17 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const provider = body.provider || 'base44';
     const model = body.model || 'automatic';
-    const prompt = body.prompt || '';
+    let prompt = body.prompt || '';
+
+    if (body.botId && body.dataRequest) {
+      const dataResponse = await base44.functions.invoke('botExternalDataAccess', {
+        botId: body.botId,
+        sourceIndex: body.dataRequest.sourceIndex || 0,
+        action: body.dataRequest.action || 'read',
+        payload: body.dataRequest.payload || {}
+      });
+      prompt = `${prompt}\n\nExternal data context:\n${JSON.stringify(dataResponse.data || {}, null, 2)}`;
+    };
 
     if (provider === 'openai') {
       const output = await callOpenAI(prompt, model);

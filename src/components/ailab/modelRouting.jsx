@@ -10,11 +10,13 @@ export async function renderPromptTemplate({ templateId, variables = {}, context
   return response.data?.rendered_prompt || '';
 }
 
-export async function invokeSelectedModel({ provider = 'base44', model = '', prompt }) {
+export async function invokeSelectedModel({ provider = 'base44', model = '', prompt, botId = '', dataRequest = null }) {
   const response = await base44.functions.invoke('invokeExternalModel', {
     provider,
     model,
     prompt,
+    botId,
+    dataRequest,
   });
 
   return response.data?.output || '';

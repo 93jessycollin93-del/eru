@@ -66,7 +66,8 @@ Return ONLY a JSON object with these fields:
   "instructions": "detailed system instructions (2-3 paragraphs)",
   "response_style": "short|detailed|strategic|creative",
   "handoff_instructions": "when to escalate or delegate",
-  "suggested_pages": ["list of relevant page routes from: /, /markets, /trade, /portfolio, /arena, /jackie, /storefront"]
+  "suggested_pages": ["list of relevant page routes from: /, /markets, /trade, /portfolio, /arena, /jackie, /storefront"],
+  "data_sources": []
 }`,
     });
 
@@ -91,6 +92,7 @@ Return ONLY a JSON object with these fields:
       response_style: result.response_style || 'detailed',
       handoff_instructions: result.handoff_instructions,
       page_assignments: result.suggested_pages || [],
+      data_sources: result.data_sources || [],
       status: 'active',
       memory_enabled: true,
       model_provider: modelConfig.provider,
