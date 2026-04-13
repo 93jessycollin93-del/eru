@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Network, Play, ChevronRight, TrendingUp, Loader2, Star, GitBranch, MessageSquareShare, Wrench } from 'lucide-react';
+import { Network, Play, ChevronRight, TrendingUp, Loader2, Star, GitBranch, MessageSquareShare, Wrench, BrainCircuit } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import CollaborationWorkspace from './CollaborationWorkspace';
+import { analyzeNetworkImprovements, createDecisionPlan, resolveFindingConflicts } from './orchestrationDecisioning';
 
 const STAGES = ['plan', 'delegation', 'execution', 'feedback', 'improvement'];
 const STAGE_LABELS = { plan: '🗺️ Plan', delegation: '🔀 Delegate', execution: '⚡ Execute', feedback: '💬 Feedback', improvement: '📈 Improve' };
@@ -98,56 +99,41 @@ export default function MultiAgentOrchestrator({ bots }) {
     if (!goal.trim() || running || bots.length === 0) return;
     setRunning(true);
     setResult(null);
-    const cycleResult = { delegations: [], findings: [], feedback: [], healing_events: [] };
+    const cycleResult = { delegations: [], findings: [], feedback: [], healing_events: [], communication_bridges: [], conflict_risks: [], redundancy_risks: [], efficiency_notes: [] };
 
     setStage('plan');
-    const selectedBots = bots.slice(0, 4);
+    const decisionPlan = await createDecisionPlan({ goal, bots });
+    const selectedBots = bots.filter((bot) => (decisionPlan.selected_bot_ids || []).includes(bot.id)).slice(0, 6);
     cycleResult.plan = await base44.integrations.Core.InvokeLLM({
       prompt: `You are a strategic AI orchestrator coordinating multiple specialist bots.
 Goal: "${goal}"
 Available bots: ${selectedBots.map((bot) => `${bot.name} (${bot.role})`).join(', ')}
+Decision notes: ${(decisionPlan.efficiency_notes || []).join(' | ')}
 
 Create a short collaboration plan describing how these bots should work together to solve the goal with higher accuracy and efficiency.`,
     });
 
     setStage('delegation');
-    const delegationResponse = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are assigning work across a team of bots.
-Goal: "${goal}"
-Plan: ${cycleResult.plan}
-Bots: ${selectedBots.map((bot) => `${bot.id}: ${bot.name} (${bot.role})`).join(', ')}
-
-Return a JSON object with a delegations array. Each item must include bot_id and assignment. Use every bot once if possible.`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          delegations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                bot_id: { type: 'string' },
-                assignment: { type: 'string' }
-              },
-              required: ['bot_id', 'assignment']
-            }
-          }
-        },
-        required: ['delegations']
-      }
-    });
-    cycleResult.delegations = (delegationResponse.delegations || []).filter((item) => selectedBots.some((bot) => bot.id === item.bot_id));
+    cycleResult.delegations = (decisionPlan.delegations || []).filter((item) => selectedBots.some((bot) => bot.id === item.bot_id));
+    cycleResult.communication_bridges = decisionPlan.communication_bridges || [];
+    cycleResult.conflict_risks = decisionPlan.conflict_risks || [];
+    cycleResult.redundancy_risks = decisionPlan.redundancy_risks || [];
+    cycleResult.efficiency_notes = decisionPlan.efficiency_notes || [];
 
     setStage('execution');
     for (const delegation of cycleResult.delegations) {
       const bot = selectedBots.find((item) => item.id === delegation.bot_id);
       if (!bot) continue;
       const sharedContext = cycleResult.findings.map((item) => `${bots.find((b) => b.id === item.bot_id)?.name || 'Bot'}: ${item.finding}`).join('\n');
+      const dependencyContext = (delegation.dependencies || []).map((dependencyId) => {
+        const dependencyFinding = cycleResult.findings.find((item) => item.bot_id === dependencyId);
+        return dependencyFinding ? `${bots.find((b) => b.id === dependencyId)?.name || dependencyId}: ${dependencyFinding.finding}` : null;
+      }).filter(Boolean).join('\n');
       const executionResult = await runSubAgentWithSelfHealing({
         bot,
         goal,
-        assignment: delegation.assignment,
-        sharedContext,
+        assignment: `${delegation.assignment}\nReason for selection: ${delegation.reason || 'Best fit for task'}${dependencyContext ? `\nRequired prior context:\n${dependencyContext}` : ''}`,
+        sharedContext: `${sharedContext}${cycleResult.communication_bridges.length ? `\n\nCommunication bridges:\n${cycleResult.communication_bridges.join('\n')}` : ''}`,
       });
       cycleResult.findings.push({
         bot_id: bot.id,
@@ -183,6 +169,12 @@ Give short feedback that improves accuracy, catches gaps, or suggests a better n
       cycleResult.feedback.push({ from_bot_id: reviewer.id, to_bot_id: current.bot_id, feedback });
     }
 
+    const conflictResolution = await resolveFindingConflicts({
+      goal,
+      findings: cycleResult.findings.map((item) => ({ ...item, bot_name: bots.find((b) => b.id === item.bot_id)?.name || item.bot_id })),
+      feedback: cycleResult.feedback.map((item) => ({ ...item, reviewer_bot_name: bots.find((b) => b.id === item.from_bot_id)?.name || item.from_bot_id }))
+    });
+
     setStage('improvement');
     const finalResponse = await base44.integrations.Core.InvokeLLM({
       prompt: `You are a lead orchestration AI creating the final team answer.
@@ -191,12 +183,15 @@ Plan: ${cycleResult.plan}
 Delegations: ${cycleResult.delegations.map((item) => `${bots.find((b) => b.id === item.bot_id)?.name || item.bot_id}: ${item.assignment}`).join('\n')}
 Findings: ${cycleResult.findings.map((item) => `${bots.find((b) => b.id === item.bot_id)?.name || item.bot_id}: ${item.finding}${item.retry_used ? ` [retry used: ${item.recovered ? 'recovered' : 'failed'}]` : ''}`).join('\n\n')}
 Feedback: ${cycleResult.feedback.map((item) => `${bots.find((b) => b.id === item.from_bot_id)?.name || item.from_bot_id} on ${bots.find((b) => b.id === item.to_bot_id)?.name || item.to_bot_id}: ${item.feedback}`).join('\n')}
+Conflict resolution summary: ${conflictResolution.resolved_summary}
+Conflict actions: ${(conflictResolution.actions || []).join(' | ')}
+Winning findings: ${(conflictResolution.winning_findings || []).join(' | ')}
 Self-healing events: ${cycleResult.healing_events.length > 0 ? cycleResult.healing_events.map((item) => `${item.bot_name}: ${item.notes}`).join('\n') : 'None'}
 
 Produce:
 1. A final synthesized answer
 2. A short improvement summary
-3. On the last line only, a score from 1-10`,
+3. On the last line only, a score from 1-10`
     });
 
     const lines = finalResponse.split('\n').filter(Boolean);
@@ -206,7 +201,9 @@ Produce:
     cycleResult.improvement = lines.slice(0, -1).slice(-2).join('\n') || 'Team collaboration completed.';
     cycleResult.execution = cycleResult.findings.map((item) => `${bots.find((b) => b.id === item.bot_id)?.name || item.bot_id}: ${item.finding}`).join('\n\n');
     cycleResult.analysis = cycleResult.feedback.map((item) => `${bots.find((b) => b.id === item.from_bot_id)?.name || item.from_bot_id} → ${bots.find((b) => b.id === item.to_bot_id)?.name || item.to_bot_id}: ${item.feedback}`).join('\n');
+    cycleResult.conflict_resolution = conflictResolution;
     cycleResult.score = score;
+    cycleResult.network_insights = await analyzeNetworkImprovements({ bots: selectedBots, result: cycleResult });
 
     await base44.entities.BotImprovement.create({
       goal,
@@ -277,6 +274,24 @@ Produce:
             </div>
           </div>
           <CollaborationWorkspace result={result} bots={bots} />
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <BrainCircuit className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold text-foreground">AI network insights</p>
+            </div>
+            <p className="text-[11px] text-muted-foreground">{result.network_insights?.monitoring_summary}</p>
+            <div className="grid gap-2 sm:grid-cols-2 text-[11px]">
+              <div className="rounded-lg border border-border bg-background p-3">
+                <p className="text-[10px] font-semibold text-foreground">Structure improvements</p>
+                <div className="mt-1 space-y-1">{(result.network_insights?.network_improvements || []).map((item) => <p key={item} className="text-muted-foreground">• {item}</p>)}</div>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-3">
+                <p className="text-[10px] font-semibold text-foreground">Handoff improvements</p>
+                <div className="mt-1 space-y-1">{(result.network_insights?.handoff_improvements || []).map((item) => <p key={item} className="text-muted-foreground">• {item}</p>)}</div>
+              </div>
+            </div>
+          </div>
+
           <details className="bg-card border border-border rounded-xl overflow-hidden">
             <summary className="px-3 py-2.5 text-xs font-medium cursor-pointer flex items-center gap-2 hover:bg-secondary/40">
               Full collaboration trace
@@ -297,6 +312,11 @@ Produce:
               <div>
                 <p className="font-semibold text-foreground mb-1">Improvement</p>
                 <p>{result.improvement}</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground mb-1">Conflict resolution</p>
+                <p>{result.conflict_resolution?.resolved_summary}</p>
+                <div className="mt-1 space-y-1">{(result.conflict_resolution?.actions || []).map((item) => <p key={item}>• {item}</p>)}</div>
               </div>
               {result.healing_events?.length > 0 && (
                 <div>

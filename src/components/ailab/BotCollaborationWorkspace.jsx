@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BrainCircuit, CheckSquare, Loader2, MessageSquareShare, Square, Users } from 'lucide-react';
+import { BrainCircuit, CheckSquare, Loader2, MessageSquareShare, Square, Users, GitBranch } from 'lucide-react';
 import SpeechToTextInput from './SpeechToTextInput.jsx';
 import CollaborationLiveRoom from './CollaborationLiveRoom.jsx';
 import { base44 } from '@/api/base44Client';
+import { analyzeNetworkImprovements, createDecisionPlan, resolveFindingConflicts } from './orchestrationDecisioning';
 
 export default function BotCollaborationWorkspace({ bots }) {
   const [title, setTitle] = useState('');
@@ -36,36 +37,38 @@ export default function BotCollaborationWorkspace({ bots }) {
     setGuidanceNotes([]);
     setLiveMessages([{ role: 'system', label: 'Session started', content: `Starting collaboration for: ${goal}` }]);
 
-    const planner = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are coordinating a team of AI bots for a complex task.
-Goal: ${goal}
-Bots available: ${selectedBots.map((bot) => `${bot.name} (${bot.role})`).join(', ')}
-
-Assign one focused subtask to each bot. Return plain text in this format exactly:
-Bot Name: task`
-    });
-
-    setLiveMessages((prev) => [...prev, { role: 'system', label: 'Delegation plan', content: planner }]);
-
-    const planLines = planner.split('\n').filter(Boolean);
-    const delegationPlan = selectedBots.map((bot, index) => {
-      const matchingLine = planLines.find((line) => line.toLowerCase().startsWith(bot.name.toLowerCase() + ':'));
+    const decisionPlan = await createDecisionPlan({ goal, bots: selectedBots, userGuidance: guidanceNotes });
+    const delegationPlan = (decisionPlan.delegations || []).map((item) => {
+      const bot = selectedBots.find((entry) => entry.id === item.bot_id);
       return {
-        bot_id: bot.id,
-        bot_name: bot.name,
-        task: matchingLine ? matchingLine.split(':').slice(1).join(':').trim() : `Contribute to the goal from the perspective of a ${bot.role} bot.`
+        bot_id: item.bot_id,
+        bot_name: bot?.name || 'Unknown bot',
+        task: item.assignment,
+        reason: item.reason,
+        dependencies: item.dependencies || []
       };
     });
+
+    setLiveMessages((prev) => [...prev, {
+      role: 'system',
+      label: 'Delegation plan',
+      content: delegationPlan.map((item) => `${item.bot_name}: ${item.task} (${item.reason})`).join('\n')
+    }]);
 
     const findings = [];
     for (const item of delegationPlan) {
       const bot = selectedBots.find((entry) => entry.id === item.bot_id);
       const currentGuidance = guidanceNotes.length > 0 ? `\nLive guidance from the user:\n${guidanceNotes.map((note) => `- ${note}`).join('\n')}` : '';
+      const dependencyContext = (item.dependencies || []).map((dependencyId) => {
+        const dependencyFinding = findings.find((entry) => entry.bot_id === dependencyId);
+        return dependencyFinding ? `${dependencyFinding.bot_name}: ${dependencyFinding.finding}` : null;
+      }).filter(Boolean).join('\n');
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are ${bot.name}. ${bot.instructions || ''}
 Role: ${bot.role}
 Task goal: ${goal}
-Your delegated task: ${item.task}${currentGuidance}
+Your delegated task: ${item.task}
+Reason you were selected: ${item.reason || 'Best fit'}${currentGuidance}${dependencyContext ? `\nDependency context:\n${dependencyContext}` : ''}
 
 Produce your best finding for the team. Be concrete, useful, and concise.`
       });
@@ -93,6 +96,8 @@ Give short peer feedback that improves quality, catches gaps, and increases accu
       setLiveMessages((prev) => [...prev, { role: 'bot', label: `${reviewer.name} feedback`, content: response }]);
     }
 
+    const conflictResolution = await resolveFindingConflicts({ goal, findings, feedback });
+
     const finalOutput = await base44.integrations.Core.InvokeLLM({
       prompt: `Synthesize this collaborative bot work into one final answer.
 Goal: ${goal}
@@ -105,12 +110,30 @@ ${findings.map((item) => `${item.bot_name}: ${item.finding}`).join('\n\n')}
 Peer feedback:
 ${feedback.map((item) => `${item.reviewer_bot_name}: ${item.feedback}`).join('\n\n')}
 
+Conflict resolution:
+${conflictResolution.resolved_summary}
+Actions:
+${(conflictResolution.actions || []).join('\n')}
+
 Live user guidance:
 ${guidanceNotes.length > 0 ? guidanceNotes.map((note) => `- ${note}`).join('\n') : 'None'}
 
 Return the best final answer with clear sections: Summary, Key Findings, Recommended Next Step.`
     });
     setLiveMessages((prev) => [...prev, { role: 'system', label: 'Final synthesis', content: finalOutput }]);
+
+    const networkInsights = await analyzeNetworkImprovements({
+      bots: selectedBots,
+      result: {
+        delegation_plan: delegationPlan,
+        findings,
+        feedback,
+        final_output: finalOutput,
+        conflict_resolution: conflictResolution,
+        communication_bridges: decisionPlan.communication_bridges || [],
+        efficiency_notes: decisionPlan.efficiency_notes || []
+      }
+    });
 
     const payload = {
       title: title.trim() || 'Bot Collaboration Session',
@@ -121,6 +144,10 @@ Return the best final answer with clear sections: Summary, Key Findings, Recomme
       findings,
       feedback,
       final_output: finalOutput,
+      conflict_resolution: conflictResolution,
+      communication_bridges: decisionPlan.communication_bridges || [],
+      efficiency_notes: decisionPlan.efficiency_notes || [],
+      network_insights: networkInsights,
     };
 
     await base44.entities.BotCollaborationSession.create(payload);
@@ -223,9 +250,42 @@ Return the best final answer with clear sections: Summary, Key Findings, Recomme
               <div key={item.bot_id} className="rounded-xl border border-border bg-secondary p-3 space-y-1.5">
                 <p className="text-xs font-semibold text-foreground">{item.bot_name}</p>
                 <p className="text-[10px] text-primary">Task: {item.task}</p>
+                {item.reason && <p className="text-[10px] text-muted-foreground">Why selected: {item.reason}</p>}
                 <p className="text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed">{item.finding}</p>
               </div>
             ))}
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <GitBranch className="w-4 h-4 text-primary" />
+              <p className="text-sm font-semibold">AI coordination insights</p>
+            </div>
+            <div className="space-y-2 text-[11px] text-muted-foreground">
+              {(result.communication_bridges || []).map((item) => <p key={item}>• {item}</p>)}
+            </div>
+            {result.conflict_resolution?.resolved_summary && (
+              <div className="rounded-xl border border-border bg-secondary p-3">
+                <p className="text-xs font-semibold text-foreground">Conflict resolution</p>
+                <p className="mt-1 text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed">{result.conflict_resolution.resolved_summary}</p>
+              </div>
+            )}
+            {result.network_insights?.monitoring_summary && (
+              <div className="rounded-xl border border-border bg-secondary p-3 space-y-2">
+                <p className="text-xs font-semibold text-foreground">Efficiency monitor</p>
+                <p className="text-[11px] text-muted-foreground">{result.network_insights.monitoring_summary}</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-semibold text-foreground">Network improvements</p>
+                    {(result.network_insights.network_improvements || []).map((item) => <p key={item} className="text-[11px] text-muted-foreground">• {item}</p>)}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-foreground">Handoff improvements</p>
+                    {(result.network_insights.handoff_improvements || []).map((item) => <p key={item} className="text-[11px] text-muted-foreground">• {item}</p>)}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
