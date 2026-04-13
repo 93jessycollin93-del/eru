@@ -21,7 +21,11 @@ export function buildBackgroundStyles(setting) {
     return { background: setting.background_value };
   }
   if (setting.background_type === 'gradient' && setting.background_value) {
-    return { backgroundImage: setting.background_value };
+    return {
+      backgroundImage: setting.background_value,
+      backgroundSize: 'cover',
+      backgroundRepeat: 'no-repeat',
+    };
   }
   if (setting.background_type === 'image' && setting.background_value) {
     return {

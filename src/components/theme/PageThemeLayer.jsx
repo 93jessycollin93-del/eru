@@ -9,7 +9,7 @@ export default function PageThemeLayer({ children }) {
   return (
     <div
       data-theme-page={location.pathname}
-      className="min-h-full"
+      className="min-h-full min-w-0"
       style={{
         background: 'var(--page-bg)',
         ...pageThemeStyles,
