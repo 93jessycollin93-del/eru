@@ -86,7 +86,7 @@ export default function Layout() {
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
         <CenteredBottomNav onSearchOpen={handleSearchOpen} />
-        <main className="flex-1">
+        <main className="flex-1 min-w-0">
           <Outlet />
         </main>
         <JackieFloat prefs={prefs} updateWidget={updateWidget} />

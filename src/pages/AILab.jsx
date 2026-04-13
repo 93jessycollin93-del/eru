@@ -731,7 +731,12 @@ export default function AILab() {
 
       {/* AGENTS */}
       {tab === 'agents' && (
-        <div className="px-4 py-4 pb-24">
+        <div className="px-4 py-4 pb-24 space-y-3">
+          <div className="flex justify-end">
+            <a href="/agent-operations" className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+              Open agent operations
+            </a>
+          </div>
           <AgentRunner bots={bots} globalPolicy={globalPolicy} />
         </div>
       )}
