@@ -32,6 +32,7 @@ export default function CardArena() {
   const [currentRound, setCurrentRound] = useState(null);
   const [roundResults, setRoundResults] = useState([]);
   const [discoveredCard, setDiscoveredCard] = useState(null);
+  const [battleReward, setBattleReward] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function CardArena() {
     setBattling(true);
   };
 
-  const handleBattleEnd = async (won, aiBoardPower, aiDeck) => {
+  const handleBattleEnd = async (won, battleData) => {
     const round = TOURNAMENT_ROUNDS[tournamentRound - 1];
     const newResults = [...roundResults, { round: tournamentRound, won }];
     setRoundResults(newResults);
@@ -91,11 +92,14 @@ export default function CardArena() {
     if (won) {
       // Award gold via secure backend endpoint
       try {
-        const newGold = await awardGold(round.prize.gold, `Tournament round ${tournamentRound} win`, {
+        const rewardGoldAmount = round.prize.gold;
+        const newGold = await awardGold(rewardGoldAmount, `Tournament round ${tournamentRound} win`, {
           round: tournamentRound,
-          difficulty: round.difficulty
+          difficulty: round.difficulty,
+          opponent_faction: battleData?.opponentFaction || round.faction,
         });
         setGold(newGold);
+        setBattleReward({ gold: rewardGoldAmount, faction: battleData?.opponentFaction || round.faction });
       } catch (err) {
         console.error('Failed to award gold:', err);
         return;
@@ -103,15 +107,19 @@ export default function CardArena() {
 
       const discoverChance = 0.4 + (tournamentRound - 1) * 0.1;
       if (Math.random() < discoverChance && round.prize.discover) {
-        const factionPool = STARTER_CARDS.filter(c => c.faction === round.faction);
-        const discovered = factionPool[Math.floor(Math.random() * factionPool.length)];
+        const targetFaction = battleData?.opponentFaction || round.faction;
+        const ownedNames = new Set(cards.map((card) => card.name));
+        const factionPool = STARTER_CARDS.filter(c => c.faction === targetFaction && !ownedNames.has(c.name));
+        const fallbackPool = STARTER_CARDS.filter(c => c.faction === targetFaction);
+        const rewardPool = factionPool.length > 0 ? factionPool : fallbackPool;
+        const discovered = rewardPool[Math.floor(Math.random() * rewardPool.length)];
         if (discovered) {
           const saved = await base44.entities.Card.create({
             ...discovered,
             id: undefined,
             quantity: 1,
           });
-          setDiscoveredCard({ ...discovered, saved: true });
+          setDiscoveredCard({ ...saved, rewardFaction: targetFaction });
           setCards(prev => [...prev, saved]);
         }
       }
@@ -126,7 +134,8 @@ export default function CardArena() {
           setCurrentRound(TOURNAMENT_ROUNDS[nextRound - 1]);
           setBattling(true);
           setDiscoveredCard(null);
-        }, discoveredCard ? 3000 : 2000);
+          setBattleReward(null);
+        }, 2200);
       }
     } else {
       setBattling(false);
@@ -140,6 +149,7 @@ export default function CardArena() {
     setCurrentRound(null);
     setRoundResults([]);
     setDiscoveredCard(null);
+    setBattleReward(null);
   };
 
   return (
@@ -190,6 +200,10 @@ export default function CardArena() {
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Active Deck <span className="text-muted-foreground font-normal text-xs">({deck.length}/5)</span></p>
               <button onClick={() => setDeck([])} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-3">
+              <p className="text-xs font-semibold text-foreground">Page purpose</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Card Arena is your battle hub for collecting cards, building a 5-card deck, and clearing a 3-stage AI tournament for gold and faction card rewards.</p>
             </div>
 
             {deck.length === 0 ? (
@@ -281,12 +295,25 @@ export default function CardArena() {
                   playerCards={[...deck]}
                   opponentName={currentRound.name}
                   difficulty={currentRound.difficulty}
+                  opponentFaction={currentRound.faction}
                   onBattleEnd={handleBattleEnd}
                 />
               </div>
             )}
 
             <AnimatePresence>
+              {battleReward && !discoveredCard && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-center"
+                >
+                  <p className="text-xs uppercase tracking-widest text-yellow-400">Battle Reward</p>
+                  <p className="mt-1 text-lg font-bold text-yellow-300">+{battleReward.gold} Gold</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Victory over {battleReward.faction}</p>
+                </motion.div>
+              )}
               {discoveredCard && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -296,7 +323,8 @@ export default function CardArena() {
                   onClick={() => setDiscoveredCard(null)}>
                   <div className="bg-card border border-primary/40 rounded-2xl p-6 text-center max-w-xs mx-4" onClick={e => e.stopPropagation()}>
                     <p className="text-xs text-primary uppercase tracking-widest mb-1">Card Discovered!</p>
-                    <p className="text-sm font-semibold mb-4">Added to your collection</p>
+                    <p className="text-sm font-semibold mb-1">Added to your collection</p>
+                    <p className="text-[11px] text-muted-foreground mb-4">Recovered from the {discoveredCard.rewardFaction} pool</p>
                     <div className="flex justify-center mb-4">
                       <CardDisplay card={discoveredCard} size="lg" glowing />
                     </div>
@@ -313,7 +341,7 @@ export default function CardArena() {
                   <p className="text-4xl mb-2">🏆</p>
                   <p className="text-xl font-bold text-yellow-400">Tournament Champion!</p>
                   <p className="text-sm text-muted-foreground mt-1">You conquered all 3 opponents</p>
-                  <p className="text-2xl font-bold text-yellow-300 mt-3">+400 Gold</p>
+                  <p className="text-2xl font-bold text-yellow-300 mt-3">3 wins · escalating rewards earned</p>
                 </div>
                 <button onClick={resetTournament} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold">
                   Play Again

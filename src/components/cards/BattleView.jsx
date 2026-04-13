@@ -12,10 +12,10 @@ function calcCardEffect(card, comboCount, opponentEl) {
   return { boardPower: Math.round(basePower * comboMult), abVal: Math.round(abVal) };
 }
 
-export default function BattleView({ playerCards, opponentName, difficulty, onBattleEnd }) {
-  const [aiDeck] = useState(() => generateAIDeck(difficulty));
+export default function BattleView({ playerCards, opponentName, difficulty, opponentFaction, onBattleEnd }) {
+  const [aiDeck] = useState(() => generateAIDeck(difficulty, opponentFaction));
   const [playerHand, setPlayerHand] = useState([...playerCards]);
-  const [aiHand, setAiHand] = useState([...generateAIDeck(difficulty)]);
+  const [aiHand, setAiHand] = useState([...generateAIDeck(difficulty, opponentFaction)]);
   const [playerBoard, setPlayerBoard] = useState(0);
   const [aiBoard, setAiBoard] = useState(0);
   const [playerHP, setPlayerHP] = useState(25);
@@ -125,7 +125,13 @@ export default function BattleView({ playerCards, opponentName, difficulty, onBa
   const endBattle = (pBoard, aBoard, won) => {
     setResult({ won, pBoard, aBoard });
     setPhase('result');
-    setTimeout(() => onBattleEnd(won, aBoard, aiDeck), 1200);
+    setTimeout(() => onBattleEnd(won, {
+      aiBoardPower: aBoard,
+      aiDeck,
+      opponentFaction: opponentFaction || aiDeck[0]?.faction,
+      playerBoardPower: pBoard,
+      turnsPlayed: turn,
+    }), 1200);
   };
 
   const playerPct = Math.round((playerHP / 25) * 100);

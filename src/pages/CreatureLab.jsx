@@ -93,7 +93,12 @@ export default function CreatureLab() {
     const cardData = breedCard(parent1, parent2);
     await new Promise(r => setTimeout(r, 1200));
 
-    const savedCard = await base44.entities.Card.create({ ...cardData, quantity: 1 });
+    const savedCard = await base44.entities.Card.create({
+      ...cardData,
+      quantity: 1,
+      creature_id: parent1.id,
+      source_creature_ids: [parent1.id, parent2.id],
+    });
     await base44.entities.Creature.update(parent1.id, { breed_count: (parent1.breed_count || 0) + 1, bred_card_id: savedCard.id });
     await base44.entities.Creature.update(parent2.id, { breed_count: (parent2.breed_count || 0) + 1 });
 
@@ -112,7 +117,7 @@ export default function CreatureLab() {
           <h2 className="text-lg font-bold flex items-center gap-2">
             <FlaskConical className="w-5 h-5 text-primary" /> Creature Lab
           </h2>
-          <p className="text-[10px] text-muted-foreground">Breed creatures to forge unique cards</p>
+          <p className="text-[10px] text-muted-foreground">Breed creatures to forge unique cards for Card Arena</p>
         </div>
         <button onClick={() => setShowCreate(true)}
           className="bg-primary text-primary-foreground rounded-xl p-2">
@@ -121,6 +126,10 @@ export default function CreatureLab() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs font-semibold text-foreground">Page purpose</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Creature Lab grows your creature roster and forges new battle-ready cards that flow directly into Card Arena.</p>
+        </div>
         {/* Breeding Chamber */}
         <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/20 border border-purple-500/30 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
