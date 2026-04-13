@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import TickerBar from '../components/dashboard/TickerBar';
 import WidgetRulesPanel from '../components/dashboard/WidgetRulesPanel';
 import { DashboardEventsProvider } from '../context/DashboardEventsContext';
@@ -11,7 +12,6 @@ import FinanceModule from '../components/dashboard/FinanceModule';
 import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
 import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
-import AnalyticsWidget from '../components/dashboard/AnalyticsWidget';
 import CollectorLeaderboard from '../components/dashboard/CollectorLeaderboard';
 import CollectorRewardsPanel from '../components/dashboard/CollectorRewardsPanel';
 import DashboardPanelManager from '../components/dashboard/DashboardPanelManager';
@@ -57,20 +57,30 @@ export default function Dashboard() {
         <PortfolioSummary />
         <QuickActions />
         <div className="px-4 mt-4 space-y-4 pb-4">
-          <ScreenVisualizer />
           <TelegramFirstBanner />
           <WidgetRulesPanel />
           <DashboardPanelManager
             collectorRewards={<CollectorRewardsPanel />}
             activeBots={<WidgetLibrary prices={prices} sections={['bot-status']} />}
-            quickStats={<AnalyticsWidget />}
+            quickStats={
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Analytics moved to a dedicated hub</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Open the full analytics page for performance monitoring, trends, and usage insights.</p>
+                  </div>
+                  <Link to="/analytics" className="rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
+                    Open Analytics
+                  </Link>
+                </div>
+              </div>
+            }
           />
           <WidgetLibrary prices={prices} sections={['market-pins', 'news-feed', 'ai-insights', 'dashboard-actions']} />
           <AppDock />
           <NotificationCenter />
           <AlertManager />
           <CollectorLeaderboard />
-          <DataVisualizer />
           <FinanceModule />
         </div>
       </div>

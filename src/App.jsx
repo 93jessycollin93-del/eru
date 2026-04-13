@@ -53,6 +53,7 @@ import SquadPerformance from './pages/SquadPerformance';
 import SquadKnowledgeTrends from './pages/SquadKnowledgeTrends';
 import BotFarm from './pages/BotFarm';
 import AgentOperations from './pages/AgentOperations';
+import AnalyticsHub from './pages/AnalyticsHub';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -129,6 +130,7 @@ const AuthenticatedApp = () => {
         <Route path="/squad-knowledge-trends" element={<SquadKnowledgeTrends />} />
         <Route path="/bot-farm" element={<BotFarm />} />
         <Route path="/agent-operations" element={<AgentOperations />} />
+        <Route path="/analytics" element={<AnalyticsHub />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

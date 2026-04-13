@@ -33,7 +33,7 @@ const SEV = {
   info:     'text-yellow-400 bg-yellow-400/10 border-yellow-400/30',
 };
 
-export default function PerformanceDashboard() {
+export default function PerformanceDashboard({ embedded = false }) {
   const [rawMetrics, setRawMetrics] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [tab, setTab] = useState('overview');
@@ -97,8 +97,8 @@ export default function PerformanceDashboard() {
   const criticalLogs = auditLogs.filter(l => l.severity === 'critical' || l.severity === 'warning');
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-24">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
+    <div className={`flex flex-col ${embedded ? 'min-h-0 bg-transparent pb-0' : 'min-h-screen bg-background pb-24'}`}>
+      <div className={`px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0 ${embedded ? 'bg-card' : ''}`}>
         <div>
           <h2 className="text-base font-bold flex items-center gap-2"><Activity className="w-4 h-4 text-primary" /> Performance Monitor</h2>
           <p className="text-[10px] text-muted-foreground">Updated {lastUpdate.toLocaleTimeString()}</p>
