@@ -28,6 +28,7 @@ export default function BotFarm() {
   const [loading, setLoading] = useState(true);
   const [schemaReady, setSchemaReady] = useState(true);
   const [sortMode, setSortMode] = useState('priority');
+  const [upgradingId, setUpgradingId] = useState(null);
 
   const applyLoadedData = useCallback((data) => {
     if (data.bots) setBots(data.bots);
@@ -360,26 +361,34 @@ export default function BotFarm() {
   };
 
   const handleUpgrade = async (upgrade) => {
+    if (upgradingId) return;
+
+    setUpgradingId(upgrade.id);
+
     const nextLevel = (upgrade.level || 1) + 1;
     const nextEffectValue = (upgrade.effect_value || 0) + 4;
     const nextComplexityCost = (upgrade.complexity_cost || 0) + 1;
 
-    const [updatedUpgrade, createdHistoryEntry] = await Promise.all([
-      base44.entities.BotFarmUpgrade.update(upgrade.id, {
+    try {
+      const updatedUpgrade = await base44.entities.BotFarmUpgrade.update(upgrade.id, {
         level: nextLevel,
         effect_value: nextEffectValue,
         complexity_cost: nextComplexityCost,
-      }),
-      base44.entities.BotFarmActivityHistory.create({
+      });
+
+      setUpgrades((current) => current.map((item) => item.id === upgrade.id ? updatedUpgrade : item));
+
+      const createdHistoryEntry = await base44.entities.BotFarmActivityHistory.create({
         actor_type: 'system',
         event_type: 'upgrade_expanded',
         summary: `${upgrade.name} advanced to level ${nextLevel}, increasing both capacity and management complexity.`,
         impact_score: nextEffectValue,
-      })
-    ]);
+      });
 
-    setUpgrades((current) => current.map((item) => item.id === upgrade.id ? updatedUpgrade : item));
-    prependHistoryEntry(createdHistoryEntry);
+      prependHistoryEntry(createdHistoryEntry);
+    } finally {
+      setUpgradingId(null);
+    }
   };
 
   const runOperationalCycle = async () => {
@@ -492,7 +501,7 @@ export default function BotFarm() {
 
             <div className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
               <BotFarmControlPanel roleSummary={roleSummary} metrics={metrics} onRunCycle={runOperationalCycle} />
-              <BotFarmUpgradePanel upgrades={upgrades} onUpgrade={handleUpgrade} />
+              <BotFarmUpgradePanel upgrades={upgrades} onUpgrade={handleUpgrade} upgradingId={upgradingId} />
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr]">
