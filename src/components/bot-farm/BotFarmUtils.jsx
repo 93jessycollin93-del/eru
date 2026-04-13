@@ -145,3 +145,68 @@ export function buildRoleSummary(bots) {
     security: bots.filter((bot) => getRoleBand(bot) === 'security'),
   };
 }
+
+export function computeMissionSimulation({ mission, selectedBots, squads, upgrades }) {
+  const assignedSquads = squads.filter((squad) => (mission?.assigned_squad_ids || []).includes(squad.id));
+  const upgradeEffect = upgrades.reduce((sum, item) => sum + (item.effect_value || 0) * (item.level || 1), 0) / Math.max(1, upgrades.length || 1);
+  const availableBots = selectedBots.filter((bot) => !['maintenance', 'quarantined', 'offline'].includes(bot.status));
+  const securityBots = availableBots.filter((bot) => getRoleBand(bot) === 'security');
+  const matchingBots = availableBots.filter((bot) => bot.specialty === ((mission?.objective && mission.objective.includes('security')) ? 'security' : bot.specialty));
+  const averageEfficiency = availableBots.length ? availableBots.reduce((sum, bot) => sum + (bot.efficiency || 0), 0) / availableBots.length : 0;
+  const averageIntegrity = availableBots.length ? availableBots.reduce((sum, bot) => sum + (bot.integrity || 0), 0) / availableBots.length : 0;
+  const averageFatigue = availableBots.length ? availableBots.reduce((sum, bot) => sum + (bot.fatigue || 0), 0) / availableBots.length : 0;
+  const averageLoad = availableBots.length ? availableBots.reduce((sum, bot) => sum + (bot.load || 0), 0) / availableBots.length : 0;
+  const coordinationSupport = availableBots.length ? availableBots.reduce((sum, bot) => sum + (bot.coordination_efficiency || 0), 0) / availableBots.length : 0;
+  const squadReliability = assignedSquads.length ? assignedSquads.reduce((sum, squad) => sum + (squad.reliability_score || 0), 0) / assignedSquads.length : 70;
+  const squadOverhead = assignedSquads.length ? assignedSquads.reduce((sum, squad) => sum + (squad.coordination_overhead || 0), 0) / assignedSquads.length : 10;
+  const specialtyCoverage = availableBots.length ? Math.min(100, Math.round((matchingBots.length / availableBots.length) * 100) + 35) : 0;
+  const securityResilience = Math.max(0, Math.min(100, Math.round((securityBots.length ? securityBots.reduce((sum, bot) => sum + ((bot.integrity || 0) + (bot.confidence || 0)) / 2, 0) / securityBots.length : averageIntegrity * 0.78) - (mission?.security_pressure || 0) * 0.35)));
+  const coordinationLoad = Math.max(0, Math.round((mission?.coordination_complexity || 0) + squadOverhead - coordinationSupport * 0.22 + Math.max(0, availableBots.length - 4) * 4));
+  const fatiguePressure = Math.max(0, Math.round(averageFatigue + averageLoad * 0.45 + Math.max(0, (mission?.coordination_complexity || 0) - coordinationSupport) * 0.18));
+  const projectedOutcome = Math.max(8, Math.min(99, Math.round(
+    specialtyCoverage * 0.26 +
+    averageEfficiency * 0.24 +
+    averageIntegrity * 0.18 +
+    squadReliability * 0.12 +
+    coordinationSupport * 0.12 +
+    securityResilience * 0.08 +
+    upgradeEffect * 0.4 -
+    coordinationLoad * 0.24 -
+    fatiguePressure * 0.18
+  )));
+
+  const coverageFit = Math.max(0, Math.min(100, Math.round((specialtyCoverage * 0.6) + (coordinationSupport * 0.4) - Math.max(0, availableBots.length - 5) * 4)));
+  const riskScore = Math.round(
+    (mission?.security_pressure || 0) * 0.32 +
+    (mission?.coordination_complexity || 0) * 0.24 +
+    fatiguePressure * 0.28 +
+    Math.max(0, 70 - securityResilience) * 0.22 +
+    Math.max(0, 68 - projectedOutcome) * 0.18
+  );
+
+  const riskLevel = riskScore >= 78 ? 'critical' : riskScore >= 58 ? 'high' : riskScore >= 36 ? 'medium' : 'low';
+  const riskSummary =
+    availableBots.length === 0 ? 'No viable bots are in the simulation yet.' :
+    riskLevel === 'critical' ? 'This lineup is likely to stall under strain or trigger serious mission risk.' :
+    riskLevel === 'high' ? 'This team can run the mission, but coordination or security pressure is elevated.' :
+    riskLevel === 'medium' ? 'This setup looks workable, though a stronger specialty or security mix would help.' :
+    'This combination looks stable for a pre-mission commit check.';
+
+  const highlights = [
+    availableBots.length === 0 ? 'Add bots to generate a projection.' : `${availableBots.length} active-ready bots included in the simulation.`,
+    `Specialty coverage is ${specialtyCoverage}% against mission demands.`,
+    `Estimated coordination load sits at ${coordinationLoad}, with fatigue pressure at ${fatiguePressure}.`,
+    `Security resilience projects at ${securityResilience}% for this mission profile.`,
+  ];
+
+  return {
+    projectedOutcome,
+    riskLevel,
+    riskSummary,
+    coverageFit,
+    coordinationLoad,
+    fatiguePressure,
+    securityResilience,
+    highlights,
+  };
+}

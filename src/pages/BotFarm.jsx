@@ -11,6 +11,7 @@ import BotFarmRetrievalPanel from '../components/bot-farm/BotFarmRetrievalPanel'
 import BotFarmControlPanel from '../components/bot-farm/BotFarmControlPanel';
 import BotFarmMaintenancePanel from '../components/bot-farm/BotFarmMaintenancePanel';
 import BotFarmMissionPanel from '../components/bot-farm/BotFarmMissionPanel';
+import BotFarmMissionSimulatorPanel from '../components/bot-farm/BotFarmMissionSimulatorPanel';
 import BotFarmPredictiveAnalyticsPanel from '../components/bot-farm/BotFarmPredictiveAnalyticsPanel';
 import { buildRoleSummary, computeAssignmentQuality, computeBotFit, computeMissionSuccessProbability, computeOutputQuality, summarizeFarmMetrics } from '../components/bot-farm/BotFarmUtils';
 import { DEMO_ACTIVITY, DEMO_BOTS, DEMO_MAINTENANCE, DEMO_MISSIONS, DEMO_OUTPUTS, DEMO_RISKS, DEMO_SQUADS, DEMO_TASKS, DEMO_UPGRADES } from '../components/bot-farm/BotFarmDemoData';
@@ -510,6 +511,7 @@ export default function BotFarm() {
             </div>
 
             <BotFarmMissionPanel missions={missions} squads={squads} bots={bots} />
+            <BotFarmMissionSimulatorPanel bots={bots} missions={missions} squads={squads} upgrades={upgrades} />
             <BotFarmPredictiveAnalyticsPanel bots={bots} maintenanceLogs={maintenanceLogs} />
             <BotFarmSquadPanel squads={squads} bots={bots} missions={missions} />
             <BotFarmRetrievalPanel bots={bots} />
