@@ -154,7 +154,7 @@ export function ThemeProvider({ children }) {
   const [primarySat,     setPrimarySat]  = useState(() => load('primarySat'));
   const [primaryLight,   setPrimaryLight]= useState(() => load('primaryLight'));
   const [customThemes,   setCustomThemes]= useState([]);
-  const [themeLayers,    setThemeLayers] = useState({ variables: {}, globalBackground: {}, pageBackground: {} });
+  const [themeLayers,    setThemeLayers] = useState({ variables: {}, globalBackground: {}, pageBackground: {}, componentBackgrounds: {} });
 
   // Setters that check lock
   const isLocked = (key) => lockedSettings.includes(key);
@@ -272,17 +272,19 @@ export function ThemeProvider({ children }) {
   const getPageThemeStyles = (pathname) => {
     const globalTheme = customThemes.find((item) => item.scope_type === 'global');
     const pageTheme = customThemes.find((item) => item.scope_type === 'page' && item.scope_key === pathname);
-    return mergeThemeSettings(globalTheme, pageTheme);
+    const componentThemes = customThemes.filter((item) => item.scope_type === 'component' && item.scope_key?.startsWith(`${pathname}::`));
+    return mergeThemeSettings(globalTheme, pageTheme, componentThemes);
   };
+
+  const getScopedComponentStyles = (scopeKey) => themeLayers.componentBackgrounds?.[scopeKey] || {};
 
   const pageThemeMap = customThemes
     .filter((item) => item.scope_type === 'page' && item.scope_key)
     .reduce((acc, item) => {
+      const merged = mergeThemeSettings(customThemes.find((theme) => theme.scope_type === 'global'), item);
       acc[item.scope_key] = {
-        ...(item.variables || {}),
-        ...(item.background_type === 'solid' && item.background_value ? { background: item.background_value } : {}),
-        ...(item.background_type === 'gradient' && item.background_value ? { backgroundImage: item.background_value, backgroundSize: 'cover', backgroundRepeat: 'no-repeat' } : {}),
-        ...(item.background_type === 'image' && item.background_value ? { backgroundImage: `url(${item.background_value})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}),
+        ...(merged.variables || {}),
+        ...(merged.pageBackground || {}),
       };
       return acc;
     }, {});
@@ -325,7 +327,9 @@ export function ThemeProvider({ children }) {
     getPageThemeStyles,
     pageThemeStyles: themeLayers.pageBackground || {},
     globalThemeStyles: themeLayers.globalBackground || {},
+    componentThemeStyles: themeLayers.componentBackgrounds || {},
     pageThemeMap,
+    getScopedComponentStyles,
     // legacy compat
     uiScale, setUiScale,
     themes: {}, theme: 'custom', setTheme: () => {},

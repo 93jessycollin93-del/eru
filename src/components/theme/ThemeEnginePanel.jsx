@@ -77,8 +77,8 @@ export default function ThemeEnginePanel() {
           <Paintbrush className="w-4 h-4 text-primary" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold leading-6 text-foreground">Visual Theme Engine</p>
-          <p className="text-xs leading-5 text-muted-foreground break-words">Set global or page-specific background and layer colors with page-aware overrides.</p>
+          <p className="text-sm font-semibold leading-6 text-foreground">Quick Theme Engine</p>
+          <p className="text-xs leading-5 text-muted-foreground break-words">Use the quick controls here or open the advanced studio below for full layered customization.</p>
         </div>
       </div>
 

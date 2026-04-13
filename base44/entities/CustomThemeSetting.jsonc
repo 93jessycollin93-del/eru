@@ -31,7 +31,13 @@
         "inherit",
         "solid",
         "gradient",
-        "image"
+        "animated_gradient",
+        "image",
+        "pattern",
+        "texture",
+        "glass",
+        "mesh",
+        "overlay"
       ],
       "default": "inherit"
     },
@@ -41,6 +47,10 @@
     "variables": {
       "type": "object",
       "description": "CSS variable overrides for visual layers"
+    },
+    "layers": {
+      "type": "object",
+      "description": "Layer-based overrides for app, page, sections, panels, modals, navigation, buttons, inputs, and widgets"
     },
     "is_active": {
       "type": "boolean",

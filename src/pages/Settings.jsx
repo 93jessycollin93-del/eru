@@ -7,6 +7,7 @@ import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
 import ThemeEnginePanel from '@/components/theme/ThemeEnginePanel';
+import AdvancedThemeStudio from '@/components/theme/AdvancedThemeStudio';
 
 const SECTIONS = [
   { icon: Shield, label: 'Security & 2FA', badge: 'Active' },
@@ -194,6 +195,11 @@ export default function Settings() {
         <div className="mt-4 space-y-2">
           <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Visual Theme Engine</p>
           <ThemeEnginePanel />
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Advanced Visual Customization</p>
+          <AdvancedThemeStudio />
         </div>
 
         {/* Sound & Haptics */}

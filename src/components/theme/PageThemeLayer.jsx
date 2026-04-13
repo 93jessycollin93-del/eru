@@ -12,6 +12,7 @@ export default function PageThemeLayer({ children }) {
       className="min-h-full min-w-0"
       style={{
         background: 'var(--page-bg, transparent)',
+        borderColor: 'var(--page-border, hsl(var(--border)))',
         ...scopedStyles,
       }}
     >
