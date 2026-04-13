@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Tv2, X, Music, Film, Globe, Star, History, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, RotateCw, ExternalLink, Search, Monitor } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { Tv2, X, Music, Film, Globe, Star, History, ChevronDown, ChevronRight, RotateCw, ExternalLink, Search, Monitor, Minimize2, Maximize2, Camera, Circle, Square, GripVertical, PictureInPicture2 } from 'lucide-react';
 
 const QUICK_LINKS = [
   { label: 'YouTube', url: 'https://www.youtube.com/embed/jfKfPfyJRdk', icon: '▶️', category: 'Video' },
@@ -37,7 +38,7 @@ const getHostLabel = (value) => {
   }
 };
 
-export default function ScreenVisualizer() {
+export default function ScreenVisualizer({ prefs, updateWidget }) {
   const [url, setUrl] = useState('');
   const [activeUrl, setActiveUrl] = useState(DEFAULT_HOME);
   const [bookmarks, setBookmarks] = useState([]);
@@ -47,7 +48,16 @@ export default function ScreenVisualizer() {
   const [tabs, setTabs] = useState([{ id: 'home', url: DEFAULT_HOME, title: 'Markets' }]);
   const [activeTabId, setActiveTabId] = useState('home');
   const [reloadKey, setReloadKey] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedUrl, setRecordedUrl] = useState('');
+  const [dragging, setDragging] = useState(false);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const inputRef = useRef(null);
+  const containerRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const miniBrowserPrefs = prefs?.miniBrowser || { visible: false, x: null, y: null, floating: true };
 
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) || tabs[0], [tabs, activeTabId]);
 
@@ -84,6 +94,18 @@ export default function ScreenVisualizer() {
       setUrl(activeTab.url);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    const handleToggle = () => updateWidget('miniBrowser', { visible: !miniBrowserPrefs.visible });
+    window.addEventListener('toggle-mini-browser', handleToggle);
+    return () => window.removeEventListener('toggle-mini-browser', handleToggle);
+  }, [miniBrowserPrefs.visible, updateWidget]);
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
 
   const persistBookmarks = (next) => {
     setBookmarks(next);
@@ -148,14 +170,112 @@ export default function ScreenVisualizer() {
 
   const refresh = () => setReloadKey((prev) => prev + 1);
 
+  const handleMouseDown = (e) => {
+    if (!miniBrowserPrefs.floating) return;
+    setDragging(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!dragging || !miniBrowserPrefs.floating) return;
+    const width = miniBrowserPrefs.visible ? 420 : 220;
+    const newX = Math.max(0, Math.min(e.clientX - offset.x, window.innerWidth - width));
+    const newY = Math.max(0, Math.min(e.clientY - offset.y, window.innerHeight - 72));
+    updateWidget('miniBrowser', { x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => setDragging(false);
+
+  const toggleFloating = () => updateWidget('miniBrowser', { floating: !miniBrowserPrefs.floating, x: null, y: null });
+
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return;
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await containerRef.current.requestFullscreen();
+    }
+  };
+
+  const captureScreenshot = async () => {
+    if (!containerRef.current) return;
+    const canvas = await html2canvas(containerRef.current, { backgroundColor: null, useCORS: true });
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `mini-browser-${Date.now()}.png`;
+    link.click();
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    const recorder = new MediaRecorder(stream);
+    chunksRef.current = [];
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunksRef.current.push(event.data);
+    };
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+      const nextUrl = URL.createObjectURL(blob);
+      setRecordedUrl(nextUrl);
+      stream.getTracks().forEach((track) => track.stop());
+    };
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true);
+  };
+
+  if (!miniBrowserPrefs.visible) {
+    return (
+      <button
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClick={() => !dragging && updateWidget('miniBrowser', { visible: true })}
+        style={miniBrowserPrefs.floating && miniBrowserPrefs.x !== null && miniBrowserPrefs.y !== null ? { left: `${miniBrowserPrefs.x}px`, top: `${miniBrowserPrefs.y}px`, right: 'auto', bottom: 'auto' } : undefined}
+        className="fixed bottom-36 right-4 z-40 flex items-center gap-2 rounded-2xl border border-primary/30 bg-card px-3 py-2.5 text-sm font-medium shadow-lg hover:border-primary transition-all cursor-move"
+      >
+        <Tv2 className="w-4 h-4 text-primary" />
+        <span className="text-xs text-foreground">Mini Browser</span>
+        <GripVertical className="w-3 h-3 text-muted-foreground" />
+      </button>
+    );
+  }
+
   return (
-    <div className="w-full">
+    <div
+      ref={containerRef}
+      className={miniBrowserPrefs.floating ? "fixed z-50 w-[min(92vw,420px)]" : "w-full"}
+      style={miniBrowserPrefs.floating ? { right: miniBrowserPrefs.x === null ? '1rem' : 'auto', bottom: miniBrowserPrefs.y === null ? '6rem' : 'auto', left: miniBrowserPrefs.x !== null ? `${miniBrowserPrefs.x}px` : 'auto', top: miniBrowserPrefs.y !== null ? `${miniBrowserPrefs.y}px` : 'auto' } : undefined}
+    >
       <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-2xl">
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-secondary/60">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-secondary/60 cursor-move" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <Tv2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
           <p className="text-xs font-semibold text-primary flex-1">Browser</p>
           <button onClick={openNewTab} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] text-foreground">
             + Tab
+          </button>
+          <button onClick={toggleFloating} className="p-1.5 rounded hover:bg-border transition-colors" title={miniBrowserPrefs.floating ? 'Dock browser' : 'Float browser'}>
+            <PictureInPicture2 className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+          <button onClick={() => updateWidget('miniBrowser', { visible: false })} className="p-1.5 rounded hover:bg-border transition-colors" title="Hide browser">
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+          <button onClick={captureScreenshot} className="p-1.5 rounded hover:bg-border transition-colors" title="Take screenshot">
+            <Camera className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+          <button onClick={toggleRecording} className="p-1.5 rounded hover:bg-border transition-colors" title={isRecording ? 'Stop recording' : 'Start recording'}>
+            {isRecording ? <Square className="w-3.5 h-3.5 text-red-400" /> : <Circle className="w-3.5 h-3.5 text-muted-foreground" />}
+          </button>
+          <button onClick={toggleFullscreen} className="p-1.5 rounded hover:bg-border transition-colors" title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-muted-foreground" /> : <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />}
           </button>
           {activeUrl && (
             <button onClick={clear} className="p-1 rounded hover:bg-border transition-colors">
@@ -179,12 +299,6 @@ export default function ScreenVisualizer() {
         </div>
 
         <div className="flex items-center gap-2 px-3 py-3 border-b border-border">
-          <button onClick={() => inputRef.current?.focus()} className="rounded-lg border border-border bg-secondary p-2 text-muted-foreground">
-            <ArrowLeft className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => inputRef.current?.focus()} className="rounded-lg border border-border bg-secondary p-2 text-muted-foreground">
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
           <button onClick={refresh} className="rounded-lg border border-border bg-secondary p-2 text-muted-foreground">
             <RotateCw className="w-3.5 h-3.5" />
           </button>
@@ -225,7 +339,7 @@ export default function ScreenVisualizer() {
           </div>
         </div>
 
-        <div className="grid gap-3 px-3 py-3 border-b border-border md:grid-cols-2">
+        {!miniBrowserPrefs.floating && <div className="grid gap-3 px-3 py-3 border-b border-border md:grid-cols-2">
           <div className="rounded-xl bg-secondary/50 border border-border p-3">
             <button onClick={() => setBookmarksCollapsed(!bookmarksCollapsed)} className="flex w-full items-center gap-2 mb-2 text-left">
               <Star className="w-3.5 h-3.5 text-primary" />
@@ -268,9 +382,9 @@ export default function ScreenVisualizer() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
-        <div className="relative bg-black h-[22rem] sm:h-[28rem]">
+        <div className={`relative bg-black ${miniBrowserPrefs.floating ? 'h-[18rem] sm:h-[22rem]' : 'h-[22rem] sm:h-[28rem]'}`}>
           {activeUrl ? (
             <iframe
               key={`${activeUrl}-${reloadKey}`}
@@ -292,6 +406,13 @@ export default function ScreenVisualizer() {
             </div>
           )}
         </div>
+        {recordedUrl && (
+          <div className="border-t border-border bg-background/80 px-3 py-2">
+            <a href={recordedUrl} download={`mini-browser-${Date.now()}.webm`} className="text-[11px] text-primary underline underline-offset-2">
+              Download latest recording
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { PanelsTopLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import TickerBar from '../components/dashboard/TickerBar';
 import WidgetRulesPanel from '../components/dashboard/WidgetRulesPanel';
@@ -11,7 +12,6 @@ import AppDock from '../components/dashboard/AppDock';
 import FinanceModule from '../components/dashboard/FinanceModule';
 import PortfolioSummary from '../components/dashboard/PortfolioSummary';
 import QuickActions from '../components/dashboard/QuickActions';
-import ScreenVisualizer from '../components/dashboard/ScreenVisualizer';
 import CollectorLeaderboard from '../components/dashboard/CollectorLeaderboard';
 import SharedDashboardCollabBar from '../components/dashboard/SharedDashboardCollabBar';
 import SharedDashboardPresence from '../components/dashboard/SharedDashboardPresence';
@@ -53,6 +53,13 @@ export default function Dashboard() {
           <ExportButton appData={appData} />
         </div>
         <div className="px-4 py-2 flex justify-end gap-2 bg-background">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-mini-browser'))}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:border-primary/40"
+          >
+            <PanelsTopLeft className="w-3.5 h-3.5 text-primary" />
+            Mini Browser
+          </button>
           <ThemeToggle />
           <LanguageSwitcher />
         </div>

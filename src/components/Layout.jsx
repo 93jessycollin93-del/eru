@@ -8,6 +8,7 @@ import CenteredBottomNav from './CenteredBottomNav';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
 import FloatingQuickActions from './FloatingQuickActions';
+import ScreenVisualizer from './dashboard/ScreenVisualizer';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
 
@@ -19,6 +20,7 @@ function useFloatingWidgetPrefs() {
         jackie: { visible: true, x: 16, y: 100 },
         botMarket: { visible: true, x: 16, y: 156 },
         botChat: { visible: true, x: null, y: null },
+        miniBrowser: { visible: false, x: null, y: null, floating: true },
         promptLibrary: { visible: true, x: 16, y: 212 },
         conversations: { visible: true, x: 16, y: 268 },
         ...JSON.parse(localStorage.getItem('floating_widget_preferences') || '{}'),
@@ -28,6 +30,7 @@ function useFloatingWidgetPrefs() {
         jackie: { visible: true, x: 16, y: 100 },
         botMarket: { visible: true, x: 16, y: 156 },
         botChat: { visible: true, x: null, y: null },
+        miniBrowser: { visible: false, x: null, y: null, floating: true },
         promptLibrary: { visible: true, x: 16, y: 212 },
         conversations: { visible: true, x: 16, y: 268 },
       };
@@ -97,6 +100,7 @@ export default function Layout() {
         <FloatingQuickActions />
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
         <BotWidget prefs={prefs} updateWidget={updateWidget} />
+        <ScreenVisualizer prefs={prefs} updateWidget={updateWidget} />
       </div>
     </>
   );
