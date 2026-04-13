@@ -11,12 +11,20 @@ function initials(name = '') {
 export default function SharedDashboardPresence() {
   const [user, setUser] = useState(null);
   const [sessions, setSessions] = useState([]);
-  const [sessionId, setSessionId] = useState(null);
 
   useEffect(() => {
     let mounted = true;
     let unsubscribe = null;
     let heartbeat = null;
+    let refreshTimer = null;
+    let localSessionId = null;
+    let isRefreshing = false;
+
+    const applySessions = (data) => {
+      if (!mounted) return;
+      const now = Date.now();
+      setSessions((data || []).filter((item) => now - new Date(item.last_seen_at || item.updated_date).getTime() < 120000));
+    };
 
     const boot = async () => {
       const me = await base44.auth.me();
@@ -46,24 +54,31 @@ export default function SharedDashboardPresence() {
       }
 
       if (!mounted) return;
-      setSessionId(record.id);
+      localSessionId = record.id;
 
       const refresh = async () => {
+        if (isRefreshing) return;
+        isRefreshing = true;
         const data = await base44.entities.SharedDashboardSession.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 20);
-        if (!mounted) return;
-        const now = Date.now();
-        setSessions((data || []).filter((item) => now - new Date(item.last_seen_at || item.updated_date).getTime() < 120000));
+        applySessions(data);
+        isRefreshing = false;
       };
 
       await refresh();
-      unsubscribe = base44.entities.SharedDashboardSession.subscribe(() => refresh());
+      unsubscribe = base44.entities.SharedDashboardSession.subscribe(() => {
+        if (refreshTimer) return;
+        refreshTimer = window.setTimeout(async () => {
+          refreshTimer = null;
+          await refresh();
+        }, 1500);
+      });
       heartbeat = window.setInterval(() => {
         base44.entities.SharedDashboardSession.update(record.id, {
           status: 'active',
           current_widget: 'overview',
           last_seen_at: new Date().toISOString(),
         });
-      }, 30000);
+      }, 90000);
     };
 
     boot();
@@ -72,8 +87,9 @@ export default function SharedDashboardPresence() {
       mounted = false;
       if (unsubscribe) unsubscribe();
       if (heartbeat) window.clearInterval(heartbeat);
-      if (sessionId) {
-        base44.entities.SharedDashboardSession.update(sessionId, {
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      if (localSessionId) {
+        base44.entities.SharedDashboardSession.update(localSessionId, {
           status: 'idle',
           last_seen_at: new Date().toISOString(),
         });
