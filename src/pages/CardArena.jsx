@@ -5,8 +5,9 @@ import { fetchUserGold, awardGold } from '@/lib/economyApi';
 import { STARTER_CARDS, ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
+import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 
 const TOURNAMENT_ROUNDS = [
   { id: 1, name: 'Novice Challenger', difficulty: 1, faction: 'Ember Clan',    prize: { gold: 50,  discover: true } },
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'collection', label: 'Collection', icon: Package },
   { id: 'deck',       label: 'Deck',       icon: Layers },
   { id: 'tournament', label: 'Tournament', icon: Trophy },
+  { id: 'history',    label: 'History',    icon: History },
   { id: 'market',     label: 'Market',     icon: ShoppingCart },
 ];
 
@@ -33,11 +35,15 @@ export default function CardArena() {
   const [roundResults, setRoundResults] = useState([]);
   const [discoveredCard, setDiscoveredCard] = useState(null);
   const [battleReward, setBattleReward] = useState(null);
+  const [battleHistory, setBattleHistory] = useState([]);
+  const [selectedBattle, setSelectedBattle] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadCards();
     loadGold();
+    loadBattleHistory();
   }, []);
 
   const loadGold = async () => {
@@ -68,6 +74,46 @@ export default function CardArena() {
     // Backend handles persistence via awardGold/deductGold
   };
 
+  const serializeDeck = (deckCards = []) => deckCards.map((card) => ({
+    name: card.name,
+    element: card.element,
+    rarity: card.rarity,
+    cost: card.cost,
+    power: card.power,
+    guard: card.guard,
+    ability: card.ability,
+    ability_value: card.ability_value || 0,
+  }));
+
+  const loadBattleHistory = async () => {
+    setHistoryLoading(true);
+    const history = await base44.entities.CardBattleHistory.list('-created_date', 50);
+    setBattleHistory(history);
+    setSelectedBattle((prev) => prev || history[0] || null);
+    setHistoryLoading(false);
+  };
+
+  const saveBattleHistory = async (won, round, battleData) => {
+    const saved = await base44.entities.CardBattleHistory.create({
+      mode: 'tournament',
+      result: won ? 'win' : 'loss',
+      opponent_name: currentRound?.name || round?.name,
+      opponent_faction: battleData?.opponentFaction || round?.faction,
+      difficulty: round?.difficulty || 1,
+      round_number: tournamentRound,
+      turns_played: battleData?.turnsPlayed || 0,
+      player_board_power: battleData?.playerBoardPower || 0,
+      opponent_board_power: battleData?.aiBoardPower || 0,
+      player_hp_end: battleData?.playerHP || 0,
+      opponent_hp_end: battleData?.aiHP || 0,
+      player_deck_snapshot: serializeDeck(battleData?.playerDeck || deck),
+      opponent_deck_snapshot: serializeDeck(battleData?.aiDeck || []),
+      turn_log: battleData?.turnLog || [],
+    });
+    setBattleHistory((prev) => [saved, ...prev].slice(0, 50));
+    setSelectedBattle(saved);
+  };
+
   const toggleDeckCard = (card) => {
     setDeck(prev => {
       const has = prev.find(c => c.id === card.id);
@@ -88,6 +134,7 @@ export default function CardArena() {
     const round = TOURNAMENT_ROUNDS[tournamentRound - 1];
     const newResults = [...roundResults, { round: tournamentRound, won }];
     setRoundResults(newResults);
+    await saveBattleHistory(won, round, battleData);
 
     if (won) {
       // Award gold via secure backend endpoint
@@ -363,6 +410,15 @@ export default function CardArena() {
               </motion.div>
             )}
           </div>
+        )}
+
+        {tab === 'history' && (
+          <BattleHistoryPanel
+            matches={battleHistory}
+            selectedMatch={selectedBattle}
+            onSelect={setSelectedBattle}
+            loading={historyLoading}
+          />
         )}
 
         {tab === 'market' && (

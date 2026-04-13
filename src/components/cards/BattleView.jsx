@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CardDisplay from './CardDisplay';
 import { getElementMultiplier, generateAIDeck } from './StarterCards';
@@ -26,8 +26,23 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
   const [phase, setPhase] = useState('player'); // player | ai | result
   const [lastPlayed, setLastPlayed] = useState(null);
   const [result, setResult] = useState(null);
+  const [turnLog, setTurnLog] = useState([]);
 
-  const addLog = (msg) => setLog(p => [msg, ...p].slice(0, 8));
+  const addLog = (msg, nextTurn = turn, actor = 'system', snapshot = {}) => {
+    setLog(p => [msg, ...p].slice(0, 8));
+    setTurnLog((prev) => ([
+      ...prev,
+      {
+        turn: nextTurn,
+        actor,
+        message: msg,
+        player_hp: snapshot.playerHP,
+        opponent_hp: snapshot.aiHP,
+        player_board: snapshot.playerBoard,
+        opponent_board: snapshot.aiBoard,
+      }
+    ]));
+  };
 
   const playCard = (card) => {
     if (phase !== 'player') return;
@@ -61,7 +76,12 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
     setAiHP(newAiHP);
     setPlayerHP(newPlayerHP);
     setComboCount(c => c + 1);
-    addLog(logMsg);
+    addLog(logMsg, turn, 'player', {
+      playerHP: newPlayerHP,
+      aiHP: newAiHP,
+      playerBoard: newPlayerBoard,
+      aiBoard,
+    });
     setPhase('ai');
 
     // Check win condition
@@ -101,7 +121,12 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
 
     setAiBoard(newAiBoard);
     setPlayerHP(newPlayerHP);
-    addLog(logMsg);
+    addLog(logMsg, turn, 'opponent', {
+      playerHP: newPlayerHP,
+      aiHP: currentAiHP,
+      playerBoard: currentPlayerBoard,
+      aiBoard: newAiBoard,
+    });
 
     const nextTurn = turn + 1;
     setTurn(nextTurn);
@@ -131,6 +156,10 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
       opponentFaction: opponentFaction || aiDeck[0]?.faction,
       playerBoardPower: pBoard,
       turnsPlayed: turn,
+      playerHP,
+      aiHP,
+      turnLog,
+      playerDeck: playerCards,
     }), 1200);
   };
 

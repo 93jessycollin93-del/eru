@@ -1,0 +1,169 @@
+{
+  "name": "CardBattleHistory",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "tournament",
+        "quick_match"
+      ],
+      "default": "tournament"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "win",
+        "loss"
+      ]
+    },
+    "opponent_name": {
+      "type": "string"
+    },
+    "opponent_faction": {
+      "type": "string"
+    },
+    "difficulty": {
+      "type": "number"
+    },
+    "round_number": {
+      "type": "number"
+    },
+    "turns_played": {
+      "type": "number"
+    },
+    "player_board_power": {
+      "type": "number"
+    },
+    "opponent_board_power": {
+      "type": "number"
+    },
+    "player_hp_end": {
+      "type": "number"
+    },
+    "opponent_hp_end": {
+      "type": "number"
+    },
+    "player_deck_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "power": {
+            "type": "number"
+          },
+          "guard": {
+            "type": "number"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "ability_value": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    },
+    "opponent_deck_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "power": {
+            "type": "number"
+          },
+          "guard": {
+            "type": "number"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "ability_value": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    },
+    "turn_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "turn": {
+            "type": "number"
+          },
+          "actor": {
+            "type": "string",
+            "enum": [
+              "player",
+              "opponent",
+              "system"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "player_hp": {
+            "type": "number"
+          },
+          "opponent_hp": {
+            "type": "number"
+          },
+          "player_board": {
+            "type": "number"
+          },
+          "opponent_board": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "mode",
+    "result",
+    "opponent_name",
+    "turn_log"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
