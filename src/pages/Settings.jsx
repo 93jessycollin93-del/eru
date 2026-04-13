@@ -106,6 +106,14 @@ export default function Settings() {
       </div>
 
       <div className="px-4 py-4">
+        <Link to="/user-settings" className="mb-4 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 hover:bg-primary/10 transition-colors">
+          <Shield className="w-4 h-4 text-primary" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">Open User Settings</p>
+            <p className="text-xs text-muted-foreground">Profile, alerts, language, and integrations in one place.</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </Link>
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 mb-4">
           <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-lg font-bold text-primary">T</div>
           <div>
