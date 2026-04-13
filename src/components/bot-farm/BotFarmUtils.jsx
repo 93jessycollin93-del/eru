@@ -210,3 +210,38 @@ export function computeMissionSimulation({ mission, selectedBots, squads, upgrad
     highlights,
   };
 }
+
+export function getBotFarmScalingSnapshot({ bots, squads, tasks }) {
+  const queueDepth = tasks.filter((task) => ['pending', 'assigned', 'active', 'blocked', 'review'].includes(task.status)).length;
+  const taskSquads = squads.filter((squad) => squad.role_type === 'task');
+  const idleTaskBots = bots.filter((bot) => getRoleBand(bot) === 'task' && bot.status === 'idle').length;
+  const strainedTaskSquads = taskSquads.filter((squad) => ['strained', 'active'].includes(squad.status) && (squad.current_load || 0) >= ((squad.capacity_limit || 100) * 0.7));
+  const lowPressureTaskSquads = taskSquads.filter((squad) => (squad.current_load || 0) <= ((squad.capacity_limit || 100) * 0.38));
+  const cohesionScore = taskSquads.length
+    ? Math.max(0, Math.min(100, Math.round(taskSquads.reduce((sum, squad) => sum + ((squad.coordination_quality || 0) - (squad.coordination_overhead || 0) * 0.45), 0) / taskSquads.length)))
+    : 0;
+  const scaleUpThreshold = 8;
+  const scaleDownThreshold = 3;
+  const canScaleUp = queueDepth >= scaleUpThreshold && idleTaskBots >= 2;
+  const canScaleDown = queueDepth <= scaleDownThreshold && lowPressureTaskSquads.length > 0;
+  const recommendation = canScaleUp ? 'Scale up' : canScaleDown ? 'Scale down' : 'Hold';
+  const scaleState = canScaleUp ? 'expand' : canScaleDown ? 'compress' : 'steady';
+
+  return {
+    queueDepth,
+    scaleState,
+    scaleUpThreshold,
+    scaleDownThreshold,
+    cohesionScore,
+    recommendation,
+    expandableSquads: strainedTaskSquads.length || taskSquads.length,
+    idleTaskBots,
+    canScaleUp,
+    canScaleDown,
+    notes: [
+      `Task-bot idle reserve is ${idleTaskBots}, which ${idleTaskBots >= 2 ? 'supports' : 'limits'} fast expansion.`,
+      `${strainedTaskSquads.length} task squads are under sustained queue pressure.`,
+      `${lowPressureTaskSquads.length} task squads are currently light enough to compress safely.`,
+    ]
+  };
+}

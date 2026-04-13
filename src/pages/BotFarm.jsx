@@ -13,7 +13,8 @@ import BotFarmMaintenancePanel from '../components/bot-farm/BotFarmMaintenancePa
 import BotFarmMissionPanel from '../components/bot-farm/BotFarmMissionPanel';
 import BotFarmMissionSimulatorPanel from '../components/bot-farm/BotFarmMissionSimulatorPanel';
 import BotFarmPredictiveAnalyticsPanel from '../components/bot-farm/BotFarmPredictiveAnalyticsPanel';
-import { buildRoleSummary, computeAssignmentQuality, computeBotFit, computeMissionSuccessProbability, computeOutputQuality, summarizeFarmMetrics } from '../components/bot-farm/BotFarmUtils';
+import BotFarmScalingControllerPanel from '../components/bot-farm/BotFarmScalingControllerPanel';
+import { buildRoleSummary, computeAssignmentQuality, computeBotFit, computeMissionSuccessProbability, computeOutputQuality, getBotFarmScalingSnapshot, summarizeFarmMetrics } from '../components/bot-farm/BotFarmUtils';
 import { DEMO_ACTIVITY, DEMO_BOTS, DEMO_MAINTENANCE, DEMO_MISSIONS, DEMO_OUTPUTS, DEMO_RISKS, DEMO_SQUADS, DEMO_TASKS, DEMO_UPGRADES } from '../components/bot-farm/BotFarmDemoData';
 
 export default function BotFarm() {
@@ -30,6 +31,7 @@ export default function BotFarm() {
   const [schemaReady, setSchemaReady] = useState(true);
   const [sortMode, setSortMode] = useState('priority');
   const [upgradingId, setUpgradingId] = useState(null);
+  const [scalingBusy, setScalingBusy] = useState(false);
 
   const applyLoadedData = useCallback((data) => {
     if (data.bots) setBots(data.bots);
@@ -168,6 +170,7 @@ export default function BotFarm() {
 
   const roleSummary = useMemo(() => buildRoleSummary(bots), [bots]);
   const metrics = useMemo(() => summarizeFarmMetrics(bots, tasks, missions, risks, outputs, squads, upgrades), [bots, tasks, missions, risks, outputs, squads, upgrades]);
+  const scalingSnapshot = useMemo(() => getBotFarmScalingSnapshot({ bots, squads, tasks }), [bots, squads, tasks]);
 
   const findSquadForBot = (bot) => squads.find((squad) => squad.id === bot.squad_id);
   const getUpgradeEffect = () => upgrades.reduce((sum, item) => sum + (item.effect_value || 0) * (item.level || 1), 0) / Math.max(1, upgrades.length || 1);
@@ -486,6 +489,99 @@ export default function BotFarm() {
     await refreshAfterMutation({ tasks: true, bots: true, missions: true, outputs: true, risks: true, history: true });
   };
 
+  const handleScaleUp = async () => {
+    if (scalingBusy || !scalingSnapshot.canScaleUp) return;
+    setScalingBusy(true);
+
+    const taskSquads = squads.filter((squad) => squad.role_type === 'task');
+    const candidateSquad = [...taskSquads].sort((a, b) => ((b.current_load || 0) / Math.max(1, b.capacity_limit || 100)) - ((a.current_load || 0) / Math.max(1, a.capacity_limit || 100)))[0];
+    const specialtyPool = new Set(candidateSquad?.specialization_focus || []);
+    const reserveBots = bots
+      .filter((bot) => bot.role_type === 'task' && bot.status === 'idle' && !bot.squad_id)
+      .filter((bot) => specialtyPool.size === 0 || specialtyPool.has(bot.specialty))
+      .slice(0, 3);
+
+    if (!candidateSquad || reserveBots.length === 0) {
+      setScalingBusy(false);
+      return;
+    }
+
+    await Promise.all([
+      ...reserveBots.map((bot) => base44.entities.BotFarmBot.update(bot.id, {
+        squad_id: candidateSquad.id,
+        farm_group: candidateSquad.farm_group,
+        status: 'assigned'
+      })),
+      base44.entities.BotFarmSquad.update(candidateSquad.id, {
+        member_bot_ids: [...new Set([...(candidateSquad.member_bot_ids || []), ...reserveBots.map((bot) => bot.id)])],
+        current_load: Math.max(0, (candidateSquad.current_load || 0) - reserveBots.length * 6),
+        capacity_limit: (candidateSquad.capacity_limit || 100) + reserveBots.length * 12,
+        coordination_quality: Math.max(68, Math.min(100, (candidateSquad.coordination_quality || 0) - 1 + reserveBots.length)),
+        status: 'active'
+      }),
+      base44.entities.BotFarmActivityHistory.create({
+        actor_type: 'farm',
+        actor_id: candidateSquad.id,
+        event_type: 'dynamic_scale_up',
+        summary: `${candidateSquad.name} absorbed ${reserveBots.length} reserve task bots to relieve queue pressure while keeping specialty cohesion intact.`,
+        impact_score: 10 + reserveBots.length * 2
+      })
+    ]);
+
+    await refreshAfterMutation({ bots: true, squads: true, history: true });
+    setScalingBusy(false);
+  };
+
+  const handleScaleDown = async () => {
+    if (scalingBusy || !scalingSnapshot.canScaleDown) return;
+    setScalingBusy(true);
+
+    const candidateSquad = squads
+      .filter((squad) => squad.role_type === 'task')
+      .filter((squad) => (squad.current_load || 0) <= ((squad.capacity_limit || 100) * 0.38))
+      .sort((a, b) => (a.current_load || 0) - (b.current_load || 0))[0];
+
+    if (!candidateSquad) {
+      setScalingBusy(false);
+      return;
+    }
+
+    const releasableBots = bots
+      .filter((bot) => bot.squad_id === candidateSquad.id && bot.role_type === 'task' && bot.status === 'idle')
+      .slice(0, 2);
+
+    if (releasableBots.length === 0) {
+      setScalingBusy(false);
+      return;
+    }
+
+    await Promise.all([
+      ...releasableBots.map((bot) => base44.entities.BotFarmBot.update(bot.id, {
+        squad_id: null,
+        assigned_task_id: null,
+        assigned_task_name: null,
+        status: 'idle'
+      })),
+      base44.entities.BotFarmSquad.update(candidateSquad.id, {
+        member_bot_ids: (candidateSquad.member_bot_ids || []).filter((id) => !releasableBots.some((bot) => bot.id === id)),
+        capacity_limit: Math.max(60, (candidateSquad.capacity_limit || 100) - releasableBots.length * 12),
+        coordination_quality: Math.min(100, (candidateSquad.coordination_quality || 0) + 2),
+        current_load: Math.max(0, (candidateSquad.current_load || 0) - releasableBots.length * 4),
+        status: 'idle'
+      }),
+      base44.entities.BotFarmActivityHistory.create({
+        actor_type: 'farm',
+        actor_id: candidateSquad.id,
+        event_type: 'dynamic_scale_down',
+        summary: `${candidateSquad.name} released ${releasableBots.length} idle task bots back to reserve as queue pressure normalized.`,
+        impact_score: 6
+      })
+    ]);
+
+    await refreshAfterMutation({ bots: true, squads: true, history: true });
+    setScalingBusy(false);
+  };
+
   return (
     <div className="min-h-screen bg-background px-4 py-4 md:px-6 md:py-6 pb-24">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -504,6 +600,13 @@ export default function BotFarm() {
               <BotFarmControlPanel roleSummary={roleSummary} metrics={metrics} onRunCycle={runOperationalCycle} />
               <BotFarmUpgradePanel upgrades={upgrades} onUpgrade={handleUpgrade} upgradingId={upgradingId} />
             </div>
+
+            <BotFarmScalingControllerPanel
+              scaling={scalingSnapshot}
+              onScaleUp={handleScaleUp}
+              onScaleDown={handleScaleDown}
+              busy={scalingBusy}
+            />
 
             <div className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr]">
               <BotFarmQueuePanel tasks={tasks} sortMode={sortMode} setSortMode={setSortMode} onAssignTask={assignTaskToBot} />
