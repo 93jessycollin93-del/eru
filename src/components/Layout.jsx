@@ -81,7 +81,7 @@ export default function Layout() {
   return (
     <>
       {/* Full-screen background — fixed, covers entire viewport */}
-      <div className="fixed inset-0" style={{ zIndex: 0, background: 'var(--app-bg, hsl(var(--background)))', ...globalThemeStyles }} />
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: 'var(--app-bg, hsl(var(--background)))', ...globalThemeStyles }} />
       <AnimatedBackground type={bg} opacity={bgOpacity} />
 
       {/* App shell — transparent so background shows through */}

@@ -57,6 +57,7 @@ export default function ThemeEnginePanel() {
   const helperLabel = form.scope_type === 'page' ? `Applies to ${location.pathname}` : 'Applies across the entire app';
 
   const saveTheme = async () => {
+    if (!base44?.entities?.CustomThemeSetting) return;
     setSaving(true);
     const payload = toPayload(form, location.pathname);
     const existing = (customThemes || []).find((item) => item.scope_type === payload.scope_type && (item.scope_key || '') === (payload.scope_key || ''));

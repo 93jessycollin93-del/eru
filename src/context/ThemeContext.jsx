@@ -203,8 +203,12 @@ export function ThemeProvider({ children }) {
   }, [colorMode, primaryHue, bgHue, cardHue, borderHue, primarySat, primaryLight]);
 
   const reloadCustomThemes = useCallback(async () => {
+    if (!base44?.entities?.CustomThemeSetting?.list) {
+      setCustomThemes([]);
+      return;
+    }
     const rows = await base44.entities.CustomThemeSetting.list('-updated_date', 200).catch(() => []);
-    setCustomThemes(rows.filter((item) => item.is_active !== false));
+    setCustomThemes(Array.isArray(rows) ? rows.filter((item) => item?.is_active !== false) : []);
   }, []);
 
   useEffect(() => {
@@ -272,12 +276,13 @@ export function ThemeProvider({ children }) {
   };
 
   const pageThemeMap = customThemes
-    .filter((item) => item.scope_type === 'page')
+    .filter((item) => item.scope_type === 'page' && item.scope_key)
     .reduce((acc, item) => {
       acc[item.scope_key] = {
-        ...item.variables,
+        ...(item.variables || {}),
         ...(item.background_type === 'solid' && item.background_value ? { background: item.background_value } : {}),
-        ...(item.background_type === 'gradient' && item.background_value ? { backgroundImage: item.background_value } : {}),
+        ...(item.background_type === 'gradient' && item.background_value ? { backgroundImage: item.background_value, backgroundSize: 'cover', backgroundRepeat: 'no-repeat' } : {}),
+        ...(item.background_type === 'image' && item.background_value ? { backgroundImage: `url(${item.background_value})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}),
       };
       return acc;
     }, {});

@@ -3,7 +3,7 @@ import { useTheme } from '@/context/ThemeContext';
 
 export default function PageThemeLayer({ children }) {
   const location = useLocation();
-  const { pageThemeStyles, pageThemeMap } = useTheme();
+  const { pageThemeMap } = useTheme();
   const scopedStyles = pageThemeMap?.[location.pathname] || {};
 
   return (
@@ -11,8 +11,7 @@ export default function PageThemeLayer({ children }) {
       data-theme-page={location.pathname}
       className="min-h-full min-w-0"
       style={{
-        background: 'var(--page-bg)',
-        ...pageThemeStyles,
+        background: 'var(--page-bg, transparent)',
         ...scopedStyles,
       }}
     >
