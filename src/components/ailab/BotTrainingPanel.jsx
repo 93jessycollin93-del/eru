@@ -47,6 +47,18 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     });
     const rows = await base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 20);
     setGoldens(rows);
+    await base44.functions.invoke('syncTrainingToSquadMemory', {
+      data: {
+        bot_id: selectedBot.id,
+        bot_name: selectedBot.name,
+        test_title: form.title,
+        input: form.input,
+        expected_output: form.expected_output,
+        actual_output: form.expected_output,
+        passed: true,
+        similarity_score: 1
+      }
+    }).catch(() => null);
     setForm(EMPTY_GOLDEN);
   };
 
@@ -106,6 +118,18 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
 
     if (records.length > 0) {
       await base44.entities.BotTestCase.bulkCreate(records);
+      await Promise.all(records.slice(0, 20).map((record) => base44.entities.BotMemory.create({
+        bot_id: selectedBot.id,
+        user_email: selectedBot.created_by,
+        role: 'system',
+        content: `Imported golden training case: ${record.title}\nInput: ${record.input}\nExpected: ${record.expected_output}`,
+        session_id: `training_${selectedBot.id}`,
+        memory_category: 'strategy',
+        importance_score: 84,
+        retrieval_tags: ['training', 'imported-golden'],
+        source_type: 'imported',
+        is_pinned: true
+      })));
       const rows = await base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 100);
       setGoldens(rows);
     }
@@ -128,6 +152,18 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
       user_email: selectedBot.created_by,
     });
     await base44.entities.UserBot.update(selectedBot.id, { instructions: candidateInstructions });
+    await base44.entities.BotMemory.create({
+      bot_id: selectedBot.id,
+      user_email: selectedBot.created_by,
+      role: 'system',
+      content: `Published upgraded instructions for ${selectedBot.name}.\nCandidate instruction snapshot:\n${candidateInstructions.slice(0, 1200)}`,
+      session_id: `training_${selectedBot.id}`,
+      memory_category: 'strategy',
+      importance_score: 92,
+      retrieval_tags: ['publish', 'instruction-upgrade', 'training'],
+      source_type: 'training',
+      is_pinned: true
+    });
     await runRegressionSuite({ bot: { ...selectedBot, instructions: candidateInstructions }, instructions: candidateInstructions, globalPolicy });
     setPublishing(false);
     onBotsUpdated?.();

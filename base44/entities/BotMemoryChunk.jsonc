@@ -49,6 +49,44 @@
     "is_active": {
       "type": "boolean",
       "default": true
+    },
+    "retrieval_score": {
+      "type": "number",
+      "default": 50
+    },
+    "memory_category": {
+      "type": "string",
+      "enum": [
+        "conversation",
+        "preference",
+        "fact",
+        "task",
+        "strategy",
+        "system"
+      ],
+      "default": "conversation"
+    },
+    "source_memory_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "compression_ratio": {
+      "type": "number",
+      "default": 1
+    },
+    "last_accessed_at": {
+      "type": "string"
+    },
+    "access_count": {
+      "type": "number",
+      "default": 0
+    },
+    "quality_score": {
+      "type": "number",
+      "default": 70
     }
   },
   "required": [

@@ -47,6 +47,42 @@
     },
     "last_retrained_at": {
       "type": "string"
+    },
+    "memory_health_score": {
+      "type": "number",
+      "default": 70
+    },
+    "hot_memory_count": {
+      "type": "number",
+      "default": 0
+    },
+    "archived_chunk_count": {
+      "type": "number",
+      "default": 0
+    },
+    "top_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "preferred_response_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "retrieval_strategy": {
+      "type": "string",
+      "enum": [
+        "balanced",
+        "recent_first",
+        "importance_first",
+        "archive_heavy"
+      ],
+      "default": "balanced"
     }
   },
   "required": [

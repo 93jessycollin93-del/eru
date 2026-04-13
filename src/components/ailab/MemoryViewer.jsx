@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Brain, Trash2, User, Bot } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Brain, Trash2, User, Bot, Search, Pin, Gauge } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 export default function MemoryViewer({ bots }) {
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBot, setSelectedBot] = useState('all');
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -22,7 +23,13 @@ export default function MemoryViewer({ bots }) {
     load();
   };
 
-  const filtered = selectedBot === 'all' ? memories : memories.filter(m => m.bot_id === selectedBot);
+  const filtered = useMemo(() => {
+    return memories.filter((m) => {
+      const botMatch = selectedBot === 'all' || m.bot_id === selectedBot;
+      const text = [m.content, ...(m.retrieval_tags || []), m.memory_category].filter(Boolean).join(' ').toLowerCase();
+      return botMatch && text.includes(search.toLowerCase());
+    });
+  }, [memories, selectedBot, search]);
 
   // Group by session
   const sessions = {};
@@ -55,6 +62,16 @@ export default function MemoryViewer({ bots }) {
           <p className="text-lg font-bold text-primary">{bots?.length || 0}</p>
           <p className="text-[9px] text-muted-foreground">Bots</p>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+        <Search className="w-4 h-4 text-muted-foreground" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search memory content, tags, or categories..."
+          className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+        />
       </div>
 
       {/* Bot filter */}
@@ -91,6 +108,11 @@ export default function MemoryViewer({ bots }) {
                   <div>
                     <p className="text-xs font-semibold">{getBotName(botId)}</p>
                     <p className="text-[9px] text-muted-foreground">{msgs.length} messages · {new Date(msgs[0]?.created_date).toLocaleDateString()}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {[...new Set(msgs.flatMap((m) => m.retrieval_tags || []))].slice(0, 4).map((tag) => (
+                        <span key={tag} className="rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[8px] text-primary">{tag}</span>
+                      ))}
+                    </div>
                   </div>
                   <button onClick={() => clearMemory(botId)}
                     className="p-1.5 rounded-lg text-red-400 hover:bg-red-400/10 transition-all">
@@ -104,9 +126,16 @@ export default function MemoryViewer({ bots }) {
                         <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${m.role === 'user' ? 'bg-primary/20' : 'bg-secondary'}`}>
                           {m.role === 'user' ? <User className="w-2.5 h-2.5 text-primary" /> : <Bot className="w-2.5 h-2.5 text-muted-foreground" />}
                         </div>
-                        <p className={`leading-relaxed rounded-xl px-2 py-1 ${m.role === 'user' ? 'bg-primary/10 text-primary' : 'bg-secondary text-foreground'}`}>
-                          {m.content.slice(0, 120)}{m.content.length > 120 ? '…' : ''}
-                        </p>
+                        <div>
+                          <p className={`leading-relaxed rounded-xl px-2 py-1 ${m.role === 'user' ? 'bg-primary/10 text-primary' : 'bg-secondary text-foreground'}`}>
+                            {m.content.slice(0, 120)}{m.content.length > 120 ? '…' : ''}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1 text-[8px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1"><Gauge className="w-2.5 h-2.5" />{m.importance_score || 50}</span>
+                            <span>{m.memory_category || 'conversation'}</span>
+                            {m.is_pinned && <span className="inline-flex items-center gap-1 text-primary"><Pin className="w-2.5 h-2.5" />Pinned</span>}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}

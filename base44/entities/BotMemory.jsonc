@@ -21,6 +21,54 @@
     },
     "session_id": {
       "type": "string"
+    },
+    "memory_category": {
+      "type": "string",
+      "enum": [
+        "conversation",
+        "preference",
+        "fact",
+        "task",
+        "strategy",
+        "system"
+      ],
+      "default": "conversation"
+    },
+    "importance_score": {
+      "type": "number",
+      "default": 50
+    },
+    "retrieval_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "chat",
+        "training",
+        "automation",
+        "manual",
+        "imported"
+      ],
+      "default": "chat"
+    },
+    "last_accessed_at": {
+      "type": "string"
+    },
+    "access_count": {
+      "type": "number",
+      "default": 0
+    },
+    "is_pinned": {
+      "type": "boolean",
+      "default": false
+    },
+    "superseded_by_chunk_id": {
+      "type": "string"
     }
   },
   "required": [

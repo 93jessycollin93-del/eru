@@ -1,4 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+/* global Deno */
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const chunkMessages = (messages, size) => {
   const chunks = [];
@@ -9,13 +10,22 @@ const chunkMessages = (messages, size) => {
 };
 
 const extractKeywords = (text) => {
-  const words = text
+  const words = String(text || '')
     .toLowerCase()
     .replace(/[^a-z0-9+#.\s/-]/g, ' ')
     .split(/\s+/)
     .filter(Boolean)
     .filter((word) => word.length > 3);
   return [...new Set(words)].slice(0, 20);
+};
+
+const scoreImportance = (memory) => {
+  const content = String(memory?.content || '');
+  let score = Number(memory?.importance_score || 50);
+  if (memory?.is_pinned) score += 25;
+  if (memory?.memory_category === 'fact' || memory?.memory_category === 'strategy') score += 15;
+  if (content.length > 280) score += 10;
+  return Math.max(0, Math.min(100, score));
 };
 
 Deno.serve(async (req) => {
@@ -47,6 +57,7 @@ Deno.serve(async (req) => {
 
     const groupedChunks = chunkMessages(targetMemories, chunkSize);
     const createdChunks = [];
+    const chunkIdMap = new Map();
 
     for (let index = 0; index < groupedChunks.length; index += 1) {
       const chunk = groupedChunks[index];
@@ -60,6 +71,8 @@ Deno.serve(async (req) => {
       });
 
       const summary = fullText.length > 500 ? `${fullText.slice(0, 500)}...` : fullText;
+      const avgImportance = Math.round(chunk.reduce((sum, item) => sum + scoreImportance(item), 0) / chunk.length);
+      const combinedCategories = [...new Set(chunk.map((item) => item.memory_category || 'conversation'))];
       const created = await base44.asServiceRole.entities.BotMemoryChunk.create({
         bot_id: botId,
         user_email: user.email,
@@ -72,11 +85,25 @@ Deno.serve(async (req) => {
         archive_signed_url: signed.signed_url,
         storage_tier: chunk.length >= chunkSize ? 'cold' : 'warm',
         last_message_at: chunk[chunk.length - 1]?.created_date || new Date().toISOString(),
-        is_active: true
+        is_active: true,
+        retrieval_score: avgImportance,
+        memory_category: combinedCategories.includes('strategy') ? 'strategy' : combinedCategories[0] || 'conversation',
+        source_memory_ids: chunk.map((item) => item.id),
+        compression_ratio: Number((Math.max(fullText.length, 1) / Math.max(summary.length, 1)).toFixed(2)),
+        quality_score: Math.max(60, avgImportance)
       });
 
       createdChunks.push(created);
+      chunk.forEach((item) => chunkIdMap.set(item.id, created.id));
     }
+
+    await Promise.all(targetMemories.map((memory) =>
+      base44.entities.BotMemory.update(memory.id, {
+        superseded_by_chunk_id: chunkIdMap.get(memory.id) || null,
+        access_count: Number(memory.access_count || 0),
+        last_accessed_at: memory.last_accessed_at || memory.updated_date || memory.created_date
+      })
+    ));
 
     return Response.json({ success: true, archived: targetMemories.length, chunks: createdChunks });
   } catch (error) {
