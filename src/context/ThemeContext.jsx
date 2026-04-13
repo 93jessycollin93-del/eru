@@ -309,7 +309,7 @@ export function ThemeProvider({ children }) {
     // low power
     lowPowerMode, setLowPowerMode: setter('lowPowerMode', setLowPower),
     // lock system
-    lockedSettings, setLockedSettings: setLocked,
+    lockedSettings, setLockedSettings: setter('lockedSettings', setLocked),
     isLocked,
     // utils
     resetAll,

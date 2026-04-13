@@ -515,6 +515,7 @@ export default function VisualEngine() {
           <span className="ml-auto text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">SYSTEM LAYER</span>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">Themes, backgrounds & animation control</p>
+        <p className="text-[10px] text-muted-foreground/80 mt-1">Changes are saved automatically on this device.</p>
       </div>
 
       {/* Tab bar */}
