@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
+import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
-import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter } from 'lucide-react';
+import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter, Repeat, Send, Handshake } from 'lucide-react';
 
 const LISTING_FEE_PCT = 0.05; // 5% listing fee
 
@@ -11,14 +12,22 @@ export default function Marketplace({ gold, onGoldChange }) {
   const [listings, setListings] = useState([]);
   const [myCards, setMyCards] = useState([]);
   const [myListings, setMyListings] = useState([]);
+  const [tradeProposals, setTradeProposals] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('browse'); // browse | my_listings | sell
+  const [tab, setTab] = useState('browse'); // browse | my_listings | sell | trade
   const [filterRarity, setFilterRarity] = useState('all');
   const [filterElement, setFilterElement] = useState('all');
   const [selectedCard, setSelectedCard] = useState(null);
+  const [tradeTargetCard, setTradeTargetCard] = useState(null);
+  const [tradeRecipient, setTradeRecipient] = useState('');
+  const [tradeType, setTradeType] = useState('swap');
+  const [tradePrice, setTradePrice] = useState('');
+  const [tradeMessage, setTradeMessage] = useState('');
   const [listPrice, setListPrice] = useState('');
   const [posting, setPosting] = useState(false);
   const [buying, setBuying] = useState(null);
+  const [proposalActionId, setProposalActionId] = useState(null);
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
 
@@ -34,15 +43,18 @@ export default function Marketplace({ gold, onGoldChange }) {
 
   const loadAll = async () => {
     setLoading(true);
-    const [all, mine, cards] = await Promise.all([
+    const me = await base44.auth.me().catch(() => null);
+    const [all, cards, proposals, userRows] = await Promise.all([
       base44.entities.CardListing.filter({ status: 'active' }, '-created_date', 50),
-      base44.entities.CardListing.list('-created_date', 30),
       base44.entities.Card.list('-created_date', 100),
+      base44.entities.CardTradeProposal.list('-created_date', 100).catch(() => []),
+      base44.entities.User.list().catch(() => []),
     ]);
-    const me = (await base44.auth.me().catch(() => null))?.email;
-    setListings(all.filter(l => l.seller_email !== me));
-    setMyListings(all.filter(l => l.seller_email === me));
+    setListings(all.filter(l => l.seller_email !== me?.email));
+    setMyListings(all.filter(l => l.seller_email === me?.email));
     setMyCards(cards);
+    setTradeProposals(proposals);
+    setUsers(userRows.filter((row) => row.email !== me?.email));
     setLoading(false);
   };
 
@@ -76,12 +88,13 @@ export default function Marketplace({ gold, onGoldChange }) {
   const buyCard = async (listing) => {
     if (gold < listing.price_gold) { showToast('Not enough gold!', 'error'); return; }
     setBuying(listing.id);
-    // Save card to buyer's collection
-    await base44.entities.Card.create({ ...listing.card_data, id: undefined, quantity: 1 });
-    // Mark listing sold
+    const me = await base44.auth.me();
+    const escrow = await initiateEscrow(listing.id, listing.seller_email, me.email, listing.card_entity_id, 'card', listing.price_gold, 'GOLD');
+    await holdFundsInEscrow(escrow.id, me.email, listing.price_gold);
+    await confirmAndTransferAsset(escrow.id, { ...escrow, asset_type: 'card', price: listing.price_gold, buyer_email: me.email, listing_id: listing.id });
     await base44.entities.CardListing.update(listing.id, { status: 'sold' });
     onGoldChange(gold - listing.price_gold);
-    showToast(`Bought ${listing.card_name} for ${listing.price_gold}g!`);
+    showToast(`Bought ${listing.card_name} for ${listing.price_gold}g through escrow!`);
     setBuying(null);
     await loadAll();
   };
@@ -89,6 +102,78 @@ export default function Marketplace({ gold, onGoldChange }) {
   const cancelListing = async (listing) => {
     await base44.entities.CardListing.update(listing.id, { status: 'cancelled' });
     showToast('Listing cancelled');
+    await loadAll();
+  };
+
+  const submitTradeProposal = async () => {
+    if (!selectedCard || !tradeRecipient) return;
+    if (tradeType === 'swap' && !tradeTargetCard) {
+      showToast('Choose a requested card for the swap', 'error');
+      return;
+    }
+    if (tradeType === 'sale' && (!tradePrice || parseInt(tradePrice) < 1)) {
+      showToast('Enter a valid sale price', 'error');
+      return;
+    }
+
+    await base44.entities.CardTradeProposal.create({
+      proposer_email: user.email,
+      recipient_email: tradeRecipient,
+      proposal_type: tradeType,
+      offered_card_id: selectedCard.id,
+      offered_card_snapshot: selectedCard,
+      requested_card_id: tradeTargetCard?.id,
+      requested_card_snapshot: tradeTargetCard || undefined,
+      sale_price_gold: tradeType === 'sale' ? parseInt(tradePrice) : undefined,
+      message: tradeMessage,
+      status: 'pending'
+    });
+
+    showToast(tradeType === 'swap' ? 'Swap proposal sent' : 'Direct sale offer sent');
+    setSelectedCard(null);
+    setTradeTargetCard(null);
+    setTradeRecipient('');
+    setTradeType('swap');
+    setTradePrice('');
+    setTradeMessage('');
+    await loadAll();
+  };
+
+  const acceptProposal = async (proposal) => {
+    setProposalActionId(proposal.id);
+    if (proposal.proposal_type === 'sale') {
+      if (gold < proposal.sale_price_gold) {
+        showToast('Not enough gold for this direct offer', 'error');
+        setProposalActionId(null);
+        return;
+      }
+      const escrow = await initiateEscrow(proposal.id, proposal.proposer_email, user.email, proposal.offered_card_id, 'card', proposal.sale_price_gold, 'GOLD');
+      await holdFundsInEscrow(escrow.id, user.email, proposal.sale_price_gold);
+      await confirmAndTransferAsset(escrow.id, { ...escrow, asset_type: 'card', price: proposal.sale_price_gold, buyer_email: user.email, listing_id: proposal.id });
+      await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed', escrow_id: escrow.id, escrow_status: 'completed' });
+      onGoldChange(gold - proposal.sale_price_gold);
+      showToast('Direct purchase completed through escrow');
+    } else {
+      const myRequestedCard = myCards.find((card) => card.id === proposal.requested_card_id);
+      if (!myRequestedCard) {
+        showToast('Requested card is no longer in your collection', 'error');
+        setProposalActionId(null);
+        return;
+      }
+      await base44.entities.Card.create({ ...proposal.offered_card_snapshot, id: undefined, quantity: 1 });
+      await base44.entities.Card.create({ ...myRequestedCard, id: undefined, quantity: 1 });
+      await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed' });
+      showToast('Swap completed');
+    }
+    setProposalActionId(null);
+    await loadAll();
+  };
+
+  const declineProposal = async (proposal) => {
+    setProposalActionId(proposal.id);
+    await base44.entities.CardTradeProposal.update(proposal.id, { status: 'declined' });
+    setProposalActionId(null);
+    showToast('Trade proposal declined');
     await loadAll();
   };
 
@@ -120,6 +205,7 @@ export default function Marketplace({ gold, onGoldChange }) {
         {[
           { id: 'browse',      label: 'Browse' },
           { id: 'sell',        label: 'Sell Card' },
+          { id: 'trade',       label: 'Trade' },
           { id: 'my_listings', label: 'My Listings' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -264,6 +350,105 @@ export default function Marketplace({ gold, onGoldChange }) {
                   </button>
                 </motion.div>
               )}
+            </div>
+          )}
+
+          {/* TRADE */}
+          {tab === 'trade' && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+                Direct trades let players offer a card swap or a private card sale, with gold deals finalized through escrow for safety.
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-semibold">Create proposal</p>
+                  </div>
+
+                  <select value={tradeRecipient} onChange={(e) => setTradeRecipient(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none">
+                    <option value="">Choose player</option>
+                    {users.map((row) => (
+                      <option key={row.id} value={row.email}>{row.full_name || row.email}</option>
+                    ))}
+                  </select>
+
+                  <div className="flex gap-2">
+                    <button onClick={() => setTradeType('swap')} className={`flex-1 rounded-xl px-3 py-2 text-xs font-semibold ${tradeType === 'swap' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+                      <Repeat className="w-3.5 h-3.5 inline mr-1" />Swap
+                    </button>
+                    <button onClick={() => setTradeType('sale')} className={`flex-1 rounded-xl px-3 py-2 text-xs font-semibold ${tradeType === 'sale' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+                      <Coins className="w-3.5 h-3.5 inline mr-1" />Sale
+                    </button>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold mb-2">Your offered card</p>
+                    <div className="flex flex-wrap gap-2">
+                      {myCards.map(card => (
+                        <CardDisplay key={card.id} card={card} size="sm" selected={selectedCard?.id === card.id} onClick={c => setSelectedCard(prev => prev?.id === c.id ? null : c)} />
+                      ))}
+                    </div>
+                  </div>
+
+                  {tradeType === 'swap' && (
+                    <div>
+                      <p className="text-xs font-semibold mb-2">Requested card from marketplace view</p>
+                      <div className="flex flex-wrap gap-2">
+                        {listings.slice(0, 8).map((listing) => (
+                          <CardDisplay key={listing.id} card={listing.card_data} size="sm" selected={tradeTargetCard?.id === listing.card_data?.id} onClick={() => setTradeTargetCard(listing.card_data)} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {tradeType === 'sale' && (
+                    <input value={tradePrice} onChange={(e) => setTradePrice(e.target.value)} type="number" min="1" placeholder="Private sale price in gold" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none" />
+                  )}
+
+                  <textarea value={tradeMessage} onChange={(e) => setTradeMessage(e.target.value)} placeholder="Optional note for the other player" className="w-full min-h-[90px] bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none resize-none" />
+
+                  <button onClick={submitTradeProposal} className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Send Proposal</button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Handshake className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-semibold">Incoming & outgoing</p>
+                  </div>
+                  <div className="space-y-2">
+                    {tradeProposals.length === 0 ? (
+                      <div className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">No trade proposals yet.</div>
+                    ) : tradeProposals.map((proposal) => {
+                      const isRecipient = proposal.recipient_email === user?.email;
+                      return (
+                        <div key={proposal.id} className="rounded-xl border border-border bg-card p-3 space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">{proposal.proposal_type === 'swap' ? 'Card Swap' : 'Direct Sale'}</p>
+                              <p className="text-[10px] text-muted-foreground">{isRecipient ? `From ${proposal.proposer_email}` : `To ${proposal.recipient_email}`}</p>
+                            </div>
+                            <span className="rounded-full bg-secondary px-2 py-1 text-[10px] uppercase text-muted-foreground">{proposal.status}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {proposal.offered_card_snapshot && <CardDisplay card={proposal.offered_card_snapshot} size="sm" />}
+                            {proposal.proposal_type === 'swap' && proposal.requested_card_snapshot && <CardDisplay card={proposal.requested_card_snapshot} size="sm" />}
+                          </div>
+                          {proposal.message && <p className="text-xs text-muted-foreground">“{proposal.message}”</p>}
+                          {proposal.proposal_type === 'sale' && <p className="text-xs font-semibold text-yellow-400">Price: {proposal.sale_price_gold}g</p>}
+                          {isRecipient && proposal.status === 'pending' && (
+                            <div className="flex gap-2">
+                              <button onClick={() => acceptProposal(proposal)} disabled={proposalActionId === proposal.id} className="flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40">Accept</button>
+                              <button onClick={() => declineProposal(proposal)} disabled={proposalActionId === proposal.id} className="flex-1 rounded-xl bg-secondary px-3 py-2 text-xs font-semibold">Decline</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

@@ -121,7 +121,7 @@ export const awardXP = async (amount, reason, metadata = {}) => {
 export const initiateEscrow = async (listingId, sellerEmail, buyerEmail, assetId, assetType, price, currency = 'GOLD') => {
   try {
     const escrow = await base44.entities.Escrow.create({
-      listing_id: listingId,
+      listing_id: listingId || 'direct_trade',
       seller_email: sellerEmail,
       buyer_email: buyerEmail,
       asset_type: assetType,

@@ -1,0 +1,111 @@
+{
+  "name": "CardTradeProposal",
+  "type": "object",
+  "properties": {
+    "proposer_email": {
+      "type": "string"
+    },
+    "recipient_email": {
+      "type": "string"
+    },
+    "proposal_type": {
+      "type": "string",
+      "enum": [
+        "swap",
+        "sale"
+      ],
+      "default": "swap"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "declined",
+        "cancelled",
+        "completed"
+      ],
+      "default": "pending"
+    },
+    "offered_card_id": {
+      "type": "string"
+    },
+    "offered_card_snapshot": {
+      "type": "object"
+    },
+    "requested_card_id": {
+      "type": "string"
+    },
+    "requested_card_snapshot": {
+      "type": "object"
+    },
+    "sale_price_gold": {
+      "type": "number"
+    },
+    "message": {
+      "type": "string"
+    },
+    "escrow_id": {
+      "type": "string"
+    },
+    "escrow_status": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "proposer_email",
+    "recipient_email",
+    "proposal_type",
+    "offered_card_id"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "proposer_email": "{{user.email}}"
+        },
+        {
+          "recipient_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "proposer_email": "{{user.email}}"
+        },
+        {
+          "recipient_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "proposer_email": "{{user.email}}"
+        },
+        {
+          "recipient_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
