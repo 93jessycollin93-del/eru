@@ -116,7 +116,7 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
           </div>
         )}
         <div className="flex gap-2 flex-wrap">
-          <button onClick={runManualTest} disabled={!selectedBot || !manualPrompt.trim() || manualLoading} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40">
+          <button onClick={runManualTest} disabled={!selectedBot || ((!manualPrompt.trim() && manualFiles.length === 0) || manualLoading)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40">
             <Play className="w-3.5 h-3.5" /> {manualLoading ? 'Testing...' : 'Run manual test'}
           </button>
           <Link to="/jackie" className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs text-muted-foreground">

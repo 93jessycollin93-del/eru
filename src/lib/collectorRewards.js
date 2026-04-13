@@ -104,7 +104,7 @@ function daysBetween(previousDateKey, currentDateKey) {
 export async function syncCollectorRewardProfile(userEmail) {
   if (!userEmail) return null;
 
-  const rewardEntity = base44.entities['CollectorRewardProfile'];
+  const rewardEntity = base44.entities?.CollectorRewardProfile;
   if (!rewardEntity) {
     return {
       user_email: userEmail,

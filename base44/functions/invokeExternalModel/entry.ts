@@ -1,7 +1,11 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-async function callOpenAI(prompt, model) {
+async function callOpenAI(prompt, model, fileUrls = []) {
   const safeModel = !model || model === 'automatic' || model === 'gpt-5-mini' ? 'gpt-4o-mini' : model;
+  const content = [{ type: 'text', text: prompt }];
+  for (const url of fileUrls) {
+    content.push({ type: 'image_url', image_url: { url } });
+  }
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -10,7 +14,7 @@ async function callOpenAI(prompt, model) {
     },
     body: JSON.stringify({
       model: safeModel,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content }],
     }),
   });
   const data = await response.json();
@@ -65,6 +69,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const provider = body.provider || 'base44';
     const model = body.model || 'automatic';
+    const fileUrls = Array.isArray(body.file_urls) ? body.file_urls : [];
     let prompt = body.prompt || '';
 
     if (body.botId && body.dataRequest) {
@@ -78,7 +83,7 @@ Deno.serve(async (req) => {
     };
 
     if (provider === 'openai') {
-      const output = await callOpenAI(prompt, model);
+      const output = await callOpenAI(prompt, model, fileUrls);
       return Response.json({ output });
     }
 
@@ -100,7 +105,7 @@ Deno.serve(async (req) => {
     }
 
     const safeModel = !model || model === 'automatic' ? undefined : model;
-    const output = await base44.integrations.Core.InvokeLLM({ prompt, model: safeModel });
+    const output = await base44.integrations.Core.InvokeLLM({ prompt, model: safeModel, file_urls: fileUrls });
     return Response.json({ output });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
