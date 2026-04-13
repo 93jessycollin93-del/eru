@@ -209,7 +209,7 @@ function BackgroundsTab() {
 
   return (
     <div className="space-y-4">
-      <SectionHeader icon={Layers} label="Animated Environments" sub="Canvas-rendered visual atmospheres" />
+      <SectionHeader icon={Layers} label="Animated Environments" sub="Choose the background effect layer; edit color layers in Themes" />
 
       <div className="flex items-center justify-between px-3 py-2 bg-secondary rounded-xl border border-border">
         <div className="flex items-center gap-2">
@@ -254,7 +254,11 @@ function BackgroundsTab() {
       </div>
 
       <div className="space-y-3 p-3 bg-card rounded-xl border border-border">
-        <SliderRow label="Opacity" value={bgOpacity} min={0} max={1} step={0.05} onChange={setBgOpacity} />
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Background Layers</p>
+          <p className="text-xs text-muted-foreground">Adjust the app atmosphere here. Surface layer colors live in the Themes tab.</p>
+        </div>
+        <SliderRow label="Background Opacity" value={bgOpacity} min={0} max={1} step={0.05} onChange={setBgOpacity} />
         <SliderRow label="Particle Density" value={particleDensity} min={0.1} max={2} step={0.1} onChange={setParticleDensity} />
       </div>
     </div>
