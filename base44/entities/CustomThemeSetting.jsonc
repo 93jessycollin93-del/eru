@@ -1,0 +1,68 @@
+{
+  "name": "CustomThemeSetting",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "scope_type": {
+      "type": "string",
+      "enum": [
+        "global",
+        "page",
+        "component"
+      ]
+    },
+    "scope_key": {
+      "type": "string"
+    },
+    "theme_mode": {
+      "type": "string",
+      "enum": [
+        "dark",
+        "light",
+        "inherit"
+      ],
+      "default": "inherit"
+    },
+    "background_type": {
+      "type": "string",
+      "enum": [
+        "inherit",
+        "solid",
+        "gradient",
+        "image"
+      ],
+      "default": "inherit"
+    },
+    "background_value": {
+      "type": "string"
+    },
+    "variables": {
+      "type": "object",
+      "description": "CSS variable overrides for visual layers"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "scope_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

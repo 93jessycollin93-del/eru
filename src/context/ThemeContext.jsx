@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { base44 } from '@/api/base44Client';
+import { applyRootVariables, mergeThemeSettings } from '@/lib/themeEngine';
 
 // ─── BACKGROUND ENVIRONMENTS ─────────────────────────────────────────────────
 export const BG_ENVS = {
@@ -151,6 +153,8 @@ export function ThemeProvider({ children }) {
   const [borderHue,      setBorderHue]   = useState(() => load('borderHue'));
   const [primarySat,     setPrimarySat]  = useState(() => load('primarySat'));
   const [primaryLight,   setPrimaryLight]= useState(() => load('primaryLight'));
+  const [customThemes,   setCustomThemes]= useState([]);
+  const [themeLayers,    setThemeLayers] = useState({ variables: {}, globalBackground: {}, pageBackground: {} });
 
   // Setters that check lock
   const isLocked = (key) => lockedSettings.includes(key);
@@ -197,6 +201,22 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--sidebar-accent-foreground', isLight ? `${bgHue} 20% 12%` : `220 20% 92%`);
     root.style.setProperty('--sidebar-border', isLight ? `${borderHue} 18% 84%` : `${borderHue} 18% 16%`);
   }, [colorMode, primaryHue, bgHue, cardHue, borderHue, primarySat, primaryLight]);
+
+  const reloadCustomThemes = useCallback(async () => {
+    const rows = await base44.entities.CustomThemeSetting.list('-updated_date', 200).catch(() => []);
+    setCustomThemes(rows.filter((item) => item.is_active !== false));
+  }, []);
+
+  useEffect(() => {
+    reloadCustomThemes();
+  }, [reloadCustomThemes]);
+
+  useEffect(() => {
+    const globalTheme = customThemes.find((item) => item.scope_type === 'global');
+    const merged = mergeThemeSettings(globalTheme, null);
+    setThemeLayers((prev) => ({ ...prev, ...merged }));
+    applyRootVariables(merged.variables || {});
+  }, [customThemes]);
 
   // Apply UI scale
   useEffect(() => {
@@ -245,6 +265,23 @@ export function ThemeProvider({ children }) {
     setPrimaryLight(DEFAULTS.primaryLight);
   };
 
+  const getPageThemeStyles = (pathname) => {
+    const globalTheme = customThemes.find((item) => item.scope_type === 'global');
+    const pageTheme = customThemes.find((item) => item.scope_type === 'page' && item.scope_key === pathname);
+    return mergeThemeSettings(globalTheme, pageTheme);
+  };
+
+  const pageThemeMap = customThemes
+    .filter((item) => item.scope_type === 'page')
+    .reduce((acc, item) => {
+      acc[item.scope_key] = {
+        ...item.variables,
+        ...(item.background_type === 'solid' && item.background_value ? { background: item.background_value } : {}),
+        ...(item.background_type === 'gradient' && item.background_value ? { backgroundImage: item.background_value } : {}),
+      };
+      return acc;
+    }, {});
+
   const value = {
     colorMode, setColorMode, toggleColorMode,
     // background
@@ -278,6 +315,12 @@ export function ThemeProvider({ children }) {
     borderHue, updateBorderHue,
     primarySat, updatePrimarySat,
     primaryLight, updatePrimaryLight,
+    customThemes,
+    reloadCustomThemes,
+    getPageThemeStyles,
+    pageThemeStyles: themeLayers.pageBackground || {},
+    globalThemeStyles: themeLayers.globalBackground || {},
+    pageThemeMap,
     // legacy compat
     uiScale, setUiScale,
     themes: {}, theme: 'custom', setTheme: () => {},

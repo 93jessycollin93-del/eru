@@ -6,6 +6,7 @@ import SoundSettings from '../components/SoundSettings';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
+import ThemeEnginePanel from '@/components/theme/ThemeEnginePanel';
 
 const SECTIONS = [
   { icon: Shield, label: 'Security & 2FA', badge: 'Active' },
@@ -180,6 +181,11 @@ export default function Settings() {
             <span className="flex-1 text-sm">Telegram Deployment Hub</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Visual Theme Engine</p>
+          <ThemeEnginePanel />
         </div>
 
         {/* Sound & Haptics */}

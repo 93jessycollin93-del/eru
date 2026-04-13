@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import AnimatedBackground from './AnimatedBackground';
+import PageThemeLayer from '@/components/theme/PageThemeLayer';
 import { useTheme } from '../context/ThemeContext';
 import JackieFloat from './JackieFloat';
 import CenteredBottomNav from './CenteredBottomNav';
@@ -51,6 +52,7 @@ export default function Layout() {
   const themeCtx = useTheme();
   const bg = themeCtx?.bg || 'none';
   const bgOpacity = themeCtx?.bgOpacity ?? 0.4;
+  const globalThemeStyles = themeCtx?.globalThemeStyles || {};
   const [searchOpen, setSearchOpen] = useState(false);
   const { prefs, updateWidget } = useFloatingWidgetPrefs();
 
@@ -79,7 +81,7 @@ export default function Layout() {
   return (
     <>
       {/* Full-screen background — fixed, covers entire viewport */}
-      <div className="fixed inset-0" style={{ zIndex: 0, background: 'hsl(var(--background))' }} />
+      <div className="fixed inset-0" style={{ zIndex: 0, background: 'var(--app-bg, hsl(var(--background)))', ...globalThemeStyles }} />
       <AnimatedBackground type={bg} opacity={bgOpacity} />
 
       {/* App shell — transparent so background shows through */}
@@ -87,7 +89,9 @@ export default function Layout() {
 
         <CenteredBottomNav onSearchOpen={handleSearchOpen} />
         <main className="flex-1 min-w-0">
-          <Outlet />
+          <PageThemeLayer>
+            <Outlet />
+          </PageThemeLayer>
         </main>
         <JackieFloat prefs={prefs} updateWidget={updateWidget} />
         <FloatingQuickActions />
