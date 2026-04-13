@@ -10,6 +10,7 @@ import KnowledgeMap from '../components/ailab/KnowledgeMap';
 import BotMemoryChunkRelationshipMap from '../components/ailab/BotMemoryChunkRelationshipMap';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
 import LabAnalytics from '../components/ailab/LabAnalytics';
+import BotPerformanceAnalyticsPanel from '../components/ailab/BotPerformanceAnalyticsPanel';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
 import BotTestingSuite from '../components/ailab/BotTestingSuite';
 import BotTestingLabWidget from '../components/ailab/BotTestingLabWidget';
@@ -714,7 +715,7 @@ export default function AILab() {
       {tab === 'orchestrator' && <div><BotCollaborationWorkspace bots={bots} /><MultiAgentOrchestrator bots={bots} /></div>}
 
       {/* ANALYTICS */}
-      {tab === 'analytics' && <LabAnalytics bots={bots} />}
+      {tab === 'analytics' && <div><BotPerformanceAnalyticsPanel bots={bots} /><LabAnalytics bots={bots} /></div>}
 
       {/* VERSIONS */}
       {tab === 'versions' && <BotVersionHistory bots={bots} onRollback={loadBots} />}
