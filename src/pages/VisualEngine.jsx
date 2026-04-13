@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, Battery, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, Battery, Sparkles, LayoutDashboard, LayoutTemplate } from 'lucide-react';
 import { useTheme, BG_ENVS, MOTION_PRESETS, TYPOGRAPHY_PACKS } from '../context/ThemeContext';
 import AnimatedBackground from '../components/AnimatedBackground';
+import PageTemplateLibrary from '../components/theme/PageTemplateLibrary';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const THEME_CATS = {
@@ -430,6 +431,10 @@ function DisplayTab() {
 }
 
 // ─── TAB: CONTROL ────────────────────────────────────────────────────────────
+function TemplatesTab() {
+  return <PageTemplateLibrary />;
+}
+
 function ControlTab() {
   const { lockedSettings = [], setLockedSettings = () => {}, resetAll = () => {} } = useTheme() || {};
   const [showReset, setShowReset] = useState(false);
@@ -499,6 +504,7 @@ const TABS = [
   { id: 'motion',  label: 'Motion',     Icon: Zap            },
   { id: 'display', label: 'Display',    Icon: Sliders        },
   { id: 'layout',  label: 'Layout',     Icon: LayoutDashboard},
+  { id: 'templates', label: 'Templates', Icon: LayoutTemplate },
   { id: 'control', label: 'Control',    Icon: Lock           },
 ];
 
@@ -514,7 +520,7 @@ export default function VisualEngine() {
           <h2 className="text-lg font-semibold">Visual Engine</h2>
           <span className="ml-auto text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">SYSTEM LAYER</span>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">Themes, backgrounds & animation control</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Themes, backgrounds, templates & animation control</p>
         <p className="text-[10px] text-muted-foreground/80 mt-1">Changes are saved automatically on this device.</p>
       </div>
 
@@ -537,6 +543,7 @@ export default function VisualEngine() {
         {tab === 'motion'  && <MotionTab />}
         {tab === 'display' && <DisplayTab />}
         {tab === 'layout'  && <LayoutTab />}
+        {tab === 'templates' && <TemplatesTab />}
         {tab === 'control' && <ControlTab />}
       </div>
     </div>
