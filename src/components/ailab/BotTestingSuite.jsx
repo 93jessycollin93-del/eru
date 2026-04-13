@@ -13,10 +13,10 @@ const EMPTY_CASE = {
   input_file_names: [],
 };
 
-async function scoreSimilarity(expectedOutput, actualOutput) {
+async function scoreSimilarity(expectedOutput, actualOutput, inputFileNames = []) {
   const response = await base44.integrations.Core.InvokeLLM({
     prompt: `You are grading a bot response.
-Expected output:\n${expectedOutput}\n\nActual output:\n${actualOutput}\n\nScore the semantic similarity from 0 to 1, where 1 means the actual output fully satisfies the expected output in meaning and logic. Return a short reason.`,
+Expected output:\n${expectedOutput}\n\nActual output:\n${actualOutput}\n\nSupporting visual or document inputs used by the bot: ${inputFileNames.length > 0 ? inputFileNames.join(', ') : 'None'}\n\nScore the semantic similarity from 0 to 1, where 1 means the actual output fully satisfies the expected output in meaning and logic based on the provided text and any referenced visual/document inputs. Return a short reason.`,
     response_json_schema: {
       type: 'object',
       properties: {
@@ -61,6 +61,8 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
     await base44.entities.BotTestCase.create({
       ...form,
       bot_name: bot.name,
+      uses_external_data: (bot.data_sources || []).length > 0,
+      data_source_summary: (bot.data_sources || []).map((source) => `${source.service || 'source'} (${source.mode || 'direct'}${source.resource_label ? ` · ${source.resource_label}` : ''})`).join(', '),
       min_similarity_score: Number(form.min_similarity_score),
       input_file_urls: uploadedFiles.map((item) => item.url),
       input_file_names: uploadedFiles.map((item) => item.name),
@@ -81,8 +83,11 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
 
     for (const testCase of cases) {
       const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}` : '';
-      const prompt = `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nUser: ${testCase.input}\nAttached files: ${(testCase.input_file_names || []).length > 0 ? testCase.input_file_names.join(', ') : 'None'}\n\n${bot.name}:`;
-      const actualOutput = await invokeSelectedModel({ provider: bot.model_provider, model: bot.model_name, prompt, file_urls: testCase.input_file_urls || [] });
+      const dataSourceSummary = (bot.data_sources || []).length > 0
+        ? (bot.data_sources || []).map((source) => `${source.service || 'source'} (${source.mode || 'direct'}${source.resource_label ? ` · ${source.resource_label}` : ''})`).join(', ')
+        : 'None';
+      const prompt = `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nConnected external/internal data sources: ${dataSourceSummary}\nUse them when relevant to the request and explain when your answer depends on those connected sources.\n\nUser: ${testCase.input}\nAttached files: ${(testCase.input_file_names || []).length > 0 ? testCase.input_file_names.join(', ') : 'None'}\n\n${bot.name}:`;
+      const actualOutput = await invokeSelectedModel({ provider: bot.model_provider, model: bot.model_name, prompt, botId: bot.id, dataRequest: { mode: 'test', sources: bot.data_sources || [] }, file_urls: testCase.input_file_urls || [] });
       const scored = await scoreSimilarity(testCase.expected_output, actualOutput, testCase.input_file_names || []);
       const previousForCase = previousRuns.find((item) => item.test_case_id === testCase.id);
       const similarity = Number(scored.similarity_score || 0);
@@ -142,6 +147,14 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
         </select>
         <input value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Test case name" className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
         <textarea value={form.input} onChange={(e) => setForm((prev) => ({ ...prev, input: e.target.value }))} placeholder="Bot input" className="min-h-[90px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
+        {form.bot_id && (() => {
+          const selectedBot = bots.find((bot) => bot.id === form.bot_id);
+          return selectedBot && (selectedBot.data_sources || []).length > 0 ? (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] text-muted-foreground">
+              This bot uses connected data sources: {(selectedBot.data_sources || []).map((source) => source.resource_label || source.service).join(', ')}
+            </div>
+          ) : null;
+        })()}
         <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
           <Paperclip className="w-3.5 h-3.5" /> Upload screenshots or documents for this test
           <input type="file" multiple onChange={(e) => setPendingFiles(Array.from(e.target.files || []))} className="hidden" />

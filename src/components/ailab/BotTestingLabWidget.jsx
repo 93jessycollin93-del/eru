@@ -29,12 +29,15 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
     if (!selectedBot || (!manualPrompt.trim() && manualFiles.length === 0)) return;
     setManualLoading(true);
     const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}` : '';
+    const dataSourceSummary = (selectedBot.data_sources || []).length > 0
+      ? (selectedBot.data_sources || []).map((source) => `${source.service || 'source'} (${source.mode || 'direct'}${source.resource_label ? ` · ${source.resource_label}` : ''})`).join(', ')
+      : 'None';
     const uploadedUrls = await Promise.all(manualFiles.map(async (file) => {
       const response = await base44.integrations.Core.UploadFile({ file });
       return response.file_url;
     }));
-    const prompt = `You are ${selectedBot.name}. ${selectedBot.instructions || ''}\nPersonality: ${selectedBot.personality || 'helpful'}\nResponse style: ${selectedBot.response_style || 'detailed'}${policyBlock}\n\nUser: ${manualPrompt || 'Analyze the attached files.'}\nAttached files: ${manualFiles.length > 0 ? manualFiles.map((file) => file.name).join(', ') : 'None'}\n\n${selectedBot.name}:`;
-    const result = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt, file_urls: uploadedUrls }).catch(() => 'This bot needs its model connection set up before it can be tested here.');
+    const prompt = `You are ${selectedBot.name}. ${selectedBot.instructions || ''}\nPersonality: ${selectedBot.personality || 'helpful'}\nResponse style: ${selectedBot.response_style || 'detailed'}${policyBlock}\n\nConnected external/internal data sources: ${dataSourceSummary}\nUse them when relevant to the request and explain when your answer depends on those connected sources.\n\nUser: ${manualPrompt || 'Analyze the attached files.'}\nAttached files: ${manualFiles.length > 0 ? manualFiles.map((file) => file.name).join(', ') : 'None'}\n\n${selectedBot.name}:`;
+    const result = await invokeSelectedModel({ provider: selectedBot.model_provider, model: selectedBot.model_name, prompt, botId: selectedBot.id, dataRequest: { mode: 'manual_test', sources: selectedBot.data_sources || [] }, file_urls: uploadedUrls }).catch(() => 'This bot needs its model connection set up before it can be tested here.');
     setManualResponse(result);
     setManualLoading(false);
   };
@@ -47,7 +50,7 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
             <FlaskConical className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-semibold">Bot Test Station</h3>
           </div>
-          <p className="text-[11px] text-muted-foreground">Automated run visibility first, with quick manual chat checks and direct Jackie access.</p>
+          <p className="text-[11px] text-muted-foreground">Automated run visibility first, with file-based checks, external-data-aware testing, and quick manual chat validation.</p>
         </div>
         <Link to="/ailab" className="text-[11px] text-primary inline-flex items-center gap-1">
           Open lab <ArrowRight className="w-3 h-3" />
@@ -99,6 +102,11 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
           onChange={setManualPrompt}
           placeholder="Ask a quick test question..."
         />
+        {selectedBot && (selectedBot.data_sources || []).length > 0 && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] text-muted-foreground">
+            This bot can use connected data sources during testing: {(selectedBot.data_sources || []).map((source) => source.resource_label || source.service).join(', ')}
+          </div>
+        )}
         <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
           <Paperclip className="w-3.5 h-3.5" /> Attach images or files
           <input type="file" multiple onChange={(e) => setManualFiles(Array.from(e.target.files || []))} className="hidden" />

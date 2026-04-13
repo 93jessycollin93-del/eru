@@ -19,8 +19,11 @@ export function buildRegressionPrompt(bot, instructions, input, globalPolicy, in
   const policyBlock = globalPolicy?.is_active
     ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}\nSafety guardrails: ${globalPolicy.safety_guardrails || 'None'}`
     : '';
+  const dataSourceSummary = (bot.data_sources || []).length > 0
+    ? bot.data_sources.map((source) => `${source.service || 'source'} (${source.mode || 'direct'}${source.resource_label ? ` · ${source.resource_label}` : ''})`).join(', ')
+    : 'None';
 
-  return `You are ${bot.name}. ${instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nUser: ${input}\nAttached files: ${inputFileNames.length > 0 ? inputFileNames.join(', ') : 'None'}\n\n${bot.name}:`;
+  return `You are ${bot.name}. ${instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}${policyBlock}\n\nConnected external/internal data sources: ${dataSourceSummary}\nUse them when relevant to the request and explain when your answer depends on those connected sources.\n\nUser: ${input}\nAttached files: ${inputFileNames.length > 0 ? inputFileNames.join(', ') : 'None'}\n\n${bot.name}:`;
 }
 
 export async function runRegressionSuite({ bot, instructions, globalPolicy }) {
