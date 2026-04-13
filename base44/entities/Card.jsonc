@@ -64,6 +64,24 @@
       "type": "string",
       "description": "Set if bred from Creature Lab"
     },
+    "source_creature_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "transmuted_from_card_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "is_transmuted": {
+      "type": "boolean",
+      "default": false
+    },
     "is_animated": {
       "type": "boolean",
       "default": false
@@ -72,6 +90,24 @@
       "type": "number",
       "default": 1,
       "description": "Copies owned"
+    },
+    "ownership_timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string"
+          },
+          "acquired_at": {
+            "type": "string"
+          },
+          "transferred_at": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
     }
   },
   "required": [

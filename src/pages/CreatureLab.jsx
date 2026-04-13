@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
-import { FlaskConical, Plus, Dna, Zap, Loader2, ChevronDown } from 'lucide-react';
+import { FlaskConical, Plus, Dna, Zap, Loader2, ChevronDown, Sparkles, Flame } from 'lucide-react';
 
 const ELEMENTS = ['fire', 'water', 'earth', 'wind', 'shadow', 'light'];
 const RARITIES = ['common', 'rare', 'epic', 'legendary'];
 const FACTIONS = ['Ember Clan', 'Tide Order', 'Stone Legion', 'Gale Court', 'Void Syndicate', 'Dawn Conclave'];
 const ABILITIES = ['burn', 'frost', 'poison', 'shield', 'combo', 'clash', 'summon', 'heal'];
+const RARITY_UPGRADE = { common: 'rare', rare: 'epic', epic: 'legendary' };
+const TRANSMUTE_REQUIREMENT = 3;
 
 function breedCard(parent1, parent2) {
   const elements = [parent1.element, parent2.element];
@@ -39,12 +41,16 @@ function breedCard(parent1, parent2) {
 
 export default function CreatureLab() {
   const [creatures, setCreatures] = useState([]);
+  const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [breeding, setBreeding] = useState(false);
+  const [transmuting, setTransmuting] = useState(false);
   const [parent1, setParent1] = useState(null);
   const [parent2, setParent2] = useState(null);
   const [breedResult, setBreedResult] = useState(null);
+  const [transmuteResult, setTransmuteResult] = useState(null);
+  const [selectedTransmuteKey, setSelectedTransmuteKey] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', element: 'fire', rarity: 'common', faction: FACTIONS[0] });
 
@@ -52,8 +58,12 @@ export default function CreatureLab() {
 
   const load = async () => {
     setLoading(true);
-    const list = await base44.entities.Creature.list('-created_date', 50);
-    setCreatures(list);
+    const [creatureList, cardList] = await Promise.all([
+      base44.entities.Creature.list('-created_date', 50),
+      base44.entities.Card.list('-created_date', 200),
+    ]);
+    setCreatures(creatureList);
+    setCards(cardList);
     setLoading(false);
   };
 
@@ -103,10 +113,68 @@ export default function CreatureLab() {
     await base44.entities.Creature.update(parent2.id, { breed_count: (parent2.breed_count || 0) + 1 });
 
     setBreedResult(savedCard);
+    setTransmuteResult(null);
     setParent1(null);
     setParent2(null);
     await load();
     setBreeding(false);
+  };
+
+  const transmuteGroups = useMemo(() => {
+    const groups = cards.reduce((acc, card) => {
+      if (!RARITY_UPGRADE[card.rarity]) return acc;
+      const key = `${card.name}__${card.rarity}__${card.element}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(card);
+      return acc;
+    }, {});
+
+    return Object.entries(groups)
+      .map(([key, groupCards]) => ({
+        key,
+        cards: groupCards,
+        count: groupCards.length,
+        base: groupCards[0],
+        canTransmute: groupCards.length >= TRANSMUTE_REQUIREMENT,
+        nextRarity: RARITY_UPGRADE[groupCards[0].rarity],
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [cards]);
+
+  const selectedTransmuteGroup = transmuteGroups.find((group) => group.key === selectedTransmuteKey) || null;
+
+  const transmuteCards = async () => {
+    if (!selectedTransmuteGroup?.canTransmute) return;
+    setTransmuting(true);
+
+    const sourceCards = selectedTransmuteGroup.cards.slice(0, TRANSMUTE_REQUIREMENT);
+    const baseCard = selectedTransmuteGroup.base;
+    const upgradedRarity = selectedTransmuteGroup.nextRarity;
+    const powerBoost = upgradedRarity === 'legendary' ? 3 : 2;
+    const guardBoost = upgradedRarity === 'legendary' ? 2 : 1;
+
+    const forgedCard = await base44.entities.Card.create({
+      ...baseCard,
+      id: undefined,
+      name: `${baseCard.name} Ascended`,
+      rarity: upgradedRarity,
+      power: baseCard.power + powerBoost,
+      guard: baseCard.guard + guardBoost,
+      cost: Math.min(7, baseCard.cost + 1),
+      quantity: 1,
+      is_transmuted: true,
+      is_animated: upgradedRarity === 'legendary' || baseCard.is_animated,
+      transmuted_from_card_ids: sourceCards.map((card) => card.id),
+      flavor_text: `Forged through transmutation from ${TRANSMUTE_REQUIREMENT} sacrificed cards.`,
+    });
+
+    await Promise.all(sourceCards.map((card) => base44.entities.Card.delete(card.id)));
+
+    setTransmuteResult(forgedCard);
+    setBreedResult(null);
+    setSelectedTransmuteKey('');
+    await load();
+    setTransmuting(false);
   };
 
   return (
@@ -163,6 +231,76 @@ export default function CreatureLab() {
           </button>
         </div>
 
+        <div className="bg-gradient-to-br from-amber-900/30 to-orange-900/20 border border-amber-500/30 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className="w-4 h-4 text-amber-400" />
+            <p className="text-sm font-semibold text-amber-300">Transmute Forge</p>
+            <span className="text-[10px] text-muted-foreground">burn {TRANSMUTE_REQUIREMENT} matching cards to ascend one</span>
+          </div>
+
+          {transmuteGroups.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No card stacks are ready for transmutation yet.</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {transmuteGroups.map((group) => (
+                  <button
+                    key={group.key}
+                    onClick={() => setSelectedTransmuteKey(group.key)}
+                    className={`w-full rounded-xl border p-3 text-left transition-all ${selectedTransmuteKey === group.key ? 'border-amber-400/60 bg-amber-900/20' : 'border-border bg-secondary/30 hover:border-amber-500/30'}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{group.base.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{group.base.rarity} → {group.nextRarity} · {group.base.element}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-bold ${group.canTransmute ? 'text-amber-300' : 'text-muted-foreground'}`}>{group.count}/{TRANSMUTE_REQUIREMENT}</p>
+                        <p className="text-[9px] text-muted-foreground">available</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {selectedTransmuteGroup && (
+                <div className="rounded-xl border border-amber-500/20 bg-black/20 p-3">
+                  <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex justify-center">
+                      <CardDisplay card={{
+                        ...selectedTransmuteGroup.base,
+                        name: `${selectedTransmuteGroup.base.name} Ascended`,
+                        rarity: selectedTransmuteGroup.nextRarity,
+                        power: selectedTransmuteGroup.base.power + (selectedTransmuteGroup.nextRarity === 'legendary' ? 3 : 2),
+                        guard: selectedTransmuteGroup.base.guard + (selectedTransmuteGroup.nextRarity === 'legendary' ? 2 : 1),
+                        cost: Math.min(7, selectedTransmuteGroup.base.cost + 1),
+                        is_animated: selectedTransmuteGroup.nextRarity === 'legendary' || selectedTransmuteGroup.base.is_animated,
+                      }} size="md" glowing />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left">
+                      <p className="text-sm font-semibold">Forge Preview</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">Burn {TRANSMUTE_REQUIREMENT} identical low-tier cards to create one upgraded version with higher rarity, power, and guard.</p>
+                      <div className="mt-2 flex flex-wrap gap-2 justify-center sm:justify-start text-[10px]">
+                        <span className="rounded-full bg-secondary px-2 py-1 text-red-400">+{selectedTransmuteGroup.nextRarity === 'legendary' ? 3 : 2} power</span>
+                        <span className="rounded-full bg-secondary px-2 py-1 text-blue-400">+{selectedTransmuteGroup.nextRarity === 'legendary' ? 2 : 1} guard</span>
+                        <span className="rounded-full bg-secondary px-2 py-1 text-amber-300">{selectedTransmuteGroup.base.rarity} → {selectedTransmuteGroup.nextRarity}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={transmuteCards}
+                    disabled={!selectedTransmuteGroup.canTransmute || transmuting}
+                    className="mt-3 w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                  >
+                    {transmuting ? <><Loader2 className="w-4 h-4 animate-spin" /> Transmuting...</> : <><Sparkles className="w-4 h-4" /> Transmute into higher rarity</>}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Bred card result */}
         <AnimatePresence>
           {breedResult && (
@@ -174,6 +312,17 @@ export default function CreatureLab() {
                 <CardDisplay card={breedResult} size="lg" glowing />
               </div>
               <button onClick={() => setBreedResult(null)} className="text-xs text-muted-foreground">Dismiss</button>
+            </motion.div>
+          )}
+          {transmuteResult && (
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              className="bg-card border border-amber-500/30 rounded-2xl p-4 text-center">
+              <p className="text-xs text-amber-300 uppercase tracking-widest mb-1">Transmutation Complete!</p>
+              <p className="text-sm font-semibold mb-3">Your upgraded card is ready</p>
+              <div className="flex justify-center mb-3">
+                <CardDisplay card={transmuteResult} size="lg" glowing />
+              </div>
+              <button onClick={() => setTransmuteResult(null)} className="text-xs text-muted-foreground">Dismiss</button>
             </motion.div>
           )}
         </AnimatePresence>
