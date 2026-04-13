@@ -7,6 +7,7 @@ import BotFarmQueuePanel from '../components/bot-farm/BotFarmQueuePanel';
 import BotFarmSquadPanel from '../components/bot-farm/BotFarmSquadPanel';
 import BotFarmOutputPanel from '../components/bot-farm/BotFarmOutputPanel';
 import BotFarmUpgradePanel from '../components/bot-farm/BotFarmUpgradePanel';
+import BotFarmRetrievalPanel from '../components/bot-farm/BotFarmRetrievalPanel';
 import BotFarmControlPanel from '../components/bot-farm/BotFarmControlPanel';
 import BotFarmMaintenancePanel from '../components/bot-farm/BotFarmMaintenancePanel';
 import BotFarmMissionPanel from '../components/bot-farm/BotFarmMissionPanel';
@@ -500,6 +501,7 @@ export default function BotFarm() {
 
             <BotFarmMissionPanel missions={missions} squads={squads} bots={bots} />
             <BotFarmSquadPanel squads={squads} bots={bots} missions={missions} />
+            <BotFarmRetrievalPanel bots={bots} />
 
             <section className="space-y-3">
               <p className="text-sm font-semibold text-foreground">Operational Workforce</p>

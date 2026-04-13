@@ -1,0 +1,98 @@
+{
+  "name": "BotSemanticMemory",
+  "type": "object",
+  "properties": {
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "bot_farm_output",
+        "bot_farm_maintenance",
+        "bot_memory_chunk",
+        "squad_knowledge"
+      ],
+      "default": "bot_farm_output"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "bot_id": {
+      "type": "string"
+    },
+    "squad_id": {
+      "type": "string"
+    },
+    "mission_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "search_text": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "memory_category": {
+      "type": "string",
+      "enum": [
+        "mission_outcome",
+        "maintenance_pattern",
+        "conversation",
+        "strategy",
+        "knowledge"
+      ],
+      "default": "mission_outcome"
+    },
+    "success_score": {
+      "type": "number",
+      "default": 50
+    },
+    "quality_score": {
+      "type": "number",
+      "default": 50
+    },
+    "retrieval_score": {
+      "type": "number",
+      "default": 50
+    },
+    "usage_count": {
+      "type": "number",
+      "default": 0
+    },
+    "last_retrieved_at": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "source_type",
+    "source_id",
+    "title",
+    "summary",
+    "search_text"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+/* eslint-env deno */
 /* global Deno */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
