@@ -57,6 +57,20 @@ export default function BotVersionHistory({ bots, onRollback }) {
       prompt_template_id: version.prompt_template_id || '',
       prompt_template_values: version.prompt_template_values || {},
     });
+    await base44.entities.BotDeployment.create({
+      bot_id: bot.id,
+      bot_name: bot.name,
+      source_version_id: version.id,
+      source_version_label: version.version_label || '',
+      target_type: 'mixed',
+      target_pages: bot.page_assignments || [],
+      target_environment: bot.deployment_environment || 'draft',
+      deployment_status: 'rolled_back',
+      deployment_notes: 'Rollback triggered from version history',
+      triggered_from: 'rollback',
+      rollback_version_id: version.id,
+      rolled_back_at: new Date().toISOString()
+    });
     onRollback?.();
     load();
   };

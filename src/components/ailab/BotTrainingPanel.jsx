@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { invokeSelectedModel } from './modelRouting';
 import { BarChart3, CheckCircle2, FlaskConical, Save, Sparkles, Upload } from 'lucide-react';
+import BotDeploymentPipelinePanel from './BotDeploymentPipelinePanel';
 import { buildRegressionPrompt, scoreSimilarity, runRegressionSuite } from './regressionTesting';
 import BotTrainingInsightsPanel from './BotTrainingInsightsPanel';
 import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
@@ -19,6 +20,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
   const [results, setResults] = useState([]);
   const [insights, setInsights] = useState(null);
   const [generatingInsights, setGeneratingInsights] = useState(false);
+  const [latestTrainingSummary, setLatestTrainingSummary] = useState('');
 
   const selectedBot = useMemo(() => bots.find((bot) => bot.id === selectedBotId) || null, [bots, selectedBotId]);
 
@@ -96,6 +98,8 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     }
 
     setResults(nextResults);
+    const passedCount = nextResults.filter((item) => item.candidateScore >= item.minScore).length;
+    setLatestTrainingSummary(`${passedCount}/${nextResults.length} candidate tests passed`);
     setRunning(false);
   };
 
@@ -296,7 +300,8 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
       )}
 
       {summary && (
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
           <div className="grid gap-3 md:grid-cols-4">
             <div className="rounded-xl border border-border bg-secondary/30 p-3 text-[11px] text-muted-foreground">Previous avg <span className="block text-lg font-semibold text-foreground">{summary.previousAverage}%</span></div>
             <div className="rounded-xl border border-border bg-secondary/30 p-3 text-[11px] text-muted-foreground">Candidate avg <span className="block text-lg font-semibold text-foreground">{summary.candidateAverage}%</span></div>
@@ -340,6 +345,14 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> A pre-training snapshot is saved automatically before publish.
           </div>
+        </div>
+
+          <BotDeploymentPipelinePanel
+            bots={bots}
+            trainingBot={selectedBot}
+            trainingSummary={latestTrainingSummary}
+            onBotsUpdated={onBotsUpdated}
+          />
         </div>
       )}
     </div>
