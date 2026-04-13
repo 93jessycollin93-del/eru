@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Layers3, Save, CopyPlus, PencilLine, RefreshCcw } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
+import { applyRootVariables } from '@/lib/themeEngine';
 import LayerStyleForm from './LayerStyleForm';
 import ThemePresetLibrary, { THEME_PRESETS } from './ThemePresetLibrary';
 import ThemeScopePreview from './ThemeScopePreview';
@@ -84,7 +85,7 @@ function layerToVariables(layerId, layer) {
 
 export default function AdvancedThemeStudio() {
   const location = useLocation();
-  const { customThemes, reloadCustomThemes } = useTheme();
+  const { customThemes, reloadCustomThemes, getThemeRecord } = useTheme();
   const [scopeType, setScopeType] = useState('global');
   const [layerId, setLayerId] = useState('app');
   const [themeName, setThemeName] = useState('');
@@ -94,22 +95,43 @@ export default function AdvancedThemeStudio() {
 
   const scopeKey = useMemo(() => scopeType === 'page' ? location.pathname : '', [scopeType, location.pathname]);
 
+  const buildVariablesFromLayers = (layers) => Object.entries(layers).reduce((acc, [id, layer]) => ({
+    ...acc,
+    ...layerToVariables(id, layer),
+  }), {});
+
   useEffect(() => {
-    const activeTheme = customThemes.find((item) => item.scope_type === scopeType && (scopeType !== 'page' || item.scope_key === location.pathname));
+    const globalTheme = getThemeRecord('global', '');
+    const activeTheme = scopeType === 'page'
+      ? getThemeRecord('page', location.pathname)
+      : globalTheme;
+
+    const baseLayers = Object.fromEntries(LAYER_OPTIONS.map(([id]) => [id, { ...emptyLayer(), ...(globalTheme?.layers?.[id] || {}) }]));
+
     if (!activeTheme) {
       setThemeName(scopeType === 'page' ? `Theme ${location.pathname}` : 'Global Theme');
       setEditingThemeId(null);
-      setLayerStyles(Object.fromEntries(LAYER_OPTIONS.map(([id]) => [id, emptyLayer()])));
+      setLayerStyles(baseLayers);
       return;
     }
 
     setThemeName(activeTheme.name || 'Theme');
     setEditingThemeId(activeTheme.id);
-    const next = Object.fromEntries(LAYER_OPTIONS.map(([id]) => [id, { ...emptyLayer(), ...(activeTheme.layers?.[id] || {}) }]));
+    const next = Object.fromEntries(LAYER_OPTIONS.map(([id]) => [
+      id,
+      {
+        ...baseLayers[id],
+        ...(scopeType === 'page' ? (activeTheme.layers?.[id] || {}) : (globalTheme?.layers?.[id] || {})),
+      },
+    ]));
     setLayerStyles(next);
-  }, [customThemes, scopeType, location.pathname]);
+  }, [customThemes, scopeType, location.pathname, getThemeRecord]);
 
   const currentLayer = layerStyles[layerId] || emptyLayer();
+
+  useEffect(() => {
+    applyRootVariables(buildVariablesFromLayers(layerStyles));
+  }, [layerStyles]);
 
   const saveTheme = async () => {
     const layers = layerStyles;
@@ -121,10 +143,7 @@ export default function AdvancedThemeStudio() {
       theme_mode: 'inherit',
       background_type: activeLayer.background_type || 'inherit',
       background_value: activeLayer.background_value || '',
-      variables: Object.values(layers).reduce((acc, layer, index) => ({
-        ...acc,
-        ...layerToVariables(LAYER_OPTIONS[index][0], layer),
-      }), {}),
+      variables: buildVariablesFromLayers(layers),
       layers,
       is_active: true,
     };
@@ -162,7 +181,9 @@ export default function AdvancedThemeStudio() {
   };
 
   const resetCurrentLayer = () => {
-    setLayerStyles((prev) => ({ ...prev, [layerId]: emptyLayer() }));
+    const globalTheme = getThemeRecord('global', '');
+    const fallback = scopeType === 'page' ? { ...emptyLayer(), ...(globalTheme?.layers?.[layerId] || {}) } : emptyLayer();
+    setLayerStyles((prev) => ({ ...prev, [layerId]: fallback }));
   };
 
   const resetScopeToGlobal = async () => {
@@ -225,12 +246,14 @@ export default function AdvancedThemeStudio() {
           <p className="mt-1 text-[11px] text-muted-foreground">Choose which layer overrides the inherited style.</p>
           <div className="mt-4 space-y-2">
             {LAYER_OPTIONS.map(([id, label]) => {
+              const globalTheme = getThemeRecord('global', '');
+              const inherited = scopeType === 'page' && globalTheme?.layers?.[id];
               const customized = Object.values(layerStyles[id] || {}).some((value) => value !== '' && value !== 0 && value !== 1 && value !== 'inherit' && value !== 16);
               return (
                 <button key={id} onClick={() => setLayerId(id)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left text-sm ${layerId === id ? 'border-primary bg-primary/10' : 'border-border bg-secondary/30'}`}>
                   <span>{label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${customized ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'}`}>
-                    {customized ? 'Custom' : 'Inherited'}
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${customized ? 'bg-primary/15 text-primary' : inherited ? 'bg-blue-500/10 text-blue-400' : 'bg-secondary text-muted-foreground'}`}>
+                    {customized ? 'Custom' : inherited ? 'Global' : 'Inherited'}
                   </span>
                 </button>
               );

@@ -3,7 +3,7 @@ export default function ThemeScopePreview() {
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-sm font-semibold">Live layer preview</p>
       <p className="mt-1 text-[11px] text-muted-foreground">Preview app, section, panel, input, badge, and button surfaces together.</p>
-      <div className="mt-4 rounded-[var(--layer-radius,1rem)] border border-[var(--page-border)] bg-[var(--section-bg,transparent)] p-4" style={{ boxShadow: 'var(--layer-shadow)' }}>
+      <div className="mt-4 rounded-[var(--layer-radius,1rem)] border border-[var(--page-border)] bg-[var(--section-bg,transparent)] p-4" style={{ boxShadow: 'var(--layer-shadow)', backdropFilter: 'blur(10px)' }}>
         <div className="rounded-[var(--layer-radius,1rem)] border border-[var(--page-border)] bg-[var(--panel-bg,var(--surface-bg))] p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -19,6 +19,7 @@ export default function ThemeScopePreview() {
           <div className="mt-4 flex flex-wrap gap-2">
             <button className="rounded-[var(--layer-radius,1rem)] border px-4 py-2 text-sm font-medium" style={{ background: 'var(--button-bg)', color: 'var(--button-foreground)', borderColor: 'var(--button-border)', boxShadow: 'var(--button-glow)' }}>Primary Button</button>
             <button className="rounded-[var(--layer-radius,1rem)] border px-4 py-2 text-sm" style={{ background: 'var(--button-hover-bg)', color: 'var(--button-foreground)', borderColor: 'var(--button-border)' }}>Hover State</button>
+            <button className="rounded-[var(--layer-radius,1rem)] border px-4 py-2 text-sm" style={{ background: 'var(--button-active-bg)', color: 'var(--button-foreground)', borderColor: 'var(--button-border)' }}>Active State</button>
             <button disabled className="rounded-[var(--layer-radius,1rem)] border px-4 py-2 text-sm opacity-70" style={{ background: 'var(--button-disabled-bg)', color: 'var(--button-foreground)', borderColor: 'var(--button-border)' }}>Disabled</button>
           </div>
         </div>

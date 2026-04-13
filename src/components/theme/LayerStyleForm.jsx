@@ -30,7 +30,7 @@ export default function LayerStyleForm({ value, onChange, onReset }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">Layer style</p>
-          <p className="text-[11px] text-muted-foreground">Each layer can inherit or override the level above it.</p>
+          <p className="text-[11px] text-muted-foreground">Each layer can inherit from global defaults or override them locally.</p>
         </div>
         <button onClick={onReset} className="inline-flex items-center gap-1 rounded-xl border border-border bg-secondary px-3 py-2 text-xs">
           <RotateCcw className="w-3.5 h-3.5" /> Reset layer

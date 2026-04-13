@@ -216,8 +216,11 @@ export function ThemeProvider({ children }) {
   }, [reloadCustomThemes]);
 
   useEffect(() => {
+    const pathname = window.location.pathname;
     const globalTheme = customThemes.find((item) => item.scope_type === 'global');
-    const merged = mergeThemeSettings(globalTheme, null);
+    const pageTheme = customThemes.find((item) => item.scope_type === 'page' && item.scope_key === pathname);
+    const componentThemes = customThemes.filter((item) => item.scope_type === 'component' && item.scope_key?.startsWith(`${pathname}::`));
+    const merged = mergeThemeSettings(globalTheme, pageTheme, componentThemes);
     setThemeLayers((prev) => ({ ...prev, ...merged }));
     applyRootVariables(merged.variables || {});
   }, [customThemes]);
@@ -276,6 +279,8 @@ export function ThemeProvider({ children }) {
     return mergeThemeSettings(globalTheme, pageTheme, componentThemes);
   };
 
+  const getThemeRecord = (scopeType, scopeKey = '') => customThemes.find((item) => item.scope_type === scopeType && (scopeType !== 'page' ? (item.scope_key || '') === (scopeKey || '') : item.scope_key === scopeKey));
+
   const getScopedComponentStyles = (scopeKey) => themeLayers.componentBackgrounds?.[scopeKey] || {};
 
   const pageThemeMap = customThemes
@@ -329,6 +334,7 @@ export function ThemeProvider({ children }) {
     globalThemeStyles: themeLayers.globalBackground || {},
     componentThemeStyles: themeLayers.componentBackgrounds || {},
     pageThemeMap,
+    getThemeRecord,
     getScopedComponentStyles,
     // legacy compat
     uiScale, setUiScale,
