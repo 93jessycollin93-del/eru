@@ -39,7 +39,7 @@ export default function PerformanceDashboard() {
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const intervalRef = useRef(null);
 
   const load = async () => {
@@ -57,11 +57,11 @@ export default function PerformanceDashboard() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
+    clearInterval(intervalRef.current);
     if (!autoRefresh) {
-      clearInterval(intervalRef.current);
       return undefined;
     }
-    intervalRef.current = setInterval(load, 15000);
+    intervalRef.current = setInterval(load, 60000);
     return () => clearInterval(intervalRef.current);
   }, [autoRefresh]);
 
@@ -106,7 +106,7 @@ export default function PerformanceDashboard() {
         <div className="flex items-center gap-2">
           <button onClick={() => setAutoRefresh(a => !a)}
             className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${autoRefresh ? 'text-primary border-primary/30 bg-primary/10' : 'text-muted-foreground border-border'}`}>
-            {autoRefresh ? '● Live' : '○ Paused'}
+            {autoRefresh ? '● Live' : '○ Manual'}
           </button>
           <button onClick={load} className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground">
             <RefreshCw className="w-3.5 h-3.5" />

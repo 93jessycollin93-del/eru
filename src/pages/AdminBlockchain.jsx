@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Shield, Zap, Database, Globe, Settings, CheckCircle2, XCircle, AlertTriangle, Save } from 'lucide-react';
+import { Shield, Database, Globe, CheckCircle2, XCircle, AlertTriangle, Save } from 'lucide-react';
 
 const PROVIDERS = [
   { id: 'ethereum', label: 'Ethereum Mainnet', rpc: 'https://mainnet.infura.io/v3/YOUR_KEY', chainId: '0x1' },
@@ -29,13 +28,10 @@ export default function AdminBlockchain() {
   const { currentUser } = useAuth();
   const [config, setConfig] = useState(BLANK_CONFIG);
   const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load from user's saved settings
     const stored = localStorage.getItem('blockchain_config');
     if (stored) { try { setConfig(JSON.parse(stored)); } catch {} }
-    setLoading(false);
   }, []);
 
   if (currentUser?.role !== 'admin') {
