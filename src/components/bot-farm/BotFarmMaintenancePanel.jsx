@@ -1,4 +1,4 @@
-export default function BotFarmMaintenancePanel({ bots, maintenanceLogs, onRest, onRepair, onRecover }) {
+export default function BotFarmMaintenancePanel({ bots, maintenanceLogs, onRest, onRepair, onRecover, onQuarantine }) {
   const maintenanceBots = bots.filter((bot) => ['maintenance', 'recovering', 'overloaded', 'quarantined'].includes(bot.status) || (bot.maintenance_status && bot.maintenance_status !== 'healthy'));
 
   return (
@@ -20,6 +20,7 @@ export default function BotFarmMaintenancePanel({ bots, maintenanceLogs, onRest,
                 <button onClick={() => onRest(bot)} className="rounded-xl border border-border px-3 py-2 text-[11px] text-muted-foreground">Rest</button>
                 <button onClick={() => onRepair(bot)} className="rounded-xl border border-border px-3 py-2 text-[11px] text-muted-foreground">Repair</button>
                 <button onClick={() => onRecover(bot)} className="rounded-xl bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground">Recover</button>
+                <button onClick={() => onQuarantine(bot)} className="rounded-xl border border-red-500/20 px-3 py-2 text-[11px] text-red-300">Quarantine</button>
               </div>
             </div>
           </div>

@@ -14,7 +14,9 @@ import BotFarmMissionPanel from '../components/bot-farm/BotFarmMissionPanel';
 import BotFarmMissionSimulatorPanel from '../components/bot-farm/BotFarmMissionSimulatorPanel';
 import BotFarmPredictiveAnalyticsPanel from '../components/bot-farm/BotFarmPredictiveAnalyticsPanel';
 import BotFarmScalingControllerPanel from '../components/bot-farm/BotFarmScalingControllerPanel';
+import BotFarmOptimizationPanel from '../components/bot-farm/BotFarmOptimizationPanel';
 import { buildRoleSummary, computeAssignmentQuality, computeBotFit, computeMissionSuccessProbability, computeOutputQuality, getBotFarmScalingSnapshot, summarizeFarmMetrics } from '../components/bot-farm/BotFarmUtils';
+import { getPredictiveBotInsight } from '../components/bot-farm/BotFarmPredictiveUtils';
 import { DEMO_ACTIVITY, DEMO_BOTS, DEMO_MAINTENANCE, DEMO_MISSIONS, DEMO_OUTPUTS, DEMO_RISKS, DEMO_SQUADS, DEMO_TASKS, DEMO_UPGRADES } from '../components/bot-farm/BotFarmDemoData';
 
 export default function BotFarm() {
@@ -32,6 +34,7 @@ export default function BotFarm() {
   const [sortMode, setSortMode] = useState('priority');
   const [upgradingId, setUpgradingId] = useState(null);
   const [scalingBusy, setScalingBusy] = useState(false);
+  const [optimizationBusy, setOptimizationBusy] = useState(false);
 
   const applyLoadedData = useCallback((data) => {
     if (data.bots) setBots(data.bots);
@@ -395,6 +398,50 @@ export default function BotFarm() {
     }
   };
 
+  const runPredictiveOptimization = async () => {
+    if (optimizationBusy) return;
+    setOptimizationBusy(true);
+
+    const ranked = bots
+      .map((bot) => ({ bot, insight: getPredictiveBotInsight(bot, maintenanceLogs, tasks, squads) }))
+      .sort((a, b) => (b.insight.failureRisk + b.insight.inefficiencyRisk) - (a.insight.failureRisk + a.insight.inefficiencyRisk));
+
+    const actions = [];
+
+    for (const item of ranked.slice(0, 6)) {
+      if (item.insight.recommendedAction === 'quarantine') {
+        await handleQuarantine(item.bot);
+        actions.push(`${item.bot.name} quarantined`);
+      } else if (item.insight.recommendedAction === 'repair') {
+        await handleRepair(item.bot);
+        actions.push(`${item.bot.name} sent to repair`);
+      } else if (item.insight.recommendedAction === 'rest') {
+        await handleRest(item.bot);
+        actions.push(`${item.bot.name} sent to rest`);
+      }
+    }
+
+    const reallocationCandidates = ranked.filter((item) => item.insight.recommendedAction === 'reallocate').slice(0, 3);
+    for (const item of reallocationCandidates) {
+      const assignedTask = tasks.find((task) => task.assigned_bot_id === item.bot.id && ['assigned', 'active', 'review'].includes(task.status));
+      if (!assignedTask) continue;
+      await assignTaskToBot(assignedTask);
+      actions.push(`${assignedTask.title} reallocated away from ${item.bot.name}`);
+    }
+
+    if (actions.length > 0) {
+      await base44.entities.BotFarmActivityHistory.create({
+        actor_type: 'system',
+        event_type: 'predictive_optimization',
+        summary: `Predictive optimization executed: ${actions.join(', ')}.`,
+        impact_score: 12 + actions.length * 2,
+      });
+    }
+
+    await refreshAfterMutation({ bots: true, squads: true, tasks: true, risks: true, history: true, maintenanceLogs: true });
+    setOptimizationBusy(false);
+  };
+
   const runOperationalCycle = async () => {
     const upgradeEffect = getUpgradeEffect();
     const actionableTasks = tasks.filter((task) => ['assigned', 'active', 'review'].includes(task.status) && task.assigned_bot_id);
@@ -608,14 +655,23 @@ export default function BotFarm() {
               busy={scalingBusy}
             />
 
+            <BotFarmOptimizationPanel
+              bots={bots}
+              squads={squads}
+              tasks={tasks}
+              maintenanceLogs={maintenanceLogs}
+              onAutoOptimize={runPredictiveOptimization}
+              optimizing={optimizationBusy}
+            />
+
             <div className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr]">
               <BotFarmQueuePanel tasks={tasks} sortMode={sortMode} setSortMode={setSortMode} onAssignTask={assignTaskToBot} />
-              <BotFarmMaintenancePanel bots={bots} maintenanceLogs={maintenanceLogs} onRest={handleRest} onRepair={handleRepair} onRecover={handleRecover} />
+              <BotFarmMaintenancePanel bots={bots} maintenanceLogs={maintenanceLogs} onRest={handleRest} onRepair={handleRepair} onRecover={handleRecover} onQuarantine={handleQuarantine} />
             </div>
 
             <BotFarmMissionPanel missions={missions} squads={squads} bots={bots} />
             <BotFarmMissionSimulatorPanel bots={bots} missions={missions} squads={squads} upgrades={upgrades} />
-            <BotFarmPredictiveAnalyticsPanel bots={bots} maintenanceLogs={maintenanceLogs} />
+            <BotFarmPredictiveAnalyticsPanel bots={bots} maintenanceLogs={maintenanceLogs} tasks={tasks} squads={squads} />
             <BotFarmSquadPanel squads={squads} bots={bots} missions={missions} />
             <BotFarmRetrievalPanel bots={bots} />
 

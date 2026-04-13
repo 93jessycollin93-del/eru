@@ -1,49 +1,5 @@
 import { AlertTriangle, Wrench, TrendingDown } from 'lucide-react';
-
-function buildTrendSeries(bot, maintenanceLogs) {
-  const relevantLogs = maintenanceLogs
-    .filter((item) => item.bot_id === bot.id)
-    .slice(0, 6);
-
-  const baseline = [
-    Math.max(0, (bot.integrity || 0) - 18),
-    Math.max(0, (bot.integrity || 0) - 12),
-    Math.max(0, (bot.integrity || 0) - 7),
-    Math.max(0, (bot.integrity || 0) - 3),
-    bot.integrity || 0,
-  ];
-
-  if (!relevantLogs.length) return baseline;
-
-  const recoveryOffset = relevantLogs.reduce((sum, item) => sum + (item.recovery_gain || 0), 0) / Math.max(1, relevantLogs.length);
-  return baseline.map((value, index) => Math.max(0, Math.min(100, Math.round(value - (relevantLogs.length - index - 1) * 2 + recoveryOffset * 0.1))));
-}
-
-function getForecast(bot, maintenanceLogs) {
-  const trend = buildTrendSeries(bot, maintenanceLogs);
-  const slope = trend.length > 1 ? (trend[trend.length - 1] - trend[0]) / (trend.length - 1) : 0;
-  const stressLoad = (bot.load || 0) * 0.18;
-  const stressFatigue = (bot.fatigue || 0) * 0.22;
-  const healthDrag = Math.max(0, 90 - (bot.system_health || 0)) * 0.3;
-  const projectedIntegrity = Math.max(0, Math.min(100, Math.round((bot.integrity || 0) + slope * 2 - stressLoad - stressFatigue - healthDrag)));
-  const degradationRisk = Math.max(0, Math.round((100 - projectedIntegrity) + ((bot.fatigue || 0) * 0.35) + ((bot.load || 0) * 0.25)));
-  const maintenanceWindow = projectedIntegrity <= 45 ? 'Immediate' : projectedIntegrity <= 58 ? 'Next cycle' : projectedIntegrity <= 70 ? 'Within 2 cycles' : 'Monitor';
-  const action = projectedIntegrity <= 45
-    ? 'Repair + recalibration'
-    : projectedIntegrity <= 58
-      ? 'Preventive repair'
-      : (bot.fatigue || 0) >= 68 || (bot.load || 0) >= 72
-        ? 'Rest cycle'
-        : 'Observation only';
-
-  return {
-    trend,
-    projectedIntegrity,
-    degradationRisk,
-    maintenanceWindow,
-    action,
-  };
-}
+import { getPredictiveBotInsight } from './BotFarmPredictiveUtils';
 
 function MiniTrend({ points }) {
   const width = 140;
@@ -63,9 +19,9 @@ function MiniTrend({ points }) {
   );
 }
 
-export default function BotFarmPredictiveAnalyticsPanel({ bots, maintenanceLogs }) {
+export default function BotFarmPredictiveAnalyticsPanel({ bots, maintenanceLogs, tasks = [], squads = [] }) {
   const ranked = (bots || [])
-    .map((bot) => ({ bot, forecast: getForecast(bot, maintenanceLogs || []) }))
+    .map((bot) => ({ bot, forecast: getPredictiveBotInsight(bot, maintenanceLogs || [], tasks, squads) }))
     .sort((a, b) => b.forecast.degradationRisk - a.forecast.degradationRisk)
     .slice(0, 6);
 
@@ -100,7 +56,7 @@ export default function BotFarmPredictiveAnalyticsPanel({ bots, maintenanceLogs 
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold text-foreground">{bot.name}</p>
-                <p className="text-[10px] text-muted-foreground">{bot.status} · integrity {bot.integrity}% · health {bot.system_health || 0}%</p>
+                <p className="text-[10px] text-muted-foreground">{bot.status} · integrity {bot.integrity}% · health {bot.system_health || 0}% · errors {forecast.errorRate}</p>
               </div>
               <div className={`rounded-full px-2 py-1 text-[10px] font-medium ${forecast.projectedIntegrity <= 45 ? 'bg-red-500/10 text-red-400' : forecast.projectedIntegrity <= 58 ? 'bg-orange-500/10 text-orange-300' : 'bg-primary/10 text-primary'}`}>
                 {forecast.maintenanceWindow}
@@ -109,9 +65,11 @@ export default function BotFarmPredictiveAnalyticsPanel({ bots, maintenanceLogs 
 
             <MiniTrend points={forecast.trend} />
 
-            <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+            <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground sm:grid-cols-4">
               <div className="rounded-lg border border-border px-2 py-2">Projected integrity <span className="text-foreground">{forecast.projectedIntegrity}%</span></div>
-              <div className="rounded-lg border border-border px-2 py-2">Risk score <span className="text-foreground">{forecast.degradationRisk}</span></div>
+              <div className="rounded-lg border border-border px-2 py-2">Failure risk <span className="text-foreground">{forecast.failureRisk}</span></div>
+              <div className="rounded-lg border border-border px-2 py-2">Inefficiency <span className="text-foreground">{forecast.inefficiencyRisk}</span></div>
+              <div className="rounded-lg border border-border px-2 py-2">Capacity <span className="text-foreground">{forecast.projectedCapacity}%</span></div>
             </div>
 
             <div className="space-y-2 rounded-xl border border-border bg-card p-3">
@@ -119,11 +77,12 @@ export default function BotFarmPredictiveAnalyticsPanel({ bots, maintenanceLogs 
                 <Wrench className="h-3.5 w-3.5 text-primary" />
                 <span className="font-medium">Suggested cycle</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">{forecast.action}</p>
-              {(forecast.projectedIntegrity <= 58 || (bot.fatigue || 0) >= 68) && (
+              <p className="text-[11px] text-muted-foreground capitalize">{forecast.recommendedAction}</p>
+              <p className="text-[11px] text-muted-foreground">{forecast.summary}</p>
+              {(forecast.projectedIntegrity <= 58 || forecast.failureRisk >= 66 || (bot.fatigue || 0) >= 68) && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-2 text-[10px] text-muted-foreground">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-red-400" />
-                  <span>Schedule this bot before the next heavy assignment cycle to avoid hardware-failure-style degradation.</span>
+                  <span>Schedule this bot before the next heavy assignment cycle to avoid failure pressure or avoidable output decay.</span>
                 </div>
               )}
             </div>

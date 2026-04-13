@@ -1,8 +1,6 @@
-/* eslint-env deno */
-/* global Deno */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-Deno.serve(async (req) => {
+const handler = async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -38,4 +36,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
+};
+
+globalThis.Deno.serve(handler);
