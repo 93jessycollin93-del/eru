@@ -77,29 +77,31 @@ export const STARTER_CARDS = [
   { id: 's24', name: 'Celestial Arbiter',cost:6, power: 7, guard: 5, element: 'light',  faction: 'Dawn Conclave',card_type: 'unit',  rarity: 'legendary', ability: 'shield', ability_value: 4, flavor_text: 'Judge, jury, and salvation.' },
 ];
 
-// Generate AI deck for a given difficulty (1=easy, 2=medium, 3=hard)
-export function generateAIDeck(difficulty, factionOverride = null) {
+// Generate AI deck for a given difficulty and deck size
+export function generateAIDeck(difficulty, factionOverride = null, deckSize = 10) {
   const factions = ['Ember Clan', 'Tide Order', 'Stone Legion', 'Gale Court', 'Void Syndicate', 'Dawn Conclave'];
   const faction = factionOverride || factions[Math.floor(Math.random() * factions.length)];
   const pool = STARTER_CARDS.filter(c => c.faction === faction);
-  
-  // Pick 5 cards weighted by difficulty
-  const rarityWeights = {
-    1: { common: 0.6, rare: 0.3, epic: 0.1, legendary: 0 },
-    2: { common: 0.3, rare: 0.4, epic: 0.2, legendary: 0.1 },
-    3: { common: 0.1, rare: 0.3, epic: 0.4, legendary: 0.2 },
-  }[difficulty] || { common: 0.4, rare: 0.35, epic: 0.2, legendary: 0.05 };
+  const targetSize = Math.max(10, Number(deckSize || 10));
+  const sizeScale = 1 + ((targetSize - 10) / 40) * 0.28;
 
   const sorted = [...pool].sort((a, b) => {
-    const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4 };
+    const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
     return (rarityOrder[b.rarity] * difficulty) - (rarityOrder[a.rarity] * difficulty);
   });
 
-  return sorted.slice(0, 5).map(c => ({
-    ...c,
-    id: `ai_${c.id}_${Math.random()}`,
-    // Scale up stats for higher difficulties
-    power: Math.round(c.power * (1 + (difficulty - 1) * 0.25)),
-    guard: Math.round(c.guard * (1 + (difficulty - 1) * 0.2)),
-  }));
+  const expanded = [];
+  let cursor = 0;
+  while (expanded.length < targetSize) {
+    const source = sorted[cursor % sorted.length] || STARTER_CARDS[cursor % STARTER_CARDS.length];
+    expanded.push({
+      ...source,
+      id: `ai_${source.id}_${cursor}_${targetSize}`,
+      power: Math.max(1, Math.round(source.power * (1 + (difficulty - 1) * 0.16) * sizeScale)),
+      guard: Math.max(0, Math.round(source.guard * (1 + (difficulty - 1) * 0.12) * sizeScale)),
+    });
+    cursor += 1;
+  }
+
+  return expanded;
 }

@@ -8,6 +8,8 @@
         "tournament",
         "quick_match",
         "pvp_ladder",
+        "pvp_duo",
+        "direct_challenge",
         "ai_campaign",
         "training",
         "tutorial",
@@ -48,6 +50,14 @@
     },
     "opponent_hp_end": {
       "type": "number"
+    },
+    "deck_mode": {
+      "type": "number",
+      "default": 10
+    },
+    "team_size": {
+      "type": "number",
+      "default": 1
     },
     "player_deck_snapshot": {
       "type": "array",

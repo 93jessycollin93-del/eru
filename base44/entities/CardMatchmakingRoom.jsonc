@@ -9,6 +9,8 @@
       "type": "string",
       "enum": [
         "pvp_ladder",
+        "pvp_duo",
+        "direct_challenge",
         "ai_campaign",
         "training",
         "tutorial",
@@ -31,10 +33,22 @@
     "player_two_email": {
       "type": "string"
     },
+    "player_three_email": {
+      "type": "string"
+    },
+    "player_four_email": {
+      "type": "string"
+    },
     "player_one_name": {
       "type": "string"
     },
     "player_two_name": {
+      "type": "string"
+    },
+    "player_three_name": {
+      "type": "string"
+    },
+    "player_four_name": {
       "type": "string"
     },
     "player_one_elo": {
@@ -43,11 +57,31 @@
     "player_two_elo": {
       "type": "number"
     },
+    "player_three_elo": {
+      "type": "number"
+    },
+    "player_four_elo": {
+      "type": "number"
+    },
     "player_one_deck_strength": {
       "type": "number"
     },
     "player_two_deck_strength": {
       "type": "number"
+    },
+    "player_three_deck_strength": {
+      "type": "number"
+    },
+    "player_four_deck_strength": {
+      "type": "number"
+    },
+    "deck_mode": {
+      "type": "number",
+      "default": 10
+    },
+    "team_size": {
+      "type": "number",
+      "default": 1
     },
     "player_one_deck_snapshot": {
       "type": "array",
@@ -83,6 +117,72 @@
       "default": []
     },
     "player_two_deck_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "power": {
+            "type": "number"
+          },
+          "guard": {
+            "type": "number"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "ability_value": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    },
+    "player_three_deck_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "power": {
+            "type": "number"
+          },
+          "guard": {
+            "type": "number"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "ability_value": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    },
+    "player_four_deck_snapshot": {
       "type": "array",
       "items": {
         "type": "object",

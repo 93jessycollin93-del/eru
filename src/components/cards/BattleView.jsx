@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CardDisplay from './CardDisplay';
 import { getElementMultiplier, generateAIDeck } from './StarterCards';
+import { getRecommendedHp, normalizeDeckMode } from './deckModes';
 import { Sword, Shield, Heart, Zap, SkipForward } from 'lucide-react';
 
 function calcCardEffect(card, comboCount, opponentEl) {
@@ -12,14 +13,16 @@ function calcCardEffect(card, comboCount, opponentEl) {
   return { boardPower: Math.round(basePower * comboMult), abVal: Math.round(abVal) };
 }
 
-export default function BattleView({ playerCards, opponentName, difficulty, opponentFaction, onBattleEnd, opponentDeck, mode = 'tournament', tutorialSteps = [] }) {
-  const [aiDeck] = useState(() => opponentDeck?.length ? opponentDeck : generateAIDeck(difficulty, opponentFaction));
-  const [playerHand, setPlayerHand] = useState([...playerCards]);
-  const [aiHand, setAiHand] = useState([...(opponentDeck?.length ? opponentDeck : generateAIDeck(difficulty, opponentFaction))]);
+export default function BattleView({ playerCards, opponentName, difficulty, opponentFaction, onBattleEnd, opponentDeck, mode = 'tournament', tutorialSteps = [], deckMode = 10, teamSize = 1 }) {
+  const normalizedDeckMode = normalizeDeckMode(deckMode);
+  const startingHp = getRecommendedHp(normalizedDeckMode, teamSize);
+  const [aiDeck] = useState(() => opponentDeck?.length ? opponentDeck : generateAIDeck(difficulty, opponentFaction, normalizedDeckMode));
+  const [playerHand, setPlayerHand] = useState([...playerCards].slice(0, normalizedDeckMode));
+  const [aiHand, setAiHand] = useState([...(opponentDeck?.length ? opponentDeck : generateAIDeck(difficulty, opponentFaction, normalizedDeckMode))].slice(0, normalizedDeckMode));
   const [playerBoard, setPlayerBoard] = useState(0);
   const [aiBoard, setAiBoard] = useState(0);
-  const [playerHP, setPlayerHP] = useState(25);
-  const [aiHP, setAiHP] = useState(25);
+  const [playerHP, setPlayerHP] = useState(startingHp);
+  const [aiHP, setAiHP] = useState(startingHp);
   const [comboCount, setComboCount] = useState(0);
   const [turn, setTurn] = useState(1);
   const [log, setLog] = useState([]);
@@ -62,7 +65,7 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
       newAiHP = Math.max(0, newAiHP - abVal);
       logMsg += `, ${card.ability} deals ${abVal} dmg`;
     } else if (card.ability === 'heal') {
-      newPlayerHP = Math.min(25, newPlayerHP + abVal);
+      newPlayerHP = Math.min(startingHp, newPlayerHP + abVal);
       logMsg += `, heal ${abVal} HP`;
     } else if (card.ability === 'shield') {
       newPlayerBoard += abVal;
@@ -137,7 +140,7 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
       return;
     }
 
-    if (nextTurn > 5 || playerCardsLeft === 0) {
+    if (nextTurn > normalizedDeckMode || playerCardsLeft === 0) {
       setTimeout(() => {
         const won = currentPlayerBoard > newAiBoard;
         endBattle(currentPlayerBoard, newAiBoard, won);
@@ -162,11 +165,13 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
       turnLog,
       playerDeck: playerCards,
       mode,
+      deckMode: normalizedDeckMode,
+      teamSize,
     }), 1200);
   };
 
-  const playerPct = Math.round((playerHP / 25) * 100);
-  const aiPct = Math.round((aiHP / 25) * 100);
+  const playerPct = Math.round((playerHP / startingHp) * 100);
+  const aiPct = Math.round((aiHP / startingHp) * 100);
 
   return (
     <div className="flex flex-col gap-3">
@@ -204,7 +209,7 @@ export default function BattleView({ playerCards, opponentName, difficulty, oppo
 
       {/* Phase indicator */}
       <div className="text-center space-y-2">
-        {phase === 'player' && <p className="text-xs text-primary font-semibold animate-pulse">▶ Your Turn — Play a card (Turn {turn}/5)</p>}
+        {phase === 'player' && <p className="text-xs text-primary font-semibold animate-pulse">▶ Your Turn — Play a card (Turn {turn}/{normalizedDeckMode})</p>}
         {phase === 'ai' && <p className="text-xs text-red-400 font-semibold animate-pulse">⏳ {opponentName} is thinking...</p>}
         {mode === 'tutorial' && tutorialSteps[tutorialIndex] && (
           <button
