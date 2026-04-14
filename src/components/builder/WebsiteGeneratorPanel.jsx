@@ -6,6 +6,7 @@ import WebsiteGeneratorForm from './WebsiteGeneratorForm';
 import WebsiteGeneratorPreview from './WebsiteGeneratorPreview';
 import WebsiteGeneratorPageMap from './WebsiteGeneratorPageMap';
 import WebsiteGeneratorSectionLibrary from './WebsiteGeneratorSectionLibrary';
+import WebsiteGeneratorEditor from './WebsiteGeneratorEditor';
 
 const EMPTY_FORM = {
   name: '',
@@ -98,8 +99,11 @@ export default function WebsiteGeneratorPanel() {
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are generating a structured website system for an integrated website generator inside ERU.
 Return a clean website blueprint with reusable sections and page structure.
+Support these site types: landing_page, business_site, portfolio.
 Support these pages when relevant: Home, About, Services, Contact.
-Support these reusable sections when relevant: Hero, Features, CTA, FAQ, Footer.
+Support these reusable sections when relevant: Hero, Features, About, Testimonials, Pricing, FAQ, CTA, Contact, Footer.
+Every page must be section-based and editable.
+Do not output random HTML.
 Project name: ${form.name}
 Project type: ${form.project_type}
 Description: ${form.description}
@@ -114,6 +118,9 @@ Notes: ${form.notes}`,
             type: 'object',
             properties: {
               site_name: { type: 'string' },
+              site_type: { type: 'string' },
+              tone: { type: 'string' },
+              cta_direction: { type: 'string' },
               site_summary: { type: 'string' },
               navigation: { type: 'array', items: { type: 'string' } },
               pages: {
@@ -214,6 +221,7 @@ Notes: ${form.notes}`,
             onGenerate={handleGenerate}
           />
           <WebsiteGeneratorPreview project={selectedProject} />
+          <WebsiteGeneratorEditor project={selectedProject} onSaved={loadProjects} />
           <WebsiteGeneratorPageMap pages={selectedProject?.site_blueprint?.pages || []} />
           <WebsiteGeneratorSectionLibrary sections={selectedProject?.site_blueprint?.reusable_sections || []} />
         </div>

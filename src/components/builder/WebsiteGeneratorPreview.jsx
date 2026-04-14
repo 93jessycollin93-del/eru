@@ -18,6 +18,7 @@ export default function WebsiteGeneratorPreview({ project }) {
         <div>
           <p className="text-sm font-semibold">First Draft Preview</p>
           <p className="mt-1 text-[11px] text-muted-foreground">{project.site_blueprint.site_summary}</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">{project.site_blueprint.site_type} · {project.site_blueprint.tone} · {project.site_blueprint.cta_direction}</p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           {(project.site_blueprint.navigation || []).map((item) => (

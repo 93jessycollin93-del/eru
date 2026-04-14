@@ -1,8 +1,12 @@
 const SECTION_LABELS = {
   hero: 'Hero',
   features: 'Features',
-  cta: 'CTA',
+  about: 'About',
+  testimonials: 'Testimonials',
+  pricing: 'Pricing',
   faq: 'FAQ',
+  cta: 'CTA',
+  contact: 'Contact',
   footer: 'Footer',
 };
 
