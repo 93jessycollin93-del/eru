@@ -33,26 +33,33 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     const payload = await req.json().catch(() => ({}));
     const botId = payload.botId;
     const sessionId = payload.sessionId;
     const chunkSize = payload.chunkSize || 20;
+    const keepRecentCount = payload.keepRecentCount || 100;
 
     if (!botId) {
       return Response.json({ error: 'botId is required' }, { status: 400 });
     }
 
-    const allMemories = await base44.entities.BotMemory.list('-created_date', 500);
-    const targetMemories = allMemories
+    const allMemories = await base44.asServiceRole.entities.BotMemory.list('-created_date', 1000);
+    const botMemories = allMemories
       .filter((item) => item.bot_id === botId && (!sessionId || item.session_id === sessionId))
       .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
 
+    if (botMemories.length <= keepRecentCount) {
+      return Response.json({ success: true, archived: 0, kept_recent: botMemories.length, chunks: [] });
+    }
+
+    const targetMemories = botMemories.slice(0, Math.max(0, botMemories.length - keepRecentCount));
+
     if (targetMemories.length === 0) {
-      return Response.json({ success: true, archived: 0, chunks: [] });
+      return Response.json({ success: true, archived: 0, kept_recent: Math.min(botMemories.length, keepRecentCount), chunks: [] });
     }
 
     const groupedChunks = chunkMessages(targetMemories, chunkSize);
@@ -98,14 +105,16 @@ Deno.serve(async (req) => {
     }
 
     await Promise.all(targetMemories.map((memory) =>
-      base44.entities.BotMemory.update(memory.id, {
-        superseded_by_chunk_id: chunkIdMap.get(memory.id) || null,
-        access_count: Number(memory.access_count || 0),
-        last_accessed_at: memory.last_accessed_at || memory.updated_date || memory.created_date
-      })
+      base44.asServiceRole.entities.BotMemory.delete(memory.id)
     ));
 
-    return Response.json({ success: true, archived: targetMemories.length, chunks: createdChunks });
+    return Response.json({
+      success: true,
+      archived: targetMemories.length,
+      kept_recent: keepRecentCount,
+      remaining_hot_memories: Math.min(botMemories.length, keepRecentCount),
+      chunks: createdChunks
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
