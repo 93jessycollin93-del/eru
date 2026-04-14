@@ -1,0 +1,67 @@
+{
+  "name": "WebsiteGeneratorProject",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "generated"
+      ],
+      "default": "draft"
+    },
+    "project_type": {
+      "type": "string",
+      "enum": [
+        "landing_page",
+        "business_site",
+        "portfolio",
+        "storefront",
+        "custom"
+      ],
+      "default": "landing_page"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "target_audience": {
+      "type": "string"
+    },
+    "style_direction": {
+      "type": "string"
+    },
+    "site_blueprint": {
+      "type": "object"
+    },
+    "generated_copy": {
+      "type": "object"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "project_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

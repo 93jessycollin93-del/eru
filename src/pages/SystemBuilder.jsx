@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Wand2, Bot, Send, Loader2, CheckCircle2, Code2, Layout, Settings2, Rocket, ChevronDown, ChevronUp, Copy, Check, Zap } from 'lucide-react';
+import { Wand2, Bot, Send, Loader2, CheckCircle2, Code2, Layout, Settings2, Rocket, ChevronDown, ChevronUp, Copy, Check, Zap, Globe } from 'lucide-react';
+import WebsiteGeneratorPanel from '../components/builder/WebsiteGeneratorPanel';
 
 const EXAMPLES = [
   'Make me a trading bot for BTC/USDT',
@@ -59,6 +60,7 @@ const CodeBlock = ({ content }) => {
 };
 
 export default function SystemBuilder() {
+  const [module, setModule] = useState('builder');
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [system, setSystem] = useState(null);
@@ -151,6 +153,16 @@ export default function SystemBuilder() {
       </div>
 
       <div className="px-4 py-4 space-y-4">
+        <div className="flex gap-2 overflow-x-auto">
+          <button onClick={() => setModule('builder')} className={`rounded-xl px-3 py-2 text-xs font-semibold ${module === 'builder' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+            <Wand2 className="mr-1 inline w-3.5 h-3.5" /> System Builder
+          </button>
+          <button onClick={() => setModule('website-generator')} className={`rounded-xl px-3 py-2 text-xs font-semibold ${module === 'website-generator' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+            <Globe className="mr-1 inline w-3.5 h-3.5" /> Website Generator
+          </button>
+        </div>
+
+        {module === 'website-generator' ? <WebsiteGeneratorPanel /> : <>
         {/* Prompt input */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-3 pt-3 pb-2">
@@ -292,6 +304,7 @@ export default function SystemBuilder() {
             ))}
           </div>
         )}
+        </>}
       </div>
     </div>
   );
