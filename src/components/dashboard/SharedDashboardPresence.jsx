@@ -16,14 +16,30 @@ export default function SharedDashboardPresence() {
     let mounted = true;
     let unsubscribe = null;
     let heartbeat = null;
-    let refreshTimer = null;
     let localSessionId = null;
-    let isRefreshing = false;
 
     const applySessions = (data) => {
       if (!mounted) return;
       const now = Date.now();
       setSessions((data || []).filter((item) => now - new Date(item.last_seen_at || item.updated_date).getTime() < 120000));
+    };
+
+    const mergeSessionEvent = (currentSessions, event) => {
+      if (event.type === 'create') {
+        return [event.data, ...currentSessions.filter((item) => item.id !== event.id)].slice(0, 20);
+      }
+      if (event.type === 'update') {
+        return currentSessions.map((item) => item.id === event.id ? event.data : item);
+      }
+      if (event.type === 'delete') {
+        return currentSessions.filter((item) => item.id !== event.id);
+      }
+      return currentSessions;
+    };
+
+    const safeListSessions = async () => {
+      const data = await base44.entities.SharedDashboardSession.filter({ dashboard_key: DASHBOARD_KEY }, undefined, 20);
+      applySessions(data);
     };
 
     const boot = async () => {
@@ -34,7 +50,7 @@ export default function SharedDashboardPresence() {
       const existing = await base44.entities.SharedDashboardSession.filter({
         dashboard_key: DASHBOARD_KEY,
         user_email: me.email,
-      }, '-updated_date', 1);
+      }, undefined, 1);
 
       const payload = {
         dashboard_key: DASHBOARD_KEY,
@@ -47,52 +63,41 @@ export default function SharedDashboardPresence() {
       };
 
       let record = existing?.[0];
-      if (record) {
-        record = await base44.entities.SharedDashboardSession.update(record.id, payload);
-      } else {
-        record = await base44.entities.SharedDashboardSession.create(payload);
-      }
+      record = record
+        ? await base44.entities.SharedDashboardSession.update(record.id, payload)
+        : await base44.entities.SharedDashboardSession.create(payload);
 
       if (!mounted) return;
       localSessionId = record.id;
 
-      const refresh = async () => {
-        if (isRefreshing) return;
-        isRefreshing = true;
-        const data = await base44.entities.SharedDashboardSession.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 20);
-        applySessions(data);
-        isRefreshing = false;
-      };
-
-      await refresh();
-      unsubscribe = base44.entities.SharedDashboardSession.subscribe(() => {
-        if (refreshTimer) return;
-        refreshTimer = window.setTimeout(async () => {
-          refreshTimer = null;
-          await refresh();
-        }, 1500);
+      await safeListSessions();
+      unsubscribe = base44.entities.SharedDashboardSession.subscribe((event) => {
+        setSessions((current) => {
+          const now = Date.now();
+          return mergeSessionEvent(current, event).filter((item) => now - new Date(item.last_seen_at || item.updated_date).getTime() < 120000);
+        });
       });
+
       heartbeat = window.setInterval(() => {
         base44.entities.SharedDashboardSession.update(record.id, {
           status: 'active',
           current_widget: 'overview',
           last_seen_at: new Date().toISOString(),
-        });
-      }, 90000);
+        }).catch(() => {});
+      }, 120000);
     };
 
-    boot();
+    boot().catch(() => {});
 
     return () => {
       mounted = false;
       if (unsubscribe) unsubscribe();
       if (heartbeat) window.clearInterval(heartbeat);
-      if (refreshTimer) window.clearTimeout(refreshTimer);
       if (localSessionId) {
         base44.entities.SharedDashboardSession.update(localSessionId, {
           status: 'idle',
           last_seen_at: new Date().toISOString(),
-        });
+        }).catch(() => {});
       }
     };
   }, []);
