@@ -12,11 +12,11 @@ const SECTION_STYLE = {
   footer: 'bg-card border-border',
 };
 
-function SectionBlock({ section, onSelect, selected }) {
+function SectionBlock({ section, onSelect, selected, previewMode }) {
   return (
     <button
       onClick={onSelect}
-      className={`w-full rounded-2xl border p-4 text-left transition-colors ${selected ? 'border-primary ring-1 ring-primary/40' : SECTION_STYLE[section.section_type] || 'border-border bg-secondary/70'}`}
+      className={`w-full rounded-2xl border text-left transition-colors ${previewMode === 'mobile' ? 'p-3' : 'p-4'} ${selected ? 'border-primary ring-1 ring-primary/40 bg-primary/5' : SECTION_STYLE[section.section_type] || 'border-border bg-secondary/70'}`}
     >
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold capitalize text-foreground">{section.section_type}</p>

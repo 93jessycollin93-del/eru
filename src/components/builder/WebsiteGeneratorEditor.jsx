@@ -88,6 +88,7 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
   };
 
   const activePage = draft?.site_blueprint?.pages?.find((page) => page.page_type === activePageType) || draft?.site_blueprint?.pages?.[0];
+  const pageIndex = (draft?.site_blueprint?.pages || []).findIndex((page) => page.page_type === activePage?.page_type);
   const activeSectionIndex = (draft?.site_blueprint?.reusable_sections || []).findIndex((section) => section.section_type === selectedSectionType);
   const activeSection = activeSectionIndex >= 0 ? draft?.site_blueprint?.reusable_sections?.[activeSectionIndex] : null;
 
@@ -107,6 +108,11 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
         pages: prev.site_blueprint.pages.map((page) => page.page_type === activePage.page_type ? { ...page, sections: nextSections } : page),
       },
     }));
+  };
+
+  const handlePreviewTextChange = (field, value) => {
+    if (!activeSection) return;
+    handleSectionFieldChange(activeSectionIndex, field, value);
   };
 
   const duplicateSection = () => {
@@ -204,82 +210,100 @@ Current items: ${(activeSection.items || []).join(', ')}`,
         </button>
       </div>
 
-      <WebsiteGeneratorLivePreview
-        pages={draft.site_blueprint.pages || []}
-        sections={draft.site_blueprint.reusable_sections || []}
-        activePageType={activePageType}
-        previewMode={previewMode}
-        selectedSectionType={selectedSectionType}
-        onPageChange={setActivePageType}
-        onModeChange={setPreviewMode}
-        onSelectSection={setSelectedSectionType}
-      />
-
-      <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-foreground">Pages</p>
-          {(draft.site_blueprint.pages || []).map((page, pageIndex) => (
-            <button key={`${page.page_type}-${pageIndex}`} onClick={() => setActivePageType(page.page_type)} className={`w-full rounded-xl p-3 text-left transition-colors ${activePageType === page.page_type ? 'border border-primary bg-primary/10' : 'border border-border bg-secondary'}`}>
-              <p className="text-sm font-semibold text-foreground">{page.page_name}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">/{page.slug}</p>
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_360px]">
+        <aside className="rounded-2xl border border-border bg-card p-3 space-y-3 h-fit xl:sticky xl:top-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Pages</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Switch between generated website pages.</p>
+          </div>
+          <div className="space-y-2">
+            {(draft.site_blueprint.pages || []).map((page, index) => (
+              <button
+                key={`${page.page_type}-${index}`}
+                onClick={() => {
+                  setActivePageType(page.page_type);
+                  setSelectedSectionType(page.sections?.[0] || null);
+                }}
+                className={`w-full rounded-xl p-3 text-left transition-colors ${activePageType === page.page_type ? 'border border-primary bg-primary/10' : 'border border-border bg-secondary'}`}
+              >
+                <p className="text-sm font-semibold text-foreground">{page.page_name}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">/{page.slug}</p>
+              </button>
+            ))}
+          </div>
           {activePage && (
-            <div className="rounded-xl bg-secondary p-3 space-y-3">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{activePage.page_name}</p>
-                <p className="text-[11px] text-muted-foreground">/{activePage.slug}</p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Page goal</label>
-                <textarea value={activePage.page_goal || ''} onChange={(e) => handlePageGoalChange((draft.site_blueprint.pages || []).findIndex((page) => page.page_type === activePage.page_type), e.target.value)} className="min-h-[72px] w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none resize-none" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Sections (comma separated)</label>
-                <input value={(activePage.sections || []).join(', ')} onChange={(e) => handlePageSectionsChange((draft.site_blueprint.pages || []).findIndex((page) => page.page_type === activePage.page_type), e.target.value)} className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none" />
-              </div>
+            <div className="rounded-xl bg-secondary p-3 space-y-2">
+              <label className="text-[11px] text-muted-foreground">Page goal</label>
+              <textarea value={activePage.page_goal || ''} onChange={(e) => handlePageGoalChange(pageIndex, e.target.value)} className="min-h-[88px] w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none resize-none" />
             </div>
           )}
+        </aside>
 
-          {activeSection && (
-            <div className="rounded-xl bg-secondary p-3 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-foreground capitalize">{activeSection.section_type}</p>
-                <WebsiteGeneratorSectionActions
-                  onMoveUp={() => moveSection('up')}
-                  onMoveDown={() => moveSection('down')}
-                  onDuplicate={duplicateSection}
-                  onDelete={deleteSection}
-                  onRegenerate={regenerateSection}
-                  disableUp={(activePage?.sections || []).findIndex((section) => section === selectedSectionType) <= 0}
-                  disableDown={(activePage?.sections || []).findIndex((section) => section === selectedSectionType) >= (activePage?.sections || []).length - 1}
-                />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">Title</label>
-                  <input value={activeSection.title || ''} onChange={(e) => handleSectionFieldChange(activeSectionIndex, 'title', e.target.value)} className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">CTA Label</label>
-                  <input value={activeSection.cta_label || ''} onChange={(e) => handleSectionFieldChange(activeSectionIndex, 'cta_label', e.target.value)} className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Subtitle</label>
-                <textarea value={activeSection.subtitle || ''} onChange={(e) => handleSectionFieldChange(activeSectionIndex, 'subtitle', e.target.value)} className="min-h-[72px] w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none resize-none" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Items (one per line)</label>
-                <textarea value={(activeSection.items || []).join('\n')} onChange={(e) => handleSectionItemsChange(activeSectionIndex, e.target.value)} className="min-h-[96px] w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none resize-none" />
-              </div>
-              {regenerating && <p className="text-[11px] text-primary">Regenerating section...</p>}
-            </div>
-          )}
+        <div className="min-w-0">
+          <WebsiteGeneratorLivePreview
+            pages={draft.site_blueprint.pages || []}
+            sections={draft.site_blueprint.reusable_sections || []}
+            activePageType={activePageType}
+            previewMode={previewMode}
+            selectedSectionType={selectedSectionType}
+            onPageChange={(pageType) => {
+              setActivePageType(pageType);
+              const page = (draft.site_blueprint.pages || []).find((item) => item.page_type === pageType);
+              setSelectedSectionType(page?.sections?.[0] || null);
+            }}
+            onModeChange={setPreviewMode}
+            onSelectSection={setSelectedSectionType}
+          />
         </div>
+
+        <aside className="rounded-2xl border border-border bg-card p-3 space-y-4 h-fit xl:sticky xl:top-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Section Editor</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Edit the selected section without leaving the preview.</p>
+          </div>
+
+          {activeSection ? (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground capitalize break-all">{activeSection.section_type}</p>
+              </div>
+
+              <WebsiteGeneratorSectionActions
+                onMoveUp={() => moveSection('up')}
+                onMoveDown={() => moveSection('down')}
+                onDuplicate={duplicateSection}
+                onDelete={deleteSection}
+                onRegenerate={regenerateSection}
+                disableUp={(activePage?.sections || []).findIndex((section) => section === selectedSectionType) <= 0}
+                disableDown={(activePage?.sections || []).findIndex((section) => section === selectedSectionType) >= (activePage?.sections || []).length - 1}
+              />
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Headline / Title</label>
+                <input value={activeSection.title || ''} onChange={(e) => handlePreviewTextChange('title', e.target.value)} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Body text / Subtitle</label>
+                <textarea value={activeSection.subtitle || ''} onChange={(e) => handlePreviewTextChange('subtitle', e.target.value)} className="min-h-[96px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">CTA text</label>
+                <input value={activeSection.cta_label || ''} onChange={(e) => handlePreviewTextChange('cta_label', e.target.value)} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">List items</label>
+                <textarea value={(activeSection.items || []).join('\n')} onChange={(e) => handleSectionItemsChange(activeSectionIndex, e.target.value)} className="min-h-[120px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
+              </div>
+
+              {regenerating && <p className="text-[11px] text-primary">Regenerating section...</p>}
+            </>
+          ) : (
+            <div className="rounded-xl bg-secondary p-4 text-xs text-muted-foreground">Select a section in the preview to edit it.</div>
+          )}
+        </aside>
       </div>
 
       <div className="rounded-xl bg-secondary p-3 space-y-3">

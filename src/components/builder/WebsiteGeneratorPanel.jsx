@@ -3,7 +3,6 @@ import { base44 } from '@/api/base44Client';
 import { Globe, Plus } from 'lucide-react';
 import WebsiteGeneratorProjectList from './WebsiteGeneratorProjectList';
 import WebsiteGeneratorForm from './WebsiteGeneratorForm';
-import WebsiteGeneratorPreview from './WebsiteGeneratorPreview';
 import WebsiteGeneratorPageMap from './WebsiteGeneratorPageMap';
 import WebsiteGeneratorSectionLibrary from './WebsiteGeneratorSectionLibrary';
 import WebsiteGeneratorEditor from './WebsiteGeneratorEditor';
@@ -221,8 +220,6 @@ Notes: ${form.notes}`,
             onGenerate={handleGenerate}
           />
           <WebsiteGeneratorEditor project={selectedProject} onSaved={loadProjects} />
-          <WebsiteGeneratorPageMap pages={selectedProject?.site_blueprint?.pages || []} />
-          <WebsiteGeneratorSectionLibrary sections={selectedProject?.site_blueprint?.reusable_sections || []} />
         </div>
       </div>
     </div>
