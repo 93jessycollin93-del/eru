@@ -5,6 +5,7 @@ import { Tv2, X, Music, Film, Globe, Star, History, ChevronDown, ChevronRight, R
 const QUICK_LINKS = [
   { label: 'YouTube', url: 'https://www.youtube.com/embed/jfKfPfyJRdk', icon: '▶️', category: 'Video' },
   { label: 'Lo-fi Radio', url: 'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1', icon: '🎵', category: 'Music' },
+  { label: 'Lo-fi Girl', url: 'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1', icon: '🌙', category: 'Music' },
   { label: 'NASA Live', url: 'https://www.youtube.com/embed/21X5lGlDOfg?autoplay=1', icon: '🚀', category: 'Live' },
   { label: 'Crypto News', url: 'https://coindesk.com', icon: '📰', category: 'News' },
   { label: 'TradingView', url: 'https://www.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=D&theme=dark', icon: '📈', category: 'Charts' },
