@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import BiometricAuth from '../components/BiometricAuth';
 import { useAuth } from '@/lib/AuthContext';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send } from 'lucide-react';
+import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send, Globe, Copy, CheckCircle2 } from 'lucide-react';
 import SoundSettings from '../components/SoundSettings';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
@@ -16,6 +16,100 @@ const SECTIONS = [
   { icon: FileText, label: 'Documents & Disclaimers', badge: null },
   { icon: Lock, label: 'Session Timeout', badge: '15 min' },
 ];
+
+function DomainRecordRow({ label, value }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className="truncate text-xs text-foreground">{value}</p>
+      </div>
+      <button onClick={handleCopy} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+        {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+    </div>
+  );
+}
+
+function DomainSettingsCard() {
+  const [domain, setDomain] = useState('');
+
+  const cleanedDomain = useMemo(() => domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''), [domain]);
+  const hostLabel = useMemo(() => {
+    if (!cleanedDomain) return 'www';
+    if (cleanedDomain.startsWith('www.')) return 'www';
+    const parts = cleanedDomain.split('.');
+    return parts.length > 2 ? parts[0] : 'www';
+  }, [cleanedDomain]);
+  const isSubdomain = useMemo(() => cleanedDomain.split('.').filter(Boolean).length > 2 && !cleanedDomain.startsWith('www.'), [cleanedDomain]);
+
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-card p-4 space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5">
+          <Globe className="w-4 h-4 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">Custom Domain</p>
+          <p className="mt-1 text-xs text-muted-foreground">Connect your own domain and point it to your hosted site with the DNS records below.</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-foreground">Your domain</label>
+        <input
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          placeholder="example.com or app.example.com"
+          className="w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none"
+        />
+        <p className="text-[11px] text-muted-foreground">Enter either your root domain or a subdomain you want to use.</p>
+      </div>
+
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+        <p className="text-xs font-semibold text-foreground">DNS setup</p>
+        {isSubdomain ? (
+          <>
+            <DomainRecordRow label="Type" value="CNAME" />
+            <DomainRecordRow label="Name / Host" value={hostLabel} />
+            <DomainRecordRow label="Value / Target" value="base44.onrender.com" />
+          </>
+        ) : (
+          <>
+            <DomainRecordRow label="Root domain (@)" value="Use ANAME or ALIAS to base44.onrender.com if your DNS provider supports it" />
+            <DomainRecordRow label="Fallback A record" value="216.24.57.1" />
+            <DomainRecordRow label="www CNAME" value="www → base44.onrender.com" />
+          </>
+        )}
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-border bg-secondary/30 p-3">
+        <p className="text-xs font-semibold text-foreground">Setup steps</p>
+        <ol className="space-y-2 text-xs text-muted-foreground list-decimal pl-4">
+          <li>Open your domain registrar or DNS provider.</li>
+          <li>Create the record shown above for your domain.</li>
+          <li>If you are using the root domain, also add the <span className="text-foreground">www</span> CNAME to <span className="text-foreground">base44.onrender.com</span>.</li>
+          <li>Remove conflicting AAAA records for the same host if they exist.</li>
+          <li>If you use Cloudflare, set the record to <span className="text-foreground">DNS only</span> while connecting.</li>
+          <li>Then go to your app dashboard domain settings and verify the domain.</li>
+        </ol>
+      </div>
+
+      <div className="flex items-start gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-[11px] text-muted-foreground">
+        <ExternalLink className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+        <p>DNS changes can take up to 48–72 hours to fully propagate, and SSL is issued automatically after verification.</p>
+      </div>
+    </div>
+  );
+}
 
 function SettingsSheet({ type, onClose }) {
   const [tab, setTab] = useState('disclaimer');
@@ -153,6 +247,8 @@ export default function Settings() {
             </button>
           ))}
         </div>
+
+        <DomainSettingsCard />
 
         <div className="mt-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1">
