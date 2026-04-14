@@ -13,6 +13,26 @@ const BG_TYPES = [
   ['overlay', 'Dark Overlay'],
 ];
 
+function ColorWheel({ value, fallback, label }) {
+  const display = value || fallback;
+  const wheelStyle = display?.includes('gradient')
+    ? { backgroundImage: display }
+    : { background: display || 'rgba(255,255,255,0.08)' };
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/40 px-3 py-3">
+      <div className="relative h-11 w-11 rounded-full border border-white/10 p-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+        <div className="h-full w-full rounded-full" style={wheelStyle} />
+        <div className="absolute inset-[11px] rounded-full border border-black/20 bg-card/70 backdrop-blur-sm" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-foreground">{label}</p>
+        <p className="truncate text-[10px] text-muted-foreground">{display || 'Not set'}</p>
+      </div>
+    </div>
+  );
+}
+
 function Field({ label, children }) {
   return (
     <label className="space-y-1.5 min-w-0">
@@ -90,34 +110,49 @@ export default function LayerStyleForm({ value, onChange, onReset }) {
         </Field>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Surface fill">
-          <input value={value.surface_bg || ''} onChange={(e) => update('surface_bg', e.target.value)} placeholder="rgba(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Surface text">
-          <input value={value.surface_fg || ''} onChange={(e) => update('surface_fg', e.target.value)} placeholder="#f8fafc" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Button fill">
-          <input value={value.button_bg || ''} onChange={(e) => update('button_bg', e.target.value)} placeholder="#29e3a1" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Button text">
-          <input value={value.button_fg || ''} onChange={(e) => update('button_fg', e.target.value)} placeholder="#07110d" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Button border">
-          <input value={value.button_border || ''} onChange={(e) => update('button_border', e.target.value)} placeholder="rgba(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Button hover">
-          <input value={value.button_hover || ''} onChange={(e) => update('button_hover', e.target.value)} placeholder="linear-gradient(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Button active">
-          <input value={value.button_active || ''} onChange={(e) => update('button_active', e.target.value)} placeholder="#1fbf85" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Button disabled">
-          <input value={value.button_disabled || ''} onChange={(e) => update('button_disabled', e.target.value)} placeholder="rgba(255,255,255,0.2)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
-        <Field label="Button glow">
-          <input value={value.button_glow || ''} onChange={(e) => update('button_glow', e.target.value)} placeholder="0 0 24px rgba(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
-        </Field>
+      <div className="space-y-3 rounded-2xl border border-border bg-background/40 p-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Surface and button colors</p>
+          <p className="text-[11px] text-muted-foreground">These now preview like theme wheels while keeping the same editable values.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-2">
+            <ColorWheel value={value.surface_bg} fallback="rgba(255,255,255,0.08)" label="Surface fill" />
+            <input value={value.surface_bg || ''} onChange={(e) => update('surface_bg', e.target.value)} placeholder="rgba(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.surface_fg} fallback="#f8fafc" label="Surface text" />
+            <input value={value.surface_fg || ''} onChange={(e) => update('surface_fg', e.target.value)} placeholder="#f8fafc" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.button_bg} fallback="#29e3a1" label="Button fill" />
+            <input value={value.button_bg || ''} onChange={(e) => update('button_bg', e.target.value)} placeholder="#29e3a1" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.button_fg} fallback="#07110d" label="Button text" />
+            <input value={value.button_fg || ''} onChange={(e) => update('button_fg', e.target.value)} placeholder="#07110d" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.button_border} fallback="rgba(255,255,255,0.16)" label="Button border" />
+            <input value={value.button_border || ''} onChange={(e) => update('button_border', e.target.value)} placeholder="rgba(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.button_hover} fallback="linear-gradient(135deg, #29e3a1, #1fbf85)" label="Button hover" />
+            <input value={value.button_hover || ''} onChange={(e) => update('button_hover', e.target.value)} placeholder="linear-gradient(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.button_active} fallback="#1fbf85" label="Button active" />
+            <input value={value.button_active || ''} onChange={(e) => update('button_active', e.target.value)} placeholder="#1fbf85" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.button_disabled} fallback="rgba(255,255,255,0.2)" label="Button disabled" />
+            <input value={value.button_disabled || ''} onChange={(e) => update('button_disabled', e.target.value)} placeholder="rgba(255,255,255,0.2)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+          <div className="space-y-2">
+            <ColorWheel value={value.button_glow} fallback="radial-gradient(circle, rgba(41,227,161,0.55), rgba(41,227,161,0.05))" label="Button glow" />
+            <input value={value.button_glow || ''} onChange={(e) => update('button_glow', e.target.value)} placeholder="0 0 24px rgba(...)" className="w-full min-h-11 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none" />
+          </div>
+        </div>
       </div>
     </div>
   );
