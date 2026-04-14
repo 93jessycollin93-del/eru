@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { invokeSelectedModel } from './modelRouting';
-import { BarChart3, CheckCircle2, FlaskConical, Save, Sparkles, Upload, BrainCircuit } from 'lucide-react';
+import { BarChart3, CheckCircle2, FlaskConical, Save, Sparkles, Upload, BrainCircuit, Eye } from 'lucide-react';
 import BotDeploymentPipelinePanel from './BotDeploymentPipelinePanel';
 import { buildRegressionPrompt, scoreSimilarity, runRegressionSuite } from './regressionTesting';
 import BotTrainingInsightsPanel from './BotTrainingInsightsPanel';
+import BotStrategySimulationOverlay from './BotStrategySimulationOverlay';
 import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 
 const EMPTY_GOLDEN = { title: '', input: '', expected_output: '', min_similarity_score: 0.75 };
@@ -22,6 +23,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
   const [generatingInsights, setGeneratingInsights] = useState(false);
   const [latestTrainingSummary, setLatestTrainingSummary] = useState('');
   const [trainingOnHistory, setTrainingOnHistory] = useState(false);
+  const [showSimulationOverlay, setShowSimulationOverlay] = useState(false);
 
   const selectedBot = useMemo(() => bots.find((bot) => bot.id === selectedBotId) || null, [bots, selectedBotId]);
 
@@ -331,9 +333,14 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
               )}
             </div>
 
-            <button onClick={runTraining} disabled={running || goldens.length === 0 || !candidateInstructions.trim()} className="w-full rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
-              {running ? 'Running training...' : 'Run micro-tests'}
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button onClick={runTraining} disabled={running || goldens.length === 0 || !candidateInstructions.trim()} className="w-full rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
+                {running ? 'Running training...' : 'Run micro-tests'}
+              </button>
+              <button onClick={() => setShowSimulationOverlay(true)} disabled={!selectedBot} className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 py-2.5 text-xs font-semibold text-primary disabled:opacity-40">
+                <Eye className="w-3.5 h-3.5" /> Simulate impact
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -346,6 +353,15 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
           onImport={importGeneratedTests}
         />
       )}
+
+      <BotStrategySimulationOverlay
+        open={showSimulationOverlay}
+        onClose={() => setShowSimulationOverlay(false)}
+        selectedBot={selectedBot}
+        testCases={goldens}
+        results={results}
+        candidateInstructions={candidateInstructions}
+      />
 
       {summary && (
         <div className="space-y-4">
