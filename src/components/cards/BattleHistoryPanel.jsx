@@ -25,7 +25,7 @@ export default function BattleHistoryPanel({ matches, selectedMatch, onSelect, l
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold">vs {match.opponent_name}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{match.opponent_faction} · Turn {match.turns_played || 0}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{match.opponent_faction} · Turn {match.turns_played || 0} · {match.deck_mode || 10}-card · {(match.team_size || 1) === 2 ? '2v2' : '1v1'}</p>
                   </div>
                   <span className={`text-[10px] font-bold uppercase ${match.result === 'win' ? 'text-green-400' : 'text-red-400'}`}>
                     {match.result}
@@ -67,6 +67,14 @@ export default function BattleHistoryPanel({ matches, selectedMatch, onSelect, l
               <div className="rounded-xl bg-secondary p-3">
                 <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Turns</p>
                 <p className="mt-1 text-sm font-bold text-foreground">{selectedMatch.turns_played || 0}</p>
+              </div>
+              <div className="rounded-xl bg-secondary p-3">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Deck Mode</p>
+                <p className="mt-1 text-sm font-bold text-foreground">{selectedMatch.deck_mode || 10}-card</p>
+              </div>
+              <div className="rounded-xl bg-secondary p-3">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Format</p>
+                <p className="mt-1 text-sm font-bold text-foreground">{(selectedMatch.team_size || 1) === 2 ? '2v2' : '1v1'}</p>
               </div>
             </div>
 

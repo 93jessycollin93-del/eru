@@ -40,12 +40,15 @@ export default function BattleReplayViewer({ match }) {
 
   if (!match) return null;
 
+  const hpBase = match?.deck_mode ? 25 + Math.round((Number(match.deck_mode) - 10) * 0.8) : 25;
+  const hpPool = hpBase * Math.max(1, Number(match.team_size || 1));
+
   return (
     <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold">Battle Replay</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Play through the saved turn log to watch the match unfold step by step.</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Play through the saved turn log to watch the match unfold step by step. Deck mode: {match.deck_mode || 10}-card · {(match.team_size || 1) === 2 ? '2v2' : '1v1'}.</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setStepIndex(0)} className="rounded-lg bg-card px-2.5 py-2 text-xs text-muted-foreground hover:text-foreground">
@@ -72,7 +75,7 @@ export default function BattleReplayViewer({ match }) {
               <div className="mt-2 h-2 rounded-full bg-background overflow-hidden">
                 <motion.div
                   className="h-full bg-green-500"
-                  animate={{ width: `${Math.max(0, Math.min(100, (((activeEntry?.player_hp ?? match.player_hp_end) || 0) / 25) * 100))}%` }}
+                  animate={{ width: `${Math.max(0, Math.min(100, (((activeEntry?.player_hp ?? match.player_hp_end) || 0) / hpPool) * 100))}%` }}
                 />
               </div>
               <p className="mt-2 text-xs text-primary font-semibold">Board {activeEntry?.player_board ?? match.player_board_power}</p>
@@ -86,7 +89,7 @@ export default function BattleReplayViewer({ match }) {
               <div className="mt-2 h-2 rounded-full bg-background overflow-hidden">
                 <motion.div
                   className="h-full bg-red-500"
-                  animate={{ width: `${Math.max(0, Math.min(100, (((activeEntry?.opponent_hp ?? match.opponent_hp_end) || 0) / 25) * 100))}%` }}
+                  animate={{ width: `${Math.max(0, Math.min(100, (((activeEntry?.opponent_hp ?? match.opponent_hp_end) || 0) / hpPool) * 100))}%` }}
                 />
               </div>
               <p className="mt-2 text-xs text-primary font-semibold">Board {activeEntry?.opponent_board ?? match.opponent_board_power}</p>

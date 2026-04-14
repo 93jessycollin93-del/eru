@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { fetchUserGold, awardGold } from '@/lib/economyApi';
 import { STARTER_CARDS, ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
+import { DECK_MODE_OPTIONS, DEFAULT_DECK_MODE, buildDeckModeSummary, calculateDeckStrength, getFairMatchScore, getMinimumDeckForMode, normalizeDeckMode } from '../components/cards/deckModes';
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield } from 'lucide-react';
+import ChallengePanel from '../components/cards/ChallengePanel';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 
@@ -26,11 +28,13 @@ const TABS = [
 
 const JACKIE_NAMES = ['Jackie Scout', 'Jackie Duelist', 'Jackie Prime', 'Jackie Oracle'];
 const TUTORIAL_STEPS = [
-  'Build a 5-card deck before ladder play.',
+  'Build a legal deck for the selected deck-size mode before queueing.',
   'Play your strongest tempo card first to build board pressure.',
   'Use burn and poison to finish weakened opponents.',
   'Guard and shield cards help you win close board races.'
 ];
+
+const TOURNAMENT_DECK_MODES = [10, 20, 30];
 
 export default function CardArena() {
   const [tab, setTab] = useState('collection');
@@ -57,6 +61,12 @@ export default function CardArena() {
   const [activeOpponentFaction, setActiveOpponentFaction] = useState('');
   const [activeDifficulty, setActiveDifficulty] = useState(1);
   const [campaignLevel, setCampaignLevel] = useState(1);
+  const [deckMode, setDeckMode] = useState(DEFAULT_DECK_MODE);
+  const [teamSize, setTeamSize] = useState(1);
+  const [queueMode, setQueueMode] = useState('pvp_ladder');
+  const [inviteSearch, setInviteSearch] = useState('');
+  const [arenaUsers, setArenaUsers] = useState([]);
+  const [openChallenges, setOpenChallenges] = useState([]);
 
   useEffect(() => {
     loadCards();
@@ -64,6 +74,7 @@ export default function CardArena() {
     loadBattleHistory();
     loadPlayerProfile();
     loadQueueState();
+    loadArenaUsers();
   }, []);
 
   const loadGold = async () => {
@@ -93,7 +104,14 @@ export default function CardArena() {
     setGold(amount);
   };
 
-  const deckStrength = useMemo(() => deck.reduce((sum, card) => sum + card.power + card.guard + (card.cost || 0), 0), [deck]);
+  const loadArenaUsers = async () => {
+    const users = await base44.entities.User.list().catch(() => []);
+    setArenaUsers(users || []);
+  };
+
+  const normalizedDeckMode = useMemo(() => normalizeDeckMode(deckMode), [deckMode]);
+  const deckModeSummary = useMemo(() => buildDeckModeSummary(normalizedDeckMode), [normalizedDeckMode]);
+  const deckStrength = useMemo(() => calculateDeckStrength(deck, normalizedDeckMode), [deck, normalizedDeckMode]);
   const collectionStrength = useMemo(() => cards.reduce((sum, card) => sum + (card.power || 0) + (card.guard || 0), 0), [cards]);
 
   const serializeDeck = (deckCards = []) => deckCards.map((card) => ({
@@ -135,10 +153,11 @@ export default function CardArena() {
 
   const loadQueueState = async () => {
     const me = await base44.auth.me();
-    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 50);
-    const roomRows = await base44.entities.CardMatchmakingRoom.list('-created_date', 50);
-    setQueueEntry(queueRows.find((row) => row.user_email === me.email && row.status === 'searching') || null);
-    setMatchRoom(roomRows.find((room) => (room.player_one_email === me.email || room.player_two_email === me.email) && room.status !== 'completed') || null);
+    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 100);
+    const roomRows = await base44.entities.CardMatchmakingRoom.list('-created_date', 100);
+    setQueueEntry(queueRows.find((row) => row.user_email === me.email && ['searching', 'open_challenge', 'invited', 'matched'].includes(row.status)) || null);
+    setOpenChallenges(queueRows.filter((row) => row.status === 'open_challenge' && row.user_email !== me.email));
+    setMatchRoom(roomRows.find((room) => [room.player_one_email, room.player_two_email, room.player_three_email, room.player_four_email].includes(me.email) && room.status !== 'completed') || null);
   };
 
   const loadBattleHistory = async () => {
@@ -151,7 +170,7 @@ export default function CardArena() {
 
   const saveBattleHistory = async (won, round, battleData) => {
     const eloBefore = playerProfile?.elo_rating || 1000;
-    const eloDelta = battleMode === 'pvp_ladder' ? (won ? 18 : -14) : battleMode === 'jackie_ai' ? (won ? 8 : -5) : 0;
+    const eloDelta = battleMode === 'pvp_ladder' ? (won ? 18 : -14) : battleMode === 'pvp_duo' ? (won ? 14 : -10) : battleMode === 'jackie_ai' ? (won ? 8 : -5) : 0;
     const eloAfter = Math.max(800, eloBefore + eloDelta);
 
     const saved = await base44.entities.CardBattleHistory.create({
@@ -166,6 +185,8 @@ export default function CardArena() {
       opponent_board_power: battleData?.aiBoardPower || 0,
       player_hp_end: battleData?.playerHP || 0,
       opponent_hp_end: battleData?.aiHP || 0,
+      deck_mode: battleData?.deckMode || normalizedDeckMode,
+      team_size: battleData?.teamSize || teamSize,
       player_deck_snapshot: serializeDeck(battleData?.playerDeck || deck),
       opponent_deck_snapshot: serializeDeck(battleData?.aiDeck || []),
       turn_log: battleData?.turnLog || [],
@@ -224,25 +245,29 @@ export default function CardArena() {
     setDeck(prev => {
       const has = prev.find(c => c.id === card.id);
       if (has) return prev.filter(c => c.id !== card.id);
-      if (prev.length >= 5) return [...prev.slice(1), card];
+      if (prev.length >= normalizedDeckMode) return [...prev.slice(1), card];
       return [...prev, card];
     });
   };
 
   const startTournament = () => {
     setBattleMode('tournament');
-    setActiveOpponentName(TOURNAMENT_ROUNDS[0].name);
-    setActiveOpponentFaction(TOURNAMENT_ROUNDS[0].faction);
-    setActiveDifficulty(TOURNAMENT_ROUNDS[0].difficulty);
+    setTeamSize(1);
+    const firstRound = { ...TOURNAMENT_ROUNDS[0], deck_mode: TOURNAMENT_DECK_MODES[0] };
+    setDeckMode(firstRound.deck_mode);
+    setActiveOpponentName(firstRound.name);
+    setActiveOpponentFaction(firstRound.faction);
+    setActiveDifficulty(firstRound.difficulty);
     setActiveOpponentDeck(null);
     setTournamentRound(1);
     setRoundResults([]);
-    setCurrentRound(TOURNAMENT_ROUNDS[0]);
+    setCurrentRound(firstRound);
     setBattling(true);
   };
 
   const startTraining = () => {
     setBattleMode('training');
+    setTeamSize(1);
     setActiveOpponentName('Training Dummy');
     setActiveOpponentFaction('Stone Legion');
     setActiveDifficulty(1);
@@ -253,6 +278,8 @@ export default function CardArena() {
 
   const startTutorial = () => {
     setBattleMode('tutorial');
+    setTeamSize(1);
+    setDeckMode(DEFAULT_DECK_MODE);
     setActiveOpponentName('Coach Jackie');
     setActiveOpponentFaction('Dawn Conclave');
     setActiveDifficulty(1);
@@ -263,6 +290,7 @@ export default function CardArena() {
 
   const startJackieAi = (level = 1) => {
     setBattleMode(level > 1 ? 'ai_campaign' : 'jackie_ai');
+    setTeamSize(1);
     setCampaignLevel(level);
     setActiveOpponentName(JACKIE_NAMES[level % JACKIE_NAMES.length]);
     setActiveOpponentFaction(level % 2 === 0 ? 'Void Syndicate' : 'Dawn Conclave');
@@ -274,13 +302,22 @@ export default function CardArena() {
 
   const findPvpMatch = async () => {
     const me = await base44.auth.me();
-    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 50);
-    const activeRows = queueRows.filter((row) => row.status === 'searching' && row.user_email !== me.email);
+    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 100);
+    const activeRows = queueRows.filter((row) => row.status === 'searching' && row.user_email !== me.email && normalizeDeckMode(row.deck_mode) === normalizedDeckMode && Number(row.team_size || 1) === teamSize && row.queue_mode === queueMode);
     const myElo = playerProfile?.elo_rating || 1000;
     const bestMatch = activeRows
       .map((row) => ({
         row,
-        score: Math.abs((row.elo_rating || 1000) - myElo) + Math.abs((row.collection_strength || 0) - collectionStrength) + Math.abs((row.deck_strength || 0) - deckStrength),
+        score: getFairMatchScore({
+          myElo,
+          theirElo: row.elo_rating || 1000,
+          myCollection: collectionStrength,
+          theirCollection: row.collection_strength || 0,
+          myDeckStrength: deckStrength,
+          theirDeckStrength: row.deck_strength || 0,
+          myDeckMode: normalizedDeckMode,
+          theirDeckMode: row.deck_mode || DEFAULT_DECK_MODE,
+        }),
       }))
       .sort((a, b) => a.score - b.score)[0];
 
@@ -291,8 +328,10 @@ export default function CardArena() {
       collection_strength: collectionStrength,
       deck_snapshot: serializeDeck(deck),
       deck_strength: deckStrength,
+      deck_mode: normalizedDeckMode,
+      team_size: teamSize,
       status: 'searching',
-      queue_mode: 'pvp_ladder',
+      queue_mode: queueMode,
     });
     setQueueEntry(myQueue);
 
@@ -300,8 +339,10 @@ export default function CardArena() {
       const roomKey = `room-${Date.now()}`;
       const room = await base44.entities.CardMatchmakingRoom.create({
         room_key: roomKey,
-        mode: 'pvp_ladder',
+        mode: queueMode,
         status: 'ready',
+        deck_mode: normalizedDeckMode,
+        team_size: teamSize,
         player_one_email: me.email,
         player_one_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
         player_two_email: bestMatch.row.user_email,
@@ -318,21 +359,60 @@ export default function CardArena() {
         base44.entities.CardMatchmakingQueue.update(bestMatch.row.id, { status: 'matched', matched_opponent_email: me.email, matched_room_key: roomKey }),
       ]);
       setMatchRoom(room);
-      setBattleMode('pvp_ladder');
+      setBattleMode(queueMode);
       setActiveOpponentName(bestMatch.row.display_name || 'Matched Rival');
       setActiveOpponentFaction(bestMatch.row.deck_snapshot?.[0]?.faction || 'Ember Clan');
-      setActiveDifficulty(2);
+      setActiveDifficulty(teamSize === 2 ? 3 : 2);
       setActiveOpponentDeck(hydrateDeckSnapshot(bestMatch.row.deck_snapshot || []));
       setBattling(true);
       return;
     }
 
-    setBattleMode('pvp_ladder');
-    setActiveOpponentName('Jackie Match Proxy');
+    setBattleMode(queueMode);
+    setActiveOpponentName(queueMode === 'pvp_duo' ? 'Jackie Duo Proxy' : 'Jackie Match Proxy');
     setActiveOpponentFaction('Void Syndicate');
-    setActiveDifficulty(2);
+    setActiveDifficulty(teamSize === 2 ? 3 : 2);
     setActiveOpponentDeck(null);
     setBattling(true);
+  };
+
+  const createOpenChallenge = async () => {
+    const me = await base44.auth.me();
+    const challenge = await base44.entities.CardMatchmakingQueue.create({
+      user_email: me.email,
+      display_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
+      elo_rating: playerProfile?.elo_rating || 1000,
+      collection_strength: collectionStrength,
+      deck_snapshot: serializeDeck(deck),
+      deck_strength: deckStrength,
+      deck_mode: normalizedDeckMode,
+      team_size: teamSize,
+      status: 'open_challenge',
+      queue_mode: queueMode,
+      challenge_visibility: 'public',
+    });
+    setQueueEntry(challenge);
+    loadQueueState();
+  };
+
+  const inviteSpecificPlayer = async (targetUser) => {
+    const me = await base44.auth.me();
+    const challenge = await base44.entities.CardMatchmakingQueue.create({
+      user_email: me.email,
+      display_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
+      elo_rating: playerProfile?.elo_rating || 1000,
+      collection_strength: collectionStrength,
+      deck_snapshot: serializeDeck(deck),
+      deck_strength: deckStrength,
+      deck_mode: normalizedDeckMode,
+      team_size: teamSize,
+      status: 'invited',
+      queue_mode: 'direct_challenge',
+      challenge_visibility: 'direct',
+      invited_player_email: targetUser.email,
+    });
+    setQueueEntry(challenge);
+    loadQueueState();
   };
 
   const handleBattleEnd = async (won, battleData) => {
@@ -341,7 +421,7 @@ export default function CardArena() {
     setRoundResults(newResults);
     await saveBattleHistory(won, round, battleData);
 
-    if (battleMode === 'pvp_ladder' || battleMode === 'training' || battleMode === 'tutorial' || battleMode === 'jackie_ai' || battleMode === 'ai_campaign') {
+    if (battleMode === 'pvp_ladder' || battleMode === 'pvp_duo' || battleMode === 'direct_challenge' || battleMode === 'training' || battleMode === 'tutorial' || battleMode === 'jackie_ai' || battleMode === 'ai_campaign') {
       setBattling(false);
       return;
     }
@@ -388,7 +468,8 @@ export default function CardArena() {
         setTimeout(() => {
           const nextRound = tournamentRound + 1;
           setTournamentRound(nextRound);
-          setCurrentRound(TOURNAMENT_ROUNDS[nextRound - 1]);
+          setCurrentRound({ ...TOURNAMENT_ROUNDS[nextRound - 1], deck_mode: TOURNAMENT_DECK_MODES[nextRound - 1] || normalizedDeckMode });
+          setDeckMode(TOURNAMENT_DECK_MODES[nextRound - 1] || normalizedDeckMode);
           setBattling(true);
           setDiscoveredCard(null);
           setBattleReward(null);
@@ -455,12 +536,24 @@ export default function CardArena() {
         {tab === 'deck' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Active Deck <span className="text-muted-foreground font-normal text-xs">({deck.length}/5)</span></p>
+              <p className="text-sm font-semibold">Active Deck <span className="text-muted-foreground font-normal text-xs">({deck.length}/{normalizedDeckMode})</span></p>
               <button onClick={() => setDeck([])} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
             </div>
-            <div className="rounded-xl border border-border bg-card p-3">
-              <p className="text-xs font-semibold text-foreground">Page purpose</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">Card Arena is your battle hub for collecting cards, building a 5-card deck, and clearing a 3-stage AI tournament for gold and faction card rewards.</p>
+            <div className="rounded-xl border border-border bg-card p-3 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-foreground">Deck rules</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">Choose a legal deck size for fair play across versus, direct challenges, tournaments, and AI.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {DECK_MODE_OPTIONS.map((size) => (
+                  <button key={size} onClick={() => setDeckMode(size)} className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${normalizedDeckMode === size ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}>
+                    {size}
+                  </button>
+                ))}
+              </div>
+              <div className="rounded-xl border border-border bg-secondary/20 p-3 text-[11px] text-muted-foreground">
+                Current mode: {deckModeSummary.label} · {deckModeSummary.band} · recommended HP {deckModeSummary.recommendedHp}
+              </div>
             </div>
 
             {deck.length === 0 ? (
@@ -542,9 +635,13 @@ export default function CardArena() {
                     <Shield className="w-4 h-4 text-primary" />
                     <p className="text-sm font-semibold">PvP Ladder</p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">Find a rival based on ELO, deck strength, and collection power.</p>
-                  <button onClick={findPvpMatch} disabled={deck.length < 3} className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40">Find Match</button>
-                  {queueEntry && <p className="text-[10px] text-primary">Searching or matched in ladder queue.</p>}
+                  <p className="text-[11px] text-muted-foreground">Fair pairing uses ELO, collection strength, deck strength, deck size, and team size.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => { setQueueMode('pvp_ladder'); setTeamSize(1); }} className={`rounded-xl px-3 py-2 text-xs font-semibold ${queueMode === 'pvp_ladder' && teamSize === 1 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>1v1</button>
+                    <button onClick={() => { setQueueMode('pvp_duo'); setTeamSize(2); }} className={`rounded-xl px-3 py-2 text-xs font-semibold ${queueMode === 'pvp_duo' && teamSize === 2 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>2v2</button>
+                  </div>
+                  <button onClick={findPvpMatch} disabled={deck.length < getMinimumDeckForMode(normalizedDeckMode)} className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40">Find Match</button>
+                  {queueEntry && <p className="text-[10px] text-primary">Queue active · {queueEntry.queue_mode === 'pvp_duo' ? '2v2' : '1v1'} · {queueEntry.deck_mode || normalizedDeckMode}-card</p>}
                 </div>
 
                 <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -562,11 +659,22 @@ export default function CardArena() {
               </div>
             )}
 
+            <ChallengePanel
+              users={arenaUsers}
+              openChallenges={openChallenges}
+              deckMode={normalizedDeckMode}
+              selectedQueueMode={queueMode}
+              onCreateOpenChallenge={createOpenChallenge}
+              onInvitePlayer={inviteSpecificPlayer}
+              inviteSearch={inviteSearch}
+              setInviteSearch={setInviteSearch}
+            />
+
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-amber-200">AI Campaign</p>
-                  <p className="text-[11px] text-muted-foreground">Beat 100 Jackie stages with saved progression.</p>
+                  <p className="text-[11px] text-muted-foreground">Beat 100 Jackie stages with saved progression and deck-size-aware scaling.</p>
                 </div>
                 <p className="text-xs text-amber-300">Unlocked: {playerProfile?.ai_campaign_level_unlocked || 1}/100</p>
               </div>
@@ -586,7 +694,7 @@ export default function CardArena() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-primary uppercase tracking-widest">{battleMode.replace('_', ' ')}</p>
-                  <p className="text-xs text-muted-foreground">vs {activeOpponentName}</p>
+                  <p className="text-xs text-muted-foreground">vs {activeOpponentName} · {normalizedDeckMode}-card · {teamSize === 2 ? '2v2' : '1v1'}</p>
                 </div>
                 <BattleView
                   playerCards={[...deck]}
@@ -595,6 +703,8 @@ export default function CardArena() {
                   opponentFaction={activeOpponentFaction}
                   opponentDeck={activeOpponentDeck}
                   mode={battleMode}
+                  deckMode={normalizedDeckMode}
+                  teamSize={teamSize}
                   tutorialSteps={battleMode === 'tutorial' ? TUTORIAL_STEPS : []}
                   onBattleEnd={handleBattleEnd}
                 />
@@ -619,7 +729,7 @@ export default function CardArena() {
                       <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground">{i + 1}</div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold">{r.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{r.faction} · Difficulty {'⭐'.repeat(r.difficulty)}</p>
+                        <p className="text-[10px] text-muted-foreground">{r.faction} · Difficulty {'⭐'.repeat(r.difficulty)} · {TOURNAMENT_DECK_MODES[i]}-card</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-yellow-400 font-bold">{r.prize.gold}g</p>
@@ -634,7 +744,7 @@ export default function CardArena() {
                   disabled={deck.length < 3}
                   className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-40">
                   <Sword className="w-4 h-4" />
-                  {deck.length < 3 ? `Build a deck first (${deck.length}/3 min)` : 'Enter Tournament'}
+                  {deck.length < TOURNAMENT_DECK_MODES[0] ? `Build a deck first (${deck.length}/${TOURNAMENT_DECK_MODES[0]} min)` : 'Enter Tournament'}
                 </button>
               </>
             )}
@@ -643,7 +753,7 @@ export default function CardArena() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-primary">Round {tournamentRound}/3</p>
-                  <p className="text-xs text-muted-foreground">vs {currentRound.name}</p>
+                  <p className="text-xs text-muted-foreground">vs {currentRound.name} · {currentRound.deck_mode || normalizedDeckMode}-card</p>
                 </div>
                 <BattleView
                   playerCards={[...deck]}
@@ -651,6 +761,8 @@ export default function CardArena() {
                   difficulty={currentRound.difficulty}
                   opponentFaction={currentRound.faction}
                   mode="tournament"
+                  deckMode={currentRound.deck_mode || normalizedDeckMode}
+                  teamSize={1}
                   onBattleEnd={handleBattleEnd}
                 />
               </div>

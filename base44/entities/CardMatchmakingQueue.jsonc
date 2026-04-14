@@ -13,7 +13,9 @@
       "enum": [
         "searching",
         "matched",
-        "cancelled"
+        "cancelled",
+        "open_challenge",
+        "invited"
       ],
       "default": "searching"
     },
@@ -60,6 +62,14 @@
       "type": "number",
       "default": 0
     },
+    "deck_mode": {
+      "type": "number",
+      "default": 10
+    },
+    "team_size": {
+      "type": "number",
+      "default": 1
+    },
     "matched_opponent_email": {
       "type": "string"
     },
@@ -69,9 +79,23 @@
     "queue_mode": {
       "type": "string",
       "enum": [
-        "pvp_ladder"
+        "pvp_ladder",
+        "pvp_duo",
+        "direct_challenge"
       ],
       "default": "pvp_ladder"
+    },
+    "challenge_visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "friends",
+        "direct"
+      ],
+      "default": "public"
+    },
+    "invited_player_email": {
+      "type": "string"
     }
   },
   "required": [
@@ -84,7 +108,17 @@
       "created_by": "{{user.email}}"
     },
     "read": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "challenge_visibility": "public"
+        },
+        {
+          "invited_player_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
       "created_by": "{{user.email}}"
