@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck, GraduationCap, Rocket, Users } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck, GraduationCap, Rocket, Users, BookOpen } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -30,6 +30,7 @@ import ModelProviderPanel from '../components/ailab/ModelProviderPanel';
 import BotInstructionArchitect from '../components/ailab/BotInstructionArchitect';
 import SharedWorkspacePanel from '../components/ailab/SharedWorkspacePanel';
 import BotDataSourcesPanel from '../components/ailab/BotDataSourcesPanel';
+import KnowledgeBaseManager from '../components/ailab/KnowledgeBaseManager';
 import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
 import { runRegressionSuite } from '../components/ailab/regressionTesting';
 import { base44 } from '@/api/base44Client';
@@ -287,6 +288,7 @@ export default function AILab() {
     { id: 'policy', label: 'Policy', icon: ShieldCheck },
     { id: 'prompts', label: 'Prompts', icon: Sparkles },
     { id: 'workspace', label: 'Workspace', icon: Users },
+    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
     { id: 'discover', label: 'Discover', icon: Sparkles },
   ];
 
@@ -779,6 +781,9 @@ export default function AILab() {
 
       {/* WORKSPACE */}
       {tab === 'workspace' && <SharedWorkspacePanel bots={bots} promptTemplates={promptTemplates} />}
+
+      {/* KNOWLEDGE */}
+      {tab === 'knowledge' && <KnowledgeBaseManager bots={bots} />}
 
       {/* DISCOVER */}
       {tab === 'discover' && <div className="px-4 py-4"><BotMarketplaceShell onInstalled={loadBots} embedded /></div>}
