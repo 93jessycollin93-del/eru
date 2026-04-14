@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { GitBranch, RotateCcw, Rocket } from 'lucide-react';
+import { GitBranch, RotateCcw, Rocket, ExternalLink, ShieldCheck, Send } from 'lucide-react';
 
 const ENVIRONMENTS = ['draft', 'staging', 'live'];
 const PAGE_OPTIONS = [
@@ -18,6 +18,24 @@ const PAGE_OPTIONS = [
   { route: '/creator', label: 'Creator Hub' },
   { route: '/thinkers', label: 'Thinkers Club' },
 ];
+
+function scoreInstructions(text = '') {
+  const clean = String(text || '').trim();
+  const lengthScore = clean.length >= 400 ? 50 : clean.length >= 180 ? 35 : clean.length >= 80 ? 20 : 5;
+  const structureScore = [/role/i, /tone|style/i, /do not|avoid|never/i, /when/i].reduce((sum, pattern) => sum + (pattern.test(clean) ? 12.5 : 0), 0);
+  const total = Math.round(lengthScore + structureScore);
+  if (total >= 75) return { score: total, status: 'pass', note: 'Instructions look strong enough for deployment.' };
+  if (total >= 45) return { score: total, status: 'review', note: 'Instructions are usable but should be tightened before wider release.' };
+  return { score: total, status: 'fail', note: 'Instructions are too thin for public deployment.' };
+}
+
+function buildMiniAppRoute(botId) {
+  return `/bot-mini-app?bot=${botId}`;
+}
+
+function buildTelegramMiniAppUrl(route) {
+  return `https://t.me/share/url?url=${encodeURIComponent(`${window.location.origin}${route}`)}`;
+}
 
 export default function BotDeploymentPipelinePanel({ bots, trainingBot, trainingSummary, onBotsUpdated }) {
   const [deployments, setDeployments] = useState([]);
@@ -51,19 +69,26 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
 
   const latestVersion = useMemo(() => versions.find((item) => item.bot_id === activeBotId), [versions, activeBotId]);
   const recentDeployments = useMemo(() => deployments.filter((item) => !activeBotId || item.bot_id === activeBotId), [deployments, activeBotId]);
+  const instructionCheck = useMemo(() => scoreInstructions(activeBot?.instructions || ''), [activeBot]);
+  const miniAppRoute = useMemo(() => activeBot ? buildMiniAppRoute(activeBot.id) : '', [activeBot]);
+  const telegramMiniAppUrl = useMemo(() => miniAppRoute ? buildTelegramMiniAppUrl(miniAppRoute) : '', [miniAppRoute]);
 
   const togglePage = (route) => {
     setTargetPages((prev) => prev.includes(route) ? prev.filter((item) => item !== route) : [...prev, route]);
   };
 
   const deploy = async () => {
-    if (!activeBot) return;
+    if (!activeBot || instructionCheck.status === 'fail') return;
     setDeploying(true);
 
     const nextAssignments = targetPages.length > 0 ? targetPages : (activeBot.page_assignments || []);
     await base44.entities.UserBot.update(activeBot.id, {
       page_assignments: nextAssignments,
       deployment_environment: targetEnvironment,
+      status: 'active',
+      is_public: true,
+      mini_app_route: miniAppRoute,
+      deployment_state: 'deployment',
     });
 
     await base44.entities.BotDeployment.create({
@@ -76,6 +101,10 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
       target_environment: targetEnvironment,
       deployment_status: 'deployed',
       deployment_notes: notes,
+      mini_app_route: miniAppRoute,
+      instruction_quality_score: instructionCheck.score,
+      instruction_quality_status: instructionCheck.status,
+      marketplace_ready: instructionCheck.status !== 'fail',
       triggered_from: trainingBot?.id ? 'training' : 'manual',
       test_summary: trainingSummary || '',
       candidate_instructions: activeBot.instructions || '',
@@ -147,6 +176,23 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
 
       {activeBot && (
         <>
+          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold text-foreground">Deployment checks</p>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-foreground">Instruction quality</p>
+                <p className="text-[11px] text-muted-foreground">{instructionCheck.note}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-primary">{instructionCheck.score}/100</p>
+                <p className={`text-[10px] uppercase ${instructionCheck.status === 'pass' ? 'text-green-400' : instructionCheck.status === 'review' ? 'text-yellow-400' : 'text-red-400'}`}>{instructionCheck.status}</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-xl border border-border bg-background p-3 space-y-2">
               <p className="text-xs font-semibold text-foreground">Target pages</p>
@@ -177,9 +223,17 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
 
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional deployment note" className="min-h-[72px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none" />
 
-          <button onClick={deploy} disabled={deploying} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
-            <Rocket className="w-3.5 h-3.5" /> {deploying ? 'Deploying...' : 'Deploy bot now'}
-          </button>
+          <div className="grid gap-2 md:grid-cols-3">
+            <button onClick={deploy} disabled={deploying || instructionCheck.status === 'fail'} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
+              <Rocket className="w-3.5 h-3.5" /> {deploying ? 'Deploying...' : 'Promote to deployment'}
+            </button>
+            <a href={miniAppRoute || '#'} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-secondary py-2.5 text-xs font-semibold text-foreground">
+              <ExternalLink className="w-3.5 h-3.5" /> Open mini-app route
+            </a>
+            <a href={telegramMiniAppUrl || '#'} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 py-2.5 text-xs font-semibold text-primary">
+              <Send className="w-3.5 h-3.5" /> Launch in Telegram
+            </a>
+          </div>
         </>
       )}
 
@@ -196,12 +250,33 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
               </div>
               <span className="text-[10px] text-primary">{deployment.deployment_status}</span>
             </div>
+            <div className="flex flex-wrap gap-2 text-[10px]">
+              {deployment.instruction_quality_status && (
+                <span className={`rounded-full px-2 py-1 ${deployment.instruction_quality_status === 'pass' ? 'bg-green-400/10 text-green-400' : deployment.instruction_quality_status === 'review' ? 'bg-yellow-400/10 text-yellow-400' : 'bg-red-400/10 text-red-400'}`}>
+                  Instructions {deployment.instruction_quality_status}
+                </span>
+              )}
+              {deployment.marketplace_ready && <span className="rounded-full bg-primary/10 px-2 py-1 text-primary">Marketplace ready</span>}
+            </div>
+            {deployment.mini_app_route && <p className="text-[11px] text-muted-foreground break-all">Mini-app: {deployment.mini_app_route}</p>}
             {deployment.deployment_notes && <p className="text-[11px] text-muted-foreground">{deployment.deployment_notes}</p>}
-            {deployment.source_version_id && deployment.deployment_status === 'deployed' && activeBot?.id === deployment.bot_id && (
-              <button onClick={() => rollbackDeployment(deployment)} disabled={rollingBackId === deployment.id} className="inline-flex items-center gap-2 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-[11px] font-semibold text-yellow-400 disabled:opacity-40">
-                <RotateCcw className="w-3.5 h-3.5" /> {rollingBackId === deployment.id ? 'Rolling back...' : 'Rollback'}
-              </button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {deployment.mini_app_route && (
+                <a href={deployment.mini_app_route} className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-[11px] font-semibold text-foreground">
+                  <ExternalLink className="w-3.5 h-3.5" /> Open route
+                </a>
+              )}
+              {deployment.mini_app_route && (
+                <a href={buildTelegramMiniAppUrl(deployment.mini_app_route)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-[11px] font-semibold text-primary">
+                  <Send className="w-3.5 h-3.5" /> Telegram mini-app
+                </a>
+              )}
+              {deployment.source_version_id && deployment.deployment_status === 'deployed' && activeBot?.id === deployment.bot_id && (
+                <button onClick={() => rollbackDeployment(deployment)} disabled={rollingBackId === deployment.id} className="inline-flex items-center gap-2 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-[11px] font-semibold text-yellow-400 disabled:opacity-40">
+                  <RotateCcw className="w-3.5 h-3.5" /> {rollingBackId === deployment.id ? 'Rolling back...' : 'Rollback'}
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

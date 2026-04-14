@@ -25,6 +25,13 @@
       "default": "ready"
     },
     "deployment_notes": { "type": "string" },
+    "mini_app_route": { "type": "string" },
+    "instruction_quality_score": { "type": "number" },
+    "instruction_quality_status": {
+      "type": "string",
+      "enum": ["pass", "review", "fail"]
+    },
+    "marketplace_ready": { "type": "boolean", "default": false },
     "triggered_from": {
       "type": "string",
       "enum": ["training", "manual", "rollback"],

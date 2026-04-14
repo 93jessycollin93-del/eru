@@ -51,6 +51,7 @@ import BlockchainAnalytics from './pages/BlockchainAnalytics';
 import WalletManager from './pages/WalletManager';
 import TransactionHistory from './pages/TransactionHistory';
 import BotMarketplace from './pages/BotMarketplace';
+import BotMiniApp from './pages/BotMiniApp';
 import SquadPerformance from './pages/SquadPerformance';
 import SquadKnowledgeTrends from './pages/SquadKnowledgeTrends';
 import BotFarm from './pages/BotFarm';
@@ -133,6 +134,7 @@ const AuthenticatedApp = () => {
         <Route path="/wallet-manager" element={<WalletManager />} />
         <Route path="/transactions" element={<TransactionHistory />} />
         <Route path="/bot-marketplace" element={<BotMarketplace />} />
+        <Route path="/bot-mini-app" element={<BotMiniApp />} />
         <Route path="/squad-performance" element={<SquadPerformance />} />
         <Route path="/squad-knowledge-trends" element={<SquadKnowledgeTrends />} />
         <Route path="/bot-farm" element={<BotFarm />} />
