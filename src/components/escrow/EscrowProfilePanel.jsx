@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { AlertTriangle, CheckCircle2, Clock3, HandCoins, PlusCircle, ShieldAlert, Wallet } from 'lucide-react';
+import { Clock3, HandCoins, PlusCircle, ShieldAlert, Wallet } from 'lucide-react';
 
 const DEFAULT_FORM = {
   listing_id: '',
