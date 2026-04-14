@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Bot, Pin, Zap, Plus, Check, Activity, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -30,23 +30,39 @@ function BotStatusWidget() {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const isLoadingRef = useRef(false);
+
+  const mergeBot = (prev, nextBot) => {
+    const withoutCurrent = prev.filter((item) => item.id !== nextBot.id);
+    return [nextBot, ...withoutCurrent]
+      .sort((a, b) => new Date(b.updated_date || b.created_date || 0) - new Date(a.updated_date || a.created_date || 0))
+      .slice(0, 8);
+  };
 
   const loadBots = async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     setLoading(true);
-    const data = await base44.entities.UserBot.list('-updated_date', 8);
-    setBots(data || []);
-    setLastUpdated(new Date());
-    setLoading(false);
+
+    try {
+      const data = await base44.entities.UserBot.list('-updated_date', 8);
+      setBots(data || []);
+      setLastUpdated(new Date());
+    } catch (error) {
+      if (error?.status !== 429) {
+        throw error;
+      }
+    } finally {
+      setLoading(false);
+      isLoadingRef.current = false;
+    }
   };
 
   useEffect(() => {
-    loadBots();
+    loadBots().catch(() => {});
     const unsubscribe = base44.entities.UserBot.subscribe((event) => {
-      if (event.type === 'create') {
-        setBots((prev) => [event.data, ...prev].slice(0, 8));
-      }
-      if (event.type === 'update') {
-        setBots((prev) => prev.map((item) => item.id === event.id ? event.data : item));
+      if (event.type === 'create' || event.type === 'update') {
+        setBots((prev) => mergeBot(prev, event.data));
       }
       if (event.type === 'delete') {
         setBots((prev) => prev.filter((item) => item.id !== event.id));
@@ -58,8 +74,8 @@ function BotStatusWidget() {
 
   const toggleStatus = async (bot) => {
     const nextStatus = bot.status === 'active' ? 'inactive' : 'active';
-    await base44.entities.UserBot.update(bot.id, { status: nextStatus });
     setBots((prev) => prev.map((item) => item.id === bot.id ? { ...item, status: nextStatus } : item));
+    await base44.entities.UserBot.update(bot.id, { status: nextStatus }).catch(() => {});
   };
 
   return (
