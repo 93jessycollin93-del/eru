@@ -18,6 +18,7 @@ import TelegramBotSetupPanel from '../components/jackie/TelegramBotSetupPanel';
 import CodeWorkspace from '../components/jackie/CodeWorkspace';
 import PromptLibraryPanel from '../components/jackie/PromptLibraryPanel.jsx';
 import { VOICES } from '../components/jackie/VoiceSelector.jsx';
+import { selectRelevantMemoryFacts } from '@/lib/jackieMemoryRetrieval';
 
 const PAGE_NAV_MAP = [
   { keywords: ['ai lab', 'ailab', 'lab', 'bots', 'bot lab'], path: '/ailab' },
@@ -144,7 +145,7 @@ export default function JackieAI() {
     }
   }, []);
 
-  const buildPrompt = useCallback((userMessage) => {
+  const buildPrompt = useCallback((userMessage, retrievedFacts = []) => {
     const voiceStyle = VOICES.find(v => v.id === voice)?.style || '';
     const thinkModePrompt = THINK_MODES.find(t => t.id === thinkMode)?.prompt || '';
     const enhancementContext = `\n[ENABLED FEATURES]\n- Educational content suggestions: recommend articles, videos, and webinars when users ask to learn a topic.\n- Feedback awareness: encourage users to submit product feedback and improvement ideas when relevant.\n- API integration awareness: mention that connected data platforms can be used for broader financial analysis.\n- Advanced alerts: discuss price and percentage-change triggers for alert customization.\n- Core programming memory: Jackie has built-in master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua.\n[END FEATURES]`;
@@ -156,8 +157,11 @@ export default function JackieAI() {
       ? `\n[API KEYS] User has ${apiKeyCount} active key(s). Bot capabilities unlocked via keys: ${[apiKeyCapabilities.webSearch && 'web-search', apiKeyCapabilities.code && 'code-engine', apiKeyCapabilities.squad && 'squad-pipelines'].filter(Boolean).join(', ') || 'basic-only'}. You can reference these capabilities when advising on bot tasks.`
       : '';
     const contextBlock = workingContext ? `\n[ACTIVE CONTEXT]\n${workingContext}\n[END CONTEXT]\n` : '';
+    const retrievalBlock = retrievedFacts.length > 0
+      ? `\n[RELEVANT MEMORY FACTS]\n${retrievedFacts.map((fact) => `- ${fact}`).join('\n')}\n[END RELEVANT MEMORY FACTS]\n`
+      : '';
     const history = messages.slice(-20).map(m => `${m.role === 'user' ? 'User' : 'Jackie'}: ${m.content}`).join('\n');
-    return `${systemPrompt}${botContext}${keyContext}${contextBlock}\n\nConversation:\n${history}\nUser: ${userMessage}\n\nJackie:`;
+    return `${systemPrompt}${botContext}${keyContext}${contextBlock}${retrievalBlock}\n\nConversation:\n${history}\nUser: ${userMessage}\n\nJackie:`;
   }, [mode, thinkMode, messages, workingContext, voice, userBots, apiKeyCount]);
 
   const updateJackieProgress = async (changes) => {
@@ -234,7 +238,21 @@ export default function JackieAI() {
 
     setLoading(true);
 
-    const prompt = buildPrompt(msg || 'Analyze the attached files.');
+    const [profiles, chunks, memories] = await Promise.all([
+      base44.entities.BotMemoryProfile.list('-updated_date', 20).catch(() => []),
+      base44.entities.BotMemoryChunk.list('-updated_date', 40).catch(() => []),
+      base44.entities.BotMemory.list('-updated_date', 80).catch(() => [])
+    ]);
+
+    const relevantFacts = selectRelevantMemoryFacts({
+      profile: profiles?.[0] || null,
+      chunks: (chunks || []).slice(0, 12),
+      memories: (memories || []).filter((item) => !item.superseded_by_chunk_id).slice(0, 20),
+      query: msg || 'Analyze the attached files.',
+      limit: 6
+    });
+
+    const prompt = buildPrompt(msg || 'Analyze the attached files.', relevantFacts);
     const response = await base44.integrations.Core.InvokeLLM({
       prompt,
       ...(fileUrls.length > 0 ? { file_urls: fileUrls } : {}),
