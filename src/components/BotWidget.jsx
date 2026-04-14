@@ -18,25 +18,49 @@ export default function BotWidget({ prefs, updateWidget }) {
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const bottomRef = useRef(null);
+  const fetchingBotRef = useRef(false);
 
   useEffect(() => {
-    const fetchBot = async () => {
-      const allBots = await base44.entities.UserBot.list('-created_date', 100);
+    let mounted = true;
+
+    const applyBotState = (allBots) => {
       const assigned = allBots.find((item) => item.status === 'active' && (item.page_assignments || []).includes(pathname));
       if (!assigned) {
+        if (!mounted) return;
         setBot(null);
         setConnectedBots([]);
         setMessages([]);
         return;
       }
+
+      if (!mounted) return;
       setBot(assigned);
       setMessages([{ role: 'bot', text: `Hi! I'm ${assigned.name}. ${assigned.description || 'How can I help?'}` }]);
       const linkedIds = assigned.connected_bot_ids || [];
       setConnectedBots(linkedIds.length > 0 ? allBots.filter((item) => linkedIds.includes(item.id)) : []);
     };
 
+    const fetchBot = async () => {
+      if (fetchingBotRef.current) return;
+      fetchingBotRef.current = true;
+      try {
+        const allBots = await base44.entities.UserBot.list('-created_date', 100);
+        applyBotState(allBots || []);
+      } catch (error) {
+        if (error?.status !== 429) {
+          throw error;
+        }
+      } finally {
+        fetchingBotRef.current = false;
+      }
+    };
+
     setOpen(false);
-    fetchBot();
+    fetchBot().catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
   }, [pathname]);
 
   useEffect(() => {
