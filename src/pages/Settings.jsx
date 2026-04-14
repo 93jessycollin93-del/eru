@@ -6,8 +6,7 @@ import SoundSettings from '../components/SoundSettings';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
-import ThemeEnginePanel from '@/components/theme/ThemeEnginePanel';
-import AdvancedThemeStudio from '@/components/theme/AdvancedThemeStudio';
+import Base44ThemeEditor from '@/components/theme/Base44ThemeEditor';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
 
 const SECTIONS = [
@@ -294,13 +293,7 @@ export default function Settings() {
         </div>
 
         <div className="mt-4 space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Visual Theme Engine</p>
-          <ThemeEnginePanel />
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Advanced Visual Customization</p>
-          <AdvancedThemeStudio />
+          <Base44ThemeEditor />
         </div>
 
         {/* Sound & Haptics */}
