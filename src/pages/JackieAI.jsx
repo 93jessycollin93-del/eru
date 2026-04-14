@@ -19,6 +19,7 @@ import CodeWorkspace from '../components/jackie/CodeWorkspace';
 import PromptLibraryPanel from '../components/jackie/PromptLibraryPanel.jsx';
 import { VOICES } from '../components/jackie/VoiceSelector.jsx';
 import { selectRelevantMemoryFacts } from '@/lib/jackieMemoryRetrieval';
+import { getCachedOrFetch, invalidateCachedValue, writeCachedValue } from '@/lib/metadataCache';
 
 const PAGE_NAV_MAP = [
   { keywords: ['ai lab', 'ailab', 'lab', 'bots', 'bot lab'], path: '/ailab' },
@@ -132,8 +133,17 @@ export default function JackieAI() {
       window.history.replaceState({}, '', '/jackie');
     }
 
-    base44.entities.UserBot.list('-created_date', 20).then(b => setUserBots(b)).catch(() => {});
-    base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).then(keys => {
+    getCachedOrFetch({
+      key: 'jackie_user_bots',
+      maxAgeMs: 5 * 60 * 1000,
+      fetcher: () => base44.entities.UserBot.list('-created_date', 20).catch(() => [])
+    }).then((bots) => setUserBots(bots || [])).catch(() => {});
+
+    getCachedOrFetch({
+      key: 'jackie_active_api_keys',
+      maxAgeMs: 2 * 60 * 1000,
+      fetcher: () => base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).catch(() => [])
+    }).then((keys) => {
       setApiKeyCount(keys.length);
       const hasBotWeb = keys.some(k => (k.permissions || []).includes('bot:websearch'));
       const hasBotCode = keys.some(k => (k.permissions || []).includes('bot:code'));
@@ -290,6 +300,11 @@ export default function JackieAI() {
     setTab('main');
   };
 
+  useEffect(() => {
+    const promptTemplatePayload = Object.entries(MODE_PROMPTS).map(([key, prompt]) => ({ key, prompt }));
+    writeCachedValue('jackie_common_prompt_templates', promptTemplatePayload);
+  }, []);
+
   const BUILT_IN_PROGRAMMING_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, debugging, refactoring, language comparison, and systems design.";
 
   const buildFoundryPreview = (message) => {
@@ -334,7 +349,12 @@ export default function JackieAI() {
 
     if (foundryPreview.bot) {
       createdBot = await base44.entities.UserBot.create(foundryPreview.bot);
-      setUserBots(prev => [createdBot, ...prev].slice(0, 20));
+      setUserBots(prev => {
+        const nextBots = [createdBot, ...prev].slice(0, 20);
+        writeCachedValue('jackie_user_bots', nextBots);
+        invalidateCachedValue('bot_widget_user_bots');
+        return nextBots;
+      });
     }
 
     if (foundryPreview.apiKey) {

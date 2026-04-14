@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Bot, Send, ChevronDown, Zap, Globe, GripVertical } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { getCachedOrFetch } from '@/lib/metadataCache';
 
 const ROLE_ICONS = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚡' };
 
@@ -44,7 +45,11 @@ export default function BotWidget({ prefs, updateWidget }) {
       if (fetchingBotRef.current) return;
       fetchingBotRef.current = true;
       try {
-        const allBots = await base44.entities.UserBot.list('-created_date', 100);
+        const allBots = await getCachedOrFetch({
+          key: 'bot_widget_user_bots',
+          maxAgeMs: 5 * 60 * 1000,
+          fetcher: () => base44.entities.UserBot.list('-created_date', 100).catch(() => [])
+        });
         applyBotState(allBots || []);
       } catch (error) {
         if (error?.status !== 429) {
