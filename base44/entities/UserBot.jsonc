@@ -162,6 +162,56 @@
         }
       },
       "default": []
+    },
+    "marketplace_sale_mode": {
+      "type": "string",
+      "enum": [
+        "sell",
+        "trade",
+        "sell_or_trade"
+      ],
+      "default": "sell_or_trade"
+    },
+    "marketplace_price": {
+      "type": "number"
+    },
+    "marketplace_currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "marketplace_price_options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    },
+    "marketplace_trade_notes": {
+      "type": "string"
+    },
+    "marketplace_accepts_trade_offers": {
+      "type": "boolean",
+      "default": true
+    },
+    "marketplace_accepts_money_offers": {
+      "type": "boolean",
+      "default": true
+    },
+    "marketplace_accepts_crypto_offers": {
+      "type": "boolean",
+      "default": true
+    },
+    "marketplace_offer_anything": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

@@ -1,0 +1,128 @@
+{
+  "name": "BotTradeProposal",
+  "type": "object",
+  "properties": {
+    "listing_bot_id": {
+      "type": "string"
+    },
+    "listing_bot_name": {
+      "type": "string"
+    },
+    "seller_email": {
+      "type": "string"
+    },
+    "buyer_email": {
+      "type": "string"
+    },
+    "proposal_type": {
+      "type": "string",
+      "enum": [
+        "buy",
+        "trade",
+        "mixed",
+        "open_offer"
+      ],
+      "default": "buy"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "declined",
+        "cancelled",
+        "completed"
+      ],
+      "default": "pending"
+    },
+    "offered_bot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "offered_bot_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "money_amount": {
+      "type": "number"
+    },
+    "money_currency": {
+      "type": "string"
+    },
+    "crypto_amount": {
+      "type": "number"
+    },
+    "crypto_currency": {
+      "type": "string"
+    },
+    "telegram_stars_amount": {
+      "type": "number"
+    },
+    "offer_message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "listing_bot_id",
+    "listing_bot_name",
+    "seller_email",
+    "buyer_email",
+    "proposal_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

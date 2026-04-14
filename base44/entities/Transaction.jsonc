@@ -11,6 +11,7 @@
       "enum": [
         "jade",
         "nft",
+        "bot",
         "card",
         "item",
         "collectible",

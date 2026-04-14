@@ -1,11 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Star, Download, MessageSquare, Search, Send, X, Sparkles, Briefcase, Blocks, Bot, ArrowUpDown, TrendingUp, Globe, Lock, Upload } from 'lucide-react';
+import { Star, Download, MessageSquare, Search, Send, X, Sparkles, Briefcase, Blocks, Bot, ArrowUpDown, TrendingUp, Globe, Lock, Upload, ShoppingCart, RefreshCcw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import BotMarketplaceTradeSheet from './BotMarketplaceTradeSheet';
+import { ALL_MARKET_CURRENCIES, DEFAULT_PRICE_OPTIONS } from './botMarketplaceCurrencies';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚙️' };
 const CATEGORY_OPTIONS = ['All', 'Assistant', 'Trading', 'Gaming', 'Social', 'Custom'];
 const INDUSTRY_OPTIONS = ['All', 'General', 'Finance', 'Ecommerce', 'Support', 'Education', 'Marketing', 'Gaming'];
+
+const DEFAULT_MARKET_SETUP = {
+  marketplace_sale_mode: 'sell_or_trade',
+  marketplace_price: '',
+  marketplace_currency: 'USD',
+  marketplace_trade_notes: '',
+  marketplace_accepts_trade_offers: true,
+  marketplace_accepts_money_offers: true,
+  marketplace_accepts_crypto_offers: true,
+  marketplace_offer_anything: false,
+};
 const SORT_OPTIONS = [
   { value: 'featured', label: 'Featured' },
   { value: 'popularity', label: 'Popularity' },
@@ -45,7 +58,7 @@ function StarRow({ value, onChange }) {
   );
 }
 
-function BotCard({ bot, ratings, onInstall, onRate }) {
+function BotCard({ bot, ratings, onInstall, onRate, onBuy, onTrade }) {
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState('');
   const [myRating, setMyRating] = useState(0);
@@ -54,6 +67,11 @@ function BotCard({ bot, ratings, onInstall, onRate }) {
   const avg = botRatings.length ? (botRatings.reduce((s, r) => s + r.rating, 0) / botRatings.length).toFixed(1) : '—';
   const category = getCategory(bot);
   const industry = getIndustry(bot);
+  const priceOptions = (bot.marketplace_price_options || []).length > 0
+    ? bot.marketplace_price_options
+    : bot.marketplace_price
+      ? [{ currency: bot.marketplace_currency || 'USD', amount: bot.marketplace_price }]
+      : [];
 
   const submitRating = async () => {
     if (!myRating) return;
@@ -75,10 +93,20 @@ function BotCard({ bot, ratings, onInstall, onRate }) {
             <span className="text-[9px] text-muted-foreground">({botRatings.length})</span>
           </div>
         </div>
-        <button onClick={() => onInstall(bot)}
-          className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-xl text-xs font-semibold flex-shrink-0">
-          <Download className="w-3 h-3" /> Install
-        </button>
+        <div className="flex flex-col gap-2 sm:items-end">
+          <button onClick={() => onInstall(bot)}
+            className="flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+            <Download className="w-3 h-3" /> Install
+          </button>
+          <div className="flex gap-2">
+            <button onClick={() => onBuy(bot)} className="flex items-center gap-1 rounded-xl border border-border bg-secondary px-3 py-1.5 text-xs font-semibold text-foreground">
+              <ShoppingCart className="h-3 w-3" /> Buy
+            </button>
+            <button onClick={() => onTrade(bot)} className="flex items-center gap-1 rounded-xl border border-border bg-secondary px-3 py-1.5 text-xs font-semibold text-foreground">
+              <RefreshCcw className="h-3 w-3" /> Trade
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -87,6 +115,19 @@ function BotCard({ bot, ratings, onInstall, onRate }) {
       </div>
       {bot.description && <p className="text-[10px] text-muted-foreground leading-relaxed">{bot.description}</p>}
       {bot.personality && <p className="text-[10px] text-foreground/60 italic">"{bot.personality}"</p>}
+      {priceOptions.length > 0 && (
+        <div className="rounded-xl border border-border bg-secondary/30 p-2.5">
+          <p className="text-[10px] font-semibold text-foreground">Price options</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {priceOptions.map((option, index) => (
+              <span key={`${option.currency}_${index}`} className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">
+                {option.amount} {option.currency}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {bot.marketplace_trade_notes && <p className="rounded-xl border border-border bg-secondary/20 px-3 py-2 text-[10px] text-muted-foreground">Trade terms: {bot.marketplace_trade_notes}</p>}
 
       <div className="flex items-center gap-2 pt-1 border-t border-border/50">
         <span className="text-[9px] text-muted-foreground">⚡ {bot.usage_count || 0} uses · Lv{bot.level || 1}</span>
@@ -138,6 +179,9 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
   const [sortBy, setSortBy] = useState('featured');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
+  const [editingBotId, setEditingBotId] = useState('');
+  const [tradeBot, setTradeBot] = useState(null);
+  const [marketForm, setMarketForm] = useState(DEFAULT_MARKET_SETUP);
 
   const load = async () => {
     setLoading(true);
@@ -196,6 +240,81 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
     setToast(bot.is_public ? `🔒 "${bot.name}" removed from marketplace.` : `🌍 "${bot.name}" published to marketplace.`);
     setTimeout(() => setToast(''), 3000);
     load();
+  };
+
+  const startEditing = (bot) => {
+    setEditingBotId(bot.id);
+    setMarketForm({
+      marketplace_sale_mode: bot.marketplace_sale_mode || 'sell_or_trade',
+      marketplace_price: bot.marketplace_price || '',
+      marketplace_currency: bot.marketplace_currency || 'USD',
+      marketplace_trade_notes: bot.marketplace_trade_notes || '',
+      marketplace_accepts_trade_offers: bot.marketplace_accepts_trade_offers ?? true,
+      marketplace_accepts_money_offers: bot.marketplace_accepts_money_offers ?? true,
+      marketplace_accepts_crypto_offers: bot.marketplace_accepts_crypto_offers ?? true,
+      marketplace_offer_anything: bot.marketplace_offer_anything ?? false,
+    });
+  };
+
+  const saveMarketSetup = async (bot) => {
+    const currencies = Array.from(new Set([
+      marketForm.marketplace_currency,
+      ...DEFAULT_PRICE_OPTIONS,
+    ])).filter(Boolean);
+
+    await base44.entities.UserBot.update(bot.id, {
+      marketplace_sale_mode: marketForm.marketplace_sale_mode,
+      marketplace_price: marketForm.marketplace_price ? Number(marketForm.marketplace_price) : undefined,
+      marketplace_currency: marketForm.marketplace_currency,
+      marketplace_trade_notes: marketForm.marketplace_trade_notes,
+      marketplace_accepts_trade_offers: marketForm.marketplace_accepts_trade_offers,
+      marketplace_accepts_money_offers: marketForm.marketplace_accepts_money_offers,
+      marketplace_accepts_crypto_offers: marketForm.marketplace_accepts_crypto_offers,
+      marketplace_offer_anything: marketForm.marketplace_offer_anything,
+      marketplace_price_options: marketForm.marketplace_price ? currencies.map((currency) => ({
+        currency,
+        amount: Number(marketForm.marketplace_price),
+      })) : [],
+    });
+
+    setEditingBotId('');
+    setToast(`🛒 "${bot.name}" shop setup saved.`);
+    setTimeout(() => setToast(''), 3000);
+    load();
+  };
+
+  const buyBot = async (bot) => {
+    const options = (bot.marketplace_price_options || []).length > 0
+      ? bot.marketplace_price_options
+      : bot.marketplace_price
+        ? [{ currency: bot.marketplace_currency || 'USD', amount: bot.marketplace_price }]
+        : [];
+
+    const chosen = options[0];
+    if (!chosen) {
+      setToast(`ℹ️ "${bot.name}" has no saved price yet.`);
+      setTimeout(() => setToast(''), 3000);
+      return;
+    }
+
+    await base44.entities.Order.create({
+      order_number: `BOT-${Date.now()}`,
+      buyer_email: currentUser.email,
+      asset_type: 'bot',
+      asset_id: bot.id,
+      base_price: Number(chosen.amount),
+      currency: chosen.currency,
+      payment_method: chosen.currency === 'TELEGRAM_STARS' ? 'wallet' : ALL_MARKET_CURRENCIES.includes(chosen.currency) ? 'crypto' : 'stripe',
+      status: 'pending_payment',
+      metadata: {
+        bot_name: bot.name,
+        seller_email: bot.created_by,
+        price_options: options,
+      }
+    });
+
+    setToast(`🧾 Order created for "${bot.name}".`);
+    setTimeout(() => setToast(''), 3000);
   };
 
   const botInsights = useMemo(() => {
@@ -282,7 +401,7 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
       <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-sm font-medium"><Upload className="h-4 w-4 text-primary" /> Publish your bots</div>
-          <p className="text-[11px] text-muted-foreground">Bots marked public are discoverable and installable by other users.</p>
+          <p className="text-[11px] text-muted-foreground">Bots marked public are discoverable and can be configured for buy, sell, crypto, Telegram Stars, and open trade offers.</p>
         </div>
         {myBots.length === 0 ? (
           <p className="text-xs text-muted-foreground">Create a bot in AI Lab first, then publish it here.</p>
@@ -301,6 +420,47 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
                   </span>
                 </div>
                 {bot.description && <p className="text-[10px] text-muted-foreground line-clamp-2">{bot.description}</p>}
+                <div className="rounded-xl border border-border bg-card/60 p-3 space-y-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <select value={editingBotId === bot.id ? marketForm.marketplace_sale_mode : (bot.marketplace_sale_mode || 'sell_or_trade')} onChange={(e) => setMarketForm((prev) => ({ ...prev, marketplace_sale_mode: e.target.value }))} disabled={editingBotId !== bot.id} className="h-10 rounded-lg border border-border bg-background px-3 text-xs outline-none disabled:opacity-60">
+                      <option value="sell">Sell</option>
+                      <option value="trade">Trade</option>
+                      <option value="sell_or_trade">Sell or trade</option>
+                    </select>
+                    <div className="grid grid-cols-[1fr,110px] gap-2">
+                      <input value={editingBotId === bot.id ? marketForm.marketplace_price : (bot.marketplace_price || '')} onChange={(e) => setMarketForm((prev) => ({ ...prev, marketplace_price: e.target.value }))} disabled={editingBotId !== bot.id} placeholder="Base price" className="h-10 rounded-lg border border-border bg-background px-3 text-xs outline-none disabled:opacity-60" />
+                      <select value={editingBotId === bot.id ? marketForm.marketplace_currency : (bot.marketplace_currency || 'USD')} onChange={(e) => setMarketForm((prev) => ({ ...prev, marketplace_currency: e.target.value }))} disabled={editingBotId !== bot.id} className="h-10 rounded-lg border border-border bg-background px-3 text-xs outline-none disabled:opacity-60">
+                        {ALL_MARKET_CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <textarea value={editingBotId === bot.id ? marketForm.marketplace_trade_notes : (bot.marketplace_trade_notes || '')} onChange={(e) => setMarketForm((prev) => ({ ...prev, marketplace_trade_notes: e.target.value }))} disabled={editingBotId !== bot.id} placeholder="Accept bots, money, crypto, Telegram Stars, bundles, services, or any custom trade terms..." className="min-h-[88px] w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none disabled:opacity-60" />
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      ['marketplace_accepts_trade_offers', 'Bot trades'],
+                      ['marketplace_accepts_money_offers', 'Money offers'],
+                      ['marketplace_accepts_crypto_offers', 'Crypto offers'],
+                      ['marketplace_offer_anything', 'Offer anything'],
+                    ].map(([key, label]) => {
+                      const checked = editingBotId === bot.id ? marketForm[key] : (bot[key] ?? false);
+                      return (
+                        <button key={key} type="button" onClick={() => editingBotId === bot.id && setMarketForm((prev) => ({ ...prev, [key]: !prev[key] }))} className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${checked ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border bg-secondary text-muted-foreground'} ${editingBotId !== bot.id ? 'cursor-default' : ''}`}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    {editingBotId === bot.id ? (
+                      <>
+                        <button onClick={() => saveMarketSetup(bot)} className="flex-1 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground">Save shop setup</button>
+                        <button onClick={() => setEditingBotId('')} className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground">Cancel</button>
+                      </>
+                    ) : (
+                      <button onClick={() => startEditing(bot)} className="flex-1 rounded-xl border border-border bg-background py-2 text-xs font-semibold text-foreground">Edit buy/sell/trade</button>
+                    )}
+                  </div>
+                </div>
                 <button
                   onClick={() => togglePublish(bot)}
                   className={`w-full rounded-xl py-2 text-xs font-semibold ${bot.is_public ? 'bg-secondary border border-border text-muted-foreground' : 'bg-primary text-primary-foreground'}`}
@@ -384,8 +544,22 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
         </div>
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
-          {filtered.map(bot => <BotCard key={bot.id} bot={bot} ratings={ratings} onInstall={install} onRate={rate} />)}
+          {filtered.map(bot => <BotCard key={bot.id} bot={bot} ratings={ratings} onInstall={install} onRate={rate} onBuy={buyBot} onTrade={setTradeBot} />)}
         </div>
+      )}
+
+      {tradeBot && (
+        <BotMarketplaceTradeSheet
+          bot={tradeBot}
+          myBots={myBots}
+          currentUser={currentUser}
+          onClose={() => setTradeBot(null)}
+          onSubmitted={() => {
+            setToast(`🤝 Offer sent for "${tradeBot.name}".`);
+            setTimeout(() => setToast(''), 3000);
+            load();
+          }}
+        />
       )}
     </div>
   );
