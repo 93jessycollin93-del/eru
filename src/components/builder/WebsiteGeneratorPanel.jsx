@@ -220,7 +220,6 @@ Notes: ${form.notes}`,
             onSaveDraft={handleSaveDraft}
             onGenerate={handleGenerate}
           />
-          <WebsiteGeneratorPreview project={selectedProject} />
           <WebsiteGeneratorEditor project={selectedProject} onSaved={loadProjects} />
           <WebsiteGeneratorPageMap pages={selectedProject?.site_blueprint?.pages || []} />
           <WebsiteGeneratorSectionLibrary sections={selectedProject?.site_blueprint?.reusable_sections || []} />
