@@ -128,6 +128,7 @@ export function useRealtimeEntityList(entityName, options = {}) {
   const [loading, setLoading] = useState(enabled);
   const lastLoadRef = useRef(0);
   const timeoutRef = useRef(null);
+  const isLoadingRef = useRef(false);
   const queryKey = JSON.stringify(query);
 
   useEffect(() => {
@@ -137,35 +138,52 @@ export function useRealtimeEntityList(entityName, options = {}) {
     }
 
     let unsubscribe = null;
+    let isMounted = true;
 
     const load = async (force = false) => {
       const now = Date.now();
-      if (!force && now - lastLoadRef.current < 2000) return;
+      if (isLoadingRef.current) return;
+      if (!force && now - lastLoadRef.current < 5000) return;
 
       const sdk = base44.entities[entityName];
       if (!sdk) {
+        if (!isMounted) return;
         setData([]);
         setLoading(false);
         return;
       }
 
+      isLoadingRef.current = true;
       lastLoadRef.current = now;
-      const rows = Object.keys(query).length > 0
-        ? await sdk.filter(query, sort, limit)
-        : await sdk.list(sort, limit);
-      setData(rows || []);
-      setLoading(false);
+
+      try {
+        const rows = Object.keys(query).length > 0
+          ? await sdk.filter(query, sort, limit)
+          : await sdk.list(sort, limit);
+        if (!isMounted) return;
+        setData(rows || []);
+      } catch (error) {
+        if (error?.status !== 429) {
+          throw error;
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+        isLoadingRef.current = false;
+      }
     };
 
     const scheduleLoad = () => {
       clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => load(), 300);
+      timeoutRef.current = setTimeout(() => load(), 1500);
     };
 
-    load(true);
+    load(true).catch(() => {});
     unsubscribe = base44.entities[entityName].subscribe(() => scheduleLoad());
 
     return () => {
+      isMounted = false;
       clearTimeout(timeoutRef.current);
       unsubscribe?.();
     };
