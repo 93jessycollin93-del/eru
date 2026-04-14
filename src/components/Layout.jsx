@@ -9,6 +9,7 @@ import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
 import FloatingQuickActions from './FloatingQuickActions';
 import ScreenVisualizer from './dashboard/ScreenVisualizer';
+import BazarStandDock from './bazar/BazarStandDock';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
 
@@ -97,6 +98,7 @@ export default function Layout() {
           </PageThemeLayer>
         </main>
         <JackieFloat prefs={prefs} updateWidget={updateWidget} />
+        <BazarStandDock />
         <FloatingQuickActions />
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
         <BotWidget prefs={prefs} updateWidget={updateWidget} />

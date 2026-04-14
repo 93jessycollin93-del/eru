@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import { playSound, VIBRATE } from '../lib/soundEngine';
 
@@ -29,6 +29,7 @@ const ALL_PAGES = [
   { id: 'arena',      label: 'Card Arena',    icon: Sword,         to: '/arena' },
   { id: 'creatures',  label: 'Creatures',     icon: Dna,           to: '/creatures' },
   { id: 'storefront', label: 'Storefront',    icon: Store,         to: '/storefront' },
+  { id: 'bazar',      label: 'Bazar Stand',   icon: Coins,         to: '/bazar-stand' },
   { id: 'sfanalytics',label: 'SF Analytics',  icon: BarChart,      to: '/storefront-analytics' },
   { id: 'economy',    label: 'Economy',       icon: Award,         to: '/admin/economy' },
   { id: 'settings',   label: 'Settings',      icon: Settings,      to: '/settings' },
@@ -41,7 +42,7 @@ const WIDGET_NAV_ITEMS = [
   { id: 'conversations', label: 'Conversations', icon: Library, to: '/jackie?panel=conversations' },
 ];
 
-const DEFAULT_PINNED = ['home', 'markets', 'trade', 'nfts', 'portfolio'];
+const DEFAULT_PINNED = ['home', 'markets', 'trade', 'bazar', 'portfolio'];
 const STORAGE_KEY = 'floating_nav_pinned';
 const POS_KEY = 'floating_nav_pos';
 const ORIENTATION_KEY = 'floating_nav_orientation';
