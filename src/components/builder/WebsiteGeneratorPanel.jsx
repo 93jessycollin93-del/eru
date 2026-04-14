@@ -4,6 +4,8 @@ import { Globe, Plus } from 'lucide-react';
 import WebsiteGeneratorProjectList from './WebsiteGeneratorProjectList';
 import WebsiteGeneratorForm from './WebsiteGeneratorForm';
 import WebsiteGeneratorPreview from './WebsiteGeneratorPreview';
+import WebsiteGeneratorPageMap from './WebsiteGeneratorPageMap';
+import WebsiteGeneratorSectionLibrary from './WebsiteGeneratorSectionLibrary';
 
 const EMPTY_FORM = {
   name: '',
@@ -94,18 +96,52 @@ export default function WebsiteGeneratorPanel() {
     if (!form.name.trim()) return;
     setGenerating(true);
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are generating a website project blueprint for an integrated website generator module.\nReturn a concise structured website plan.\nProject name: ${form.name}\nProject type: ${form.project_type}\nDescription: ${form.description}\nTarget audience: ${form.target_audience}\nStyle direction: ${form.style_direction}\nPrompt: ${form.prompt}\nNotes: ${form.notes}`,
+      prompt: `You are generating a structured website system for an integrated website generator inside ERU.
+Return a clean website blueprint with reusable sections and page structure.
+Support these pages when relevant: Home, About, Services, Contact.
+Support these reusable sections when relevant: Hero, Features, CTA, FAQ, Footer.
+Project name: ${form.name}
+Project type: ${form.project_type}
+Description: ${form.description}
+Target audience: ${form.target_audience}
+Style direction: ${form.style_direction}
+Prompt: ${form.prompt}
+Notes: ${form.notes}`,
       response_json_schema: {
         type: 'object',
         properties: {
           site_blueprint: {
             type: 'object',
             properties: {
-              hero_title: { type: 'string' },
-              hero_subtitle: { type: 'string' },
-              sections: { type: 'array', items: { type: 'string' } },
-              features: { type: 'array', items: { type: 'string' } },
-              cta: { type: 'string' }
+              site_name: { type: 'string' },
+              site_summary: { type: 'string' },
+              navigation: { type: 'array', items: { type: 'string' } },
+              pages: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    page_name: { type: 'string' },
+                    page_type: { type: 'string' },
+                    slug: { type: 'string' },
+                    page_goal: { type: 'string' },
+                    sections: { type: 'array', items: { type: 'string' } }
+                  }
+                }
+              },
+              reusable_sections: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    section_type: { type: 'string' },
+                    title: { type: 'string' },
+                    subtitle: { type: 'string' },
+                    cta_label: { type: 'string' },
+                    items: { type: 'array', items: { type: 'string' } }
+                  }
+                }
+              }
             }
           },
           generated_copy: {
@@ -113,7 +149,10 @@ export default function WebsiteGeneratorPanel() {
             properties: {
               headline: { type: 'string' },
               subheadline: { type: 'string' },
-              value_points: { type: 'array', items: { type: 'string' } }
+              value_points: { type: 'array', items: { type: 'string' } },
+              about_intro: { type: 'string' },
+              services_intro: { type: 'string' },
+              contact_intro: { type: 'string' }
             }
           }
         }
@@ -175,6 +214,8 @@ export default function WebsiteGeneratorPanel() {
             onGenerate={handleGenerate}
           />
           <WebsiteGeneratorPreview project={selectedProject} />
+          <WebsiteGeneratorPageMap pages={selectedProject?.site_blueprint?.pages || []} />
+          <WebsiteGeneratorSectionLibrary sections={selectedProject?.site_blueprint?.reusable_sections || []} />
         </div>
       </div>
     </div>

@@ -31,6 +31,11 @@ export default function WebsiteGeneratorForm({ form, modeLabel, saving, generati
         </div>
       </div>
 
+      <div className="rounded-xl border border-border bg-secondary/40 p-3">
+        <p className="text-[11px] font-semibold text-foreground">Structured output</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">Generation includes Home, About, Services, Contact plus reusable Hero, Features, CTA, FAQ, and Footer sections when they fit the brief.</p>
+      </div>
+
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground flex items-center gap-1"><FileText className="w-3 h-3" /> Description</label>
         <textarea value={form.description} onChange={(e) => onChange('description', e.target.value)} className="min-h-[80px] w-full rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm outline-none resize-none" placeholder="What is this website for?" />
