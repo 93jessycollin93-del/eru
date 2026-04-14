@@ -158,7 +158,7 @@ export default function SystemBuilder() {
             <Wand2 className="mr-1 inline w-3.5 h-3.5" /> System Builder
           </button>
           <button onClick={() => setModule('website-generator')} className={`rounded-xl px-3 py-2 text-xs font-semibold ${module === 'website-generator' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-            <Globe className="mr-1 inline w-3.5 h-3.5" /> Website Generator
+            <Globe className="mr-1 inline w-3.5 h-3.5" /> Website Generator App
           </button>
         </div>
 

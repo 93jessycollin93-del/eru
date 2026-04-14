@@ -22,7 +22,7 @@ const ALL_PAGES = [
   { id: 'botmarket',  label: 'Bot Market',    icon: Cpu,           to: '/bot-marketplace' },
   { id: 'botfarm',    label: 'Bot Farm',      icon: Factory,       to: '/bot-farm' },
   { id: 'apikeys',    label: 'API Keys',      icon: KeyRound,      to: '/apikeys' },
-  { id: 'builder',    label: 'ERU Builder',   icon: Wand2,         to: '/builder' },
+  { id: 'builder',    label: 'ERU',           icon: Wand2,         to: '/builder' },
   { id: 'pipeline',   label: 'Pipeline',      icon: Layers,        to: '/pipeline' },
   { id: 'jta',        label: 'Jade Atelier',  icon: Gem,           to: '/jta' },
   { id: 'visual',     label: 'Visual',        icon: Sparkles,      to: '/visual' },
