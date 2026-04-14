@@ -45,6 +45,9 @@
     "theme_settings": {
       "type": "object"
     },
+    "code_injection": {
+      "type": "object"
+    },
     "notes": {
       "type": "string"
     }

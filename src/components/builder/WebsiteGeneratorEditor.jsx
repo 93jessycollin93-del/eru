@@ -5,6 +5,7 @@ import WebsiteGeneratorLivePreview from './WebsiteGeneratorLivePreview';
 import WebsiteGeneratorSectionActions from './WebsiteGeneratorSectionActions';
 import WebsiteGeneratorThemeControls from './WebsiteGeneratorThemeControls';
 import WebsiteGeneratorExportPanel from './WebsiteGeneratorExportPanel';
+import WebsiteGeneratorCodeInjectionPanel from './WebsiteGeneratorCodeInjectionPanel';
 import { DEFAULT_THEME_SETTINGS, getSafeThemeSettings } from './websiteThemeUtils';
 
 function updatePage(pages, pageIndex, updater) {
@@ -33,6 +34,7 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
       site_blueprint: project.site_blueprint,
       generated_copy: project.generated_copy || {},
       theme_settings: getSafeThemeSettings(project.theme_settings || DEFAULT_THEME_SETTINGS),
+      code_injection: project.code_injection || {},
     });
     setActivePageType(project.site_blueprint.pages?.[0]?.page_type || 'home');
     setSelectedSectionType(project.site_blueprint.pages?.[0]?.sections?.[0] || null);
@@ -132,6 +134,16 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
         theme_settings: nextTheme,
       };
     });
+  };
+
+  const handleCodeInjectionChange = (field, value) => {
+    setDraft((prev) => ({
+      ...prev,
+      code_injection: {
+        ...(prev.code_injection || {}),
+        [field]: value,
+      },
+    }));
   };
 
   const activePage = draft?.site_blueprint?.pages?.find((page) => page.page_type === activePageType) || draft?.site_blueprint?.pages?.[0];
@@ -239,6 +251,7 @@ Current items: ${(activeSection.items || []).join(', ')}`,
       site_blueprint: draft.site_blueprint,
       generated_copy: draft.generated_copy,
       theme_settings: draft.theme_settings,
+      code_injection: draft.code_injection,
     });
     setSaving(false);
     onSaved?.();
@@ -338,6 +351,7 @@ Current items: ${(activeSection.items || []).join(', ')}`,
               <div className="flex gap-1 rounded-xl bg-secondary p-1">
                 <button onClick={() => setEditorTab('content')} className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-semibold ${editorTab === 'content' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}>Content</button>
                 <button onClick={() => setEditorTab('theme')} className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-semibold ${editorTab === 'theme' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}>Theme</button>
+                <button onClick={() => setEditorTab('settings')} className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-semibold ${editorTab === 'settings' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}>Settings</button>
               </div>
 
               {editorTab === 'content' ? (
@@ -362,7 +376,7 @@ Current items: ${(activeSection.items || []).join(', ')}`,
                     <textarea value={(activeSection.items || []).join('\n')} onChange={(e) => handleSectionItemsChange(activeSectionIndex, e.target.value)} className="min-h-[120px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
                   </div>
                 </div>
-              ) : (
+              ) : editorTab === 'theme' ? (
                 <div className="space-y-4">
                   <WebsiteGeneratorThemeControls
                     scopeLabel="Global Theme"
@@ -382,6 +396,11 @@ Current items: ${(activeSection.items || []).join(', ')}`,
                     onChange={(key, value) => handleThemeChange('section', key, value)}
                   />
                 </div>
+              ) : (
+                <WebsiteGeneratorCodeInjectionPanel
+                  value={draft.code_injection}
+                  onChange={handleCodeInjectionChange}
+                />
               )}
 
               {regenerating && <p className="text-[11px] text-primary">Regenerating section...</p>}

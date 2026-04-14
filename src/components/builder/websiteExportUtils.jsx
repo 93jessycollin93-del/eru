@@ -3,6 +3,7 @@ export function buildWebsiteExportJson(draft) {
     site_blueprint: draft?.site_blueprint || {},
     generated_copy: draft?.generated_copy || {},
     theme_settings: draft?.theme_settings || {},
+    code_injection: draft?.code_injection || {},
   }, null, 2);
 }
 
@@ -45,6 +46,8 @@ export function buildWebsiteExportMarkdown(draft) {
 
   lines.push('## Reusable Sections', '');
 
+  const injections = draft?.code_injection || {};
+
   sections.forEach((section) => {
     lines.push(`### ${section.section_type}`);
     if (section.title) lines.push(`- Title: ${section.title}`);
@@ -56,6 +59,13 @@ export function buildWebsiteExportMarkdown(draft) {
     }
     lines.push('');
   });
+
+  lines.push('## Code Injection', '');
+  lines.push(`### Head HTML\n${injections.head_html || ''}`, '');
+  lines.push(`### Body Start HTML\n${injections.body_start_html || ''}`, '');
+  lines.push(`### Body End HTML / Scripts\n${injections.body_end_html || ''}`, '');
+  lines.push(`### Custom CSS\n${injections.custom_css || ''}`, '');
+  lines.push(`### Custom JavaScript\n${injections.custom_js || ''}`, '');
 
   return lines.join('\n');
 }
