@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, Battery, Sparkles, LayoutDashboard, LayoutTemplate } from 'lucide-react';
+import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, Battery, Sparkles, LayoutDashboard, LayoutTemplate, Brush, PanelsTopLeft } from 'lucide-react';
 import { useTheme, BG_ENVS, MOTION_PRESETS, TYPOGRAPHY_PACKS } from '../context/ThemeContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import PageTemplateLibrary from '../components/theme/PageTemplateLibrary';
+import AdvancedThemeStudio from '../components/theme/AdvancedThemeStudio';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const THEME_CATS = {
@@ -435,6 +436,26 @@ function TemplatesTab() {
   return <PageTemplateLibrary />;
 }
 
+function LayersTab() {
+  return (
+    <div className="space-y-4">
+      <SectionHeader icon={Brush} label="Front Layer Skin Studio" sub="Use your own visuals as skins for app layers, pages, panels, buttons, inputs, and widgets." />
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5">
+            <PanelsTopLeft className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Scoped inheritance</p>
+            <p className="mt-1 text-xs text-muted-foreground">Global skins flow down by default. Page skins only affect that page. Layer overrides only affect the selected front layer.</p>
+          </div>
+        </div>
+      </div>
+      <AdvancedThemeStudio />
+    </div>
+  );
+}
+
 function ControlTab() {
   const { lockedSettings = [], setLockedSettings = () => {}, resetAll = () => {} } = useTheme() || {};
   const [showReset, setShowReset] = useState(false);
@@ -499,6 +520,7 @@ function ControlTab() {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const TABS = [
+  { id: 'layers',  label: 'Layers',     Icon: Brush          },
   { id: 'themes',  label: 'Themes',     Icon: Palette        },
   { id: 'bg',      label: 'Backgrounds',Icon: Layers         },
   { id: 'motion',  label: 'Motion',     Icon: Zap            },
@@ -509,7 +531,7 @@ const TABS = [
 ];
 
 export default function VisualEngine() {
-  const [tab, setTab] = useState('themes');
+  const [tab, setTab] = useState('layers');
 
   return (
     <div className="flex flex-col h-screen relative z-10" style={{ background: 'hsl(var(--background))' }}>
@@ -518,26 +540,30 @@ export default function VisualEngine() {
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">Visual Engine</h2>
-          <span className="ml-auto text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">SYSTEM LAYER</span>
+          <span className="ml-auto text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">LAYER STUDIO</span>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">Themes, backgrounds, templates & animation control</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Control front-layer skins for app surfaces, pages, panels, buttons, inputs, widgets, and inherited styling.</p>
         <p className="text-[10px] text-muted-foreground/80 mt-1">Changes are saved automatically on this device.</p>
       </div>
 
       {/* Tab bar */}
       <div className="flex-shrink-0 overflow-x-auto border-b border-border bg-card/50">
         <div className="flex min-w-max">
-          {TABS.map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => setTab(id)}
-              className={`flex flex-col items-center gap-0.5 px-5 py-2.5 text-[10px] font-medium transition-colors whitespace-nowrap ${tab === id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
+          {TABS.map((tabItem) => {
+            const TabIcon = tabItem.Icon;
+            return (
+              <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+                className={`flex flex-col items-center gap-0.5 px-5 py-2.5 text-[10px] font-medium transition-colors whitespace-nowrap ${tab === tabItem.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                <TabIcon className="w-4 h-4" />
+                {tabItem.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+        {tab === 'layers'  && <LayersTab />}
         {tab === 'themes'  && <ThemesTab />}
         {tab === 'bg'      && <BackgroundsTab />}
         {tab === 'motion'  && <MotionTab />}
