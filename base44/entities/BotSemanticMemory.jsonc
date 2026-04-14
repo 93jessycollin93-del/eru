@@ -72,6 +72,18 @@
     },
     "metadata": {
       "type": "object"
+    },
+    "dataset_label": {
+      "type": "string"
+    },
+    "label_status": {
+      "type": "string",
+      "enum": [
+        "unreviewed",
+        "reviewed",
+        "approved"
+      ],
+      "default": "unreviewed"
     }
   },
   "required": [

@@ -87,6 +87,25 @@
     "quality_score": {
       "type": "number",
       "default": 70
+    },
+    "label_status": {
+      "type": "string",
+      "enum": [
+        "unreviewed",
+        "reviewed",
+        "approved"
+      ],
+      "default": "unreviewed"
+    },
+    "dataset_source_name": {
+      "type": "string"
+    },
+    "training_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
     }
   },
   "required": [

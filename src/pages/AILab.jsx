@@ -15,6 +15,7 @@ import BotVersionHistory from '../components/ailab/BotVersionHistory';
 import BotTestingSuite from '../components/ailab/BotTestingSuite';
 import BotTestingLabWidget from '../components/ailab/BotTestingLabWidget';
 import BotTrainingPanel from '../components/ailab/BotTrainingPanel';
+import BotFineTuningWorkbench from '../components/ailab/BotFineTuningWorkbench';
 import BotDeploymentPipelinePanel from '../components/ailab/BotDeploymentPipelinePanel';
 import BotMarketplaceShell from '../components/ailab/BotMarketplaceShell';
 import BotDashboard from '../components/ailab/BotDashboard';
@@ -281,6 +282,7 @@ export default function AILab() {
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'testing', label: 'Testing', icon: CheckSquare },
     { id: 'training', label: 'Bot Training', icon: GraduationCap },
+    { id: 'fine-tuning', label: 'Fine-Tuning', icon: Brain },
     { id: 'deployments', label: 'Deployments', icon: Rocket },
     { id: 'dashboard', label: 'Stats', icon: LayoutDashboard },
     { id: 'pinned', label: 'Cards', icon: Pin },
@@ -760,6 +762,9 @@ export default function AILab() {
 
       {/* BOT TRAINING */}
       {tab === 'training' && <BotTrainingPanel bots={bots} globalPolicy={globalPolicy} onBotsUpdated={loadBots} />}
+
+      {/* FINE-TUNING */}
+      {tab === 'fine-tuning' && <BotFineTuningWorkbench bots={bots} globalPolicy={globalPolicy} />}
 
       {/* DEPLOYMENTS */}
       {tab === 'deployments' && <div className="px-4 py-4"><BotDeploymentPipelinePanel bots={bots} onBotsUpdated={loadBots} /></div>}
