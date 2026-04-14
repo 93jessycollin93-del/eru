@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
 import ThemeEnginePanel from '@/components/theme/ThemeEnginePanel';
 import AdvancedThemeStudio from '@/components/theme/AdvancedThemeStudio';
+import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
 
 const SECTIONS = [
   { icon: Shield, label: 'Security & 2FA', badge: 'Active' },
@@ -249,6 +250,10 @@ export default function Settings() {
         </div>
 
         <DomainSettingsCard />
+
+        <div className="mt-4">
+          <EscrowProfilePanel userEmail={currentUser?.email || ''} compact />
+        </div>
 
         <div className="mt-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1">

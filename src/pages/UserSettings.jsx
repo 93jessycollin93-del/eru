@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import SoundSettings from '@/components/SoundSettings';
+import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
 
 const DEFAULT_PREFS = {
   productUpdates: true,
@@ -276,6 +277,8 @@ export default function UserSettings() {
             ))}
           </div>
         </SectionCard>
+
+        <EscrowProfilePanel userEmail={userEmail} />
 
         <SectionCard title="Integrations" subtitle="Access connected tools and app-linked services.">
           <div className="space-y-2">
