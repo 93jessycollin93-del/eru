@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Sparkles, Loader2, Wand2, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, CheckCircle2, BadgeDollarSign } from 'lucide-react';
 
 export default function ListingAIAssistant({ form, onApply }) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [marketTrend, setMarketTrend] = useState('stable');
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -14,6 +15,9 @@ export default function ListingAIAssistant({ form, onApply }) {
       assetType: form.asset_type,
       saleMode: form.sale_mode,
       conditionScore: form.condition_score,
+      fiatCurrency: form.fiat_currency,
+      cryptoCurrency: form.crypto_currency,
+      marketTrend,
       mediaUrls: (form.media_urls || []).filter(Boolean),
       existingTitle: form.title,
       existingDescription: form.description,
@@ -29,6 +33,8 @@ export default function ListingAIAssistant({ form, onApply }) {
       title: result.title || '',
       description: result.description || '',
       tags: (result.tags || []).join(', '),
+      ask_price_fiat: result.suggested_fiat_price ?? '',
+      crypto_value: result.suggested_crypto_value ?? '',
     });
   };
 
@@ -50,6 +56,17 @@ export default function ListingAIAssistant({ form, onApply }) {
         placeholder="Example: Vintage Pokémon card in very good condition, great for collectors, emphasize authenticity and gift appeal"
         className="w-full min-h-[88px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none"
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <select value={marketTrend} onChange={(e) => setMarketTrend(e.target.value)} className="bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none">
+          <option value="bearish">Bearish market</option>
+          <option value="stable">Stable market</option>
+          <option value="bullish">Bullish market</option>
+        </select>
+        <div className="rounded-xl border border-border bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-2">
+          <BadgeDollarSign className="w-4 h-4 text-primary" /> AI can suggest both {form.fiat_currency} and {form.crypto_currency} pricing.
+        </div>
+      </div>
 
       <button
         onClick={handleGenerate}
@@ -80,6 +97,21 @@ export default function ListingAIAssistant({ form, onApply }) {
               ))}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-border bg-card p-3">
+              <p className="text-[11px] text-muted-foreground mb-1">Suggested fiat</p>
+              <p className="text-sm font-semibold">{result.suggested_fiat_price} {form.fiat_currency}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-3">
+              <p className="text-[11px] text-muted-foreground mb-1">Suggested crypto</p>
+              <p className="text-sm font-semibold">{result.suggested_crypto_value} {form.crypto_currency}</p>
+            </div>
+          </div>
+          {result.pricing_notes && (
+            <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
+              {result.pricing_notes}
+            </div>
+          )}
           {result.compliance_notes && (
             <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
               {result.compliance_notes}
