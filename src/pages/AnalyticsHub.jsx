@@ -4,11 +4,13 @@ import AnalyticsWidget from '@/components/dashboard/AnalyticsWidget';
 import AIInsightsWidget from '@/components/dashboard/AIInsightsWidget';
 import AnalyticsHubOverview from '@/components/analytics/AnalyticsHubOverview';
 import AnalyticsHubPerformancePanel from '@/components/analytics/AnalyticsHubPerformancePanel';
+import Bot24hAISummaryPanel from '@/components/analytics/Bot24hAISummaryPanel';
 
 const TABS = [
   { id: 'overview', label: 'Overview', Icon: LayoutDashboard },
   { id: 'performance', label: 'Performance', Icon: Activity },
   { id: 'usage', label: 'Usage', Icon: BarChart3 },
+  { id: 'bot-summary', label: 'Bot Summary', Icon: Sparkles },
 ];
 
 export default function AnalyticsHub() {
@@ -64,6 +66,8 @@ export default function AnalyticsHub() {
             <AIInsightsWidget />
           </div>
         )}
+
+        {tab === 'bot-summary' && <Bot24hAISummaryPanel />}
       </div>
     </div>
   );
