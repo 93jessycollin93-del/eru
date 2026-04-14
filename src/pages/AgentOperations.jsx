@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Cpu } from 'lucide-react';
+import { ArrowLeft, Cpu, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import AgentTaskBuilder from '@/components/ailab/AgentTaskBuilder';
 import AgentTaskList from '@/components/ailab/AgentTaskList';
@@ -10,14 +10,23 @@ export default function AgentOperations() {
   const [bots, setBots] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [runs, setRuns] = useState([]);
+  const [entitiesAvailable, setEntitiesAvailable] = useState(true);
 
   const loadData = async () => {
-    const [botRows, taskRows, runRows] = await Promise.all([
-      base44.entities.UserBot.list('-updated_date', 100),
-      base44.entities.AgentTask.list('-updated_date', 100),
-      base44.entities.AgentTaskRun.list('-created_date', 100),
-    ]);
+    const botRows = await base44.entities.UserBot.list('-updated_date', 100).catch(() => []);
+    const taskRows = await base44.entities.AgentTask.list('-updated_date', 100).catch(() => null);
+    const runRows = await base44.entities.AgentTaskRun.list('-created_date', 100).catch(() => null);
+
     setBots(botRows || []);
+
+    if (taskRows === null || runRows === null) {
+      setEntitiesAvailable(false);
+      setTasks([]);
+      setRuns([]);
+      return;
+    }
+
+    setEntitiesAvailable(true);
     setTasks(taskRows || []);
     setRuns(runRows || []);
   };
@@ -44,18 +53,32 @@ export default function AgentOperations() {
           </Link>
         </div>
 
-        <AgentActivityDashboard tasks={tasks} runs={runs} />
+        {entitiesAvailable ? (
+          <>
+            <AgentActivityDashboard tasks={tasks} runs={runs} />
 
-        <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <AgentTaskBuilder bots={bots} onCreated={loadData} />
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Saved custom tasks</p>
-              <p className="text-[11px] text-muted-foreground">Manage event-driven and time-based agent workflows.</p>
+            <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+              <AgentTaskBuilder bots={bots} onCreated={loadData} />
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Saved custom tasks</p>
+                  <p className="text-[11px] text-muted-foreground">Manage event-driven and time-based agent workflows.</p>
+                </div>
+                <AgentTaskList tasks={tasks} onChanged={loadData} />
+              </div>
             </div>
-            <AgentTaskList tasks={tasks} onChanged={loadData} />
+          </>
+        ) : (
+          <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-400" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Agent task storage is not available</p>
+                <p className="mt-1 text-xs text-muted-foreground">This page is trying to use AgentTask and AgentTaskRun, but those entities are not available in the live app yet. The page has been safely disabled so it won’t crash.</p>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
