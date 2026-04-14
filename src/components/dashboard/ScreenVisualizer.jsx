@@ -17,6 +17,38 @@ const ACTIVE_TAB_KEY = 'screen-visualizer-active-tab';
 const TABS_KEY = 'screen-visualizer-tabs';
 const DEFAULT_HOME = 'https://www.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=D&theme=dark';
 
+const toYouTubeEmbedUrl = (value) => {
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.replace('www.', '');
+
+    if (host === 'youtu.be') {
+      const videoId = parsed.pathname.split('/').filter(Boolean)[0];
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : value;
+    }
+
+    if (host.includes('youtube.com')) {
+      if (parsed.pathname.startsWith('/embed/')) return value;
+      if (parsed.pathname === '/watch') {
+        const videoId = parsed.searchParams.get('v');
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : value;
+      }
+      if (parsed.pathname.startsWith('/shorts/')) {
+        const videoId = parsed.pathname.split('/')[2];
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : value;
+      }
+      if (parsed.pathname.startsWith('/live/')) {
+        const videoId = parsed.pathname.split('/')[2];
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : value;
+      }
+    }
+
+    return value;
+  } catch {
+    return value;
+  }
+};
+
 const normalizeUrl = (value) => {
   let target = (value || '').trim();
   if (!target) return '';
@@ -27,7 +59,7 @@ const normalizeUrl = (value) => {
   }
 
   if (!target.startsWith('http')) target = `https://${target}`;
-  return target;
+  return toYouTubeEmbedUrl(target);
 };
 
 const getHostLabel = (value) => {
@@ -51,6 +83,7 @@ export default function ScreenVisualizer({ prefs, updateWidget }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedUrl, setRecordedUrl] = useState('');
+  const [youtubeFallback, setYoutubeFallback] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const inputRef = useRef(null);
@@ -124,6 +157,7 @@ export default function ScreenVisualizer({ prefs, updateWidget }) {
   const load = (u) => {
     const target = normalizeUrl(u || url);
     if (!target) return;
+    setYoutubeFallback(false);
     setActiveUrl(target);
     setUrl(target);
     updateActiveTab(target);
@@ -386,15 +420,44 @@ export default function ScreenVisualizer({ prefs, updateWidget }) {
 
         <div className={`relative bg-black ${miniBrowserPrefs.floating ? 'h-[18rem] sm:h-[22rem]' : 'h-[22rem] sm:h-[28rem]'}`}>
           {activeUrl ? (
-            <iframe
-              key={`${activeUrl}-${reloadKey}`}
-              src={activeUrl}
-              className="w-full h-full border-0 bg-white"
-              allow="autoplay; fullscreen; encrypted-media"
-              allowFullScreen
-              title="Screen Visualizer"
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation allow-downloads"
-            />
+            <>
+              <iframe
+                key={`${activeUrl}-${reloadKey}`}
+                src={activeUrl}
+                className="w-full h-full border-0 bg-white"
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                allowFullScreen
+                title="Screen Visualizer"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation allow-downloads"
+                onError={() => setYoutubeFallback(true)}
+              />
+              {activeUrl.includes('youtube.com/embed/') && (
+                <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-end p-2">
+                  <div className="pointer-events-auto flex gap-2">
+                    <button
+                      onClick={() => window.open(activeUrl.replace('/embed/', '/watch?v='), '_blank', 'noopener,noreferrer')}
+                      className="rounded-lg border border-white/10 bg-black/70 px-2.5 py-1.5 text-[10px] font-semibold text-white backdrop-blur"
+                    >
+                      Open YouTube
+                    </button>
+                  </div>
+                </div>
+              )}
+              {youtubeFallback && activeUrl.includes('youtube.com/embed/') && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80 px-4 text-center">
+                  <div className="max-w-xs space-y-3 rounded-2xl border border-white/10 bg-black/70 p-4 backdrop-blur">
+                    <p className="text-sm font-semibold text-white">This YouTube video can’t play inside the mini browser</p>
+                    <p className="text-xs text-white/70">Some videos restrict embedded playback. Open it directly in YouTube to watch and interact with it.</p>
+                    <button
+                      onClick={() => window.open(activeUrl.replace('/embed/', '/watch?v='), '_blank', 'noopener,noreferrer')}
+                      className="inline-flex rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                    >
+                      Open in YouTube
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground px-4 text-center">
               <div className="flex gap-4 mb-1">
