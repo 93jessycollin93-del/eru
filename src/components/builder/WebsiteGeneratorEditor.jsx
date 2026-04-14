@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import WebsiteGeneratorLivePreview from './WebsiteGeneratorLivePreview';
 import WebsiteGeneratorSectionActions from './WebsiteGeneratorSectionActions';
 import WebsiteGeneratorThemeControls from './WebsiteGeneratorThemeControls';
+import WebsiteGeneratorExportPanel from './WebsiteGeneratorExportPanel';
 import { DEFAULT_THEME_SETTINGS, getSafeThemeSettings } from './websiteThemeUtils';
 
 function updatePage(pages, pageIndex, updater) {
@@ -390,6 +391,12 @@ Current items: ${(activeSection.items || []).join(', ')}`,
           )}
         </aside>
       </div>
+
+      <WebsiteGeneratorExportPanel
+        draft={draft}
+        activePageType={activePage?.page_type}
+        activePageName={activePage?.page_name}
+      />
 
       <div className="rounded-xl bg-secondary p-3 space-y-3">
         <p className="text-xs font-semibold text-foreground">Core Copy</p>
