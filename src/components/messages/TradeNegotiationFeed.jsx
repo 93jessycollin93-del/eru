@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import { Gem, Send, Swords, MessageCircle } from 'lucide-react';
 
-function buildInventory(jadeAssets, cards, listings) {
+function buildInventory(jadeAssets = [], cards = [], listings = []) {
   return [
     ...jadeAssets.map((item) => ({
       key: `jade-${item.id}`,
@@ -36,7 +36,9 @@ function buildInventory(jadeAssets, cards, listings) {
 export default function TradeNegotiationFeed({ onOpenChat }) {
   const { user } = useAuth();
   const ownerQuery = useMemo(() => user?.email ? { created_by: user.email } : {}, [user?.email]);
-  const { data: posts } = useRealtimeEntityList('TradeNegotiationPost', { sort: '-created_date', limit: 50 });
+  const tradePostEnabled = Boolean(base44.entities?.TradeNegotiationPost);
+  const tradeChatEnabled = Boolean(base44.entities?.TradeNegotiationChat);
+  const { data: posts } = useRealtimeEntityList('TradeNegotiationPost', { sort: '-created_date', limit: 50, enabled: tradePostEnabled });
   const { data: jadeAssets } = useRealtimeEntityList('JadeAsset', { query: ownerQuery, sort: '-updated_date', limit: 50, enabled: !!user?.email });
   const { data: cards } = useRealtimeEntityList('Card', { query: ownerQuery, sort: '-updated_date', limit: 50, enabled: !!user?.email });
   const { data: listings } = useRealtimeEntityList('StorefrontListing', { query: ownerQuery, sort: '-updated_date', limit: 50, enabled: !!user?.email });
@@ -50,28 +52,31 @@ export default function TradeNegotiationFeed({ onOpenChat }) {
   const selectedAsset = inventory.find((item) => item.key === selectedKey) || null;
 
   const handlePost = async () => {
-    if (!user || !selectedAsset) return;
+    if (!user || !selectedAsset || !base44.entities?.TradeNegotiationPost) return;
     setPosting(true);
-    await base44.entities.TradeNegotiationPost.create({
-      author_email: user.email,
-      author_name: user.full_name || user.email.split('@')[0],
-      asset_type: selectedAsset.asset_type,
-      asset_id: selectedAsset.asset_id,
-      title: selectedAsset.title,
-      description: description.trim(),
-      asking_for: askingFor.trim(),
-      status: 'open',
-      asset_snapshot: selectedAsset.snapshot,
-      chat_count: 0,
-    });
-    setSelectedKey('');
-    setDescription('');
-    setAskingFor('');
-    setPosting(false);
+    try {
+      await base44.entities.TradeNegotiationPost.create({
+        author_email: user.email,
+        author_name: user.full_name || user.email.split('@')[0],
+        asset_type: selectedAsset.asset_type,
+        asset_id: selectedAsset.asset_id,
+        title: selectedAsset.title,
+        description: description.trim(),
+        asking_for: askingFor.trim(),
+        status: 'open',
+        asset_snapshot: selectedAsset.snapshot,
+        chat_count: 0,
+      });
+      setSelectedKey('');
+      setDescription('');
+      setAskingFor('');
+    } finally {
+      setPosting(false);
+    }
   };
 
   const handleStartNegotiation = async (post) => {
-    if (!user || post.author_email === user.email) return;
+    if (!user || post.author_email === user.email || !base44.entities?.TradeNegotiationChat) return;
     const existing = await base44.entities.TradeNegotiationChat.filter({ post_id: post.id, buyer_email: user.email }, '-created_date', 1);
     if (existing?.[0]) {
       onOpenChat(existing[0].id);
@@ -97,7 +102,9 @@ export default function TradeNegotiationFeed({ onOpenChat }) {
       ],
       last_message: `Hi, I want to negotiate for ${post.title}.`,
     });
-    await base44.entities.TradeNegotiationPost.update(post.id, { chat_count: Number(post.chat_count || 0) + 1, status: 'negotiating' });
+    if (base44.entities?.TradeNegotiationPost) {
+      await base44.entities.TradeNegotiationPost.update(post.id, { chat_count: Number(post.chat_count || 0) + 1, status: 'negotiating' });
+    }
     onOpenChat(chat.id);
   };
 
@@ -116,9 +123,10 @@ export default function TradeNegotiationFeed({ onOpenChat }) {
         </select>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your item, negotiation terms, or trade angle..." className="w-full min-h-[88px] rounded-xl border border-border bg-secondary px-3 py-3 text-sm text-foreground outline-none resize-none" />
         <input value={askingFor} onChange={(e) => setAskingFor(e.target.value)} placeholder="What are you looking for in return?" className="w-full rounded-xl border border-border bg-secondary px-3 py-3 text-sm text-foreground outline-none" />
-        <button onClick={handlePost} disabled={!selectedAsset || posting} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+        <button onClick={handlePost} disabled={!selectedAsset || posting || !tradePostEnabled} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           <Send className="h-4 w-4" /> {posting ? 'Posting...' : 'Post negotiation offer'}
         </button>
+        {!tradePostEnabled && <p className="text-[11px] text-muted-foreground">Negotiation feed is still initializing.</p>}
       </div>
 
       <div className="space-y-3">
@@ -143,7 +151,7 @@ export default function TradeNegotiationFeed({ onOpenChat }) {
               </div>
               <button
                 onClick={() => handleStartNegotiation(post)}
-                disabled={post.author_email === user?.email}
+                disabled={post.author_email === user?.email || !tradeChatEnabled}
                 className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
               >
                 <MessageCircle className="h-3.5 w-3.5" /> Negotiate

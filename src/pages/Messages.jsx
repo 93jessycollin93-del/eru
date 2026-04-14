@@ -43,7 +43,8 @@ export default function Messages() {
   const [chats, setChats] = useState(INITIAL_CHATS);
   const [activeChatId, setActiveChatId] = useState('global');
   const [activeNegotiationChatId, setActiveNegotiationChatId] = useState(null);
-  const { data: negotiationChats } = useRealtimeEntityList('TradeNegotiationChat', { sort: '-updated_date', limit: 50, enabled: !!user?.email });
+  const negotiationEnabled = Boolean(user?.email) && Boolean(window.base44?.entities?.TradeNegotiationChat || true);
+  const { data: negotiationChats } = useRealtimeEntityList('TradeNegotiationChat', { sort: '-updated_date', limit: 50, enabled: negotiationEnabled });
 
   const visibleChats = useMemo(() => chats.filter((chat) => [chat.name, chat.description].join(' ').toLowerCase().includes(search.toLowerCase())), [chats, search]);
   const visibleNegotiationChats = useMemo(() => (negotiationChats || []).filter((chat) => [chat.post_title, chat.seller_email, chat.buyer_email, chat.last_message].join(' ').toLowerCase().includes(search.toLowerCase())), [negotiationChats, search]);

@@ -8,48 +8,55 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
   const [creatingOrder, setCreatingOrder] = useState(false);
 
   const handleSend = async () => {
-    if (!draft.trim()) return;
+    if (!draft.trim() || !base44.entities?.TradeNegotiationChat) return;
     setSending(true);
-    const nextMessages = [
-      ...(chat.messages || []),
-      {
-        id: `m-${Date.now()}`,
-        author: currentUserEmail === chat.seller_email ? 'Seller' : 'Buyer',
-        author_email: currentUserEmail,
-        text: draft.trim(),
-        created_at: new Date().toISOString(),
-      },
-    ];
-    await base44.entities.TradeNegotiationChat.update(chat.id, {
-      messages: nextMessages,
-      last_message: draft.trim(),
-    });
-    setDraft('');
-    setSending(false);
+    try {
+      const nextMessages = [
+        ...(chat.messages || []),
+        {
+          id: `m-${Date.now()}`,
+          author: currentUserEmail === chat.seller_email ? 'Seller' : 'Buyer',
+          author_email: currentUserEmail,
+          text: draft.trim(),
+          created_at: new Date().toISOString(),
+        },
+      ];
+      await base44.entities.TradeNegotiationChat.update(chat.id, {
+        messages: nextMessages,
+        last_message: draft.trim(),
+      });
+      setDraft('');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleMoveToOrder = async () => {
+    if (!base44.entities?.Order || !base44.entities?.TradeNegotiationChat) return;
     setCreatingOrder(true);
-    const order = await base44.entities.Order.create({
-      order_number: `NEG-${Date.now()}`,
-      buyer_email: chat.buyer_email,
-      asset_type: chat.asset_type === 'listing' ? 'item' : chat.asset_type,
-      asset_id: chat.asset_id,
-      quantity: 1,
-      base_price: 0,
-      currency: 'GOLD',
-      status: 'pending',
-      payment_method: 'wallet',
-      metadata: {
-        negotiation_chat_id: chat.id,
-        negotiation_post_id: chat.post_id,
-      },
-    });
-    await base44.entities.TradeNegotiationChat.update(chat.id, {
-      status: 'moved_to_order',
-      linked_order_id: order.id,
-    });
-    setCreatingOrder(false);
+    try {
+      const order = await base44.entities.Order.create({
+        order_number: `NEG-${Date.now()}`,
+        buyer_email: chat.buyer_email,
+        asset_type: chat.asset_type === 'listing' ? 'item' : chat.asset_type,
+        asset_id: chat.asset_id,
+        quantity: 1,
+        base_price: 0,
+        currency: 'GOLD',
+        status: 'pending',
+        payment_method: 'wallet',
+        metadata: {
+          negotiation_chat_id: chat.id,
+          negotiation_post_id: chat.post_id,
+        },
+      });
+      await base44.entities.TradeNegotiationChat.update(chat.id, {
+        status: 'moved_to_order',
+        linked_order_id: order.id,
+      });
+    } finally {
+      setCreatingOrder(false);
+    }
   };
 
   return (
