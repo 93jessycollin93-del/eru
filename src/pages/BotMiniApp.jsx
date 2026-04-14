@@ -1,25 +1,86 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Bot, ExternalLink, Send } from 'lucide-react';
+import MiniAppHeader from '../components/bot-mini-app/MiniAppHeader';
+import MiniAppWalletPanel from '../components/bot-mini-app/MiniAppWalletPanel';
+import MiniAppNftPanel from '../components/bot-mini-app/MiniAppNftPanel';
+import MiniAppTaskQueue from '../components/bot-mini-app/MiniAppTaskQueue';
+import MiniAppChatPanel from '../components/bot-mini-app/MiniAppChatPanel';
 
 export default function BotMiniApp() {
   const [bot, setBot] = useState(null);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
+  const [wallets, setWallets] = useState([]);
+  const [holdings, setHoldings] = useState({});
+  const [nfts, setNfts] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [taskDraft, setTaskDraft] = useState('');
 
   const botId = useMemo(() => new URLSearchParams(window.location.search).get('bot'), []);
 
   useEffect(() => {
     if (!botId) return;
-    base44.entities.UserBot.filter({ id: botId }, '-created_date', 1)
-      .then((rows) => setBot(rows?.[0] || null));
+
+    const load = async () => {
+      const [botRows, me] = await Promise.all([
+        base44.entities.UserBot.filter({ id: botId }, '-created_date', 1),
+        base44.auth.me().catch(() => null),
+      ]);
+
+      const activeBot = botRows?.[0] || null;
+      setBot(activeBot);
+
+      if (!me) return;
+
+      const [walletRows, nftRows, taskRows] = await Promise.all([
+        base44.entities.ConnectedWallet?.filter?.({ user_email: me.email }, '-created_date', 20).catch(() => []),
+        base44.entities.NFT?.filter?.({ owner_email: me.email }, '-updated_date', 4).catch(() => []),
+        base44.entities.Task?.filter?.({ owner_email: me.email, bot_id: botId }, '-updated_date', 10).catch(() => []),
+      ]);
+
+      setWallets(walletRows || []);
+      setNfts(nftRows || []);
+      setTasks(taskRows || []);
+
+      const holdingsMap = {};
+      await Promise.all((walletRows || []).map(async (wallet) => {
+        const rows = await base44.entities.WalletHolding?.filter?.({ wallet_id: wallet.id }, '-value_usd', 3).catch(() => []);
+        holdingsMap[wallet.id] = rows || [];
+      }));
+      setHoldings(holdingsMap);
+    };
+
+    load();
   }, [botId]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    setMessages((prev) => [...prev, { role: 'user', content: input }]);
-    setMessages((prev) => [...prev, { role: 'assistant', content: bot?.greeting_message || bot?.description || 'Bot is ready.' }]);
+    const nextUserMessage = { role: 'user', content: input };
+    const nextAssistantMessage = { role: 'assistant', content: bot?.greeting_message || bot?.description || 'Bot is ready.' };
+    setMessages((prev) => [...prev, nextUserMessage, nextAssistantMessage]);
     setInput('');
+  };
+
+  const createTask = async () => {
+    if (!taskDraft.trim() || !bot) return;
+    const me = await base44.auth.me().catch(() => null);
+    const newTask = await base44.entities.Task.create({
+      bot_id: bot.id,
+      bot_name: bot.name,
+      title: taskDraft,
+      status: 'todo',
+      priority: 'medium',
+      task_type: 'bot_action',
+      owner_email: me?.email || '',
+    });
+    setTasks((prev) => [newTask, ...prev]);
+    setTaskDraft('');
+  };
+
+  const toggleTask = async (task) => {
+    const nextStatus = task.status === 'todo' ? 'in_progress' : task.status === 'in_progress' ? 'done' : 'todo';
+    await base44.entities.Task.update(task.id, { status: nextStatus });
+    setTasks((prev) => prev.map((item) => item.id === task.id ? { ...item, status: nextStatus } : item));
   };
 
   if (!bot) {
@@ -34,45 +95,25 @@ export default function BotMiniApp() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-4 py-4 pb-24 space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <Bot className="w-5 h-5 text-primary" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold text-foreground truncate">{bot.name}</h1>
-            <p className="text-xs text-muted-foreground line-clamp-2">{bot.description || 'Telegram mini-app deployment'}</p>
-          </div>
-          <a href="/ailab" className="inline-flex items-center gap-1 rounded-xl border border-border bg-secondary px-3 py-2 text-[11px] font-medium text-foreground">
-            <ExternalLink className="w-3.5 h-3.5" /> AI Lab
-          </a>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-        <p className="text-sm font-semibold text-foreground">Mini-app preview</p>
-        <div className="rounded-xl border border-border bg-background min-h-[320px] p-3 space-y-2">
-          {messages.length === 0 ? (
-            <div className="text-sm text-muted-foreground">{bot.greeting_message || 'Start chatting with this deployed bot.'}</div>
-          ) : messages.map((message, index) => (
-            <div key={index} className={`rounded-xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground ml-8' : 'bg-secondary text-foreground mr-8'}`}>
-              {message.content}
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="Message this bot..."
-            className="flex-1 rounded-xl border border-border bg-secondary px-3 py-2 text-sm outline-none text-foreground"
-          />
-          <button onClick={sendMessage} className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
+    <div className="min-h-screen bg-background px-3 py-3 pb-24">
+      <div className="mx-auto max-w-md space-y-3">
+        <MiniAppHeader bot={bot} />
+        <MiniAppWalletPanel wallets={wallets} holdings={holdings} />
+        <MiniAppNftPanel nfts={nfts} />
+        <MiniAppTaskQueue
+          tasks={tasks}
+          draftTitle={taskDraft}
+          onDraftTitleChange={setTaskDraft}
+          onCreateTask={createTask}
+          onToggleTask={toggleTask}
+        />
+        <MiniAppChatPanel
+          bot={bot}
+          messages={messages}
+          input={input}
+          onInputChange={setInput}
+          onSend={sendMessage}
+        />
       </div>
     </div>
   );
