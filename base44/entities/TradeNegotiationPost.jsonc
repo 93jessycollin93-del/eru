@@ -1,0 +1,67 @@
+{
+  "name": "TradeNegotiationPost",
+  "type": "object",
+  "properties": {
+    "author_email": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "jade",
+        "card",
+        "listing"
+      ]
+    },
+    "asset_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "asking_for": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "negotiating",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "asset_snapshot": {
+      "type": "object"
+    },
+    "chat_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "author_email",
+    "author_name",
+    "asset_type",
+    "asset_id",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

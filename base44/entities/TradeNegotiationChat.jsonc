@@ -1,0 +1,126 @@
+{
+  "name": "TradeNegotiationChat",
+  "type": "object",
+  "properties": {
+    "post_id": {
+      "type": "string"
+    },
+    "post_title": {
+      "type": "string"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "jade",
+        "card",
+        "listing"
+      ]
+    },
+    "asset_id": {
+      "type": "string"
+    },
+    "seller_email": {
+      "type": "string"
+    },
+    "buyer_email": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "moved_to_order",
+        "closed"
+      ],
+      "default": "active"
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "author_email": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "last_message": {
+      "type": "string"
+    },
+    "linked_order_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "post_id",
+    "post_title",
+    "asset_type",
+    "asset_id",
+    "seller_email",
+    "buyer_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "seller_email": "{{user.email}}"
+        },
+        {
+          "buyer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

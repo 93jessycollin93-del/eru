@@ -4,6 +4,10 @@ import SocialFeed from '../components/messages/SocialFeed';
 import ChatDirectory from '../components/messages/ChatDirectory';
 import ChatRoom from '../components/messages/ChatRoom';
 import CreateChatPanel from '../components/messages/CreateChatPanel';
+import TradeNegotiationFeed from '../components/messages/TradeNegotiationFeed';
+import TradeNegotiationChatRoom from '../components/messages/TradeNegotiationChatRoom';
+import { useAuth } from '@/lib/AuthContext';
+import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 
 const INITIAL_CHATS = [
   {
@@ -33,13 +37,18 @@ const INITIAL_CHATS = [
 ];
 
 export default function Messages() {
+  const { user } = useAuth();
   const [tab, setTab] = useState('feed');
   const [search, setSearch] = useState('');
   const [chats, setChats] = useState(INITIAL_CHATS);
   const [activeChatId, setActiveChatId] = useState('global');
+  const [activeNegotiationChatId, setActiveNegotiationChatId] = useState(null);
+  const { data: negotiationChats } = useRealtimeEntityList('TradeNegotiationChat', { sort: '-updated_date', limit: 50, enabled: !!user?.email });
 
   const visibleChats = useMemo(() => chats.filter((chat) => [chat.name, chat.description].join(' ').toLowerCase().includes(search.toLowerCase())), [chats, search]);
+  const visibleNegotiationChats = useMemo(() => (negotiationChats || []).filter((chat) => [chat.post_title, chat.seller_email, chat.buyer_email, chat.last_message].join(' ').toLowerCase().includes(search.toLowerCase())), [negotiationChats, search]);
   const activeChat = visibleChats.find((chat) => chat.id === activeChatId) || chats.find((chat) => chat.id === activeChatId) || chats[0];
+  const activeNegotiationChat = visibleNegotiationChats.find((chat) => chat.id === activeNegotiationChatId) || negotiationChats?.find((chat) => chat.id === activeNegotiationChatId) || visibleNegotiationChats[0] || null;
 
   const createChat = (form) => {
     const newChat = {
@@ -89,8 +98,9 @@ export default function Messages() {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats and social activity..." className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground" />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={() => setTab('feed')} className={`rounded-xl px-3 py-2 text-xs font-medium ${tab === 'feed' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>Feed</button>
+          <button onClick={() => setTab('negotiations')} className={`rounded-xl px-3 py-2 text-xs font-medium ${tab === 'negotiations' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>Negotiations</button>
           <button onClick={() => setTab('chats')} className={`rounded-xl px-3 py-2 text-xs font-medium ${tab === 'chats' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>Chats</button>
           <button onClick={() => setTab('create')} className={`rounded-xl px-3 py-2 text-xs font-medium ${tab === 'create' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>Create Room</button>
         </div>
@@ -98,6 +108,15 @@ export default function Messages() {
 
       <div className="px-4 py-4 space-y-4">
         {tab === 'feed' && <SocialFeed />}
+
+        {tab === 'negotiations' && (
+          <div className="space-y-4">
+            <TradeNegotiationFeed onOpenChat={(chatId) => {
+              setActiveNegotiationChatId(chatId);
+              setTab('chats');
+            }} />
+          </div>
+        )}
 
         {tab === 'chats' && (
           <div className="space-y-4">
@@ -109,6 +128,7 @@ export default function Messages() {
               <p className="text-xs text-muted-foreground">Global chat is open to everyone, while personal group chats can be open to join or locked to invites only, with optional voice room controls.</p>
             </div>
             <ChatDirectory chats={visibleChats} activeChatId={activeChat?.id} onSelectChat={setActiveChatId} onCreateChat={() => setTab('create')} />
+            {activeNegotiationChat && <TradeNegotiationChatRoom chat={activeNegotiationChat} currentUserEmail={user?.email} />}
             {activeChat && <ChatRoom chat={activeChat} onSendMessage={sendMessage} onInvite={inviteToChat} />}
           </div>
         )}
