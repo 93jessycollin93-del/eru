@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Bot, Pin, Zap, Plus, Check, Activity, RefreshCw } from 'lucide-react';
+import { Bot, Pin, Zap, Plus, Check, Activity, RefreshCw, Pause, Play, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NewsFeedWidget from './NewsFeedWidget';
 import AIInsightsWidget from './AIInsightsWidget';
@@ -29,6 +29,8 @@ function SectionHeader({ icon: HeaderIcon, title, action }) {
 function BotStatusWidget() {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [selectedBotIds, setSelectedBotIds] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
   const isLoadingRef = useRef(false);
 
@@ -72,6 +74,24 @@ function BotStatusWidget() {
     return unsubscribe;
   }, []);
 
+  const toggleSelection = (botId) => {
+    setSelectedBotIds((prev) => prev.includes(botId) ? prev.filter((id) => id !== botId) : [...prev, botId]);
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedBotIds((prev) => prev.length === bots.length ? [] : bots.map((bot) => bot.id));
+  };
+
+  const runBulkAction = async (nextStatus) => {
+    if (selectedBotIds.length === 0 || batchLoading) return;
+    setBatchLoading(true);
+    setBots((prev) => prev.map((item) => selectedBotIds.includes(item.id) ? { ...item, status: nextStatus } : item));
+    await Promise.all(selectedBotIds.map((botId) => base44.entities.UserBot.update(botId, { status: nextStatus }).catch(() => null)));
+    setSelectedBotIds([]);
+    setBatchLoading(false);
+    setLastUpdated(new Date());
+  };
+
   const toggleStatus = async (bot) => {
     const nextStatus = bot.status === 'active' ? 'inactive' : 'active';
     setBots((prev) => prev.map((item) => item.id === bot.id ? { ...item, status: nextStatus } : item));
@@ -86,19 +106,53 @@ function BotStatusWidget() {
         action={<button onClick={loadBots} className="p-1 rounded hover:bg-secondary"><RefreshCw className={`w-3.5 h-3.5 text-muted-foreground ${loading ? 'animate-spin' : ''}`} /></button>}
       />
       {lastUpdated && <p className="text-[10px] text-muted-foreground mb-3">Live · Updated {lastUpdated.toLocaleTimeString()}</p>}
+      {bots.length > 0 && (
+        <div className="mb-3 rounded-xl border border-border bg-secondary/30 p-2.5 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button onClick={toggleSelectAll} disabled={batchLoading} className="text-[10px] px-2.5 py-1 rounded-lg border border-border bg-card text-muted-foreground disabled:opacity-50">
+              {selectedBotIds.length === bots.length ? 'Clear all' : 'Select all'}
+            </button>
+            <span className="text-[10px] text-muted-foreground">{selectedBotIds.length} selected</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button onClick={() => runBulkAction('active')} disabled={selectedBotIds.length === 0 || batchLoading} className="inline-flex items-center justify-center gap-1 rounded-lg border border-green-400/20 bg-green-400/10 px-2.5 py-2 text-[10px] font-medium text-green-400 disabled:opacity-50">
+              <Play className="w-3 h-3" /> Start
+            </button>
+            <button onClick={() => runBulkAction('paused')} disabled={selectedBotIds.length === 0 || batchLoading} className="inline-flex items-center justify-center gap-1 rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-2.5 py-2 text-[10px] font-medium text-yellow-300 disabled:opacity-50">
+              <Pause className="w-3 h-3" /> Pause
+            </button>
+            <button onClick={() => runBulkAction('inactive')} disabled={selectedBotIds.length === 0 || batchLoading} className="inline-flex items-center justify-center gap-1 rounded-lg border border-border bg-card px-2.5 py-2 text-[10px] font-medium text-muted-foreground disabled:opacity-50">
+              <Square className="w-3 h-3" /> Stop
+            </button>
+          </div>
+          {batchLoading && (
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Updating selected bots...
+            </div>
+          )}
+        </div>
+      )}
       <div className="space-y-2">
         {bots.length === 0 ? (
           <p className="text-xs text-muted-foreground">No bots found.</p>
         ) : bots.map((bot) => (
           <div key={bot.id} className="flex items-center gap-2 sm:gap-3 rounded-xl bg-secondary/50 border border-border px-3 py-2.5">
-            <div className={`w-2 h-2 rounded-full ${bot.status === 'active' ? 'bg-green-400' : 'bg-muted-foreground'}`} />
+            <input
+              type="checkbox"
+              checked={selectedBotIds.includes(bot.id)}
+              onChange={() => toggleSelection(bot.id)}
+              disabled={batchLoading}
+              className="h-4 w-4 rounded border-border bg-card"
+            />
+            <div className={`w-2 h-2 rounded-full ${bot.status === 'active' ? 'bg-green-400' : bot.status === 'paused' ? 'bg-yellow-300' : 'bg-muted-foreground'}`} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{bot.name}</p>
               <p className="text-[10px] text-muted-foreground capitalize">{bot.role || 'bot'} · {bot.status || 'inactive'}</p>
             </div>
             <button
               onClick={() => toggleStatus(bot)}
-              className={`text-[10px] px-2 py-1 rounded-lg border whitespace-nowrap ${bot.status === 'active' ? 'border-green-400/20 bg-green-400/10 text-green-400' : 'border-border bg-card text-muted-foreground'}`}
+              disabled={batchLoading}
+              className={`text-[10px] px-2 py-1 rounded-lg border whitespace-nowrap disabled:opacity-50 ${bot.status === 'active' ? 'border-green-400/20 bg-green-400/10 text-green-400' : 'border-border bg-card text-muted-foreground'}`}
             >
               {bot.status === 'active' ? 'Disable' : 'Enable'}
             </button>
