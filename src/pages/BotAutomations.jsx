@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Plus, Play, Pause, Trash2, Zap, AlertCircle, CheckCircle, Send, Bot, Edit3 } from 'lucide-react';
+import { Clock, Plus, Play, Pause, Trash2, Zap, AlertCircle, CheckCircle, Send, Bot, Edit3, Link as LinkIcon, MessageCircle, BellRing } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -12,7 +12,7 @@ const INTERVALS = [
   { label: 'Every week', hours: 168 },
 ];
 
-const BLANK = { name: '', bot_id: '', bot_name: '', task_prompt: '', interval_hours: 24, slack_webhook_url: '', alert_condition: '' };
+const BLANK = { name: '', bot_id: '', bot_name: '', task_prompt: '', interval_hours: 24, slack_webhook_url: '', webhook_urls_text: '', telegram_chat_ids_text: '', alert_condition: '', alert_events: ['trade_execution', 'performance_threshold'], threshold_rules_text: '', inbound_webhook_key: '', inbound_webhook_label: '' };
 
 function timeAgo(iso) {
   if (!iso) return 'Never';
@@ -49,7 +49,20 @@ export default function BotAutomations() {
   const save = async () => {
     if (!form.name || !form.bot_id || !form.task_prompt) return;
     const selectedBot = bots.find(b => b.id === form.bot_id);
-    const data = { ...form, bot_name: selectedBot?.name || '', user_email: currentUser?.email };
+    const data = {
+      ...form,
+      bot_name: selectedBot?.name || '',
+      user_email: currentUser?.email,
+      webhook_urls: form.webhook_urls_text.split('\n').map(item => item.trim()).filter(Boolean),
+      telegram_chat_ids: form.telegram_chat_ids_text.split(',').map(item => item.trim()).filter(Boolean),
+      threshold_rules: form.threshold_rules_text.split('\n').map(item => item.trim()).filter(Boolean).map((item) => ({ metric: item, operator: 'above', value: 0, label: item })),
+    };
+    delete data.webhook_urls_text;
+    delete data.telegram_chat_ids_text;
+    delete data.threshold_rules_text;
+    if (!data.inbound_webhook_key) {
+      data.inbound_webhook_key = crypto.randomUUID();
+    }
     if (editId) await base44.entities.BotAutomation.update(editId, data);
     else await base44.entities.BotAutomation.create(data);
     setShowForm(false); setForm(BLANK); setEditId(null); load();
@@ -63,7 +76,21 @@ export default function BotAutomations() {
   };
 
   const startEdit = (auto) => {
-    setForm({ name: auto.name, bot_id: auto.bot_id, bot_name: auto.bot_name, task_prompt: auto.task_prompt, interval_hours: auto.interval_hours, slack_webhook_url: auto.slack_webhook_url || '', alert_condition: auto.alert_condition || '' });
+    setForm({
+      name: auto.name,
+      bot_id: auto.bot_id,
+      bot_name: auto.bot_name,
+      task_prompt: auto.task_prompt,
+      interval_hours: auto.interval_hours,
+      slack_webhook_url: auto.slack_webhook_url || '',
+      webhook_urls_text: (auto.webhook_urls || []).join('\n'),
+      telegram_chat_ids_text: (auto.telegram_chat_ids || []).join(', '),
+      alert_condition: auto.alert_condition || '',
+      alert_events: auto.alert_events || ['trade_execution', 'performance_threshold'],
+      threshold_rules_text: (auto.threshold_rules || []).map(rule => rule.label || rule.metric || '').join('\n'),
+      inbound_webhook_key: auto.inbound_webhook_key || '',
+      inbound_webhook_label: auto.inbound_webhook_label || ''
+    });
     setEditId(auto.id);
     setShowForm(true);
   };
@@ -79,16 +106,19 @@ export default function BotAutomations() {
       model: 'gemini_3_flash',
     });
 
-    // Post to Slack if webhook configured and condition met
-    if (auto.slack_webhook_url) {
-      const shouldAlert = !auto.alert_condition || result.toLowerCase().includes(auto.alert_condition.toLowerCase());
-      if (shouldAlert) {
-        await fetch(auto.slack_webhook_url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: `🤖 *${auto.name}* (${bot?.name})\n${result}` }),
-        }).catch(() => {});
-      }
+    const shouldAlert = !auto.alert_condition || result.toLowerCase().includes(auto.alert_condition.toLowerCase());
+    if (shouldAlert) {
+      await base44.functions.invoke('dispatchBotAutomationAlert', {
+        automationId: auto.id,
+        eventType: 'automation_run',
+        title: `${auto.name} alert`,
+        message: result,
+        data: {
+          bot_id: auto.bot_id,
+          bot_name: bot?.name || auto.bot_name,
+          source: 'run_now'
+        }
+      }).catch(() => null);
     }
 
     await base44.entities.BotAutomation.update(auto.id, {
@@ -106,7 +136,7 @@ export default function BotAutomations() {
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Bot Automations</h2>
-          <p className="text-[10px] text-muted-foreground">Scheduled bot tasks with live web data + Slack alerts</p>
+          <p className="text-[10px] text-muted-foreground">Scheduled bot tasks with Telegram + multi-webhook alerts and inbound webhook triggering</p>
         </div>
         <button onClick={() => { setShowForm(true); setForm(BLANK); setEditId(null); }}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-xl text-xs font-semibold">
@@ -144,8 +174,40 @@ export default function BotAutomations() {
           </div>
 
           <input value={form.slack_webhook_url} onChange={e => setForm(p => ({ ...p, slack_webhook_url: e.target.value }))}
-            placeholder="Slack Webhook URL (optional)"
+            placeholder="Legacy Slack Webhook URL (optional)"
             className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none text-foreground" />
+
+          <textarea value={form.webhook_urls_text} onChange={e => setForm(p => ({ ...p, webhook_urls_text: e.target.value }))}
+            placeholder="Outbound webhook URLs, one per line"
+            className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none resize-none min-h-[70px] text-foreground" />
+
+          <input value={form.telegram_chat_ids_text} onChange={e => setForm(p => ({ ...p, telegram_chat_ids_text: e.target.value }))}
+            placeholder="Telegram chat IDs, comma separated"
+            className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none text-foreground" />
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground">
+              <input type="checkbox" checked={form.alert_events.includes('trade_execution')} onChange={e => setForm(p => ({ ...p, alert_events: e.target.checked ? [...new Set([...p.alert_events, 'trade_execution'])] : p.alert_events.filter(item => item !== 'trade_execution') }))} />
+              Trade execution alerts
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground">
+              <input type="checkbox" checked={form.alert_events.includes('performance_threshold')} onChange={e => setForm(p => ({ ...p, alert_events: e.target.checked ? [...new Set([...p.alert_events, 'performance_threshold'])] : p.alert_events.filter(item => item !== 'performance_threshold') }))} />
+              Performance threshold alerts
+            </label>
+          </div>
+
+          <textarea value={form.threshold_rules_text} onChange={e => setForm(p => ({ ...p, threshold_rules_text: e.target.value }))}
+            placeholder="Threshold labels, one per line (you can expand these later)"
+            className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none resize-none min-h-[70px] text-foreground" />
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input value={form.inbound_webhook_label} onChange={e => setForm(p => ({ ...p, inbound_webhook_label: e.target.value }))}
+              placeholder="Inbound webhook label"
+              className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none text-foreground" />
+            <input value={form.inbound_webhook_key} onChange={e => setForm(p => ({ ...p, inbound_webhook_key: e.target.value }))}
+              placeholder="Inbound webhook secret key"
+              className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none text-foreground" />
+          </div>
 
           <div className="flex gap-2">
             <button onClick={save} disabled={!form.name || !form.bot_id || !form.task_prompt}
@@ -198,12 +260,21 @@ export default function BotAutomations() {
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {auto.slack_webhook_url && <Zap className="w-3 h-3 text-yellow-400" title="Slack alerts enabled" />}
+                {(auto.webhook_urls || []).length > 0 && <LinkIcon className="w-3 h-3 text-blue-400" title="Webhook alerts enabled" />}
+                {(auto.telegram_chat_ids || []).length > 0 && <MessageCircle className="w-3 h-3 text-primary" title="Telegram alerts enabled" />}
+                {(auto.alert_events || []).length > 0 && <BellRing className="w-3 h-3 text-green-400" title="Alert events configured" />}
                 <button onClick={() => startEdit(auto)} className="p-1 text-muted-foreground hover:text-foreground"><Edit3 className="w-3.5 h-3.5" /></button>
                 <button onClick={() => del(auto.id)} className="p-1 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
 
             <p className="text-[10px] text-muted-foreground line-clamp-2">{auto.task_prompt}</p>
+            {auto.inbound_webhook_key && (
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                <p className="text-[9px] text-muted-foreground">Inbound webhook</p>
+                <p className="mt-1 break-all text-[10px] text-foreground/80">botAutomationWebhook → automationId: {auto.id} · webhookKey: {auto.inbound_webhook_key}</p>
+              </div>
+            )}
 
             {auto.last_run_result && (
               <div className="bg-secondary rounded-lg px-3 py-2">

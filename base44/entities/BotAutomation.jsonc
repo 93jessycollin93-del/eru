@@ -29,11 +29,73 @@
     },
     "slack_webhook_url": {
       "type": "string",
-      "description": "Optional Slack webhook to post results to"
+      "description": "Legacy optional Slack webhook to post results to"
+    },
+    "webhook_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Multiple outbound webhook URLs for alert delivery"
+    },
+    "telegram_chat_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Telegram chat IDs to receive bot alerts"
     },
     "alert_condition": {
       "type": "string",
       "description": "e.g. Only alert if result contains 'warning' or 'drop'"
+    },
+    "alert_events": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "trade_execution",
+        "performance_threshold"
+      ],
+      "description": "Alert event types enabled for this automation"
+    },
+    "threshold_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "above",
+              "below",
+              "equals"
+            ]
+          },
+          "value": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "default": [],
+      "description": "Configured performance thresholds"
+    },
+    "inbound_webhook_key": {
+      "type": "string",
+      "description": "Secret key for inbound webhook trigger URL"
+    },
+    "inbound_webhook_label": {
+      "type": "string",
+      "description": "Friendly label for inbound webhook usage"
     },
     "last_run_at": {
       "type": "string"
