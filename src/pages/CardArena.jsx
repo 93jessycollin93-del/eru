@@ -7,7 +7,7 @@ import { DECK_MODE_OPTIONS, DEFAULT_DECK_MODE, buildDeckModeSummary, calculateDe
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
 import ChallengePanel from '../components/cards/ChallengePanel';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 
@@ -67,6 +67,7 @@ export default function CardArena() {
   const [inviteSearch, setInviteSearch] = useState('');
   const [arenaUsers, setArenaUsers] = useState([]);
   const [openChallenges, setOpenChallenges] = useState([]);
+  const [copyingDeck, setCopyingDeck] = useState(false);
 
   useEffect(() => {
     loadCards();
@@ -248,6 +249,40 @@ export default function CardArena() {
       if (prev.length >= normalizedDeckMode) return [...prev.slice(1), card];
       return [...prev, card];
     });
+  };
+
+  const copyTopPlayerDeck = async () => {
+    const profiles = await base44.entities.CardPlayerProfile.list('-updated_date', 100);
+    const topPlayer = [...profiles].sort((a, b) => (b.elo_rating || 0) - (a.elo_rating || 0)).find((profile) => profile.user_email !== playerProfile?.user_email);
+    if (!topPlayer) return;
+
+    const history = await base44.entities.CardBattleHistory.list('-created_date', 200);
+    const bestMatch = history.find((match) => match.created_by === topPlayer.user_email && (match.player_deck_snapshot || []).length > 0);
+    if (!bestMatch) return;
+
+    setCopyingDeck(true);
+    const copiedDeck = hydrateDeckSnapshot((bestMatch.player_deck_snapshot || []).slice(0, normalizedDeckMode));
+    setDeck(copiedDeck);
+    await base44.entities.PlayerDeck.create({
+      name: `${topPlayer.display_name || 'Top Player'} copied deck`,
+      card_ids: copiedDeck.map((card) => card.id),
+      is_active: true,
+      wins: 0,
+      losses: 0,
+    }).catch(() => null);
+    await base44.entities.SocialStrategyPost.create({
+      author_email: playerProfile?.user_email || (await base44.auth.me()).email,
+      author_name: playerProfile?.display_name || 'Arena Player',
+      post_type: 'deck_copy',
+      title: `Copied ${topPlayer.display_name || 'top player'} deck`,
+      content: `Deck copied from the leaderboard for testing and practice in Card Arena.`,
+      deck_name: `${topPlayer.display_name || 'Top Player'} ladder deck`,
+      deck_snapshot: bestMatch.player_deck_snapshot || [],
+      linked_profile_email: topPlayer.user_email,
+      likes: 0,
+      copy_count: 1,
+    }).catch(() => null);
+    setCopyingDeck(false);
   };
 
   const startTournament = () => {
@@ -627,6 +662,10 @@ export default function CardArena() {
                 <p className="text-[10px] text-muted-foreground">Campaign</p>
               </div>
             </div>
+
+            <button onClick={copyTopPlayerDeck} disabled={copyingDeck} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary disabled:opacity-40">
+              <Copy className="w-4 h-4" /> {copyingDeck ? 'Copying top deck...' : 'Copy top-ranked player deck'}
+            </button>
 
             {!battling && (
               <div className="grid gap-3 md:grid-cols-2">

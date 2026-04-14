@@ -1,0 +1,108 @@
+{
+  "name": "SocialStrategyPost",
+  "type": "object",
+  "properties": {
+    "author_email": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "post_type": {
+      "type": "string",
+      "enum": [
+        "deck_strategy",
+        "nft_trade",
+        "deck_copy"
+      ],
+      "default": "deck_strategy"
+    },
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "deck_name": {
+      "type": "string"
+    },
+    "deck_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "power": {
+            "type": "number"
+          },
+          "guard": {
+            "type": "number"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "ability_value": {
+            "type": "number"
+          }
+        }
+      },
+      "default": []
+    },
+    "trade_title": {
+      "type": "string"
+    },
+    "trade_value": {
+      "type": "number"
+    },
+    "trade_currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "nft_label": {
+      "type": "string"
+    },
+    "nft_image_url": {
+      "type": "string"
+    },
+    "linked_profile_email": {
+      "type": "string"
+    },
+    "likes": {
+      "type": "number",
+      "default": 0
+    },
+    "copy_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "author_email",
+    "author_name",
+    "post_type",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
