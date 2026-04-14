@@ -179,8 +179,18 @@ export function useRealtimeEntityList(entityName, options = {}) {
       timeoutRef.current = setTimeout(() => load(), 1500);
     };
 
+    const sdk = base44.entities[entityName];
+    if (!sdk) {
+      setData([]);
+      setLoading(false);
+      return () => {
+        isMounted = false;
+        clearTimeout(timeoutRef.current);
+      };
+    }
+
     load(true).catch(() => {});
-    unsubscribe = base44.entities[entityName].subscribe(() => scheduleLoad());
+    unsubscribe = sdk.subscribe(() => scheduleLoad());
 
     return () => {
       isMounted = false;
