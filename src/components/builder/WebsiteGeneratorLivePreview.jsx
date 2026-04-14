@@ -17,14 +17,14 @@ function SectionBlock({ section, onSelect, selected, previewMode, theme }) {
   return (
     <button
       onClick={onSelect}
-      className={`w-full border text-left transition-colors ${theme?.buttons?.style || 'rounded-2xl'} ${theme?.spacing?.section_padding || (previewMode === 'mobile' ? 'p-3' : 'p-4')} ${theme?.background?.value || (selected ? 'bg-primary/5' : SECTION_STYLE[section.section_type] || 'bg-secondary/70')} ${theme?.surfaces?.panel_border || 'border-border'} ${selected ? 'ring-1 ring-primary/40 border-primary' : ''}`}
+      className={`w-full border text-left transition-colors ${theme?.surfaces?.radius || theme?.buttons?.style || 'rounded-2xl'} ${theme?.spacing?.section_padding || (previewMode === 'mobile' ? 'p-3' : 'p-4')} ${theme?.background?.value || (selected ? 'bg-primary/5' : SECTION_STYLE[section.section_type] || 'bg-secondary/70')} ${theme?.surfaces?.panel_border || 'border-border'} ${theme?.surfaces?.shadow || ''} ${selected ? 'ring-1 ring-primary/40 border-primary' : ''}`}
     >
       <div className="flex items-center justify-between gap-3">
         <p className={`text-sm font-semibold capitalize ${theme?.colors?.text || 'text-foreground'}`}>{section.section_type}</p>
         <span className="rounded-full bg-card px-2 py-1 text-[10px] uppercase text-muted-foreground">section</span>
       </div>
-      {section.title && <p className={`mt-3 font-bold ${theme?.typography?.heading_size || 'text-lg'} ${theme?.typography?.font_family || 'font-sans'} ${theme?.colors?.text || 'text-foreground'}`}>{section.title}</p>}
-      {section.subtitle && <p className={`mt-2 ${theme?.typography?.body_size || 'text-sm'} ${theme?.typography?.font_family || 'font-sans'} ${theme?.colors?.muted_text || 'text-muted-foreground'}`}>{section.subtitle}</p>}
+      {section.title && <p className={`mt-3 ${theme?.typography?.heading_weight || 'font-bold'} ${theme?.typography?.tracking || 'tracking-normal'} ${theme?.typography?.heading_size || 'text-lg'} ${theme?.typography?.font_family || 'font-sans'} ${theme?.colors?.text || 'text-foreground'}`}>{section.title}</p>}
+      {section.subtitle && <p className={`mt-2 ${theme?.typography?.tracking || 'tracking-normal'} ${theme?.typography?.body_size || 'text-sm'} ${theme?.typography?.font_family || 'font-sans'} ${theme?.colors?.muted_text || 'text-muted-foreground'}`}>{section.subtitle}</p>}
       {Array.isArray(section.items) && section.items.length > 0 && (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {section.items.slice(0, 4).map((item, index) => (
@@ -34,7 +34,7 @@ function SectionBlock({ section, onSelect, selected, previewMode, theme }) {
       )}
       {section.cta_label && (
         <div className="mt-4">
-          <span className={`inline-flex ${theme?.buttons?.style || 'rounded-xl'} ${theme?.colors?.accent || 'bg-primary'} ${theme?.colors?.accent_text || 'text-primary-foreground'} ${theme?.buttons?.padding || 'px-3 py-2'} text-xs font-semibold`}>{section.cta_label}</span>
+          <span className={`inline-flex ${theme?.buttons?.style || 'rounded-xl'} ${theme?.buttons?.shadow || ''} ${theme?.colors?.accent || 'bg-primary'} ${theme?.colors?.accent_text || 'text-primary-foreground'} ${theme?.buttons?.padding || 'px-3 py-2'} text-xs font-semibold`}>{section.cta_label}</span>
         </div>
       )}
     </button>
@@ -70,7 +70,7 @@ export default function WebsiteGeneratorLivePreview({ pages, sections, themeSett
       </div>
 
       <div className="rounded-[28px] border border-border bg-background p-3">
-        <div className={`mx-auto rounded-[24px] border shadow-sm transition-all ${previewMode === 'mobile' ? 'max-w-sm p-3' : 'max-w-5xl p-4'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.background?.value || 'bg-card'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.surfaces?.panel_border || 'border-border'}`}>
+        <div className={`mx-auto border transition-all ${previewMode === 'mobile' ? 'max-w-sm' : 'max-w-5xl'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.spacing?.container_padding || 'p-4'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.background?.value || 'bg-card'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.surfaces?.panel_border || 'border-border'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.surfaces?.radius || 'rounded-[24px]'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.surfaces?.shadow || 'shadow-sm'}`}>
           <div className={resolveThemeLayer(themeSettings, activePage?.page_type, null)?.spacing?.section_gap || 'space-y-4'}>
             {visibleSections.map((section, index) => {
               const theme = resolveThemeLayer(themeSettings, activePage?.page_type, section.section_type);

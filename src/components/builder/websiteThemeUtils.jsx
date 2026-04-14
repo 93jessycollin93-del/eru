@@ -4,6 +4,8 @@ export const DEFAULT_THEME_SETTINGS = {
       heading_size: 'text-3xl',
       body_size: 'text-sm',
       font_family: 'font-sans',
+      heading_weight: 'font-bold',
+      tracking: 'tracking-normal',
     },
     colors: {
       background: 'bg-background',
@@ -17,19 +19,24 @@ export const DEFAULT_THEME_SETTINGS = {
       style: 'rounded-xl',
       fill: 'solid',
       padding: 'px-4 py-2.5',
+      shadow: 'shadow-sm',
     },
     surfaces: {
       page_background: 'bg-background',
       panel_background: 'bg-card',
       panel_border: 'border-border',
+      shadow: 'shadow-sm',
+      radius: 'rounded-2xl',
     },
     spacing: {
       section_gap: 'space-y-4',
       section_padding: 'p-4',
+      container_padding: 'p-4',
     },
     background: {
       type: 'solid',
       value: 'bg-background',
+      overlay: '',
     }
   },
   page_overrides: {},
