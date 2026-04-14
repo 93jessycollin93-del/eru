@@ -127,6 +127,23 @@
           },
           "error_message": {
             "type": "string"
+          },
+          "price_adjustment_type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "percent",
+              "fixed"
+            ]
+          },
+          "price_adjustment_value": {
+            "type": "number"
+          },
+          "effective_price": {
+            "type": "number"
+          },
+          "last_sync_note": {
+            "type": "string"
           }
         }
       },

@@ -100,6 +100,31 @@
       "type": "number",
       "default": 0
     },
+    "price_adjustment_type": {
+      "type": "string",
+      "enum": [
+        "none",
+        "percent",
+        "fixed"
+      ],
+      "default": "none"
+    },
+    "price_adjustment_value": {
+      "type": "number",
+      "default": 0
+    },
+    "auto_publish": {
+      "type": "boolean",
+      "default": false
+    },
+    "simulation_mode": {
+      "type": "boolean",
+      "default": true
+    },
+    "external_market_slug": {
+      "type": "string",
+      "description": "Known external marketplace identifier like opensea"
+    },
     "notes": {
       "type": "string"
     }

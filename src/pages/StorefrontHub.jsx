@@ -6,7 +6,7 @@ import {
   Clock, XCircle, Search, Filter, Gem, Image, Bot, Sword, Package,
   Globe, Lock, ChevronRight, Wifi, WifiOff, Loader2, ExternalLink,
   ToggleLeft, ToggleRight, Edit2, Trash2, Shield, Activity,
-  Square, CheckSquare, Send, BarChart2
+  Square, CheckSquare, Send, BarChart2, SlidersHorizontal, Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ListingEditor from '../components/storefront/ListingEditor';
@@ -112,7 +112,7 @@ function ConnectorCard({ connector, onToggle, onEdit, onDelete, isAdmin }) {
   );
 }
 
-function ListingCard({ listing, connectors, onEdit, selected, onSelect }) {
+function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected, onSelect, onRunSync }) {
   const AssetIcon = ASSET_ICONS[listing.asset_type] || Package;
   const syncs = listing.external_syndications || [];
   const syncedCount = syncs.filter(s => s.sync_status === 'synced').length;
@@ -178,7 +178,10 @@ function ListingCard({ listing, connectors, onEdit, selected, onSelect }) {
         <div className="space-y-1.5 pt-2 border-t border-border">
           {syncs.map((s, i) => (
             <div key={i} className="flex items-center justify-between text-[10px]">
-              <span className="text-muted-foreground">{s.connector_name}</span>
+              <div>
+                <span className="text-muted-foreground">{s.connector_name}</span>
+                {typeof s.effective_price === 'number' && <p className="text-[9px] text-muted-foreground">Effective price: {s.effective_price}</p>}
+              </div>
               <div className="flex items-center gap-2">
                 {s.custom_price && <span className="text-foreground font-mono">{s.custom_price}</span>}
                 <SyncBadge status={s.sync_status} />
@@ -187,6 +190,18 @@ function ListingCard({ listing, connectors, onEdit, selected, onSelect }) {
           ))}
         </div>
       )}
+
+      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
+        <button onClick={(e) => { e.stopPropagation(); onRunSync(listing.id); }} className="rounded-lg bg-primary/10 px-2 py-2 text-[10px] font-medium text-primary flex items-center justify-center gap-1">
+          <Zap className="w-3 h-3" /> Sync
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); onSyndicationEdit(listing); }} className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
+          <SlidersHorizontal className="w-3 h-3" /> Syndication
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); onEdit(listing); }} className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
+          <Edit2 className="w-3 h-3" /> Edit
+        </button>
+      </div>
     </div>
   );
 }
@@ -261,6 +276,42 @@ function AddConnectorModal({ onClose, onSave }) {
                 placeholder="e.g. OPENSEA_API_KEY"
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 font-mono" />
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Default price rule</label>
+                <select value={form.price_adjustment_type || 'none'} onChange={e => setForm(f => ({...f, price_adjustment_type: e.target.value}))}
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50">
+                  <option value="none">No adjustment</option>
+                  <option value="percent">Percent</option>
+                  <option value="fixed">Fixed</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Default amount</label>
+                <input type="number" value={form.price_adjustment_value || 0} onChange={e => setForm(f => ({...f, price_adjustment_value: Number(e.target.value || 0)}))}
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-secondary rounded-xl border border-border">
+              <div>
+                <p className="text-xs font-medium">Auto publish</p>
+                <p className="text-[10px] text-muted-foreground">Automatically add active listings to this connector</p>
+              </div>
+              <button onClick={() => setForm(f => ({...f, auto_publish: !f.auto_publish}))}
+                className={`w-9 h-5 rounded-full relative transition-colors ${form.auto_publish ? 'bg-primary' : 'bg-border'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.auto_publish ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-secondary rounded-xl border border-border">
+              <div>
+                <p className="text-xs font-medium">Simulation mode</p>
+                <p className="text-[10px] text-muted-foreground">Use safe simulated syncs until live API wiring is ready</p>
+              </div>
+              <button onClick={() => setForm(f => ({...f, simulation_mode: !f.simulation_mode}))}
+                className={`w-9 h-5 rounded-full relative transition-colors ${form.simulation_mode ? 'bg-primary' : 'bg-border'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.simulation_mode ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
             <div className="space-y-2">
               <label className="text-xs text-muted-foreground">Supported Asset Types</label>
               <div className="flex flex-wrap gap-2">
@@ -302,6 +353,74 @@ function AddConnectorModal({ onClose, onSave }) {
 }
 
 // ─── CREATE LISTING MODAL ─────────────────────────────────────────────────────
+function SyndicationModal({ listing, connectors, onClose, onSave }) {
+  const [items, setItems] = useState(() => {
+    const existing = Array.isArray(listing?.external_syndications) ? listing.external_syndications : [];
+    return connectors.map((connector) => {
+      const match = existing.find((item) => item.connector_id === connector.id);
+      return match || {
+        connector_id: connector.id,
+        connector_name: connector.name,
+        enabled: false,
+        custom_price: '',
+        external_listing_id: '',
+        sync_status: connector.is_enabled ? 'pending' : 'not_connected',
+        last_synced_at: '',
+        error_message: '',
+        price_adjustment_type: connector.price_adjustment_type || 'none',
+        price_adjustment_value: Number(connector.price_adjustment_value || 0),
+        effective_price: Number(listing?.base_price || 0),
+        last_sync_note: '',
+      };
+    });
+  });
+
+  const updateItem = (connectorId, key, value) => {
+    setItems((prev) => prev.map((item) => item.connector_id === connectorId ? { ...item, [key]: value } : item));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={onClose}>
+      <div className="w-full max-w-md bg-card rounded-t-2xl border-t border-border p-5 space-y-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Syndication Settings</h3>
+          <button onClick={onClose}><XCircle className="w-5 h-5 text-muted-foreground" /></button>
+        </div>
+        <p className="text-xs text-muted-foreground">Choose where this listing publishes and how each marketplace price should be adjusted.</p>
+        <div className="space-y-3">
+          {connectors.map((connector) => {
+            const item = items.find((entry) => entry.connector_id === connector.id);
+            if (!item) return null;
+            return (
+              <div key={connector.id} className="rounded-xl border border-border bg-secondary/30 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{connector.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{connector.is_enabled ? 'Ready to sync' : 'Connector disabled'}</p>
+                  </div>
+                  <button onClick={() => updateItem(connector.id, 'enabled', !item.enabled)} className={`w-10 h-6 rounded-full relative transition-colors ${item.enabled ? 'bg-primary' : 'bg-border'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${item.enabled ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={item.price_adjustment_type || 'none'} onChange={(e) => updateItem(connector.id, 'price_adjustment_type', e.target.value)} className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none">
+                    <option value="none">No adjustment</option>
+                    <option value="percent">Percent</option>
+                    <option value="fixed">Fixed amount</option>
+                  </select>
+                  <input type="number" value={item.price_adjustment_value ?? 0} onChange={(e) => updateItem(connector.id, 'price_adjustment_value', Number(e.target.value || 0))} placeholder="Adjustment" className="bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
+                </div>
+                <input type="number" value={item.custom_price ?? ''} onChange={(e) => updateItem(connector.id, 'custom_price', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Optional custom base price" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none" />
+              </div>
+            );
+          })}
+        </div>
+        <button onClick={() => onSave(items)} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold">Save syndication</button>
+      </div>
+    </div>
+  );
+}
+
 function CreateListingModal({ connectors, onClose, onSave }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={onClose}>
@@ -355,6 +474,8 @@ export default function StorefrontHub() {
   const [bulkPushing, setBulkPushing] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
   const [editingListing, setEditingListing] = useState(null);
+  const [syndicationListing, setSyndicationListing] = useState(null);
+  const [syncingListingId, setSyncingListingId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -379,7 +500,14 @@ export default function StorefrontHub() {
   });
 
   const handleSaveConnector = async (data) => {
-    await base44.entities.MarketConnector.create(data);
+    await base44.entities.MarketConnector.create({
+      ...data,
+      price_adjustment_type: 'none',
+      price_adjustment_value: 0,
+      auto_publish: false,
+      simulation_mode: true,
+      external_market_slug: data.name?.toLowerCase().includes('opensea') ? 'opensea' : '',
+    });
     setShowAddConnector(false);
     load();
   };
@@ -406,6 +534,24 @@ export default function StorefrontHub() {
       currency: data.crypto_currency,
     });
     setEditingListing(null);
+    load();
+  };
+
+  const handleSaveSyndication = async (items) => {
+    await base44.entities.StorefrontListing.update(syndicationListing.id, {
+      external_syndications: items.map((item) => ({
+        ...item,
+        sync_status: item.enabled ? (connectors.find((connector) => connector.id === item.connector_id)?.is_enabled ? 'pending' : 'not_connected') : 'not_connected',
+      })),
+    });
+    setSyndicationListing(null);
+    load();
+  };
+
+  const handleRunSync = async (listingId) => {
+    setSyncingListingId(listingId);
+    await base44.functions.invoke('runMarketplaceSyndication', { listingId });
+    setSyncingListingId(null);
     load();
   };
 
@@ -595,8 +741,11 @@ export default function StorefrontHub() {
                       <div key={l.id} className="space-y-2">
                         <ListingCard listing={l} connectors={connectors}
                           selected={selectedIds.has(l.id)}
-                          onSelect={toggleSelect} />
-                        <button onClick={() => setEditingListing(l)} className="w-full text-xs bg-secondary border border-border rounded-lg py-2 text-muted-foreground hover:text-foreground">Edit listing</button>
+                          onSelect={toggleSelect}
+                          onEdit={setEditingListing}
+                          onSyndicationEdit={setSyndicationListing}
+                          onRunSync={handleRunSync} />
+                        {syncingListingId === l.id && <p className="text-[10px] text-primary">Running sync...</p>}
                       </div>
                     ))}
                   </div>
@@ -733,6 +882,7 @@ export default function StorefrontHub() {
 
       {showAddConnector && <AddConnectorModal onClose={() => setShowAddConnector(false)} onSave={handleSaveConnector} />}
       {showCreateListing && <CreateListingModal connectors={connectors} onClose={() => setShowCreateListing(false)} onSave={handleCreateListing} />}
+      {syndicationListing && <SyndicationModal listing={syndicationListing} connectors={connectors} onClose={() => setSyndicationListing(null)} onSave={handleSaveSyndication} />}
     </div>
   );
 }
