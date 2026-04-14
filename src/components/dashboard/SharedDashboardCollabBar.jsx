@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { PencilLine, UsersRound } from 'lucide-react';
 
@@ -22,6 +22,13 @@ function loadPanels() {
 
 export default function SharedDashboardCollabBar() {
   const [saved, setSaved] = useState(false);
+  const saveTimerRef = useRef(null);
+
+  const applyStateToStorage = (state) => {
+    if (!state?.panel_order?.length) return;
+    const next = state.panel_order.map((id) => ({ id, visible: !state.hidden_panel_ids?.includes(id) }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  };
 
   const syncLayout = async () => {
     const me = await base44.auth.me();
@@ -43,29 +50,36 @@ export default function SharedDashboardCollabBar() {
       await base44.entities.SharedDashboardState.create(payload);
     }
     setSaved(true);
-    window.setTimeout(() => setSaved(false), 1600);
+    window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => setSaved(false), 1600);
   };
 
   useEffect(() => {
     let unsubscribe = null;
+    let isMounted = true;
+
     const start = async () => {
-      const existing = await base44.entities.SharedDashboardState.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 1);
-      const state = existing?.[0];
-      if (state?.panel_order?.length) {
-        const currentPanels = loadPanels();
-        const mapped = state.panel_order.map((id) => currentPanels.find((item) => item.id === id) || { id, visible: !state.hidden_panel_ids?.includes(id) });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped.map((item) => ({ ...item, visible: !state.hidden_panel_ids?.includes(item.id) }))));
+      try {
+        const existing = await base44.entities.SharedDashboardState.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 1);
+        if (!isMounted) return;
+        applyStateToStorage(existing?.[0]);
+      } catch (error) {
+        if (error?.status !== 429) {
+          throw error;
+        }
       }
-      unsubscribe = base44.entities.SharedDashboardState.subscribe(async () => {
-        const updated = await base44.entities.SharedDashboardState.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 1);
-        const latest = updated?.[0];
-        if (!latest?.panel_order?.length) return;
-        const next = latest.panel_order.map((id) => ({ id, visible: !latest.hidden_panel_ids?.includes(id) }));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+      unsubscribe = base44.entities.SharedDashboardState.subscribe((event) => {
+        if (event?.data?.dashboard_key !== DASHBOARD_KEY) return;
+        if (event.type === 'delete') return;
+        applyStateToStorage(event.data);
       });
     };
-    start();
+
+    start().catch(() => {});
     return () => {
+      isMounted = false;
+      window.clearTimeout(saveTimerRef.current);
       if (unsubscribe) unsubscribe();
     };
   }, []);
