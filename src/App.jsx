@@ -35,6 +35,7 @@ import VisualEngine from './pages/VisualEngine';
 import CardArena from './pages/CardArena';
 import StorefrontHub from './pages/StorefrontHub';
 import StorefrontAnalytics from './pages/StorefrontAnalytics';
+import SellerDashboard from './pages/SellerDashboard';
 import CreatureLab from './pages/CreatureLab';
 import AdminEconomyDashboard from './pages/AdminEconomyDashboard';
 import Economy from './pages/Economy';
@@ -114,6 +115,7 @@ const AuthenticatedApp = () => {
         <Route path="/creatures" element={<CreatureLab />} />
         <Route path="/storefront" element={<StorefrontHub />} />
         <Route path="/storefront-analytics" element={<StorefrontAnalytics />} />
+        <Route path="/seller-dashboard" element={<SellerDashboard />} />
         <Route path="/admin/economy" element={<AdminEconomyDashboard />} />
         <Route path="/economy" element={<Economy />} />
         <Route path="/performance" element={<PerformanceDashboard />} />

@@ -464,9 +464,14 @@ export default function StorefrontHub() {
         <div className="flex items-center gap-2">
           <Store className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">Storefront Network</h2>
-          <Link to="/storefront-analytics" className="ml-auto p-1.5 rounded-lg bg-secondary hover:bg-border transition-colors">
-          <BarChart2 className="w-3.5 h-3.5 text-muted-foreground" />
-        </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <Link to="/seller-dashboard" className="p-1.5 rounded-lg bg-secondary hover:bg-border transition-colors">
+              <Store className="w-3.5 h-3.5 text-muted-foreground" />
+            </Link>
+            <Link to="/storefront-analytics" className="p-1.5 rounded-lg bg-secondary hover:bg-border transition-colors">
+              <BarChart2 className="w-3.5 h-3.5 text-muted-foreground" />
+            </Link>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">Unified listing hub with external marketplace connectors</p>
       </div>
