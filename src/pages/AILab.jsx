@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck, GraduationCap, Rocket, Users, BookOpen } from 'lucide-react';
+import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, ChevronRight, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ArrowUpDown, Filter, ShieldCheck, GraduationCap, Rocket, Users, BookOpen, GitBranch } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
 import MemoryViewer from '../components/ailab/MemoryViewer';
@@ -9,6 +9,7 @@ import SemanticMemorySearchPanel from '../components/ailab/SemanticMemorySearchP
 import KnowledgeMap from '../components/ailab/KnowledgeMap';
 import BotMemoryChunkRelationshipMap from '../components/ailab/BotMemoryChunkRelationshipMap';
 import MultiAgentOrchestrator from '../components/ailab/MultiAgentOrchestrator';
+import WorkflowCanvasBuilder from '../components/ailab/WorkflowCanvasBuilder';
 import LabAnalytics from '../components/ailab/LabAnalytics';
 import BotPerformanceAnalyticsPanel from '../components/ailab/BotPerformanceAnalyticsPanel';
 import BotVersionHistory from '../components/ailab/BotVersionHistory';
@@ -278,6 +279,7 @@ export default function AILab() {
     { id: 'agents', label: 'Agents', icon: Zap },
     { id: 'memory', label: 'Memory', icon: Brain },
     { id: 'orchestrator', label: 'Orchestra', icon: Network },
+    { id: 'workflow-canvas', label: 'Workflow', icon: GitBranch },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'testing', label: 'Testing', icon: CheckSquare },
@@ -750,6 +752,9 @@ export default function AILab() {
 
       {/* ORCHESTRATOR */}
       {tab === 'orchestrator' && <div><BotCollaborationWorkspace bots={bots} /><MultiAgentOrchestrator bots={bots} /></div>}
+
+      {/* WORKFLOW CANVAS */}
+      {tab === 'workflow-canvas' && <WorkflowCanvasBuilder bots={bots} />}
 
       {/* ANALYTICS */}
       {tab === 'analytics' && <div><BotPerformanceAnalyticsPanel bots={bots} /><LabAnalytics bots={bots} /></div>}
