@@ -3,11 +3,13 @@ import { Coins, Gem } from 'lucide-react';
 const ICONS = {
   GOLD: Coins,
   JADEITE: Gem,
+  BUNDLE: Coins,
 };
 
 const COLORS = {
   GOLD: 'border-yellow-500/20 bg-yellow-500/5 text-yellow-400',
   JADEITE: 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
+  BUNDLE: 'border-primary/20 bg-primary/5 text-primary',
 };
 
 export default function BazarProductCard({ product, onBuy, buying }) {
@@ -23,8 +25,15 @@ export default function BazarProductCard({ product, onBuy, buying }) {
         {product.badge ? <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">{product.badge}</span> : null}
       </div>
       <div className="mt-4">
-        <p className="text-sm font-semibold text-foreground">{product.title}</p>
+        <p className="text-sm font-semibold text-foreground">{product.tier_label} — {product.title}</p>
         <p className="mt-1 text-xs text-muted-foreground">{product.description}</p>
+        {product.rewards?.bonuses?.length ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {product.rewards.bonuses.map((bonus) => (
+              <span key={bonus} className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{bonus}</span>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="mt-4 flex items-end justify-between gap-3">
         <div>
