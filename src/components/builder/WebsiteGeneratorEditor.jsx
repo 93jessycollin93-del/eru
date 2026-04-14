@@ -3,6 +3,8 @@ import { Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import WebsiteGeneratorLivePreview from './WebsiteGeneratorLivePreview';
 import WebsiteGeneratorSectionActions from './WebsiteGeneratorSectionActions';
+import WebsiteGeneratorThemeControls from './WebsiteGeneratorThemeControls';
+import { DEFAULT_THEME_SETTINGS, getSafeThemeSettings } from './websiteThemeUtils';
 
 function updatePage(pages, pageIndex, updater) {
   return pages.map((page, index) => index === pageIndex ? updater(page) : page);
@@ -28,6 +30,7 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
     setDraft({
       site_blueprint: project.site_blueprint,
       generated_copy: project.generated_copy || {},
+      theme_settings: getSafeThemeSettings(project.theme_settings || DEFAULT_THEME_SETTINGS),
     });
     setActivePageType(project.site_blueprint.pages?.[0]?.page_type || 'home');
     setSelectedSectionType(project.site_blueprint.pages?.[0]?.sections?.[0] || null);
@@ -85,6 +88,48 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
         [field]: value,
       },
     }));
+  };
+
+  const setNestedValue = (obj, path, value) => {
+    const keys = path.split('.');
+    const next = { ...obj };
+    let current = next;
+    keys.forEach((key, index) => {
+      if (index === keys.length - 1) {
+        current[key] = value;
+        return;
+      }
+      current[key] = { ...(current[key] || {}) };
+      current = current[key];
+    });
+    return next;
+  };
+
+  const handleThemeChange = (scope, key, value) => {
+    setDraft((prev) => {
+      const safe = getSafeThemeSettings(prev.theme_settings || DEFAULT_THEME_SETTINGS);
+      const nextTheme = { ...safe };
+      if (scope === 'global') {
+        nextTheme.global = setNestedValue(nextTheme.global, key, value);
+      }
+      if (scope === 'page' && activePage?.page_type) {
+        nextTheme.page_overrides = {
+          ...nextTheme.page_overrides,
+          [activePage.page_type]: setNestedValue(nextTheme.page_overrides?.[activePage.page_type] || {}, key, value),
+        };
+      }
+      if (scope === 'section' && activePage?.page_type && selectedSectionType) {
+        const sectionKey = `${activePage.page_type}:${selectedSectionType}`;
+        nextTheme.section_overrides = {
+          ...nextTheme.section_overrides,
+          [sectionKey]: setNestedValue(nextTheme.section_overrides?.[sectionKey] || {}, key, value),
+        };
+      }
+      return {
+        ...prev,
+        theme_settings: nextTheme,
+      };
+    });
   };
 
   const activePage = draft?.site_blueprint?.pages?.find((page) => page.page_type === activePageType) || draft?.site_blueprint?.pages?.[0];
@@ -191,6 +236,7 @@ Current items: ${(activeSection.items || []).join(', ')}`,
     await base44.entities.WebsiteGeneratorProject.update(project.id, {
       site_blueprint: draft.site_blueprint,
       generated_copy: draft.generated_copy,
+      theme_settings: draft.theme_settings,
     });
     setSaving(false);
     onSaved?.();
@@ -243,6 +289,7 @@ Current items: ${(activeSection.items || []).join(', ')}`,
           <WebsiteGeneratorLivePreview
             pages={draft.site_blueprint.pages || []}
             sections={draft.site_blueprint.reusable_sections || []}
+            themeSettings={draft.theme_settings}
             activePageType={activePageType}
             previewMode={previewMode}
             selectedSectionType={selectedSectionType}
@@ -297,6 +344,24 @@ Current items: ${(activeSection.items || []).join(', ')}`,
                 <label className="text-[11px] text-muted-foreground">List items</label>
                 <textarea value={(activeSection.items || []).join('\n')} onChange={(e) => handleSectionItemsChange(activeSectionIndex, e.target.value)} className="min-h-[120px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
               </div>
+
+              <WebsiteGeneratorThemeControls
+                scopeLabel="Global Theme"
+                values={draft.theme_settings?.global}
+                onChange={(key, value) => handleThemeChange('global', key, value)}
+              />
+
+              <WebsiteGeneratorThemeControls
+                scopeLabel={`Page Theme${activePage ? ` · ${activePage.page_name}` : ''}`}
+                values={draft.theme_settings?.page_overrides?.[activePage?.page_type] || {}}
+                onChange={(key, value) => handleThemeChange('page', key, value)}
+              />
+
+              <WebsiteGeneratorThemeControls
+                scopeLabel={`Section Theme${activeSection ? ` · ${activeSection.section_type}` : ''}`}
+                values={draft.theme_settings?.section_overrides?.[`${activePage?.page_type}:${selectedSectionType}`] || {}}
+                onChange={(key, value) => handleThemeChange('section', key, value)}
+              />
 
               {regenerating && <p className="text-[11px] text-primary">Regenerating section...</p>}
             </>

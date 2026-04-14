@@ -42,6 +42,9 @@
     "generated_copy": {
       "type": "object"
     },
+    "theme_settings": {
+      "type": "object"
+    },
     "notes": {
       "type": "string"
     }
