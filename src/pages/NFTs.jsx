@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Grid, List, Wallet, AlertTriangle, Plus, X, Tag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectBar from '../components/WalletConnectBar';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ListingManager from '../components/storefront/ListingManager';
+import TelegramImportPanel from '../components/nfts/TelegramImportPanel';
 
 const COLLECTIONS = [
   { id: 1, name: 'TON Punks', floor: 12.5, volume: 4820, items: 10000, img: 'https://images.unsplash.com/photo-1635322966219-b75ed372eb01?w=100&h=100&fit=crop' },
@@ -29,7 +30,19 @@ export default function NFTs() {
   const [showListForm, setShowListForm] = useState(false);
   const [listing, setListing] = useState(false);
   const [listSuccess, setListSuccess] = useState(false);
+  const [importedNfts, setImportedNfts] = useState([]);
   const wallet = useWallet();
+
+  const loadImportedNfts = async () => {
+    const rows = await base44.entities.NFT?.list?.('-updated_date', 50).catch(() => []);
+    setImportedNfts(rows || []);
+  };
+
+  useEffect(() => {
+    if (tab === 'my_nfts') {
+      loadImportedNfts();
+    }
+  }, [tab]);
 
   const submitListing = async (values) => {
     setListing(true);
@@ -198,15 +211,30 @@ export default function NFTs() {
             </div>
           )}
 
+          <TelegramImportPanel onImported={loadImportedNfts} />
           <ListingManager assetType="nft" title="Manage NFT Listings" />
           <WalletConnectBar />
-          {wallet.status !== 'connected' ? (
+          {importedNfts.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Imported to My NFTs</p>
+              {importedNfts.map((nft) => (
+                <div key={nft.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
+                  <img src={nft.image_url || 'https://images.unsplash.com/photo-1635322966219-b75ed372eb01?w=200&h=200&fit=crop'} alt={nft.name} className="w-14 h-14 rounded-lg object-cover bg-secondary" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{nft.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{nft.collection || 'Telegram Import'} · {nft.network || 'TON'}</p>
+                    <p className="text-[11px] text-primary mt-1">Imported via {nft.source || 'telegram'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : wallet.status !== 'connected' ? (
             <p className="text-xs text-muted-foreground text-center">Connect your wallet to view on-chain NFTs</p>
           ) : (
             <div className="py-6 text-center">
               <p className="text-4xl mb-3">🖼</p>
-              <p className="text-sm text-muted-foreground">No on-chain NFTs detected</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">NFTs held in your wallet will appear here once RPC integration is configured</p>
+              <p className="text-sm text-muted-foreground">No NFTs imported yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Use Import via Chat or manual import to populate your inventory automatically</p>
             </div>
           )}
         </div>
