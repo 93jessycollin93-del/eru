@@ -1,4 +1,4 @@
-import { Monitor, Smartphone } from 'lucide-react';
+import { Monitor, Smartphone, Tablet } from 'lucide-react';
 import { resolveThemeLayer } from './websiteThemeUtils';
 
 const SECTION_STYLE = {
@@ -11,6 +11,12 @@ const SECTION_STYLE = {
   cta: 'bg-primary/10 border-primary/20',
   contact: 'bg-secondary/70 border-border',
   footer: 'bg-card border-border',
+};
+
+const PREVIEW_DEVICES = {
+  desktop: { label: 'Desktop', width: '1440px', minHeight: '900px', icon: Monitor },
+  tablet: { label: 'Tablet', width: '768px', minHeight: '1024px', icon: Tablet },
+  mobile: { label: 'Mobile', width: '390px', minHeight: '844px', icon: Smartphone },
 };
 
 function SectionBlock({ section, onSelect, selected, previewMode, theme }) {
@@ -45,6 +51,7 @@ export default function WebsiteGeneratorLivePreview({ pages, sections, themeSett
   const activePage = pages.find((page) => page.page_type === activePageType) || pages[0];
   const pageTheme = resolveThemeLayer(themeSettings, activePage?.page_type, null);
   const visibleSections = (activePage?.sections || []).map((sectionType) => sections.find((section) => section.section_type === sectionType)).filter(Boolean);
+  const activeDevice = PREVIEW_DEVICES[previewMode] || PREVIEW_DEVICES.desktop;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
@@ -60,18 +67,33 @@ export default function WebsiteGeneratorLivePreview({ pages, sections, themeSett
             </button>
           ))}
         </div>
-        <div className="flex gap-2 self-start lg:self-auto">
-          <button onClick={() => onModeChange('desktop')} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${previewMode === 'desktop' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-            <Monitor className="w-3.5 h-3.5" /> Desktop
-          </button>
-          <button onClick={() => onModeChange('mobile')} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${previewMode === 'mobile' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-            <Smartphone className="w-3.5 h-3.5" /> Mobile
-          </button>
+        <div className="flex flex-wrap gap-2 self-start lg:self-auto">
+          {Object.entries(PREVIEW_DEVICES).map(([key, device]) => {
+            const Icon = device.icon;
+            const isActive = previewMode === key;
+
+            return (
+              <button
+                key={key}
+                onClick={() => onModeChange(key)}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${isActive ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{device.label}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] ${isActive ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-card text-muted-foreground'}`}>
+                  {device.width.replace('px', '')}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-border bg-background p-3 overflow-hidden">
-        <div className={`mx-auto border transition-all overflow-hidden ${previewMode === 'mobile' ? 'max-w-sm' : 'max-w-5xl'} ${pageTheme?.spacing?.container_padding || 'p-4'} ${pageTheme?.background?.value || 'bg-card'} ${pageTheme?.surfaces?.panel_border || 'border-border'} ${pageTheme?.surfaces?.radius || 'rounded-[24px]'} ${pageTheme?.surfaces?.shadow || 'shadow-sm'}`}>
+      <div className="rounded-[28px] border border-border bg-background p-3 overflow-x-auto overflow-y-hidden">
+        <div
+          className={`mx-auto border transition-all overflow-hidden ${pageTheme?.spacing?.container_padding || 'p-4'} ${pageTheme?.background?.value || 'bg-card'} ${pageTheme?.surfaces?.panel_border || 'border-border'} ${pageTheme?.surfaces?.radius || 'rounded-[24px]'} ${pageTheme?.surfaces?.shadow || 'shadow-sm'}`}
+          style={{ width: activeDevice.width, minHeight: activeDevice.minHeight }}
+        >
           <div className={pageTheme?.spacing?.section_gap || 'space-y-4'}>
             {visibleSections.map((section, index) => {
               const theme = resolveThemeLayer(themeSettings, activePage?.page_type, section.section_type);
