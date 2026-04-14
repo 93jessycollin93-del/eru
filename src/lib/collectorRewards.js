@@ -104,8 +104,8 @@ function daysBetween(previousDateKey, currentDateKey) {
 export async function syncCollectorRewardProfile(userEmail) {
   if (!userEmail) return null;
 
-  const rewardEntity = base44.entities?.CollectorRewardProfile;
-  if (!rewardEntity) {
+  const hasRewardEntity = typeof base44.entities?.CollectorRewardProfile?.filter === 'function';
+  if (!hasRewardEntity) {
     return {
       user_email: userEmail,
       current_portfolio_value: 0,
@@ -117,6 +117,8 @@ export async function syncCollectorRewardProfile(userEmail) {
       badge_ids: [],
     };
   }
+
+  const rewardEntity = base44.entities.CollectorRewardProfile;
 
   const [existingProfiles, jadeAssets, cards, transactions] = await Promise.all([
     rewardEntity.filter({ user_email: userEmail }, '-updated_date', 1),

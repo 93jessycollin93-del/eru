@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }) => {
       setUser(currentUser);
       setIsAuthenticated(true);
       if (currentUser?.email) {
-        syncCollectorRewardProfile(currentUser.email);
+        syncCollectorRewardProfile(currentUser.email).catch(() => null);
       }
       setIsLoadingAuth(false);
     } catch (error) {
