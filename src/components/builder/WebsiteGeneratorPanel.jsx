@@ -3,8 +3,6 @@ import { base44 } from '@/api/base44Client';
 import { Globe, Plus } from 'lucide-react';
 import WebsiteGeneratorProjectList from './WebsiteGeneratorProjectList';
 import WebsiteGeneratorForm from './WebsiteGeneratorForm';
-import WebsiteGeneratorPageMap from './WebsiteGeneratorPageMap';
-import WebsiteGeneratorSectionLibrary from './WebsiteGeneratorSectionLibrary';
 import WebsiteGeneratorEditor from './WebsiteGeneratorEditor';
 
 const EMPTY_FORM = {
@@ -24,6 +22,7 @@ export default function WebsiteGeneratorPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [lastSavedProjectId, setLastSavedProjectId] = useState(null);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) || null,
@@ -74,6 +73,7 @@ export default function WebsiteGeneratorPanel() {
   const handleSaveDraft = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
+    let savedProjectId = selectedProjectId;
     if (selectedProjectId) {
       await base44.entities.WebsiteGeneratorProject.update(selectedProjectId, {
         ...form,
@@ -86,8 +86,10 @@ export default function WebsiteGeneratorPanel() {
         ...form,
         status: 'draft',
       });
+      savedProjectId = created.id;
       setSelectedProjectId(created.id);
     }
+    setLastSavedProjectId(savedProjectId || null);
     await loadProjects();
     setSaving(false);
   };
@@ -95,6 +97,7 @@ export default function WebsiteGeneratorPanel() {
   const handleGenerate = async () => {
     if (!form.name.trim()) return;
     setGenerating(true);
+    let savedProjectId = selectedProjectId;
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are generating a structured website system for an integrated website generator inside ERU.
 Return a clean website blueprint with reusable sections and page structure.
@@ -179,9 +182,11 @@ Notes: ${form.notes}`,
         site_blueprint: result.site_blueprint,
         generated_copy: result.generated_copy,
       });
+      savedProjectId = created.id;
       setSelectedProjectId(created.id);
     }
 
+    setLastSavedProjectId(savedProjectId || null);
     await loadProjects();
     setGenerating(false);
   };
@@ -189,14 +194,31 @@ Notes: ${form.notes}`,
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
             <h3 className="text-base font-semibold flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Website Generator</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Create and manage website projects directly inside ERU with saved drafts and generation flow.</p>
+            <p className="text-xs text-muted-foreground">Create, save, reopen, and refine website systems directly inside ERU with structured editing and persistent themes.</p>
+            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+              <span className="rounded-full bg-secondary px-2.5 py-1">Saved projects</span>
+              <span className="rounded-full bg-secondary px-2.5 py-1">Live preview</span>
+              <span className="rounded-full bg-secondary px-2.5 py-1">Theme inheritance</span>
+            </div>
           </div>
-          <button onClick={handleNew} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
-            <Plus className="w-3.5 h-3.5" /> New
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedProject && (
+              <span className="rounded-full bg-secondary px-3 py-1.5 text-[11px] text-muted-foreground">
+                Editing: {selectedProject.name}
+              </span>
+            )}
+            {lastSavedProjectId && lastSavedProjectId === selectedProjectId && (
+              <span className="rounded-full bg-primary/10 px-3 py-1.5 text-[11px] text-primary">
+                Saved
+              </span>
+            )}
+            <button onClick={handleNew} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+              <Plus className="w-3.5 h-3.5" /> New
+            </button>
+          </div>
         </div>
       </div>
 

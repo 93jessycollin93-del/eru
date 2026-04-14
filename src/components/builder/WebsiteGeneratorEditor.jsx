@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Save } from 'lucide-react';
+import { LayoutTemplate, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import WebsiteGeneratorLivePreview from './WebsiteGeneratorLivePreview';
 import WebsiteGeneratorSectionActions from './WebsiteGeneratorSectionActions';
@@ -21,6 +21,7 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
   const [activePageType, setActivePageType] = useState('home');
   const [previewMode, setPreviewMode] = useState('desktop');
   const [selectedSectionType, setSelectedSectionType] = useState(null);
+  const [editorTab, setEditorTab] = useState('content');
 
   useEffect(() => {
     if (!project?.site_blueprint) {
@@ -246,13 +247,18 @@ Current items: ${(activeSection.items || []).join(', ')}`,
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
           <p className="text-sm font-semibold">Website Generator Engine</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">Edit pages and reusable sections directly from the generated blueprint.</p>
+          <p className="text-[11px] text-muted-foreground">Edit pages, reusable sections, and theme layers directly from the generated blueprint.</p>
+          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            <span className="rounded-full bg-secondary px-2.5 py-1">{draft.site_blueprint.pages?.length || 0} pages</span>
+            <span className="rounded-full bg-secondary px-2.5 py-1">{draft.site_blueprint.reusable_sections?.length || 0} sections</span>
+            <span className="rounded-full bg-secondary px-2.5 py-1">{previewMode} preview</span>
+          </div>
         </div>
         <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40">
-          <Save className="w-3.5 h-3.5" /> Save Structure
+          <Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save Structure'}
         </button>
       </div>
 
@@ -279,7 +285,10 @@ Current items: ${(activeSection.items || []).join(', ')}`,
           </div>
           {activePage && (
             <div className="rounded-xl bg-secondary p-3 space-y-2">
-              <label className="text-[11px] text-muted-foreground">Page goal</label>
+              <div className="flex items-center gap-2">
+                <LayoutTemplate className="w-3.5 h-3.5 text-primary" />
+                <label className="text-[11px] text-muted-foreground">Page goal</label>
+              </div>
               <textarea value={activePage.page_goal || ''} onChange={(e) => handlePageGoalChange(pageIndex, e.target.value)} className="min-h-[88px] w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none resize-none" />
             </div>
           )}
@@ -325,43 +334,54 @@ Current items: ${(activeSection.items || []).join(', ')}`,
                 disableDown={(activePage?.sections || []).findIndex((section) => section === selectedSectionType) >= (activePage?.sections || []).length - 1}
               />
 
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Headline / Title</label>
-                <input value={activeSection.title || ''} onChange={(e) => handlePreviewTextChange('title', e.target.value)} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none" />
+              <div className="flex gap-1 rounded-xl bg-secondary p-1">
+                <button onClick={() => setEditorTab('content')} className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-semibold ${editorTab === 'content' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}>Content</button>
+                <button onClick={() => setEditorTab('theme')} className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-semibold ${editorTab === 'theme' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}>Theme</button>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Body text / Subtitle</label>
-                <textarea value={activeSection.subtitle || ''} onChange={(e) => handlePreviewTextChange('subtitle', e.target.value)} className="min-h-[96px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
-              </div>
+              {editorTab === 'content' ? (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Headline / Title</label>
+                    <input value={activeSection.title || ''} onChange={(e) => handlePreviewTextChange('title', e.target.value)} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none" />
+                  </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">CTA text</label>
-                <input value={activeSection.cta_label || ''} onChange={(e) => handlePreviewTextChange('cta_label', e.target.value)} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none" />
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Body text / Subtitle</label>
+                    <textarea value={activeSection.subtitle || ''} onChange={(e) => handlePreviewTextChange('subtitle', e.target.value)} className="min-h-[96px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
+                  </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">List items</label>
-                <textarea value={(activeSection.items || []).join('\n')} onChange={(e) => handleSectionItemsChange(activeSectionIndex, e.target.value)} className="min-h-[120px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">CTA text</label>
+                    <input value={activeSection.cta_label || ''} onChange={(e) => handlePreviewTextChange('cta_label', e.target.value)} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none" />
+                  </div>
 
-              <WebsiteGeneratorThemeControls
-                scopeLabel="Global Theme"
-                values={draft.theme_settings?.global}
-                onChange={(key, value) => handleThemeChange('global', key, value)}
-              />
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">List items</label>
+                    <textarea value={(activeSection.items || []).join('\n')} onChange={(e) => handleSectionItemsChange(activeSectionIndex, e.target.value)} className="min-h-[120px] w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs outline-none resize-none" />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <WebsiteGeneratorThemeControls
+                    scopeLabel="Global Theme"
+                    values={draft.theme_settings?.global}
+                    onChange={(key, value) => handleThemeChange('global', key, value)}
+                  />
 
-              <WebsiteGeneratorThemeControls
-                scopeLabel={`Page Theme${activePage ? ` · ${activePage.page_name}` : ''}`}
-                values={draft.theme_settings?.page_overrides?.[activePage?.page_type] || {}}
-                onChange={(key, value) => handleThemeChange('page', key, value)}
-              />
+                  <WebsiteGeneratorThemeControls
+                    scopeLabel={`Page Theme${activePage ? ` · ${activePage.page_name}` : ''}`}
+                    values={draft.theme_settings?.page_overrides?.[activePage?.page_type] || {}}
+                    onChange={(key, value) => handleThemeChange('page', key, value)}
+                  />
 
-              <WebsiteGeneratorThemeControls
-                scopeLabel={`Section Theme${activeSection ? ` · ${activeSection.section_type}` : ''}`}
-                values={draft.theme_settings?.section_overrides?.[`${activePage?.page_type}:${selectedSectionType}`] || {}}
-                onChange={(key, value) => handleThemeChange('section', key, value)}
-              />
+                  <WebsiteGeneratorThemeControls
+                    scopeLabel={`Section Theme${activeSection ? ` · ${activeSection.section_type}` : ''}`}
+                    values={draft.theme_settings?.section_overrides?.[`${activePage?.page_type}:${selectedSectionType}`] || {}}
+                    onChange={(key, value) => handleThemeChange('section', key, value)}
+                  />
+                </div>
+              )}
 
               {regenerating && <p className="text-[11px] text-primary">Regenerating section...</p>}
             </>

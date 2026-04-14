@@ -43,6 +43,7 @@ function SectionBlock({ section, onSelect, selected, previewMode, theme }) {
 
 export default function WebsiteGeneratorLivePreview({ pages, sections, themeSettings, activePageType, previewMode, selectedSectionType, onPageChange, onModeChange, onSelectSection }) {
   const activePage = pages.find((page) => page.page_type === activePageType) || pages[0];
+  const pageTheme = resolveThemeLayer(themeSettings, activePage?.page_type, null);
   const visibleSections = (activePage?.sections || []).map((sectionType) => sections.find((section) => section.section_type === sectionType)).filter(Boolean);
 
   return (
@@ -69,9 +70,9 @@ export default function WebsiteGeneratorLivePreview({ pages, sections, themeSett
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-border bg-background p-3">
-        <div className={`mx-auto border transition-all ${previewMode === 'mobile' ? 'max-w-sm' : 'max-w-5xl'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.spacing?.container_padding || 'p-4'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.background?.value || 'bg-card'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.surfaces?.panel_border || 'border-border'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.surfaces?.radius || 'rounded-[24px]'} ${resolveThemeLayer(themeSettings, activePage?.page_type, null)?.surfaces?.shadow || 'shadow-sm'}`}>
-          <div className={resolveThemeLayer(themeSettings, activePage?.page_type, null)?.spacing?.section_gap || 'space-y-4'}>
+      <div className="rounded-[28px] border border-border bg-background p-3 overflow-hidden">
+        <div className={`mx-auto border transition-all overflow-hidden ${previewMode === 'mobile' ? 'max-w-sm' : 'max-w-5xl'} ${pageTheme?.spacing?.container_padding || 'p-4'} ${pageTheme?.background?.value || 'bg-card'} ${pageTheme?.surfaces?.panel_border || 'border-border'} ${pageTheme?.surfaces?.radius || 'rounded-[24px]'} ${pageTheme?.surfaces?.shadow || 'shadow-sm'}`}>
+          <div className={pageTheme?.spacing?.section_gap || 'space-y-4'}>
             {visibleSections.map((section, index) => {
               const theme = resolveThemeLayer(themeSettings, activePage?.page_type, section.section_type);
               return (
