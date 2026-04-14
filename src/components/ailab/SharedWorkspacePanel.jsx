@@ -18,9 +18,9 @@ export default function SharedWorkspacePanel({ bots, promptTemplates }) {
 
   const load = async () => {
     const [workspaceRows, knowledgeRows, commentRows, user] = await Promise.all([
-      base44.entities.SharedBotWorkspace.list('-updated_date', 100),
-      base44.entities.SharedKnowledgeBase.list('-updated_date', 200),
-      base44.entities.PromptTemplateComment.list('-updated_date', 200),
+      base44.entities.SharedBotWorkspace.list(undefined, 100),
+      base44.entities.SharedKnowledgeBase.list(undefined, 200),
+      base44.entities.PromptTemplateComment.list(undefined, 200),
       base44.auth.me()
     ]);
     setWorkspaces(workspaceRows || []);
