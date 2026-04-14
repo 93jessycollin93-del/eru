@@ -98,9 +98,15 @@ export default function BotWidget({ prefs, updateWidget }) {
       }
     }
 
+    const ragResponse = await base44.functions.invoke('retrieveKnowledgeBaseContext', { query: userMsg, botId: bot.id, limit: 5 }).catch(() => ({ data: { results: [], context: '' } }));
+    const knowledgeContext = ragResponse.data?.context || '';
+    const sourceGuardrail = knowledgeContext
+      ? `Primary knowledge base context:\n${knowledgeContext}\n\nUse the knowledge base as the primary source of truth. If the answer is not in these sources, say so clearly before using any general knowledge.`
+      : 'No matching knowledge base sources were retrieved. Answer normally, but do not pretend you found supporting docs.';
+
     const prompt = consultResult
-      ? `You are ${bot.name}. ${bot.instructions || ''}\nA connected bot provided this: ${consultResult}\nSummarize and present this to the user helpfully.\n\nUser original question: ${userMsg}\n\n${bot.name}:`
-      : `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}\nContext: User is on the page "${pathname}".\n\nUser: ${userMsg}\n\n${bot.name}:`;
+      ? `You are ${bot.name}. ${bot.instructions || ''}\n${sourceGuardrail}\nA connected bot provided this: ${consultResult}\nSummarize and present this to the user helpfully.\n\nUser original question: ${userMsg}\n\n${bot.name}:`
+      : `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}\nContext: User is on the page "${pathname}".\n${sourceGuardrail}\n\nUser: ${userMsg}\n\n${bot.name}:`;
 
     const res = await base44.integrations.Core.InvokeLLM({
       prompt,

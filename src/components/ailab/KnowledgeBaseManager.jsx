@@ -2,6 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { BookOpen, Upload, FileText, HelpCircle, Search, Trash2, Link2, Sparkles } from 'lucide-react';
 
+function tokenize(text) {
+  return Array.from(new Set(String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9+#.\s/-]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2)));
+}
+
+function toVector(tokens) {
+  return tokens.slice(0, 64).map((token) => {
+    let sum = 0;
+    for (let i = 0; i < token.length; i += 1) sum += token.charCodeAt(i);
+    return Number((sum / 1000).toFixed(4));
+  });
+}
+
 const EMPTY_TEXT_FORM = { title: '', content: '', keywords: '', linked_bot_ids: [] };
 const EMPTY_FAQ_FORM = { title: '', keywords: '', linked_bot_ids: [], items: [{ question: '', answer: '' }] };
 
@@ -49,12 +65,18 @@ export default function KnowledgeBaseManager({ bots = [] }) {
 
   const saveTextEntry = async () => {
     if (!textForm.title.trim() || !textForm.content.trim()) return;
+    const keywords = normalizeKeywords(textForm.keywords);
+    const searchText = [textForm.title, textForm.content, ...keywords].filter(Boolean).join(' ').toLowerCase();
+    const retrievalTerms = tokenize(searchText);
     await base44.entities.KnowledgeBaseDocument.create({
       title: textForm.title,
       source_type: 'text',
       content: textForm.content,
-      keywords: normalizeKeywords(textForm.keywords),
+      keywords,
       linked_bot_ids: textForm.linked_bot_ids,
+      search_text: searchText,
+      retrieval_terms: retrievalTerms,
+      embedding_hint: toVector(retrievalTerms),
       status: 'active',
     });
     setTextForm(EMPTY_TEXT_FORM);
@@ -75,12 +97,19 @@ export default function KnowledgeBaseManager({ bots = [] }) {
   const saveFaqEntry = async () => {
     const cleanItems = faqForm.items.filter((item) => item.question.trim() && item.answer.trim());
     if (!faqForm.title.trim() || cleanItems.length === 0) return;
+    const keywords = normalizeKeywords(faqForm.keywords);
+    const faqText = cleanItems.map((item) => `${item.question} ${item.answer}`).join(' ');
+    const searchText = [faqForm.title, faqText, ...keywords].filter(Boolean).join(' ').toLowerCase();
+    const retrievalTerms = tokenize(searchText);
     await base44.entities.KnowledgeBaseDocument.create({
       title: faqForm.title,
       source_type: 'faq',
       faq_items: cleanItems,
-      keywords: normalizeKeywords(faqForm.keywords),
+      keywords,
       linked_bot_ids: faqForm.linked_bot_ids,
+      search_text: searchText,
+      retrieval_terms: retrievalTerms,
+      embedding_hint: toVector(retrievalTerms),
       status: 'active',
     });
     setFaqForm(EMPTY_FAQ_FORM);
@@ -92,14 +121,20 @@ export default function KnowledgeBaseManager({ bots = [] }) {
     if (!file) return;
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const title = file.name.replace(/\.[^.]+$/, '');
+    const searchText = [title, file.name, file.type].filter(Boolean).join(' ').toLowerCase();
+    const retrievalTerms = tokenize(searchText);
     await base44.entities.KnowledgeBaseDocument.create({
-      title: file.name.replace(/\.[^.]+$/, ''),
+      title,
       source_type: 'document',
       file_name: file.name,
       file_url,
       mime_type: file.type || 'application/octet-stream',
       keywords: [],
       linked_bot_ids: [],
+      search_text: searchText,
+      retrieval_terms: retrievalTerms,
+      embedding_hint: toVector(retrievalTerms),
       status: 'active',
     });
     setUploading(false);
@@ -115,35 +150,14 @@ export default function KnowledgeBaseManager({ bots = [] }) {
   const runSemanticPreview = async () => {
     if (!semanticQuery.trim()) return;
     setSemanticLoading(true);
-    const ranked = documents
-      .map((document) => {
-        const corpus = buildSearchCorpus(document);
-        const queryTerms = semanticQuery.toLowerCase().split(/\s+/).filter(Boolean);
-        const score = queryTerms.reduce((total, term) => total + (corpus.includes(term) ? 1 : 0), 0);
-        return { document, score };
-      })
-      .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-
-    const preview = await Promise.all(ranked.map(async ({ document, score }) => {
-      const sourceText = document.source_type === 'faq'
-        ? (document.faq_items || []).map((item) => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n')
-        : (document.content || document.file_name || document.title);
-
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are previewing retrieval for a bot knowledge base.\n\nUser query: ${semanticQuery}\n\nKnowledge source title: ${document.title}\nKnowledge source type: ${document.source_type}\nKnowledge source body:\n${sourceText.slice(0, 6000)}\n\nReturn a short JSON-like plain text summary with:\n1. why this source matches\n2. the best snippet or answer to show\n3. confidence as low, medium, or high.`,
-      });
-
-      return {
-        id: document.id,
-        title: document.title,
-        source_type: document.source_type,
-        score,
-        preview: response,
-      };
+    const response = await base44.functions.invoke('retrieveKnowledgeBaseContext', { query: semanticQuery, limit: 5 });
+    const preview = (response.data?.results || []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      source_type: item.source_type,
+      score: item.similarity_score,
+      preview: item.snippet,
     }));
-
     setSemanticResults(preview);
     setSemanticLoading(false);
   };
