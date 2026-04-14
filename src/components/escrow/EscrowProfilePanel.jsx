@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Clock3, HandCoins, PlusCircle, ShieldAlert, Wallet } from 'lucide-react';
+import EscrowStatusTimeline from '@/components/escrow/EscrowStatusTimeline';
+import { getEscrowStatusMeta, getNextEscrowPatch } from '@/lib/escrowStateMachine';
 
 const DEFAULT_FORM = {
   listing_id: '',
@@ -66,27 +68,11 @@ export default function EscrowProfilePanel({ userEmail = '', compact = false }) 
     loadEscrows();
   };
 
-  const markPaid = (escrow) => updateEscrow(escrow.id, {
-    buyer_marked_paid: true,
-    buyer_marked_paid_at: new Date().toISOString(),
-    status: escrow.status === 'pending' ? 'funds_held' : escrow.status
-  });
+  const markPaid = (escrow) => updateEscrow(escrow.id, getNextEscrowPatch(escrow, 'mark_paid', userEmail));
 
-  const markReceived = (escrow) => updateEscrow(escrow.id, {
-    seller_marked_received: true,
-    seller_marked_received_at: new Date().toISOString(),
-    status: escrow.status === 'payment_confirmed' ? 'asset_transferred' : escrow.status
-  });
+  const markReceived = (escrow) => updateEscrow(escrow.id, getNextEscrowPatch(escrow, 'mark_asset_transferred', userEmail));
 
-  const requestRelease = (escrow) => updateEscrow(escrow.id, userEmail === escrow.buyer_email ? {
-    buyer_release_requested: true,
-    status: escrow.seller_release_requested ? 'completed' : escrow.status,
-    completed_at: escrow.seller_release_requested ? new Date().toISOString() : escrow.completed_at
-  } : {
-    seller_release_requested: true,
-    status: escrow.buyer_release_requested ? 'completed' : escrow.status,
-    completed_at: escrow.buyer_release_requested ? new Date().toISOString() : escrow.completed_at
-  });
+  const requestRelease = (escrow) => updateEscrow(escrow.id, getNextEscrowPatch(escrow, 'request_release', userEmail));
 
   const requestCancel = (escrow) => {
     const reason = window.prompt('Reason for cancellation request?');
@@ -151,6 +137,7 @@ export default function EscrowProfilePanel({ userEmail = '', compact = false }) 
           <div className="rounded-xl border border-dashed border-border bg-secondary/10 p-4 text-xs text-muted-foreground">No escrow deals yet.</div>
         ) : escrows.map((escrow) => {
           const isBuyer = escrow.buyer_email === userEmail;
+          const statusMeta = getEscrowStatusMeta(escrow.status);
           const statusTone = escrow.status === 'completed' ? 'success' : escrow.status === 'disputed' ? 'danger' : escrow.status === 'cancelled' ? 'warning' : 'default';
           return (
             <div key={escrow.id} className="rounded-xl border border-border bg-secondary/10 p-3 space-y-3">
@@ -160,10 +147,12 @@ export default function EscrowProfilePanel({ userEmail = '', compact = false }) 
                   <p className="text-xs text-muted-foreground mt-1">{isBuyer ? `Seller: ${escrow.seller_email}` : `Buyer: ${escrow.buyer_email}`}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Pill tone={statusTone}>{escrow.status}</Pill>
+                  <Pill tone={statusTone}>{statusMeta.label}</Pill>
                   <Pill>{escrow.price} {escrow.currency}</Pill>
                 </div>
               </div>
+
+              <EscrowStatusTimeline escrow={escrow} />
 
               <div className="grid gap-2 sm:grid-cols-3 text-[11px] text-muted-foreground">
                 <div className="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2"><Wallet className="w-3.5 h-3.5 text-primary" /> {escrow.buyer_marked_paid ? 'Buyer marked paid' : 'Awaiting payment mark'}</div>

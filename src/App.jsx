@@ -57,6 +57,7 @@ import BotFarm from './pages/BotFarm';
 import AgentOperations from './pages/AgentOperations';
 import AnalyticsHub from './pages/AnalyticsHub';
 import BazarStand from './pages/BazarStand';
+import EscrowDashboard from './pages/EscrowDashboard';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -137,6 +138,7 @@ const AuthenticatedApp = () => {
         <Route path="/agent-operations" element={<AgentOperations />} />
         <Route path="/analytics" element={<AnalyticsHub />} />
         <Route path="/bazar-stand" element={<BazarStand />} />
+        <Route path="/escrow-dashboard" element={<EscrowDashboard />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
