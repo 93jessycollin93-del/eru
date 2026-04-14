@@ -21,19 +21,36 @@ export default function SharedDashboardComments() {
 
   useEffect(() => {
     let mounted = true;
-    let unsubscribe = null;
+
+    const sortComments = (items) => [...items]
+      .filter((item) => item.dashboard_key === DASHBOARD_KEY)
+      .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0))
+      .slice(0, 20);
 
     const load = async () => {
-      const data = await base44.entities.SharedDashboardComment.filter({ dashboard_key: DASHBOARD_KEY }, '-created_date', 20);
-      if (mounted) setComments(data || []);
+      try {
+        const data = await base44.entities.SharedDashboardComment.filter({ dashboard_key: DASHBOARD_KEY }, '-created_date', 20);
+        if (mounted) setComments(sortComments(data || []));
+      } catch (error) {
+        if (error?.status !== 429) {
+          throw error;
+        }
+      }
     };
 
-    load();
-    unsubscribe = base44.entities.SharedDashboardComment.subscribe(() => load());
+    load().catch(() => {});
+    const unsubscribe = base44.entities.SharedDashboardComment.subscribe((event) => {
+      if (event.type === 'delete') {
+        setComments((prev) => prev.filter((item) => item.id !== event.id));
+        return;
+      }
+      if (event.data?.dashboard_key !== DASHBOARD_KEY) return;
+      setComments((prev) => sortComments([event.data, ...prev.filter((item) => item.id !== event.id)]));
+    });
 
     return () => {
       mounted = false;
-      if (unsubscribe) unsubscribe();
+      unsubscribe();
     };
   }, []);
 
