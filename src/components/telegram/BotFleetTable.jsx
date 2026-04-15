@@ -1,4 +1,4 @@
-import { Bot, Copy, Trash2 } from 'lucide-react';
+import { Bot, Copy, Trash2, Network, Radio } from 'lucide-react';
 
 export default function BotFleetTable({ bots = [], selectedBotId, onSelectBot, onCloneBot, onDeleteBot }) {
   return (
@@ -15,6 +15,8 @@ export default function BotFleetTable({ bots = [], selectedBotId, onSelectBot, o
               <th className="text-left px-4 py-3 font-medium">Username</th>
               <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="text-left px-4 py-3 font-medium">Memory</th>
+              <th className="text-left px-4 py-3 font-medium">Mode</th>
+              <th className="text-left px-4 py-3 font-medium">Webhook</th>
               <th className="text-left px-4 py-3 font-medium">Tools</th>
               <th className="text-right px-4 py-3 font-medium">Actions</th>
             </tr>
@@ -22,7 +24,7 @@ export default function BotFleetTable({ bots = [], selectedBotId, onSelectBot, o
           <tbody>
             {bots.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No Telegram bots yet.</td>
+                <td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">No Telegram bots yet.</td>
               </tr>
             ) : bots.map((bot) => (
               <tr key={bot.id} className={`border-t border-border ${selectedBotId === bot.id ? 'bg-primary/5' : ''}`}>
@@ -37,6 +39,16 @@ export default function BotFleetTable({ bots = [], selectedBotId, onSelectBot, o
                   <span className="px-2 py-1 rounded-full text-[11px] bg-secondary text-foreground">{bot.status || 'draft'}</span>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{bot.memory_enabled ? `${bot.memory_retention || 'medium'} · ${bot.memory_message_limit || 20}` : 'Off'}</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] ${bot.swarm_enabled ? 'bg-primary/10 text-primary' : 'bg-secondary text-foreground'}`}>
+                    <Network className="w-3 h-3" /> {bot.swarm_enabled ? 'Swarm' : 'Solo'}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-[11px] text-foreground">
+                    <Radio className="w-3 h-3" /> {bot.webhook_url ? 'Registered' : 'Pending'}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-muted-foreground">{(bot.tool_modules || []).length}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">

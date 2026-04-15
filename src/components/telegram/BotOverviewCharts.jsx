@@ -31,6 +31,11 @@ export default function BotOverviewCharts({ bots = [], messages = [], logs = [],
     }, {})
   ).map(([name, value]) => ({ name, value }));
 
+  const modeData = [
+    { name: 'Independent', value: bots.filter((bot) => !bot.swarm_enabled).length },
+    { name: 'Swarm', value: bots.filter((bot) => !!bot.swarm_enabled).length }
+  ].filter((item) => item.value > 0);
+
   const botVolumeData = bots.map((bot) => {
     const botMessages = messages.filter((message) => message.bot_id === bot.id);
     const sessions = new Set(botMessages.map((message) => message.telegram_chat_id).filter(Boolean)).size;
@@ -102,7 +107,24 @@ export default function BotOverviewCharts({ bots = [], messages = [], logs = [],
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3 xl:col-span-2">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <p className="text-sm font-semibold">Bot mode mix</p>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={modeData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={80} paddingAngle={3}>
+                {modeData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.name === 'Swarm' ? '#14b8a6' : '#6366f1'} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3 xl:col-span-1">
         <p className="text-sm font-semibold">Message volume by bot</p>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">

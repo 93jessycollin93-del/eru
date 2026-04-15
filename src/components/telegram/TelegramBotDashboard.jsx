@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, Plus, RefreshCw, Radio, Save, Settings2, TerminalSquare, CheckCircle2, Power, Copy, Trash2, BarChart3 } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Save, Settings2, TerminalSquare, Copy, Trash2, BarChart3 } from 'lucide-react';
 import BotFlowBuilder from './BotFlowBuilder';
 import TelegramBotAnalytics from './TelegramBotAnalytics';
 import TelegramAgentBuilder from './TelegramAgentBuilder';
 import BotOverviewCharts from './BotOverviewCharts';
 import BotFleetTable from './BotFleetTable';
 import TelegramSwarmConfigPanel from './TelegramSwarmConfigPanel';
+import TelegramBotOperationsPanel from './TelegramBotOperationsPanel';
 
 const DEFAULT_FORM = {
   name: '',
@@ -362,15 +363,6 @@ export default function TelegramBotDashboard() {
           <button onClick={updateBot} disabled={!selectedBot || saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">
             <Save className="w-4 h-4" /> Save
           </button>
-          <button onClick={verifyConnection} disabled={!selectedBot || verifying} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-secondary border border-border rounded-xl text-sm font-medium disabled:opacity-50">
-            {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Verify
-          </button>
-          <button onClick={registerWebhook} disabled={!selectedBot || registering} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-secondary border border-border rounded-xl text-sm font-medium disabled:opacity-50">
-            {registering ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />} Set Webhook
-          </button>
-          <button onClick={toggleBotStatus} disabled={!selectedBot || toggling} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-secondary border border-border rounded-xl text-sm font-medium disabled:opacity-50">
-            {toggling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />} {selectedBot?.status === 'active' ? 'Go Offline' : 'Go Active'}
-          </button>
           <button onClick={() => cloneBot(selectedBot)} disabled={!selectedBot} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-secondary border border-border rounded-xl text-sm font-medium disabled:opacity-50">
             <Copy className="w-4 h-4" /> Clone
           </button>
@@ -378,10 +370,18 @@ export default function TelegramBotDashboard() {
             <Trash2 className="w-4 h-4" /> Delete
           </button>
         </div>
-        {verification?.bot_username && <p className="text-[11px] text-green-400">Connected as @{verification.bot_username}</p>}
-        {verification?.error && <p className="text-[11px] text-red-400">{verification.error}</p>}
-        {selectedBot?.webhook_url && <p className="text-[11px] text-muted-foreground break-all">Webhook: {selectedBot.webhook_url}</p>}
       </div>
+
+      <TelegramBotOperationsPanel
+        selectedBot={selectedBot}
+        verification={verification}
+        verifying={verifying}
+        registering={registering}
+        toggling={toggling}
+        onVerify={verifyConnection}
+        onRegisterWebhook={registerWebhook}
+        onToggleBotStatus={toggleBotStatus}
+      />
 
       <TelegramBotAnalytics bot={selectedBot} messages={selectedMessages} logs={selectedLogs} sessions={selectedSessions} />
 

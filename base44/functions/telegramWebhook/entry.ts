@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const payload = await req.json();
     const url = new URL(req.url);
-    const botId = url.searchParams.get('botId');
+    const botId = url.searchParams.get('botId') || url.searchParams.get('bot_id');
 
     const incomingMessage = payload.message || payload.edited_message;
     if (!incomingMessage?.chat?.id) {

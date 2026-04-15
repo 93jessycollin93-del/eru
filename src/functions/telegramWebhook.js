@@ -93,6 +93,8 @@ Write the final Telegram reply in a clear, direct, compact format.`
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const url = new URL(req.url);
+    const targetBotId = url.searchParams.get('bot_id') || '';
     const body = await req.json().catch(() => ({}));
     const message = body.message || body.edited_message;
     const text = message?.text || '';
@@ -108,7 +110,7 @@ Deno.serve(async (req) => {
 
     if (!text.startsWith('/link') && !text.startsWith('/sync')) {
       const availableBots = await base44.asServiceRole.entities.TelegramBot.list('-updated_date', 100).catch(() => []);
-      const activeTelegramBot = availableBots.find((bot) => bot.status === 'active' && (!botUsername || bot.bot_username === botUsername)) || availableBots.find((bot) => bot.status === 'active' && bot.swarm_enabled);
+      const activeTelegramBot = availableBots.find((bot) => bot.id === targetBotId) || availableBots.find((bot) => bot.status === 'active' && (!botUsername || bot.bot_username === botUsername)) || availableBots.find((bot) => bot.status === 'active' && bot.swarm_enabled);
 
       if (activeTelegramBot?.swarm_enabled) {
         const swarmResult = await runTelegramSwarm({
