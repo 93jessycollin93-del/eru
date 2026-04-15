@@ -27,13 +27,12 @@ export default function BazarProductCard({ product, onBuy, buying }) {
       <div className="mt-4">
         <p className="text-sm font-semibold text-foreground">{product.tier_label} — {product.title}</p>
         <p className="mt-1 text-xs text-muted-foreground">{product.description}</p>
-        {product.rewards?.bonuses?.length ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {product.rewards.bonuses.map((bonus) => (
-              <span key={bonus} className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{bonus}</span>
-            ))}
-          </div>
-        ) : null}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] text-primary">+1 bonus card</span>
+          {product.rewards?.bonuses?.map((bonus) => (
+            <span key={bonus} className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{bonus}</span>
+          ))}
+        </div>
       </div>
       <div className="mt-4 flex items-end justify-between gap-3">
         <div>

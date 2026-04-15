@@ -73,6 +73,9 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
         metadata: { volume_kg: preview.volume_kg, color_type: preview.color_type }
       }],
     });
+    const me = await base44.auth.me();
+    const bonusCards = 1;
+    await base44.auth.updateMe({ bonus_cards: (me?.bonus_cards || 0) + bonusCards });
     await base44.entities.JadeTransaction.create({
       jade_asset_id: jade.id,
       transaction_type: 'extraction',
@@ -133,7 +136,7 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
             <button onClick={handleConfirm} disabled={loading}
               className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gem className="w-4 h-4" />}
-              Confirm Extract — $1.00
+              Confirm Extract — $1.00 + 1 bonus card
             </button>
             <button onClick={handleRoll} className="px-3 py-2.5 bg-secondary border border-border rounded-xl text-xs text-muted-foreground">Reroll</button>
           </div>

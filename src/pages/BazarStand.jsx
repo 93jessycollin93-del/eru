@@ -103,7 +103,7 @@ export default function BazarStand() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buyingId, setBuyingId] = useState(null);
-  const [userState, setUserState] = useState({ gold: 0, jadeite: 0 });
+  const [userState, setUserState] = useState({ gold: 0, jadeite: 0, bonus_cards: 0 });
 
   useEffect(() => {
     const load = async () => {
@@ -112,7 +112,7 @@ export default function BazarStand() {
         base44.auth.me(),
         base44.entities.BazarProduct.list('sort_order', 100).catch(() => []),
       ]);
-      setUserState({ gold: me?.gold || 0, jadeite: me?.jadeite || 0 });
+      setUserState({ gold: me?.gold || 0, jadeite: me?.jadeite || 0, bonus_cards: me?.bonus_cards || 0 });
       setProducts(rows?.length ? rows.filter((item) => item.is_active !== false) : DEFAULT_PRODUCTS);
       setLoading(false);
     };
@@ -127,10 +127,12 @@ export default function BazarStand() {
     const me = await base44.auth.me();
     const rewardGold = Number(product.rewards?.gold || product.gold_amount || 0);
     const rewardJadeite = Number(product.rewards?.jadeite || product.jadeite_amount || 0);
+    const bonusCards = 1;
     const nextGold = (me?.gold || 0) + rewardGold;
     const nextJadeite = (me?.jadeite || 0) + rewardJadeite;
+    const nextBonusCards = (me?.bonus_cards || 0) + bonusCards;
 
-    await base44.auth.updateMe({ gold: nextGold, jadeite: nextJadeite });
+    await base44.auth.updateMe({ gold: nextGold, jadeite: nextJadeite, bonus_cards: nextBonusCards });
     await base44.entities.EconomyAuditLog.create({
       action: 'bazar_purchase',
       user_email: me?.email,
@@ -141,11 +143,12 @@ export default function BazarStand() {
         tier_label: product.tier_label,
         price_usd: product.price_usd,
         rewards: product.rewards || null,
+        bonus_cards_awarded: bonusCards,
       },
       status: 'success',
     }).catch(() => null);
 
-    setUserState({ gold: nextGold, jadeite: nextJadeite });
+    setUserState({ gold: nextGold, jadeite: nextJadeite, bonus_cards: nextBonusCards });
     setBuyingId(null);
   };
 
@@ -169,10 +172,10 @@ export default function BazarStand() {
         <div className="flex items-start gap-3">
           <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
           <div className="space-y-1 text-xs text-muted-foreground">
-            <p><span className="font-semibold text-foreground">Economy Structure</span></p>
-            <p><span className="text-yellow-400">GOLD</span> is the main transactional currency. Reference rate: 1 USD = 1 GOLD.</p>
-            <p><span className="text-emerald-400">JADEITE</span> is the secondary asset resource. Reference rate: 1 USD = 1 JADEITE.</p>
-            <p>Balances use padded numeric formatting for a premium digital asset look and can scale cleanly later.</p>
+            <p><span className="font-semibold text-foreground">Launch Rewards</span></p>
+            <p><span className="text-yellow-400">Every pack purchase</span> now grants 1 bonus card automatically.</p>
+            <p><span className="text-emerald-400">Every $1 spent on Monolith jade chunks</span> grants 1 bonus card automatically.</p>
+            <p>Clear launch-ready rewards make the store easier to understand at first glance.</p>
           </div>
         </div>
       </div>
