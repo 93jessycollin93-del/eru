@@ -10,6 +10,7 @@ import TelegramSwarmConfigPanel from './TelegramSwarmConfigPanel';
 import TelegramBotOperationsPanel from './TelegramBotOperationsPanel';
 import TelegramSwarmHistoryPanel from './TelegramSwarmHistoryPanel';
 import TelegramSwarmPerformanceDashboard from './TelegramSwarmPerformanceDashboard';
+import TelegramBotAnalyticsDashboard from './TelegramBotAnalyticsDashboard';
 
 const DEFAULT_FORM = {
   name: '',
@@ -530,6 +531,13 @@ export default function TelegramBotDashboard() {
       />
 
       <TelegramBotAnalytics bot={selectedBot} messages={selectedMessages} logs={selectedLogs} sessions={selectedSessions} />
+      <TelegramBotAnalyticsDashboard
+        bot={selectedBot}
+        messages={data.messages.filter((message) => message.bot_id === selectedBot?.id)}
+        logs={data.logs.filter((log) => log.bot_id === selectedBot?.id)}
+        sessions={selectedSessions}
+        comparisons={data.comparisons || []}
+      />
 
       <TelegramSwarmHistoryPanel
         bot={selectedBot}
