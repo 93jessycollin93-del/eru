@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Network, Play, ChevronRight, TrendingUp, Loader2, Star, GitBranch, MessageSquareShare, Wrench, BrainCircuit } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import CollaborationWorkspace from './CollaborationWorkspace';
+import OrchestratorBotSetupPanel from './OrchestratorBotSetupPanel';
+import OrchestratorStateBoard from './OrchestratorStateBoard';
+import OrchestratorFeedbackPanel from './OrchestratorFeedbackPanel';
 import { analyzeNetworkImprovements, createDecisionPlan, resolveFindingConflicts } from './orchestrationDecisioning';
 
 const STAGES = ['plan', 'delegation', 'execution', 'feedback', 'improvement'];
@@ -85,6 +88,11 @@ export default function MultiAgentOrchestrator({ bots }) {
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [routerBotId, setRouterBotId] = useState('');
+  const [specialistBotIds, setSpecialistBotIds] = useState([]);
+
+  const routerBot = useMemo(() => bots.find((bot) => bot.id === routerBotId) || null, [bots, routerBotId]);
+  const specialistBots = useMemo(() => bots.filter((bot) => specialistBotIds.includes(bot.id) && bot.id !== routerBotId), [bots, specialistBotIds, routerBotId]);
 
   const loadHistory = async () => {
     setLoadingHistory(true);
@@ -95,22 +103,36 @@ export default function MultiAgentOrchestrator({ bots }) {
 
   useEffect(() => { loadHistory(); }, []);
 
+  useEffect(() => {
+    if (!routerBotId && bots.length > 0) {
+      setRouterBotId(bots[0].id);
+    }
+    if (specialistBotIds.length === 0 && bots.length > 1) {
+      setSpecialistBotIds(bots.slice(1, 4).map((bot) => bot.id));
+    }
+  }, [bots, routerBotId, specialistBotIds.length]);
+
+  const toggleSpecialistBot = (botId) => {
+    setSpecialistBotIds((prev) => prev.includes(botId) ? prev.filter((id) => id !== botId) : [...prev, botId]);
+  };
+
   const runCycle = async () => {
-    if (!goal.trim() || running || bots.length === 0) return;
+    if (!goal.trim() || running || !routerBot || specialistBots.length === 0) return;
     setRunning(true);
     setResult(null);
-    const cycleResult = { delegations: [], findings: [], feedback: [], healing_events: [], communication_bridges: [], conflict_risks: [], redundancy_risks: [], efficiency_notes: [] };
+    const cycleResult = { delegations: [], findings: [], feedback: [], healing_events: [], communication_bridges: [], conflict_risks: [], redundancy_risks: [], efficiency_notes: [], router_bot_id: routerBot.id, specialist_bot_ids: specialistBots.map((bot) => bot.id) };
 
     setStage('plan');
-    const decisionPlan = await createDecisionPlan({ goal, bots });
-    const selectedBots = bots.filter((bot) => (decisionPlan.selected_bot_ids || []).includes(bot.id)).slice(0, 6);
+    const decisionPlan = await createDecisionPlan({ goal, bots: [routerBot, ...specialistBots] });
+    const selectedBots = [routerBot, ...specialistBots].filter((bot) => (decisionPlan.selected_bot_ids || []).includes(bot.id) || specialistBots.some((item) => item.id === bot.id)).slice(0, 6);
     cycleResult.plan = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a strategic AI orchestrator coordinating multiple specialist bots.
+      prompt: `You are ${routerBot.name}, the master router bot coordinating specialist agents.
 Goal: "${goal}"
-Available bots: ${selectedBots.map((bot) => `${bot.name} (${bot.role})`).join(', ')}
+Router bot: ${routerBot.name} (${routerBot.role})
+Specialist bots: ${selectedBots.filter((bot) => bot.id !== routerBot.id).map((bot) => `${bot.name} (${bot.role})`).join(', ')}
 Decision notes: ${(decisionPlan.efficiency_notes || []).join(' | ')}
 
-Create a short collaboration plan describing how these bots should work together to solve the goal with higher accuracy and efficiency.`,
+Create a short collaboration plan describing how the router should delegate work, manage shared state, and close feedback loops between specialists.`,
     });
 
     setStage('delegation');
@@ -234,15 +256,25 @@ Produce:
         </div>
       </div>
 
+      <OrchestratorBotSetupPanel
+        bots={bots}
+        routerBotId={routerBotId}
+        specialistBotIds={specialistBotIds}
+        onRouterChange={setRouterBotId}
+        onToggleSpecialist={toggleSpecialistBot}
+      />
+
+      <OrchestratorStateBoard routerBot={routerBot} specialists={specialistBots} result={result} />
+
       {/* Goal input */}
       <div className="space-y-2">
         <label className="text-xs text-muted-foreground">Define your goal</label>
         <textarea value={goal} onChange={e => setGoal(e.target.value)}
           placeholder="e.g. Increase portfolio ROI by 15% through diversification and automated rebalancing..."
           className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none resize-none min-h-[80px] text-foreground" />
-        <button onClick={runCycle} disabled={!goal.trim() || running}
+        <button onClick={runCycle} disabled={!goal.trim() || running || !routerBot || specialistBots.length === 0}
           className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white rounded-xl py-3 font-semibold text-sm disabled:opacity-40 transition-all">
-          {running ? <><Loader2 className="w-4 h-4 animate-spin" /> Running cycle…</> : <><Network className="w-4 h-4" /> Run Agent Cycle</>}
+          {running ? <><Loader2 className="w-4 h-4 animate-spin" /> Running orchestrator…</> : <><Network className="w-4 h-4" /> Run master router</>}
         </button>
       </div>
 
@@ -274,6 +306,7 @@ Produce:
             </div>
           </div>
           <CollaborationWorkspace result={result} bots={bots} />
+          <OrchestratorFeedbackPanel result={result} bots={bots} />
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <BrainCircuit className="w-4 h-4 text-primary" />
