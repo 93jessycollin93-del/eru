@@ -29,6 +29,62 @@
     },
     "last_message_at": {
       "type": "string"
+    },
+    "swarm_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "user_message": {
+            "type": "string"
+          },
+          "router_context": {
+            "type": "string"
+          },
+          "routing_plan": {
+            "type": "object"
+          },
+          "router_bot_name": {
+            "type": "string"
+          },
+          "specialist_contexts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bot_id": {
+                  "type": "string"
+                },
+                "bot_name": {
+                  "type": "string"
+                },
+                "delegated_assignment": {
+                  "type": "string"
+                },
+                "prompt_context": {
+                  "type": "string"
+                },
+                "result": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "final_reply": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "context_override": {
+      "type": "string"
+    },
+    "history_purged_at": {
+      "type": "string"
     }
   },
   "required": [

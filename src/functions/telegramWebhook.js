@@ -20,7 +20,7 @@ function parseSyncPayload(text) {
   }).filter((item) => item.name);
 }
 
-async function runTelegramSwarm({ base44, telegramBot, incomingText, userContext }) {
+async function runTelegramSwarm({ base44, telegramBot, incomingText, userContext, sessionContext }) {
   const routerBot = telegramBot?.router_bot_id
     ? await base44.asServiceRole.entities.UserBot.get(telegramBot.router_bot_id).catch(() => null)
     : null;
@@ -36,8 +36,7 @@ async function runTelegramSwarm({ base44, telegramBot, incomingText, userContext
   const maxSpecialists = Math.max(1, Math.min(Number(telegramBot?.max_specialists_per_request || 6), 24));
   const backendSwarmSize = Math.max(specialistBots.length, Number(telegramBot?.backend_swarm_size || specialistBots.length || 0));
 
-  const routingPlan = await base44.integrations.Core.InvokeLLM({
-    prompt: `You are ${routerBot.name}, the master router bot for a Telegram front-door bot.
+  const routerContext = `You are ${routerBot.name}, the master router bot for a Telegram front-door bot.
 Router instructions: ${routerBot.instructions || ''}
 Front-door role: ${telegramBot.front_door_role || 'general'}
 Execution mode: ${telegramBot.swarm_execution_mode || 'targeted'}
@@ -46,7 +45,12 @@ Max specialists to invoke now: ${maxSpecialists}
 Telegram routing template: ${telegramBot.swarm_goal_template || 'Route the request to the best specialists and synthesize a final reply.'}
 Incoming Telegram message: ${incomingText}
 User context: ${userContext}
+Session context: ${sessionContext || 'No stored session context.'}
 Specialists available: ${specialistBots.map((bot) => `${bot.id} | ${bot.name} | ${bot.role}`).join('\n')}
+`;
+
+  const routingPlan = await base44.integrations.Core.InvokeLLM({
+    prompt: `${routerContext}
 
 Return JSON with:
 - selected_bot_ids: array of specialist bot ids to use
@@ -70,14 +74,23 @@ Return JSON with:
   const specialistResults = [];
 
   for (const bot of selectedSpecialists) {
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are ${bot.name}, a ${bot.role} specialist bot.
+    const specialistContext = `You are ${bot.name}, a ${bot.role} specialist bot.
 Instructions: ${bot.instructions || ''}
 Incoming Telegram message: ${incomingText}
+User context: ${userContext}
+Session context: ${sessionContext || 'No stored session context.'}
 Delegated assignment: ${routingPlan.delegation_notes?.[bot.id] || 'Contribute your best specialist response.'}
-Provide a concise specialist contribution for the router.`
+Provide a concise specialist contribution for the router.`;
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: specialistContext
     });
-    specialistResults.push({ bot_id: bot.id, bot_name: bot.name, result });
+    specialistResults.push({
+      bot_id: bot.id,
+      bot_name: bot.name,
+      delegated_assignment: routingPlan.delegation_notes?.[bot.id] || 'Contribute your best specialist response.',
+      prompt_context: specialistContext,
+      result
+    });
   }
 
   const finalReply = await base44.integrations.Core.InvokeLLM({
@@ -94,6 +107,8 @@ Write the final Telegram reply in a clear, direct, compact format.`
     reply: finalReply,
     specialists_used: specialistResults.map((item) => item.bot_name),
     trace: specialistResults,
+    routing_plan: routingPlan,
+    router_context: routerContext,
     represented_swarm_size: backendSwarmSize,
     invoked_specialist_count: selectedSpecialists.length
   };
@@ -122,14 +137,59 @@ Deno.serve(async (req) => {
       const activeTelegramBot = availableBots.find((bot) => bot.id === targetBotId) || availableBots.find((bot) => bot.status === 'active' && (!botUsername || bot.bot_username === botUsername)) || availableBots.find((bot) => bot.status === 'active' && bot.swarm_enabled);
 
       if (activeTelegramBot?.swarm_enabled) {
+        const existingSessions = await base44.asServiceRole.entities.TelegramBotSession.filter({
+          bot_id: activeTelegramBot.id,
+          telegram_chat_id: String(message?.chat?.id || '')
+        }, '-updated_date', 1).catch(() => []);
+        const existingSession = existingSessions?.[0] || null;
+
         const swarmResult = await runTelegramSwarm({
           base44,
           telegramBot: activeTelegramBot,
           incomingText: text,
-          userContext: `Telegram user: ${telegramDisplayName || telegramUsername || telegramUserId}`
+          userContext: `Telegram user: ${telegramDisplayName || telegramUsername || telegramUserId}`,
+          sessionContext: existingSession?.context_override || existingSession?.memory_summary || ''
         });
 
         if (swarmResult) {
+          const nextHistory = [
+            ...((existingSession?.swarm_history || []).slice(-9)),
+            {
+              created_at: new Date().toISOString(),
+              user_message: text,
+              router_context: swarmResult.router_context,
+              routing_plan: swarmResult.routing_plan,
+              router_bot_name: activeTelegramBot.name,
+              specialist_contexts: swarmResult.trace,
+              final_reply: swarmResult.reply
+            }
+          ];
+
+          if (existingSession) {
+            await base44.asServiceRole.entities.TelegramBotSession.update(existingSession.id, {
+              telegram_user_id: telegramUserId,
+              telegram_username: telegramUsername,
+              last_user_message: text,
+              last_bot_response: swarmResult.reply,
+              last_message_at: new Date().toISOString(),
+              message_count: Number(existingSession.message_count || 0) + 1,
+              swarm_history: nextHistory
+            });
+          } else {
+            await base44.asServiceRole.entities.TelegramBotSession.create({
+              bot_id: activeTelegramBot.id,
+              telegram_chat_id: String(message?.chat?.id || ''),
+              telegram_user_id: telegramUserId,
+              telegram_username: telegramUsername,
+              last_user_message: text,
+              last_bot_response: swarmResult.reply,
+              memory_summary: '',
+              message_count: 1,
+              last_message_at: new Date().toISOString(),
+              swarm_history: nextHistory
+            });
+          }
+
           return Response.json({ ok: true, swarm: true, reply: swarmResult.reply, specialists_used: swarmResult.specialists_used, trace: swarmResult.trace, represented_swarm_size: swarmResult.represented_swarm_size, invoked_specialist_count: swarmResult.invoked_specialist_count });
         }
       }

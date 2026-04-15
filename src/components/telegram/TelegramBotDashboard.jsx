@@ -8,6 +8,7 @@ import BotOverviewCharts from './BotOverviewCharts';
 import BotFleetTable from './BotFleetTable';
 import TelegramSwarmConfigPanel from './TelegramSwarmConfigPanel';
 import TelegramBotOperationsPanel from './TelegramBotOperationsPanel';
+import TelegramSwarmHistoryPanel from './TelegramSwarmHistoryPanel';
 
 const DEFAULT_FORM = {
   name: '',
@@ -37,6 +38,8 @@ export default function TelegramBotDashboard() {
   const [registering, setRegistering] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [savingContext, setSavingContext] = useState(false);
+  const [purgingHistory, setPurgingHistory] = useState(false);
   const [verification, setVerification] = useState(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedBotIds, setSelectedBotIds] = useState([]);
@@ -107,6 +110,31 @@ export default function TelegramBotDashboard() {
     () => data.sessions.filter((session) => session.bot_id === selectedBot?.id),
     [data.sessions, selectedBot?.id]
   );
+
+  const saveSessionContext = async (session, contextOverride) => {
+    setSavingContext(true);
+    await base44.entities.TelegramBotSession.update(session.id, {
+      context_override: contextOverride,
+      memory_summary: contextOverride || session.memory_summary || ''
+    });
+    await load();
+    setSavingContext(false);
+  };
+
+  const purgeSessionHistory = async (session) => {
+    setPurgingHistory(true);
+    await base44.entities.TelegramBotSession.update(session.id, {
+      swarm_history: [],
+      context_override: '',
+      memory_summary: '',
+      last_user_message: '',
+      last_bot_response: '',
+      message_count: 0,
+      history_purged_at: new Date().toISOString()
+    });
+    await load();
+    setPurgingHistory(false);
+  };
 
   const selectedAnalytics = useMemo(() => {
     const messageCount = selectedMessages.length;
@@ -400,6 +428,15 @@ export default function TelegramBotDashboard() {
       />
 
       <TelegramBotAnalytics bot={selectedBot} messages={selectedMessages} logs={selectedLogs} sessions={selectedSessions} />
+
+      <TelegramSwarmHistoryPanel
+        bot={selectedBot}
+        sessions={selectedSessions}
+        onSaveContext={saveSessionContext}
+        onPurgeHistory={purgeSessionHistory}
+        savingContext={savingContext}
+        purgingHistory={purgingHistory}
+      />
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
