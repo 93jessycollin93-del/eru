@@ -6,6 +6,7 @@ import TelegramBotAnalytics from './TelegramBotAnalytics';
 import TelegramAgentBuilder from './TelegramAgentBuilder';
 import BotOverviewCharts from './BotOverviewCharts';
 import BotFleetTable from './BotFleetTable';
+import TelegramSwarmConfigPanel from './TelegramSwarmConfigPanel';
 
 const DEFAULT_FORM = {
   name: '',
@@ -19,6 +20,10 @@ const DEFAULT_FORM = {
   memory_message_limit: 20,
   tool_modules: [],
   agent_notes: '',
+  swarm_enabled: false,
+  router_bot_id: '',
+  specialist_bot_ids: [],
+  swarm_goal_template: '',
 };
 
 export default function TelegramBotDashboard() {
@@ -33,6 +38,7 @@ export default function TelegramBotDashboard() {
   const [data, setData] = useState({ bots: [], messages: [], logs: [], sessions: [], comparisons: [] });
   const [selectedBotId, setSelectedBotId] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
+  const [labBots, setLabBots] = useState([]);
 
   const load = async () => {
     setLoading(true);
@@ -42,6 +48,10 @@ export default function TelegramBotDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    base44.entities.UserBot.list('-updated_date', 100).then(setLabBots).catch(() => setLabBots([]));
+  }, []);
 
   const selectedBot = useMemo(
     () => data.bots.find((bot) => bot.id === selectedBotId) || data.bots[0] || null,
@@ -63,6 +73,10 @@ export default function TelegramBotDashboard() {
         memory_message_limit: selectedBot.memory_message_limit || 20,
         tool_modules: selectedBot.tool_modules || [],
         agent_notes: selectedBot.agent_notes || '',
+        swarm_enabled: !!selectedBot.swarm_enabled,
+        router_bot_id: selectedBot.router_bot_id || '',
+        specialist_bot_ids: selectedBot.specialist_bot_ids || [],
+        swarm_goal_template: selectedBot.swarm_goal_template || '',
       });
       setVerification(null);
     } else {
@@ -137,6 +151,10 @@ export default function TelegramBotDashboard() {
       memory_message_limit: Number(form.memory_message_limit || 20),
       tool_modules: form.tool_modules || [],
       agent_notes: form.agent_notes || '',
+      swarm_enabled: !!form.swarm_enabled,
+      router_bot_id: form.router_bot_id || '',
+      specialist_bot_ids: form.specialist_bot_ids || [],
+      swarm_goal_template: form.swarm_goal_template || '',
       commands: [
         { command: '/start', description: 'Start the bot' },
         { command: '/help', description: 'See bot help' },
@@ -162,6 +180,10 @@ export default function TelegramBotDashboard() {
       memory_message_limit: Number(form.memory_message_limit || 20),
       tool_modules: form.tool_modules || [],
       agent_notes: form.agent_notes || '',
+      swarm_enabled: !!form.swarm_enabled,
+      router_bot_id: form.router_bot_id || '',
+      specialist_bot_ids: form.specialist_bot_ids || [],
+      swarm_goal_template: form.swarm_goal_template || '',
     });
     await load();
     setSaving(false);
@@ -334,6 +356,7 @@ export default function TelegramBotDashboard() {
         <p className="text-[11px] text-muted-foreground">Paste the token exactly as provided by BotFather. The saved bot token will also be reused if this field is left unchanged.</p>
         <textarea value={form.greeting_message} onChange={(e) => setForm((prev) => ({ ...prev, greeting_message: e.target.value }))} placeholder="Greeting message" className="w-full min-h-[80px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
         <TelegramAgentBuilder form={form} setForm={setForm} />
+        <TelegramSwarmConfigPanel bots={labBots} form={form} setForm={setForm} />
         <BotFlowBuilder value={form.flow_blocks} onChange={(flow_blocks) => setForm((prev) => ({ ...prev, flow_blocks }))} />
         <div className="flex gap-2 flex-wrap">
           <button onClick={updateBot} disabled={!selectedBot || saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">
