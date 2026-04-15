@@ -1,0 +1,146 @@
+{
+  "name": "TelegramBotExperiment",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "bot_name": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "running",
+        "completed",
+        "paused"
+      ],
+      "default": "draft"
+    },
+    "traffic_source": {
+      "type": "string",
+      "enum": [
+        "live_only",
+        "live_plus_sandbox",
+        "sandbox_only"
+      ],
+      "default": "live_plus_sandbox"
+    },
+    "optimization_metric": {
+      "type": "string",
+      "enum": [
+        "engagement_rate",
+        "conversion_rate"
+      ],
+      "default": "engagement_rate"
+    },
+    "variant_a_label": {
+      "type": "string",
+      "default": "Variant A"
+    },
+    "variant_b_label": {
+      "type": "string",
+      "default": "Variant B"
+    },
+    "variant_a_prompt": {
+      "type": "string"
+    },
+    "variant_b_prompt": {
+      "type": "string"
+    },
+    "winner_variant": {
+      "type": "string",
+      "enum": [
+        "a",
+        "b",
+        "none"
+      ],
+      "default": "none"
+    },
+    "winner_declared_at": {
+      "type": "string"
+    },
+    "auto_deploy_winner": {
+      "type": "boolean",
+      "default": false
+    },
+    "minimum_sample_size": {
+      "type": "number",
+      "default": 20
+    },
+    "engagement_threshold_messages": {
+      "type": "number",
+      "default": 2
+    },
+    "conversion_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "buy",
+        "purchase",
+        "checkout",
+        "book",
+        "schedule",
+        "order",
+        "pay",
+        "sign up"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "name",
+    "variant_a_prompt",
+    "variant_b_prompt"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

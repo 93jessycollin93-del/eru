@@ -20,6 +20,33 @@ function parseSyncPayload(text) {
   }).filter((item) => item.name);
 }
 
+async function chooseExperimentVariant(base44, telegramBot) {
+  const experiments = await base44.asServiceRole.entities.TelegramBotExperiment.filter({
+    bot_id: telegramBot.id,
+    status: 'running'
+  }, '-updated_date', 1).catch(() => []);
+
+  const experiment = experiments?.[0];
+  if (!experiment || experiment.traffic_source === 'sandbox_only') {
+    return null;
+  }
+
+  const runRows = await base44.asServiceRole.entities.TelegramBotExperimentRun.filter({
+    experiment_id: experiment.id
+  }, '-created_date', 500).catch(() => []);
+
+  const aCount = runRows.filter((run) => run.variant === 'a').length;
+  const bCount = runRows.filter((run) => run.variant === 'b').length;
+  const variant = aCount <= bCount ? 'a' : 'b';
+
+  return {
+    experiment,
+    variant,
+    prompt: variant === 'a' ? experiment.variant_a_prompt : experiment.variant_b_prompt,
+    conversionKeywords: experiment.conversion_keywords || []
+  };
+}
+
 async function runTelegramSwarm({ base44, telegramBot, incomingText, userContext, sessionContext }) {
   const routerBot = telegramBot?.router_bot_id
     ? await base44.asServiceRole.entities.UserBot.get(telegramBot.router_bot_id).catch(() => null)
@@ -36,13 +63,16 @@ async function runTelegramSwarm({ base44, telegramBot, incomingText, userContext
   const maxSpecialists = Math.max(1, Math.min(Number(telegramBot?.max_specialists_per_request || 6), 24));
   const backendSwarmSize = Math.max(specialistBots.length, Number(telegramBot?.backend_swarm_size || specialistBots.length || 0));
 
+  const experimentSelection = await chooseExperimentVariant(base44, telegramBot);
+  const routingTemplate = experimentSelection?.prompt || telegramBot.swarm_goal_template || 'Route the request to the best specialists and synthesize a final reply.';
+
   const routerContext = `You are ${routerBot.name}, the master router bot for a Telegram front-door bot.
 Router instructions: ${routerBot.instructions || ''}
 Front-door role: ${telegramBot.front_door_role || 'general'}
 Execution mode: ${telegramBot.swarm_execution_mode || 'targeted'}
 Represented backend swarm size: ${backendSwarmSize}
 Max specialists to invoke now: ${maxSpecialists}
-Telegram routing template: ${telegramBot.swarm_goal_template || 'Route the request to the best specialists and synthesize a final reply.'}
+Telegram routing template: ${routingTemplate}
 Incoming Telegram message: ${incomingText}
 User context: ${userContext}
 Session context: ${sessionContext || 'No stored session context.'}
@@ -110,7 +140,8 @@ Write the final Telegram reply in a clear, direct, compact format.`
     routing_plan: routingPlan,
     router_context: routerContext,
     represented_swarm_size: backendSwarmSize,
-    invoked_specialist_count: selectedSpecialists.length
+    invoked_specialist_count: selectedSpecialists.length,
+    experiment: experimentSelection
   };
 }
 
@@ -189,28 +220,49 @@ Deno.serve(async (req) => {
             }
           ];
 
-          if (existingSession) {
-            await base44.asServiceRole.entities.TelegramBotSession.update(existingSession.id, {
-              telegram_user_id: telegramUserId,
-              telegram_username: telegramUsername,
-              last_user_message: text,
-              last_bot_response: swarmResult.reply,
-              last_message_at: new Date().toISOString(),
-              message_count: Number(existingSession.message_count || 0) + 1,
-              swarm_history: nextHistory
-            });
-          } else {
-            await base44.asServiceRole.entities.TelegramBotSession.create({
+          const updatedSession = existingSession
+            ? await base44.asServiceRole.entities.TelegramBotSession.update(existingSession.id, {
+                telegram_user_id: telegramUserId,
+                telegram_username: telegramUsername,
+                last_user_message: text,
+                last_bot_response: swarmResult.reply,
+                last_message_at: new Date().toISOString(),
+                message_count: Number(existingSession.message_count || 0) + 1,
+                swarm_history: nextHistory
+              })
+            : await base44.asServiceRole.entities.TelegramBotSession.create({
+                bot_id: activeTelegramBot.id,
+                telegram_chat_id: String(message?.chat?.id || ''),
+                telegram_user_id: telegramUserId,
+                telegram_username: telegramUsername,
+                last_user_message: text,
+                last_bot_response: swarmResult.reply,
+                memory_summary: '',
+                message_count: 1,
+                last_message_at: new Date().toISOString(),
+                swarm_history: nextHistory
+              });
+
+          if (swarmResult.experiment?.experiment?.id && swarmResult.experiment?.variant) {
+            const conversionKeywords = (swarmResult.experiment.conversionKeywords || []).map((item) => String(item).toLowerCase());
+            const replyLower = String(swarmResult.reply || '').toLowerCase();
+            const converted = conversionKeywords.some((keyword) => keyword && replyLower.includes(keyword));
+            const engaged = Number(updatedSession?.message_count || existingSession?.message_count || 0) >= Number(swarmResult.experiment.experiment.engagement_threshold_messages || 2);
+
+            await base44.asServiceRole.entities.TelegramBotExperimentRun.create({
+              experiment_id: swarmResult.experiment.experiment.id,
               bot_id: activeTelegramBot.id,
-              telegram_chat_id: String(message?.chat?.id || ''),
-              telegram_user_id: telegramUserId,
-              telegram_username: telegramUsername,
-              last_user_message: text,
-              last_bot_response: swarmResult.reply,
-              memory_summary: '',
-              message_count: 1,
-              last_message_at: new Date().toISOString(),
-              swarm_history: nextHistory
+              variant: swarmResult.experiment.variant,
+              source: 'live',
+              session_id: updatedSession.id,
+              input_message: text,
+              output_message: swarmResult.reply,
+              engaged,
+              converted,
+              score_snapshot: {
+                specialists_used: swarmResult.specialists_used,
+                invoked_specialist_count: swarmResult.invoked_specialist_count
+              }
             });
           }
 

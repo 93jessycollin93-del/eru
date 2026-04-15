@@ -14,6 +14,7 @@ import TelegramBotAnalyticsDashboard from './TelegramBotAnalyticsDashboard';
 import TelegramSwarmSandboxPanel from './TelegramSwarmSandboxPanel';
 import TelegramHumanHandoffPanel from './TelegramHumanHandoffPanel';
 import TelegramHandoffInbox from './TelegramHandoffInbox';
+import TelegramABTestingPanel from './TelegramABTestingPanel';
 
 const DEFAULT_FORM = {
   name: '',
@@ -572,6 +573,8 @@ export default function TelegramBotDashboard() {
       />
 
       <TelegramSwarmSandboxPanel bot={selectedBot} sessions={selectedSessions} />
+
+      <TelegramABTestingPanel bot={selectedBot} sessions={selectedSessions} />
 
       <TelegramHandoffInbox bot={selectedBot} sessions={selectedSessions} onRefresh={load} />
 
