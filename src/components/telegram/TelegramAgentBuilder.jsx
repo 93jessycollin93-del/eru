@@ -1,4 +1,4 @@
-import { Brain, Settings2, Wrench } from 'lucide-react';
+import { Brain, Link2, Settings2, Upload, Wrench } from 'lucide-react';
 
 const MEMORY_PRESETS = [
   { id: 'short', label: 'Short', hint: 'Recent context only' },
@@ -15,7 +15,7 @@ const TOOL_MODULES = [
   { id: 'upsell', label: 'Upsell prompts' },
 ];
 
-export default function TelegramAgentBuilder({ form, setForm }) {
+export default function TelegramAgentBuilder({ form, setForm, knowledgeState, onUploadKnowledgeFile, onAddKnowledgeUrl }) {
   const toggleModule = (moduleId) => {
     const active = (form.tool_modules || []).includes(moduleId);
     setForm((prev) => ({
@@ -101,6 +101,39 @@ export default function TelegramAgentBuilder({ form, setForm }) {
             );
           })}
         </div>
+      </div>
+
+      <div className="space-y-3 rounded-xl border border-border bg-background p-3">
+        <div className="flex items-center gap-2">
+          <Upload className="w-4 h-4 text-primary" />
+          <p className="text-sm font-medium">Knowledge training</p>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Upload PDFs or TXTs, or add a URL. The app will summarize the content, extract key knowledge, and use it to improve bot responses.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-3 py-3 text-xs font-medium text-primary">
+            <Upload className="w-3.5 h-3.5" />
+            {knowledgeState?.uploading ? 'Processing...' : 'Upload PDF or TXT'}
+            <input type="file" accept=".pdf,.txt" className="hidden" onChange={onUploadKnowledgeFile} />
+          </label>
+          <button
+            type="button"
+            onClick={onAddKnowledgeUrl}
+            disabled={knowledgeState?.uploading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-secondary px-3 py-3 text-xs font-medium text-foreground disabled:opacity-50"
+          >
+            <Link2 className="w-3.5 h-3.5 text-primary" /> Add URL context
+          </button>
+        </div>
+        {knowledgeState?.items?.length > 0 && (
+          <div className="space-y-2">
+            {knowledgeState.items.map((item) => (
+              <div key={item.id} className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs font-semibold text-foreground">{item.title}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground line-clamp-3">{item.summary}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-1">

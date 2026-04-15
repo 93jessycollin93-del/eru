@@ -48,6 +48,7 @@ export default function TelegramBotDashboard() {
   const [selectedBotId, setSelectedBotId] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
   const [labBots, setLabBots] = useState([]);
+  const [knowledgeState, setKnowledgeState] = useState({ uploading: false, items: [] });
 
   const load = async () => {
     setLoading(true);
@@ -111,6 +112,22 @@ export default function TelegramBotDashboard() {
     () => data.sessions.filter((session) => session.bot_id === selectedBot?.id),
     [data.sessions, selectedBot?.id]
   );
+
+  useEffect(() => {
+    if (!selectedBot?.id) {
+      setKnowledgeState({ uploading: false, items: [] });
+      return;
+    }
+    base44.entities.KnowledgeBaseDocument.filter({ status: 'active' }, '-updated_date', 50)
+      .then((rows) => {
+        const linked = (rows || [])
+          .filter((item) => (item.linked_bot_ids || []).includes(selectedBot.id))
+          .slice(0, 5)
+          .map((item) => ({ id: item.id, title: item.title, summary: item.content?.slice(0, 220) || '' }));
+        setKnowledgeState((prev) => ({ ...prev, items: linked }));
+      })
+      .catch(() => setKnowledgeState((prev) => ({ ...prev, items: [] })));
+  }, [selectedBot?.id]);
 
   const saveSessionContext = async (session, contextOverride) => {
     setSavingContext(true);
@@ -327,6 +344,55 @@ export default function TelegramBotDashboard() {
     }));
   };
 
+  const uploadKnowledgeFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedBot?.id) return;
+    setKnowledgeState((prev) => ({ ...prev, uploading: true }));
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const response = await base44.functions.invoke('ingestTelegramBotKnowledge', {
+      botId: selectedBot.id,
+      sourceType: 'file',
+      fileUrl: file_url,
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      title: file.name.replace(/\.[^.]+$/, '')
+    });
+    const doc = response.data?.document;
+    const summary = response.data?.summary || '';
+    if (doc?.id) {
+      setKnowledgeState((prev) => ({
+        uploading: false,
+        items: [{ id: doc.id, title: doc.title, summary }, ...prev.items].slice(0, 5)
+      }));
+    } else {
+      setKnowledgeState((prev) => ({ ...prev, uploading: false }));
+    }
+    event.target.value = '';
+  };
+
+  const addKnowledgeUrl = async () => {
+    if (!selectedBot?.id) return;
+    const url = window.prompt('Paste a URL to use as training context');
+    if (!url) return;
+    setKnowledgeState((prev) => ({ ...prev, uploading: true }));
+    const response = await base44.functions.invoke('ingestTelegramBotKnowledge', {
+      botId: selectedBot.id,
+      sourceType: 'url',
+      url,
+      title: url
+    });
+    const doc = response.data?.document;
+    const summary = response.data?.summary || '';
+    if (doc?.id) {
+      setKnowledgeState((prev) => ({
+        uploading: false,
+        items: [{ id: doc.id, title: doc.title, summary }, ...prev.items].slice(0, 5)
+      }));
+    } else {
+      setKnowledgeState((prev) => ({ ...prev, uploading: false }));
+    }
+  };
+
   const deleteBot = async (botId) => {
     await base44.entities.TelegramBot.delete(botId);
     setSelectedBotId(null);
@@ -430,7 +496,13 @@ export default function TelegramBotDashboard() {
         <input value={form.bot_token} onChange={(e) => setForm((prev) => ({ ...prev, bot_token: e.target.value }))} placeholder="Telegram bot token" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
         <p className="text-[11px] text-muted-foreground">Paste the token exactly as provided by BotFather. The saved bot token will also be reused if this field is left unchanged.</p>
         <textarea value={form.greeting_message} onChange={(e) => setForm((prev) => ({ ...prev, greeting_message: e.target.value }))} placeholder="Greeting message" className="w-full min-h-[80px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
-        <TelegramAgentBuilder form={form} setForm={setForm} />
+        <TelegramAgentBuilder
+          form={form}
+          setForm={setForm}
+          knowledgeState={knowledgeState}
+          onUploadKnowledgeFile={uploadKnowledgeFile}
+          onAddKnowledgeUrl={addKnowledgeUrl}
+        />
         <TelegramSwarmConfigPanel bots={labBots} form={form} setForm={setForm} onCloneSpecialist={cloneSpecialistBot} />
         <BotFlowBuilder value={form.flow_blocks} onChange={(flow_blocks) => setForm((prev) => ({ ...prev, flow_blocks }))} />
         <div className="flex gap-2 flex-wrap">
