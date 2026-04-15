@@ -7,7 +7,7 @@ export default function TelegramBotOperationsPanel({ selectedBot, verification, 
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div>
         <p className="text-sm font-semibold text-foreground">Webhook & token operations</p>
-        <p className="text-[11px] text-muted-foreground">Each Telegram bot uses its own token and webhook lifecycle.</p>
+        <p className="text-[11px] text-muted-foreground">Each Telegram bot uses its own token and webhook lifecycle, including group and channel events.</p>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-3">

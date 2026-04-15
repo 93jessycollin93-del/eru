@@ -114,14 +114,38 @@ Write the final Telegram reply in a clear, direct, compact format.`
   };
 }
 
+function shouldHandleGroupMessage({ telegramBot, message, text }) {
+  const chatType = message?.chat?.type || '';
+  const isChannel = chatType === 'channel';
+  const isGroupLike = ['group', 'supergroup'].includes(chatType);
+  const botUsername = telegramBot?.bot_username ? `@${String(telegramBot.bot_username).toLowerCase()}` : '';
+  const normalizedText = String(text || '');
+  const lowerText = normalizedText.toLowerCase();
+  const isCommand = normalizedText.trim().startsWith('/');
+  const isMentioned = botUsername ? lowerText.includes(botUsername) : false;
+
+  if (isChannel) {
+    if (!telegramBot?.channel_post_responses_enabled) return false;
+  }
+
+  if (isGroupLike) {
+    if (!telegramBot?.group_responses_enabled) return false;
+  }
+
+  const mode = telegramBot?.group_response_mode || 'commands_only';
+  if (mode === 'always_reply') return true;
+  if (mode === 'mention_only') return isMentioned;
+  return isCommand;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const url = new URL(req.url);
     const targetBotId = url.searchParams.get('bot_id') || '';
     const body = await req.json().catch(() => ({}));
-    const message = body.message || body.edited_message;
-    const text = message?.text || '';
+    const message = body.message || body.edited_message || body.channel_post || body.edited_channel_post;
+    const text = message?.text || message?.caption || '';
 
     if (!message) {
       return Response.json({ ok: true, ignored: true });
@@ -136,7 +160,7 @@ Deno.serve(async (req) => {
       const availableBots = await base44.asServiceRole.entities.TelegramBot.list('-updated_date', 100).catch(() => []);
       const activeTelegramBot = availableBots.find((bot) => bot.id === targetBotId) || availableBots.find((bot) => bot.status === 'active' && (!botUsername || bot.bot_username === botUsername)) || availableBots.find((bot) => bot.status === 'active' && bot.swarm_enabled);
 
-      if (activeTelegramBot?.swarm_enabled) {
+      if (activeTelegramBot?.swarm_enabled && shouldHandleGroupMessage({ telegramBot: activeTelegramBot, message, text })) {
         const existingSessions = await base44.asServiceRole.entities.TelegramBotSession.filter({
           bot_id: activeTelegramBot.id,
           telegram_chat_id: String(message?.chat?.id || '')

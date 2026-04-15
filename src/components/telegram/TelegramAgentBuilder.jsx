@@ -104,6 +104,52 @@ export default function TelegramAgentBuilder({ form, setForm, knowledgeState, on
       </div>
 
       <div className="space-y-3 rounded-xl border border-border bg-background p-3">
+        <div className="space-y-3 rounded-xl border border-border bg-card p-3">
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-primary" />
+            <p className="text-sm font-medium">Groups and channels</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={!!form.group_responses_enabled}
+                onChange={(e) => setForm((prev) => ({ ...prev, group_responses_enabled: e.target.checked }))}
+                className="accent-primary"
+              />
+              <span>Enable group replies</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={!!form.channel_post_responses_enabled}
+                onChange={(e) => setForm((prev) => ({ ...prev, channel_post_responses_enabled: e.target.checked }))}
+                className="accent-primary"
+              />
+              <span>Enable channel post replies</span>
+            </label>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs text-muted-foreground">Reply mode in groups/channels</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                { id: 'commands_only', label: 'Commands only', hint: 'Respond to slash commands' },
+                { id: 'mention_only', label: 'Mention only', hint: 'Respond when tagged' },
+                { id: 'always_reply', label: 'Always reply', hint: 'Respond to all visible posts' },
+              ].map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, group_response_mode: mode.id }))}
+                  className={`rounded-xl border p-3 text-left ${form.group_response_mode === mode.id ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}
+                >
+                  <p className="text-xs font-medium">{mode.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{mode.hint}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <Upload className="w-4 h-4 text-primary" />
           <p className="text-sm font-medium">Knowledge training</p>

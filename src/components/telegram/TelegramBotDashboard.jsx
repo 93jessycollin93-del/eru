@@ -32,6 +32,9 @@ const DEFAULT_FORM = {
   backend_swarm_size: 25,
   swarm_execution_mode: 'targeted',
   max_specialists_per_request: 6,
+  group_response_mode: 'commands_only',
+  group_responses_enabled: true,
+  channel_post_responses_enabled: false,
 };
 
 export default function TelegramBotDashboard() {
@@ -92,6 +95,9 @@ export default function TelegramBotDashboard() {
         backend_swarm_size: selectedBot.backend_swarm_size || 25,
         swarm_execution_mode: selectedBot.swarm_execution_mode || 'targeted',
         max_specialists_per_request: selectedBot.max_specialists_per_request || 6,
+        group_response_mode: selectedBot.group_response_mode || 'commands_only',
+        group_responses_enabled: selectedBot.group_responses_enabled ?? true,
+        channel_post_responses_enabled: selectedBot.channel_post_responses_enabled ?? false,
       });
       setVerification(null);
     } else {
@@ -215,6 +221,9 @@ export default function TelegramBotDashboard() {
       backend_swarm_size: Number(form.backend_swarm_size || 25),
       swarm_execution_mode: form.swarm_execution_mode || 'targeted',
       max_specialists_per_request: Number(form.max_specialists_per_request || 6),
+      group_response_mode: form.group_response_mode || 'commands_only',
+      group_responses_enabled: form.group_responses_enabled ?? true,
+      channel_post_responses_enabled: form.channel_post_responses_enabled ?? false,
       commands: [
         { command: '/start', description: 'Start the bot' },
         { command: '/help', description: 'See bot help' },
@@ -248,6 +257,9 @@ export default function TelegramBotDashboard() {
       backend_swarm_size: Number(form.backend_swarm_size || 25),
       swarm_execution_mode: form.swarm_execution_mode || 'targeted',
       max_specialists_per_request: Number(form.max_specialists_per_request || 6),
+      group_response_mode: form.group_response_mode || 'commands_only',
+      group_responses_enabled: form.group_responses_enabled ?? true,
+      channel_post_responses_enabled: form.channel_post_responses_enabled ?? false,
     });
     await load();
     setSaving(false);

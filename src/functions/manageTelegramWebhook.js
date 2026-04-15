@@ -50,7 +50,10 @@ Deno.serve(async (req) => {
     if (action === 'activate') {
       const me = await callTelegram(botToken, 'getMe');
       const webhookUrl = `${appBaseUrl.replace(/\/$/, '')}/functions/telegramWebhook?bot_id=${botId}`;
-      await callTelegram(botToken, 'setWebhook', { url: webhookUrl });
+      await callTelegram(botToken, 'setWebhook', {
+        url: webhookUrl,
+        allowed_updates: ['message', 'edited_message', 'channel_post', 'edited_channel_post', 'my_chat_member']
+      });
       await base44.entities.TelegramBot.update(botId, {
         bot_username: me.username || bot.bot_username || '',
         webhook_url: webhookUrl,
