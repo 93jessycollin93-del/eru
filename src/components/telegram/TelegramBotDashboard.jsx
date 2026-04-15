@@ -9,6 +9,7 @@ import BotFleetTable from './BotFleetTable';
 import TelegramSwarmConfigPanel from './TelegramSwarmConfigPanel';
 import TelegramBotOperationsPanel from './TelegramBotOperationsPanel';
 import TelegramSwarmHistoryPanel from './TelegramSwarmHistoryPanel';
+import TelegramSwarmPerformanceDashboard from './TelegramSwarmPerformanceDashboard';
 
 const DEFAULT_FORM = {
   name: '',
@@ -437,6 +438,8 @@ export default function TelegramBotDashboard() {
         savingContext={savingContext}
         purgingHistory={purgingHistory}
       />
+
+      <TelegramSwarmPerformanceDashboard bot={selectedBot} sessions={selectedSessions} />
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
