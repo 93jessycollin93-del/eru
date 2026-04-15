@@ -11,6 +11,7 @@ import TelegramBotOperationsPanel from './TelegramBotOperationsPanel';
 import TelegramSwarmHistoryPanel from './TelegramSwarmHistoryPanel';
 import TelegramSwarmPerformanceDashboard from './TelegramSwarmPerformanceDashboard';
 import TelegramBotAnalyticsDashboard from './TelegramBotAnalyticsDashboard';
+import TelegramSwarmSandboxPanel from './TelegramSwarmSandboxPanel';
 
 const DEFAULT_FORM = {
   name: '',
@@ -550,6 +551,8 @@ export default function TelegramBotDashboard() {
         sessions={selectedSessions}
         comparisons={data.comparisons || []}
       />
+
+      <TelegramSwarmSandboxPanel bot={selectedBot} sessions={selectedSessions} />
 
       <TelegramSwarmHistoryPanel
         bot={selectedBot}
