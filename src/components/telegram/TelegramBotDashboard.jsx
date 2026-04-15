@@ -298,6 +298,35 @@ export default function TelegramBotDashboard() {
     await load();
   };
 
+  const cloneSpecialistBot = async (bot) => {
+    const created = await base44.entities.UserBot.create({
+      name: `${bot.name} Variant`,
+      description: bot.description || '',
+      role: bot.role || 'custom',
+      personality: bot.personality || '',
+      instructions: bot.instructions || '',
+      response_style: bot.response_style || 'detailed',
+      memory_enabled: bot.memory_enabled ?? true,
+      status: bot.status || 'active',
+      is_public: false,
+      connected_bot_ids: [],
+      handoff_instructions: bot.handoff_instructions || '',
+      model_provider: bot.model_provider || 'base44',
+      model_name: bot.model_name || '',
+      prompt_template_id: bot.prompt_template_id || '',
+      prompt_template_name: bot.prompt_template_name || '',
+      template_variables: bot.template_variables || [],
+      data_sources: bot.data_sources || [],
+      page_assignments: [],
+      tool_modules: bot.tool_modules || []
+    });
+    setLabBots((prev) => [created, ...prev]);
+    setForm((prev) => ({
+      ...prev,
+      specialist_bot_ids: [...new Set([...(prev.specialist_bot_ids || []), created.id])]
+    }));
+  };
+
   const deleteBot = async (botId) => {
     await base44.entities.TelegramBot.delete(botId);
     setSelectedBotId(null);
@@ -402,7 +431,7 @@ export default function TelegramBotDashboard() {
         <p className="text-[11px] text-muted-foreground">Paste the token exactly as provided by BotFather. The saved bot token will also be reused if this field is left unchanged.</p>
         <textarea value={form.greeting_message} onChange={(e) => setForm((prev) => ({ ...prev, greeting_message: e.target.value }))} placeholder="Greeting message" className="w-full min-h-[80px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
         <TelegramAgentBuilder form={form} setForm={setForm} />
-        <TelegramSwarmConfigPanel bots={labBots} form={form} setForm={setForm} />
+        <TelegramSwarmConfigPanel bots={labBots} form={form} setForm={setForm} onCloneSpecialist={cloneSpecialistBot} />
         <BotFlowBuilder value={form.flow_blocks} onChange={(flow_blocks) => setForm((prev) => ({ ...prev, flow_blocks }))} />
         <div className="flex gap-2 flex-wrap">
           <button onClick={updateBot} disabled={!selectedBot || saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">

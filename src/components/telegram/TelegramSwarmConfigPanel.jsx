@@ -1,4 +1,4 @@
-import { Network } from 'lucide-react';
+import { Copy, Network } from 'lucide-react';
 
 const FRONT_DOOR_ROLES = [
   { value: 'general', label: 'General entry' },
@@ -14,7 +14,7 @@ const EXECUTION_MODES = [
   { value: 'wide', label: 'Wide routing' },
 ];
 
-export default function TelegramSwarmConfigPanel({ bots, form, setForm }) {
+export default function TelegramSwarmConfigPanel({ bots, form, setForm, onCloneSpecialist }) {
   const routerBotId = form.router_bot_id || '';
   const specialistBotIds = form.specialist_bot_ids || [];
 
@@ -111,14 +111,28 @@ export default function TelegramSwarmConfigPanel({ bots, form, setForm }) {
               {bots.filter((bot) => bot.id !== routerBotId).map((bot) => {
                 const active = specialistBotIds.includes(bot.id);
                 return (
-                  <button
+                  <div
                     key={bot.id}
-                    onClick={() => toggleSpecialist(bot.id)}
-                    className={`w-full rounded-xl border px-3 py-2.5 text-left text-xs transition-all ${active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-foreground'}`}
+                    className={`w-full rounded-xl border px-3 py-2.5 text-xs transition-all ${active ? 'border-primary bg-primary/10' : 'border-border bg-background'}`}
                   >
-                    <p className="font-semibold truncate">{bot.name}</p>
-                    <p className={`mt-1 text-[11px] ${active ? 'text-primary/80' : 'text-muted-foreground'}`}>{bot.role}</p>
-                  </button>
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        onClick={() => toggleSpecialist(bot.id)}
+                        className={`flex-1 min-w-0 text-left ${active ? 'text-primary' : 'text-foreground'}`}
+                      >
+                        <p className="font-semibold truncate">{bot.name}</p>
+                        <p className={`mt-1 text-[11px] ${active ? 'text-primary/80' : 'text-muted-foreground'}`}>{bot.role}</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onCloneSpecialist?.(bot)}
+                        className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground"
+                        title="Clone specialist"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
