@@ -85,6 +85,32 @@
     },
     "history_purged_at": {
       "type": "string"
+    },
+    "human_handoff_requested": {
+      "type": "boolean",
+      "default": false
+    },
+    "human_handoff_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "requested",
+        "active",
+        "resolved"
+      ],
+      "default": "none"
+    },
+    "human_handoff_reason": {
+      "type": "string"
+    },
+    "human_handoff_requested_at": {
+      "type": "string"
+    },
+    "human_handoff_resolved_at": {
+      "type": "string"
+    },
+    "human_handoff_assignee": {
+      "type": "string"
     }
   },
   "required": [

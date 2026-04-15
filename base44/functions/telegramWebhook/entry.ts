@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
     const chatId = String(incomingMessage.chat.id);
     const telegramUserId = String(incomingMessage.from?.id || '');
     const text = incomingMessage.text || '';
+    const normalizedText = text.toLowerCase();
     const isCommand = text.startsWith('/');
     const startedAt = Date.now();
 
@@ -71,6 +72,60 @@ Deno.serve(async (req) => {
       content: text,
       status: 'processed'
     });
+
+    const handoffKeywords = (bot.human_handoff_keywords || []).map((item) => String(item).toLowerCase());
+    const keywordTriggered = !!bot.human_handoff_enabled && handoffKeywords.some((keyword) => keyword && normalizedText.includes(keyword));
+    const handoffAlreadyActive = session.human_handoff_status === 'requested' || session.human_handoff_status === 'active';
+
+    if (bot.human_handoff_enabled && (keywordTriggered || handoffAlreadyActive) && bot.human_handoff_pause_ai !== false) {
+      const handoffReason = keywordTriggered ? `Keyword trigger from user: ${text}` : (session.human_handoff_reason || 'Human handoff already active');
+      const handoffReply = 'A human support teammate has been notified and will take over shortly.';
+
+      await base44.asServiceRole.entities.TelegramBotSession.update(session.id, {
+        telegram_user_id: telegramUserId,
+        telegram_username: incomingMessage.from?.username || session.telegram_username || '',
+        last_user_message: text,
+        last_bot_response: handoffReply,
+        human_handoff_requested: true,
+        human_handoff_status: 'active',
+        human_handoff_reason: handoffReason,
+        human_handoff_requested_at: session.human_handoff_requested_at || new Date().toISOString(),
+        last_message_at: new Date().toISOString()
+      });
+
+      await base44.asServiceRole.entities.AppNotification.create({
+        user_email: bot.created_by,
+        type: 'task_assigned',
+        title: `Human handoff requested for ${bot.name}`,
+        message: `${incomingMessage.from?.username || chatId} needs live support: ${text}`,
+        metadata: {
+          bot_id: bot.id,
+          session_id: session.id,
+          telegram_chat_id: chatId,
+          handoff: true,
+          handoff_reason: handoffReason
+        }
+      });
+
+      await sendTelegramMessage(token, chatId, handoffReply);
+
+      await base44.asServiceRole.entities.TelegramBotMessage.create({
+        bot_id: bot.id,
+        session_id: session.id,
+        telegram_chat_id: chatId,
+        telegram_message_id: '',
+        direction: 'outgoing',
+        message_type: 'system',
+        content: handoffReply,
+        status: 'sent'
+      });
+
+      if (bot.human_handoff_admin_chat_id) {
+        await sendTelegramMessage(token, bot.human_handoff_admin_chat_id, `Human handoff needed for ${bot.name}\nUser: ${incomingMessage.from?.username || chatId}\nMessage: ${text}`);
+      }
+
+      return Response.json({ success: true, handoff: true, paused: true });
+    }
 
     let replyText = bot.greeting_message || 'Hello.';
 
@@ -119,7 +174,9 @@ Deno.serve(async (req) => {
       last_bot_response: replyText,
       memory_summary: `Latest user intent: ${text}. Latest assistant reply: ${replyText}`,
       message_count: Number(session.message_count || 0) + 1,
-      last_message_at: new Date().toISOString()
+      last_message_at: new Date().toISOString(),
+      human_handoff_status: session.human_handoff_status === 'resolved' ? 'resolved' : 'none',
+      human_handoff_requested: false
     });
 
     await base44.asServiceRole.entities.TelegramBot.update(bot.id, {

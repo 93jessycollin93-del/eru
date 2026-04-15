@@ -12,6 +12,8 @@ import TelegramSwarmHistoryPanel from './TelegramSwarmHistoryPanel';
 import TelegramSwarmPerformanceDashboard from './TelegramSwarmPerformanceDashboard';
 import TelegramBotAnalyticsDashboard from './TelegramBotAnalyticsDashboard';
 import TelegramSwarmSandboxPanel from './TelegramSwarmSandboxPanel';
+import TelegramHumanHandoffPanel from './TelegramHumanHandoffPanel';
+import TelegramHandoffInbox from './TelegramHandoffInbox';
 
 const DEFAULT_FORM = {
   name: '',
@@ -25,6 +27,10 @@ const DEFAULT_FORM = {
   memory_message_limit: 20,
   tool_modules: [],
   agent_notes: '',
+  human_handoff_enabled: false,
+  human_handoff_admin_chat_id: '',
+  human_handoff_pause_ai: true,
+  human_handoff_keywords: ['human', 'agent', 'person', 'support', 'help', 'escalate', 'complaint', 'refund'],
   swarm_enabled: false,
   router_bot_id: '',
   specialist_bot_ids: [],
@@ -88,6 +94,10 @@ export default function TelegramBotDashboard() {
         memory_message_limit: selectedBot.memory_message_limit || 20,
         tool_modules: selectedBot.tool_modules || [],
         agent_notes: selectedBot.agent_notes || '',
+        human_handoff_enabled: !!selectedBot.human_handoff_enabled,
+        human_handoff_admin_chat_id: selectedBot.human_handoff_admin_chat_id || '',
+        human_handoff_pause_ai: selectedBot.human_handoff_pause_ai ?? true,
+        human_handoff_keywords: selectedBot.human_handoff_keywords || ['human', 'agent', 'person', 'support', 'help', 'escalate', 'complaint', 'refund'],
         swarm_enabled: !!selectedBot.swarm_enabled,
         router_bot_id: selectedBot.router_bot_id || '',
         specialist_bot_ids: selectedBot.specialist_bot_ids || [],
@@ -214,6 +224,10 @@ export default function TelegramBotDashboard() {
       memory_message_limit: Number(form.memory_message_limit || 20),
       tool_modules: form.tool_modules || [],
       agent_notes: form.agent_notes || '',
+      human_handoff_enabled: !!form.human_handoff_enabled,
+      human_handoff_admin_chat_id: form.human_handoff_admin_chat_id || '',
+      human_handoff_pause_ai: form.human_handoff_pause_ai ?? true,
+      human_handoff_keywords: form.human_handoff_keywords || [],
       swarm_enabled: !!form.swarm_enabled,
       router_bot_id: form.router_bot_id || '',
       specialist_bot_ids: form.specialist_bot_ids || [],
@@ -250,6 +264,10 @@ export default function TelegramBotDashboard() {
       memory_message_limit: Number(form.memory_message_limit || 20),
       tool_modules: form.tool_modules || [],
       agent_notes: form.agent_notes || '',
+      human_handoff_enabled: !!form.human_handoff_enabled,
+      human_handoff_admin_chat_id: form.human_handoff_admin_chat_id || '',
+      human_handoff_pause_ai: form.human_handoff_pause_ai ?? true,
+      human_handoff_keywords: form.human_handoff_keywords || [],
       swarm_enabled: !!form.swarm_enabled,
       router_bot_id: form.router_bot_id || '',
       specialist_bot_ids: form.specialist_bot_ids || [],
@@ -518,6 +536,7 @@ export default function TelegramBotDashboard() {
           onAddKnowledgeUrl={addKnowledgeUrl}
         />
         <TelegramSwarmConfigPanel bots={labBots} form={form} setForm={setForm} onCloneSpecialist={cloneSpecialistBot} />
+        <TelegramHumanHandoffPanel form={form} setForm={setForm} sessions={selectedSessions} />
         <BotFlowBuilder value={form.flow_blocks} onChange={(flow_blocks) => setForm((prev) => ({ ...prev, flow_blocks }))} />
         <div className="flex gap-2 flex-wrap">
           <button onClick={updateBot} disabled={!selectedBot || saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">
@@ -553,6 +572,8 @@ export default function TelegramBotDashboard() {
       />
 
       <TelegramSwarmSandboxPanel bot={selectedBot} sessions={selectedSessions} />
+
+      <TelegramHandoffInbox bot={selectedBot} sessions={selectedSessions} onRefresh={load} />
 
       <TelegramSwarmHistoryPanel
         bot={selectedBot}
