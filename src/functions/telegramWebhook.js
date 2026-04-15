@@ -33,9 +33,16 @@ async function runTelegramSwarm({ base44, telegramBot, incomingText, userContext
     return null;
   }
 
+  const maxSpecialists = Math.max(1, Math.min(Number(telegramBot?.max_specialists_per_request || 6), 24));
+  const backendSwarmSize = Math.max(specialistBots.length, Number(telegramBot?.backend_swarm_size || specialistBots.length || 0));
+
   const routingPlan = await base44.integrations.Core.InvokeLLM({
     prompt: `You are ${routerBot.name}, the master router bot for a Telegram front-door bot.
 Router instructions: ${routerBot.instructions || ''}
+Front-door role: ${telegramBot.front_door_role || 'general'}
+Execution mode: ${telegramBot.swarm_execution_mode || 'targeted'}
+Represented backend swarm size: ${backendSwarmSize}
+Max specialists to invoke now: ${maxSpecialists}
 Telegram routing template: ${telegramBot.swarm_goal_template || 'Route the request to the best specialists and synthesize a final reply.'}
 Incoming Telegram message: ${incomingText}
 User context: ${userContext}
@@ -59,7 +66,7 @@ Return JSON with:
     }
   });
 
-  const selectedSpecialists = specialistBots.filter((bot) => routingPlan.selected_bot_ids.includes(bot.id)).slice(0, 6);
+  const selectedSpecialists = specialistBots.filter((bot) => routingPlan.selected_bot_ids.includes(bot.id)).slice(0, maxSpecialists);
   const specialistResults = [];
 
   for (const bot of selectedSpecialists) {
@@ -86,7 +93,9 @@ Write the final Telegram reply in a clear, direct, compact format.`
   return {
     reply: finalReply,
     specialists_used: specialistResults.map((item) => item.bot_name),
-    trace: specialistResults
+    trace: specialistResults,
+    represented_swarm_size: backendSwarmSize,
+    invoked_specialist_count: selectedSpecialists.length
   };
 }
 
@@ -121,7 +130,7 @@ Deno.serve(async (req) => {
         });
 
         if (swarmResult) {
-          return Response.json({ ok: true, swarm: true, reply: swarmResult.reply, specialists_used: swarmResult.specialists_used, trace: swarmResult.trace });
+          return Response.json({ ok: true, swarm: true, reply: swarmResult.reply, specialists_used: swarmResult.specialists_used, trace: swarmResult.trace, represented_swarm_size: swarmResult.represented_swarm_size, invoked_specialist_count: swarmResult.invoked_specialist_count });
         }
       }
 

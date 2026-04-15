@@ -1,5 +1,19 @@
 import { Network } from 'lucide-react';
 
+const FRONT_DOOR_ROLES = [
+  { value: 'general', label: 'General entry' },
+  { value: 'sales', label: 'Sales entry' },
+  { value: 'support', label: 'Support entry' },
+  { value: 'ops', label: 'Ops entry' },
+  { value: 'custom', label: 'Custom entry' },
+];
+
+const EXECUTION_MODES = [
+  { value: 'targeted', label: 'Targeted routing' },
+  { value: 'tiered', label: 'Tiered routing' },
+  { value: 'wide', label: 'Wide routing' },
+];
+
 export default function TelegramSwarmConfigPanel({ bots, form, setForm }) {
   const routerBotId = form.router_bot_id || '';
   const specialistBotIds = form.specialist_bot_ids || [];
@@ -42,12 +56,54 @@ export default function TelegramSwarmConfigPanel({ bots, form, setForm }) {
             {bots.map((bot) => <option key={bot.id} value={bot.id}>{bot.name}</option>)}
           </select>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <select
+              value={form.front_door_role || 'general'}
+              onChange={(e) => setForm((prev) => ({ ...prev, front_door_role: e.target.value }))}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
+            >
+              {FRONT_DOOR_ROLES.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
+            </select>
+            <select
+              value={form.swarm_execution_mode || 'targeted'}
+              onChange={(e) => setForm((prev) => ({ ...prev, swarm_execution_mode: e.target.value }))}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
+            >
+              {EXECUTION_MODES.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input
+              type="number"
+              min="1"
+              max="1000"
+              value={form.backend_swarm_size || 25}
+              onChange={(e) => setForm((prev) => ({ ...prev, backend_swarm_size: Number(e.target.value || 25) }))}
+              placeholder="Backend swarm size"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
+            />
+            <input
+              type="number"
+              min="1"
+              max="24"
+              value={form.max_specialists_per_request || 6}
+              onChange={(e) => setForm((prev) => ({ ...prev, max_specialists_per_request: Number(e.target.value || 6) }))}
+              placeholder="Max specialists per request"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none"
+            />
+          </div>
+
           <textarea
             value={form.swarm_goal_template || ''}
             onChange={(e) => setForm((prev) => ({ ...prev, swarm_goal_template: e.target.value }))}
             placeholder="Optional router instructions for Telegram requests"
             className="w-full min-h-[80px] rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none resize-none"
           />
+
+          <div className="rounded-xl border border-border bg-background px-3 py-2.5 text-[11px] text-muted-foreground">
+            Front-door bots can represent very large backend swarms while only activating a capped subset per request.
+          </div>
 
           <div className="space-y-2">
             <p className="text-[11px] text-muted-foreground">Specialist bots</p>

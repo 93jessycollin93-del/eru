@@ -25,6 +25,10 @@ const DEFAULT_FORM = {
   router_bot_id: '',
   specialist_bot_ids: [],
   swarm_goal_template: '',
+  front_door_role: 'general',
+  backend_swarm_size: 25,
+  swarm_execution_mode: 'targeted',
+  max_specialists_per_request: 6,
 };
 
 export default function TelegramBotDashboard() {
@@ -78,6 +82,10 @@ export default function TelegramBotDashboard() {
         router_bot_id: selectedBot.router_bot_id || '',
         specialist_bot_ids: selectedBot.specialist_bot_ids || [],
         swarm_goal_template: selectedBot.swarm_goal_template || '',
+        front_door_role: selectedBot.front_door_role || 'general',
+        backend_swarm_size: selectedBot.backend_swarm_size || 25,
+        swarm_execution_mode: selectedBot.swarm_execution_mode || 'targeted',
+        max_specialists_per_request: selectedBot.max_specialists_per_request || 6,
       });
       setVerification(null);
     } else {
@@ -156,6 +164,10 @@ export default function TelegramBotDashboard() {
       router_bot_id: form.router_bot_id || '',
       specialist_bot_ids: form.specialist_bot_ids || [],
       swarm_goal_template: form.swarm_goal_template || '',
+      front_door_role: form.front_door_role || 'general',
+      backend_swarm_size: Number(form.backend_swarm_size || 25),
+      swarm_execution_mode: form.swarm_execution_mode || 'targeted',
+      max_specialists_per_request: Number(form.max_specialists_per_request || 6),
       commands: [
         { command: '/start', description: 'Start the bot' },
         { command: '/help', description: 'See bot help' },
@@ -185,6 +197,10 @@ export default function TelegramBotDashboard() {
       router_bot_id: form.router_bot_id || '',
       specialist_bot_ids: form.specialist_bot_ids || [],
       swarm_goal_template: form.swarm_goal_template || '',
+      front_door_role: form.front_door_role || 'general',
+      backend_swarm_size: Number(form.backend_swarm_size || 25),
+      swarm_execution_mode: form.swarm_execution_mode || 'targeted',
+      max_specialists_per_request: Number(form.max_specialists_per_request || 6),
     });
     await load();
     setSaving(false);

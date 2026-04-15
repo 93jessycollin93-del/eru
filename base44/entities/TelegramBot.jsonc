@@ -125,6 +125,55 @@
     "source_bot_id": {
       "type": "string",
       "description": "Original bot id if cloned"
+    },
+    "swarm_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "router_bot_id": {
+      "type": "string",
+      "description": "Primary router bot id used by the Telegram front-door"
+    },
+    "specialist_bot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "swarm_goal_template": {
+      "type": "string",
+      "description": "Routing instructions for Telegram swarm handling"
+    },
+    "front_door_role": {
+      "type": "string",
+      "enum": [
+        "general",
+        "sales",
+        "support",
+        "ops",
+        "custom"
+      ],
+      "default": "general"
+    },
+    "backend_swarm_size": {
+      "type": "number",
+      "default": 25,
+      "description": "Expected backend swarm size represented by this Telegram bot"
+    },
+    "swarm_execution_mode": {
+      "type": "string",
+      "enum": [
+        "targeted",
+        "tiered",
+        "wide"
+      ],
+      "default": "targeted"
+    },
+    "max_specialists_per_request": {
+      "type": "number",
+      "default": 6,
+      "description": "Hard cap for how many specialists are invoked per Telegram request"
     }
   },
   "required": [
