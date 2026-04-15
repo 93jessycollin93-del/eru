@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart2, Users, Zap, TrendingUp, Award } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import SwarmCycleAnalyticsDashboard from './SwarmCycleAnalyticsDashboard';
 
 export default function LabAnalytics({ bots }) {
   const [memories, setMemories] = useState([]);
@@ -124,6 +125,8 @@ export default function LabAnalytics({ bots }) {
           ))}
         </div>
       )}
+
+      <SwarmCycleAnalyticsDashboard />
     </div>
   );
 }
