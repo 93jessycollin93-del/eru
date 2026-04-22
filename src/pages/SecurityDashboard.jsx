@@ -1,51 +1,90 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
-import { Activity, Clock, AlertTriangle, Filter, Search } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Shield, LayoutDashboard, Radio, ListChecks, Users, Filter } from 'lucide-react';
+import { useSecurityFeed } from '@/components/security/useSecurityFeed';
+import { LiveClock, PulseDot } from '@/components/security/SecurityPrimitives';
+import SocOverview from '@/components/security/SocOverview';
+import SocLive from '@/components/security/SocLive';
+import SocIncidents, { IncidentDrawer } from '@/components/security/SocIncidents';
+import SocCompose from '@/components/security/SocCompose';
+import SocSessions from '@/components/security/SocSessions';
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'live', label: 'Live Feed', icon: Radio },
+  { id: 'incidents', label: 'Incidents', icon: ListChecks },
+  { id: 'sessions', label: 'Sessions', icon: Users },
+  { id: 'compose', label: 'Compose', icon: Filter },
+];
+
+function deriveKpis(events) {
+  const now = Date.now();
+  const within = (ms) => events.filter(e => now - new Date(e.created_date).getTime() < ms);
+  const last24h = within(24 * 60 * 60 * 1000);
+  const last1h = within(60 * 60 * 1000);
+  const critical24h = last24h.filter(e => e.severity === 'critical').length;
+  const warning24h = last24h.filter(e => e.severity === 'warning').length;
+  const failedAuth24h = last24h.filter(e => e.source === 'audit' && (e.status === 'failed' || /fail|login/.test(e.event_type || ''))).length;
+  const openIncidents = events.filter(e => e.actionable && e.status !== 'resolved').length;
+  const ackIncidents = events.filter(e => e.actionable && e.status === 'acknowledged').length;
+  const uniqueIps = new Set(last24h.map(e => e.ip_address).filter(Boolean)).size;
+  const perMin = last1h.length / 60;
+
+  // Posture: 100 baseline, subtract weighted penalties.
+  const rawScore = 100 - (critical24h * 10 + warning24h * 3 + failedAuth24h * 2 + openIncidents * 2);
+  const postureScore = Math.max(0, Math.min(100, Math.round(rawScore)));
+
+  return {
+    total: events.length,
+    critical24h, warning24h, failedAuth24h, openIncidents, ackIncidents,
+    uniqueIps, perMin, postureScore,
+  };
+}
 
 export default function SecurityDashboard() {
   const { currentUser } = useAuth();
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [searchEmail, setSearchEmail] = useState('');
+  const [tab, setTab] = useState('overview');
+  const [paused, setPaused] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [actionState, setActionState] = useState('idle');
+  const [actionError, setActionError] = useState(null);
+  const [composerSeed, setComposerSeed] = useState(null);
 
-  useEffect(() => {
-    if (currentUser?.role !== 'admin') {
-      return;
-    }
-    
-    fetchLogs();
-  }, [filter, searchEmail]);
+  const feed = useSecurityFeed({ live: !paused, intervalMs: 10000, windowLimit: 200 });
+  const { events, loading, lastUpdate, refresh, applyAction, error, sources } = feed;
 
-  const fetchLogs = async () => {
+  const kpis = useMemo(() => deriveKpis(events), [events]);
+
+  const handleSelectType = useCallback((type) => {
+    setComposerSeed({ textMatch: type.replace(/_/g, ' ') });
+    setTab('compose');
+  }, []);
+
+  const handleAction = useCallback(async (event, action) => {
+    setActionState('working');
+    setActionError(null);
     try {
-      setLoading(true);
-      let query = {};
-
-      if (filter !== 'all') {
-        query.severity = filter;
-      }
-
-      if (searchEmail) {
-        query.user_email = searchEmail;
-      }
-
-      const data = await base44.entities.SecurityAuditLog.filter(
-        query,
-        '-created_date',
-        100
-      );
-
-      setLogs(data || []);
-    } catch (err) {
-      console.error('Error fetching logs:', err);
+      await applyAction(event, action);
+      setActionState('done');
+      // Refresh the selected event reference so the drawer reflects new state.
+      setSelectedEvent(prev => prev ? { ...prev, status: action === 'acknowledge' ? 'acknowledged' : action === 'review' ? 'reviewing' : action === 'resolve' ? 'resolved' : prev.status } : prev);
+    } catch (e) {
+      setActionError(e?.message || 'Action failed');
+      setActionState('idle');
     } finally {
-      setLoading(false);
+      setTimeout(() => setActionState('idle'), 500);
     }
-  };
+  }, [applyAction]);
 
-  if (currentUser?.role !== 'admin') {
+  const togglePause = useCallback(() => {
+    setPaused(p => {
+      const next = !p;
+      feed.setLive(!next);
+      return next;
+    });
+  }, [feed]);
+
+  if (currentUser && currentUser.role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-3">
@@ -56,118 +95,100 @@ export default function SecurityDashboard() {
     );
   }
 
+  const sourceStatus = Object.entries(sources).map(([k, v]) => `${k}:${v}`).join(' · ');
+
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Activity className="w-5 h-5 text-primary" /> Security Audit Log
-        </h2>
-        <p className="text-xs text-muted-foreground mt-1">Immutable system event logs for admin review</p>
+    <div className="flex flex-col min-h-screen bg-background pb-24">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="min-w-0">
+          <h2 className="text-base font-bold flex items-center gap-2">
+            <Shield className="w-4 h-4 text-primary" /> Security Operations Center
+            <PulseDot active={!paused} color={paused ? 'bg-muted-foreground' : 'bg-primary'} />
+          </h2>
+          <p className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5">
+            <LiveClock />
+            <span className="font-mono truncate">{sourceStatus}</span>
+            {lastUpdate && <span className="font-mono">· last pull {lastUpdate.toLocaleTimeString()}</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={togglePause}
+            className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${paused ? 'border-border bg-card text-muted-foreground' : 'border-primary/40 bg-primary/10 text-primary'}`}
+          >
+            {paused ? '○ Paused' : '● Live'}
+          </button>
+          <button
+            type="button"
+            onClick={refresh}
+            className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground"
+            title="Refresh"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
-      {/* Search & Filter */}
-      <div className="px-4 py-3 border-b border-border space-y-3">
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Filter by email..."
-              value={searchEmail}
-              onChange={(e) => setSearchEmail(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-secondary border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {['all', 'info', 'warning', 'critical'].map((sev) => (
+      <div className="flex border-b border-border overflow-x-auto flex-shrink-0">
+        {TABS.map(t => {
+          const Icon = t.icon;
+          return (
             <button
-              key={sev}
-              onClick={() => setFilter(sev)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                filter === sev
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground'
-              }`}>
-              {sev === 'all' ? 'All Events' : sev.charAt(0).toUpperCase() + sev.slice(1)}
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-1.5 py-2.5 px-4 text-xs font-semibold transition-colors whitespace-nowrap ${
+                tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {t.label}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Logs Table */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-primary rounded-full animate-spin mx-auto" />
+      {error && (
+        <div className="mx-4 mt-3 text-[10px] px-3 py-2 rounded-lg border border-red-400/30 bg-red-400/10 text-red-400 flex items-center gap-2">
+          <AlertTriangle className="w-3 h-3" /> Feed error: {error}
+        </div>
+      )}
+      {actionError && (
+        <div className="mx-4 mt-3 text-[10px] px-3 py-2 rounded-lg border border-red-400/30 bg-red-400/10 text-red-400 flex items-center gap-2">
+          <AlertTriangle className="w-3 h-3" /> Action failed: {actionError}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-hidden px-4 py-4">
+        {loading && events.length === 0 ? (
+          <div className="flex justify-center py-12">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : logs.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">No events found</div>
         ) : (
-          <div className="space-y-2">
-            {logs.map((log) => (
-              <div
-                key={log.id}
-                className={`p-3 rounded-xl border transition-colors ${
-                  log.severity === 'critical'
-                    ? 'bg-red-500/5 border-red-500/20'
-                    : log.severity === 'warning'
-                      ? 'bg-yellow-500/5 border-yellow-500/20'
-                      : 'bg-card border-border'
-                }`}>
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium capitalize truncate">
-                      {log.event_type.replace(/_/g, ' ')}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">{log.user_email}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground flex-shrink-0">
-                    <Clock className="w-3 h-3" />
-                    {new Date(log.created_date).toLocaleTimeString()}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${
-                      log.severity === 'critical'
-                        ? 'bg-red-500/20 text-red-600'
-                        : log.severity === 'warning'
-                          ? 'bg-yellow-500/20 text-yellow-600'
-                          : 'bg-primary/10 text-primary'
-                    }`}>
-                    {log.severity.toUpperCase()}
-                  </span>
-                  <span
-                    className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${
-                      log.status === 'success'
-                        ? 'bg-green-500/20 text-green-600'
-                        : log.status === 'failed'
-                          ? 'bg-red-500/20 text-red-600'
-                          : 'bg-yellow-500/20 text-yellow-600'
-                    }`}>
-                    {log.status.toUpperCase()}
-                  </span>
-                  {log.ip_address && (
-                    <span className="text-[9px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-                      {log.ip_address}
-                    </span>
-                  )}
-                </div>
-
-                {log.details && (
-                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                    {JSON.stringify(log.details)}
-                  </p>
-                )}
+          <div className="h-full flex flex-col min-h-0">
+            {tab === 'overview' && (
+              <div className="flex-1 overflow-y-auto pr-1">
+                <SocOverview events={events} kpis={kpis} onSelectType={handleSelectType} />
               </div>
-            ))}
+            )}
+            {tab === 'live' && <SocLive feed={feed} onSelectEvent={setSelectedEvent} paused={paused} onPauseToggle={togglePause} />}
+            {tab === 'incidents' && <SocIncidents events={events} onSelectEvent={setSelectedEvent} />}
+            {tab === 'sessions' && <SocSessions events={events} onInspect={setSelectedEvent} />}
+            {tab === 'compose' && <SocCompose events={events} onSelectEvent={setSelectedEvent} initialQuery={composerSeed} />}
           </div>
         )}
       </div>
+
+      {selectedEvent && (
+        <IncidentDrawer
+          event={selectedEvent}
+          allEvents={events}
+          onClose={() => setSelectedEvent(null)}
+          onAction={handleAction}
+          actionState={actionState}
+        />
+      )}
     </div>
   );
 }
