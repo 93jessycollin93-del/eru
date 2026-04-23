@@ -230,16 +230,25 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   useEffect(() => {
     if (!lockedToTicker) return;
 
+    let frameId;
+
     const syncToTicker = () => {
       const ticker = document.getElementById(TICKER_BAR_ID);
-      if (!ticker) return;
-      const tickerHeight = ticker.offsetHeight || 0;
-      setPos({ x: null, y: tickerHeight + 8 });
+      if (!ticker) {
+        frameId = window.requestAnimationFrame(syncToTicker);
+        return;
+      }
+
+      const rect = ticker.getBoundingClientRect();
+      const nextY = Math.max(8, rect.bottom + 8);
+      setPos((prev) => (prev?.x === null && prev?.y === nextY ? prev : { x: null, y: nextY }));
+      frameId = window.requestAnimationFrame(syncToTicker);
     };
 
     syncToTicker();
     window.addEventListener('resize', syncToTicker);
     return () => {
+      window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', syncToTicker);
     };
   }, [lockedToTicker]);
@@ -268,7 +277,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
       {/* Floating nav */}
       <div
         ref={navRef}
-        style={{ ...style, zIndex: 50, touchAction: 'none', userSelect: 'none' }}
+        style={{ ...style, zIndex: lockedToTicker ? 55 : 50, touchAction: 'none', userSelect: 'none' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
