@@ -41,7 +41,7 @@ export default function TickerBar() {
 
   const items = [...prices, ...prices];
   return (
-    <div className="bg-card border-b border-border overflow-hidden sticky top-0 z-50">
+    <div id="app-ticker-bar" className="bg-card border-b border-border overflow-hidden sticky top-0 z-50">
       <div className="flex ticker-track whitespace-nowrap">
         {items.map((p, i) => (
           <span key={i} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-mono">

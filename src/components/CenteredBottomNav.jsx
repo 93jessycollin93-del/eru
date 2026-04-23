@@ -50,6 +50,8 @@ const EXPANDED_KEY = 'floating_nav_expanded';
 const ROWS_KEY = 'floating_nav_rows';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
+const NAV_LOCKED_TO_TICKER_KEY = 'floating_nav_locked_to_ticker';
+const TICKER_BAR_ID = 'app-ticker-bar';
 
 const FLOATING_WIDGETS = [
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
@@ -106,6 +108,9 @@ export default function FloatingNav({ onSearchOpen }) {
   const [unavailableWidget, setUnavailableWidget] = useState(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
+  const [lockedToTicker, setLockedToTicker] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(NAV_LOCKED_TO_TICKER_KEY)) || false; } catch { return false; }
+  });
 
   useEffect(() => {
     const handleUnavailable = () => {
@@ -182,13 +187,13 @@ export default function FloatingNav({ onSearchOpen }) {
   };
 
   const onPointerDown = useCallback((e) => {
-    if (e.target.closest('a, button')) return;
+    if (lockedToTicker || e.target.closest('a, button')) return;
     dragging.current = true;
     didDrag.current = false;
     const rect = navRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     navRef.current.setPointerCapture(e.pointerId);
-  }, []);
+  }, [lockedToTicker]);
 
   const onPointerMove = useCallback((e) => {
     if (!dragging.current) return;
@@ -210,7 +215,37 @@ export default function FloatingNav({ onSearchOpen }) {
     dragging.current = false;
   }, []);
 
-  const style = pos.x !== null
+  useEffect(() => {
+    if (!lockedToTicker) return;
+
+    const syncToTicker = () => {
+      const ticker = document.getElementById(TICKER_BAR_ID);
+      const navEl = navRef.current;
+      if (!ticker || !navEl) return;
+      const rect = ticker.getBoundingClientRect();
+      const nextY = Math.max(8, rect.bottom + 8);
+      setPos({ x: null, y: nextY });
+    };
+
+    syncToTicker();
+    window.addEventListener('resize', syncToTicker);
+    window.addEventListener('scroll', syncToTicker, true);
+    return () => {
+      window.removeEventListener('resize', syncToTicker);
+      window.removeEventListener('scroll', syncToTicker, true);
+    };
+  }, [lockedToTicker]);
+
+  const toggleTickerLock = () => {
+    const next = !lockedToTicker;
+    setLockedToTicker(next);
+    localStorage.setItem(NAV_LOCKED_TO_TICKER_KEY, JSON.stringify(next));
+    if (!next) {
+      setPos((prev) => ({ ...prev, y: prev?.y ?? 12 }));
+    }
+  };
+
+  const style = pos.x !== null && !lockedToTicker
     ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
     : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
 
@@ -223,7 +258,7 @@ export default function FloatingNav({ onSearchOpen }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl cursor-grab active:cursor-grabbing ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
+        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl ${lockedToTicker ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
@@ -253,6 +288,17 @@ export default function FloatingNav({ onSearchOpen }) {
             title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
           >
             {rows}
+          </button>
+          <button
+            onClick={() => {
+              playSound('toggle');
+              VIBRATE.toggle();
+              toggleTickerLock();
+            }}
+            className={`transition-colors hover:text-primary ${lockedToTicker ? 'text-primary' : ''}`}
+            title={lockedToTicker ? 'Unlock from Ticker' : 'Lock to Ticker'}
+          >
+            <ArrowUpRightFromSquare className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => {
