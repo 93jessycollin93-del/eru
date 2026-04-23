@@ -80,7 +80,12 @@ export default function FloatingNav({ onSearchOpen }) {
     try { return JSON.parse(localStorage.getItem(ROWS_KEY)) || 1; } catch { return 1; }
   });
   const [isLocked, setIsLocked] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(LOCKED_KEY)) || false; } catch { return false; }
+    try {
+      const stored = localStorage.getItem(LOCKED_KEY);
+      return stored === null ? false : JSON.parse(stored);
+    } catch {
+      return false;
+    }
   });
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
@@ -300,12 +305,20 @@ export default function FloatingNav({ onSearchOpen }) {
     didDrag.current = false;
   }, [getDockedPosition, pos]);
 
-  const style = {
-    position: 'fixed',
-    left: pos?.x ?? PREVIEW_EDGE_GAP,
-    top: pos?.y ?? PREVIEW_TOP_SAFE_OFFSET,
-    transform: 'none'
-  };
+  const style = isLocked
+    ? {
+        position: 'fixed',
+        left: '50%',
+        bottom: '12px',
+        top: 'auto',
+        transform: 'translateX(-50%)'
+      }
+    : {
+        position: 'fixed',
+        left: pos?.x ?? PREVIEW_EDGE_GAP,
+        top: pos?.y ?? PREVIEW_TOP_SAFE_OFFSET,
+        transform: 'none'
+      };
 
   return (
     <>
