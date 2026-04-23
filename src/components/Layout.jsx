@@ -91,7 +91,7 @@ export default function Layout() {
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
-        <CenteredBottomNav onSearchOpen={handleSearchOpen} />
+        <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
         <main className="flex-1 min-w-0">
           <PageThemeLayer>
             <Outlet />

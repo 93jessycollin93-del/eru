@@ -52,6 +52,8 @@ const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
 const NAV_LOCKED_TO_TICKER_KEY = 'floating_nav_locked_to_ticker';
 const TICKER_BAR_ID = 'app-ticker-bar';
+// Offset between BotWidget clicker top and nav top when glued together.
+const CLICKER_BLOCK = 56;
 
 const FLOATING_WIDGETS = [
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
@@ -60,9 +62,13 @@ const FLOATING_WIDGETS = [
   { id: 'conversations', label: 'Conversations', icon: Library },
 ];
 
-export default function FloatingNav({ onSearchOpen }) {
+export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const clickerPos = prefs?.botChat;
+  const isAttachedToClicker =
+    !!clickerPos && clickerPos.x !== null && clickerPos.x !== undefined &&
+    clickerPos.y !== null && clickerPos.y !== undefined;
 
   const [pinned, setPinned] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || DEFAULT_PINNED; } catch { return DEFAULT_PINNED; }
@@ -206,10 +212,17 @@ export default function FloatingNav({ onSearchOpen }) {
     const y = e.clientY - dragOffset.current.y;
     const maxX = window.innerWidth - navRef.current.offsetWidth;
     const maxY = window.innerHeight - navRef.current.offsetHeight;
-    const newPos = { x: Math.max(0, Math.min(x, maxX)), y: Math.max(0, Math.min(y, maxY)) };
+    const clampedX = Math.max(0, Math.min(x, maxX));
+    const clampedY = Math.max(0, Math.min(y, maxY));
+    // When glued to the clicker, dragging the nav also drags the clicker:
+    // clicker sits above the nav by CLICKER_BLOCK pixels.
+    if (updateWidget) {
+      updateWidget('botChat', { x: clampedX, y: Math.max(0, clampedY - CLICKER_BLOCK) });
+    }
+    const newPos = { x: clampedX, y: clampedY };
     setPos(newPos);
     localStorage.setItem(POS_KEY, JSON.stringify(newPos));
-  }, []);
+  }, [updateWidget]);
 
   const onPointerUp = useCallback(() => {
     dragging.current = false;
@@ -241,11 +254,18 @@ export default function FloatingNav({ onSearchOpen }) {
     }
   };
 
+  // Priority: ticker lock wins (explicit user choice), else glue under the
+  // clicker when it has been positioned, else the nav's own saved position,
+  // else the centered default. All modes use position: fixed so the nav
+  // stays anchored to the viewport — not to the scrollable document — on
+  // every page.
   const style = lockedToTicker
     ? { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' }
-    : pos.x !== null
-      ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
-      : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
+    : isAttachedToClicker
+      ? { position: 'fixed', left: clickerPos.x, top: clickerPos.y + CLICKER_BLOCK, transform: 'none' }
+      : pos.x !== null
+        ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
+        : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
 
   return (
     <>
