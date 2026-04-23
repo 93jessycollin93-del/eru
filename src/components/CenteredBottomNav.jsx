@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, Lock, Unlock } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import { playSound, VIBRATE } from '../lib/soundEngine';
 
@@ -48,6 +48,7 @@ const POS_KEY = 'floating_nav_pos';
 const ORIENTATION_KEY = 'floating_nav_orientation';
 const EXPANDED_KEY = 'floating_nav_expanded';
 const ROWS_KEY = 'floating_nav_rows';
+const LOCKED_KEY = 'floating_nav_locked';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
 const PREVIEW_EDGE_GAP = 14;
@@ -77,6 +78,9 @@ export default function FloatingNav({ onSearchOpen }) {
   });
   const [rows, setRows] = useState(() => {
     try { return JSON.parse(localStorage.getItem(ROWS_KEY)) || 1; } catch { return 1; }
+  });
+  const [isLocked, setIsLocked] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(LOCKED_KEY)) || false; } catch { return false; }
   });
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
@@ -242,6 +246,12 @@ export default function FloatingNav({ onSearchOpen }) {
     localStorage.setItem(EXPANDED_KEY, JSON.stringify(!isExpanded));
   };
 
+  const toggleLock = () => {
+    const nextLocked = !isLocked;
+    setIsLocked(nextLocked);
+    localStorage.setItem(LOCKED_KEY, JSON.stringify(nextLocked));
+  };
+
   const cycleRows = () => {
     const newRows = rows === 1 ? 2 : rows === 2 ? 3 : 1;
     setRows(newRows);
@@ -260,13 +270,13 @@ export default function FloatingNav({ onSearchOpen }) {
   };
 
   const onPointerDown = useCallback((e) => {
-    if (e.target.closest('a, button')) return;
+    if (isLocked || e.target.closest('a, button')) return;
     dragging.current = true;
     didDrag.current = false;
     const rect = navRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     navRef.current.setPointerCapture(e.pointerId);
-  }, []);
+  }, [isLocked]);
 
   const onPointerMove = useCallback((e) => {
     if (!dragging.current) return;
@@ -306,7 +316,7 @@ export default function FloatingNav({ onSearchOpen }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl cursor-grab active:cursor-grabbing ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
+        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
@@ -336,6 +346,17 @@ export default function FloatingNav({ onSearchOpen }) {
             title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
           >
             {rows}
+          </button>
+          <button
+            onClick={() => {
+              playSound('toggle');
+              VIBRATE.toggle();
+              toggleLock();
+            }}
+            className={`transition-colors ${isLocked ? 'text-primary' : 'hover:text-primary'}`}
+            title={isLocked ? 'Unlock position' : 'Lock position'}
+          >
+            {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={() => {
@@ -541,7 +562,10 @@ export default function FloatingNav({ onSearchOpen }) {
             <p className="text-[10px] text-muted-foreground px-4 py-2 border-b border-border">Tap to add or remove pages and floating widgets.</p>
             <div className="overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] flex-1 min-h-0 px-4 py-3 space-y-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Pages</p>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pages</p>
+                <span className="text-[10px] text-muted-foreground">Position: {isLocked ? 'Locked' : 'Moveable'}</span>
+              </div>
                 <div className="grid grid-cols-4 gap-3">
                   {ALL_PAGES.map(({ id, label, icon: Icon }) => {
                     const isPinned = pinned.includes(id);
