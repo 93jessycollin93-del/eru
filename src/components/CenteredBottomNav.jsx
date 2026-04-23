@@ -223,7 +223,7 @@ export default function FloatingNav({ onSearchOpen }) {
       const navEl = navRef.current;
       if (!ticker || !navEl) return;
       const rect = ticker.getBoundingClientRect();
-      const nextY = Math.max(8, rect.bottom + 8);
+      const nextY = Math.max(8, rect.height + 8);
       setPos({ x: null, y: nextY });
     };
 
@@ -262,7 +262,7 @@ export default function FloatingNav({ onSearchOpen }) {
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
-          <GripHorizontal className="w-3.5 h-3.5" />
+          <GripHorizontal className={`w-3.5 h-3.5 ${lockedToTicker ? 'opacity-40' : ''}`} />
           <button
             onClick={() => {
               playSound('toggle');
