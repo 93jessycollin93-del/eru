@@ -50,6 +50,9 @@ const EXPANDED_KEY = 'floating_nav_expanded';
 const ROWS_KEY = 'floating_nav_rows';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
+const PREVIEW_EDGE_GAP = 14;
+const PREVIEW_BOTTOM_SAFE_OFFSET = 86;
+const PREVIEW_TOP_SAFE_OFFSET = 14;
 
 const FLOATING_WIDGETS = [
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
@@ -103,6 +106,7 @@ export default function FloatingNav({ onSearchOpen }) {
   const dragOffset = useRef({ x: 0, y: 0 });
   const navRef = useRef(null);
   const didDrag = useRef(false);
+  const [navSize, setNavSize] = useState({ width: 0, height: 0 });
   const [unavailableWidget, setUnavailableWidget] = useState(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
@@ -130,6 +134,80 @@ export default function FloatingNav({ onSearchOpen }) {
   const pinnedPages = ALL_PAGES.filter(p => pinned.includes(p.id));
   const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.id]?.visible);
   const navItems = [...pinnedPages, ...attachedWidgets];
+
+  useEffect(() => {
+    if (!navRef.current) return;
+
+    const updateNavSize = () => {
+      const rect = navRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setNavSize({ width: rect.width, height: rect.height });
+    };
+
+    updateNavSize();
+    const resizeObserver = new ResizeObserver(updateNavSize);
+    resizeObserver.observe(navRef.current);
+    window.addEventListener('resize', updateNavSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateNavSize);
+    };
+  }, [orientation, rows, navItems.length]);
+
+  const getViewportBounds = useCallback((width = navSize.width, height = navSize.height) => {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const safeWidth = Math.max(0, viewportWidth - width - PREVIEW_EDGE_GAP * 2);
+    const safeHeight = Math.max(0, viewportHeight - height - PREVIEW_TOP_SAFE_OFFSET - PREVIEW_BOTTOM_SAFE_OFFSET);
+
+    return {
+      minX: PREVIEW_EDGE_GAP,
+      maxX: PREVIEW_EDGE_GAP + safeWidth,
+      minY: PREVIEW_TOP_SAFE_OFFSET,
+      maxY: PREVIEW_TOP_SAFE_OFFSET + safeHeight,
+      viewportWidth,
+      viewportHeight,
+    };
+  }, [navSize.height, navSize.width]);
+
+  const clampToViewport = useCallback((nextPos, width = navSize.width, height = navSize.height) => {
+    const bounds = getViewportBounds(width, height);
+    return {
+      x: Math.min(Math.max(nextPos.x, bounds.minX), bounds.maxX),
+      y: Math.min(Math.max(nextPos.y, bounds.minY), bounds.maxY),
+    };
+  }, [getViewportBounds, navSize.height, navSize.width]);
+
+  const getDockedPosition = useCallback((currentPos = pos, width = navSize.width, height = navSize.height) => {
+    const bounds = getViewportBounds(width, height);
+    const x = currentPos?.x ?? Math.round((bounds.viewportWidth - width) / 2);
+    const y = currentPos?.y ?? bounds.maxY;
+    const clamped = clampToViewport({ x, y }, width, height);
+
+    const distances = {
+      left: Math.abs(clamped.x - bounds.minX),
+      right: Math.abs(bounds.maxX - clamped.x),
+      top: Math.abs(clamped.y - bounds.minY),
+      bottom: Math.abs(bounds.maxY - clamped.y),
+    };
+
+    const nearestEdge = Object.entries(distances).sort((a, b) => a[1] - b[1])[0]?.[0] || 'bottom';
+
+    if (nearestEdge === 'left') return { x: bounds.minX, y: clamped.y };
+    if (nearestEdge === 'right') return { x: bounds.maxX, y: clamped.y };
+    if (nearestEdge === 'top') return { x: clamped.x, y: bounds.minY };
+    return { x: clamped.x, y: bounds.maxY };
+  }, [clampToViewport, getViewportBounds, navSize.height, navSize.width, pos]);
+
+  useEffect(() => {
+    if (!navSize.width || !navSize.height) return;
+    const nextDocked = getDockedPosition(pos, navSize.width, navSize.height);
+    if (nextDocked.x !== pos?.x || nextDocked.y !== pos?.y) {
+      setPos(nextDocked);
+      localStorage.setItem(POS_KEY, JSON.stringify(nextDocked));
+    }
+  }, [getDockedPosition, navSize.height, navSize.width]);
 
   const savePinned = (next) => {
     setPinned(next);
@@ -199,27 +277,32 @@ export default function FloatingNav({ onSearchOpen }) {
     didDrag.current = true;
     const x = e.clientX - dragOffset.current.x;
     const y = e.clientY - dragOffset.current.y;
-    const maxX = window.innerWidth - navRef.current.offsetWidth;
-    const maxY = window.innerHeight - navRef.current.offsetHeight;
-    const newPos = { x: Math.max(0, Math.min(x, maxX)), y: Math.max(0, Math.min(y, maxY)) };
+    const newPos = clampToViewport({ x, y }, navRef.current?.offsetWidth, navRef.current?.offsetHeight);
     setPos(newPos);
-    localStorage.setItem(POS_KEY, JSON.stringify(newPos));
-  }, []);
+  }, [clampToViewport]);
 
   const onPointerUp = useCallback(() => {
+    if (!dragging.current) return;
     dragging.current = false;
-  }, []);
+    const nextPos = didDrag.current ? getDockedPosition(pos, navRef.current?.offsetWidth, navRef.current?.offsetHeight) : pos;
+    setPos(nextPos);
+    localStorage.setItem(POS_KEY, JSON.stringify(nextPos));
+    didDrag.current = false;
+  }, [getDockedPosition, pos]);
 
-  const style = pos.x !== null
-    ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
-    : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
+  const style = {
+    position: 'fixed',
+    left: pos?.x ?? PREVIEW_EDGE_GAP,
+    top: pos?.y ?? PREVIEW_TOP_SAFE_OFFSET,
+    transform: 'none'
+  };
 
   return (
     <>
       {/* Floating nav */}
       <div
         ref={navRef}
-        style={{ ...style, zIndex: 50, touchAction: 'none', userSelect: 'none' }}
+        style={{ ...style, zIndex: 50, touchAction: 'none', userSelect: 'none', maxWidth: 'calc(100vw - 28px)' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
