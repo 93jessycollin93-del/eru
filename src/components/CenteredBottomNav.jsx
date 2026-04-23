@@ -220,19 +220,15 @@ export default function FloatingNav({ onSearchOpen }) {
 
     const syncToTicker = () => {
       const ticker = document.getElementById(TICKER_BAR_ID);
-      const navEl = navRef.current;
-      if (!ticker || !navEl) return;
-      const rect = ticker.getBoundingClientRect();
-      const nextY = Math.max(8, rect.height + 8);
-      setPos({ x: null, y: nextY });
+      if (!ticker) return;
+      const tickerHeight = ticker.offsetHeight || 0;
+      setPos({ x: null, y: tickerHeight + 8 });
     };
 
     syncToTicker();
     window.addEventListener('resize', syncToTicker);
-    window.addEventListener('scroll', syncToTicker, true);
     return () => {
       window.removeEventListener('resize', syncToTicker);
-      window.removeEventListener('scroll', syncToTicker, true);
     };
   }, [lockedToTicker]);
 
@@ -245,9 +241,11 @@ export default function FloatingNav({ onSearchOpen }) {
     }
   };
 
-  const style = pos.x !== null && !lockedToTicker
-    ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
-    : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
+  const style = lockedToTicker
+    ? { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' }
+    : pos.x !== null
+      ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
+      : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
 
   return (
     <>
