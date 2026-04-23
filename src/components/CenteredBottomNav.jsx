@@ -212,17 +212,16 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     const y = e.clientY - dragOffset.current.y;
     const maxX = window.innerWidth - navRef.current.offsetWidth;
     const maxY = window.innerHeight - navRef.current.offsetHeight;
-    const clampedX = Math.max(0, Math.min(x, maxX));
-    const clampedY = Math.max(0, Math.min(y, maxY));
-    // When glued to the clicker, dragging the nav also drags the clicker:
-    // clicker sits above the nav by CLICKER_BLOCK pixels.
-    if (updateWidget) {
-      updateWidget('botChat', { x: clampedX, y: Math.max(0, clampedY - CLICKER_BLOCK) });
-    }
-    const newPos = { x: clampedX, y: clampedY };
+    // Ticker guard: prevent the nav from overlapping the ticker bar.
+    const ticker = document.getElementById(TICKER_BAR_ID);
+    const minY = ticker ? (ticker.offsetHeight || 0) + 8 : 0;
+    const newPos = {
+      x: Math.max(0, Math.min(x, maxX)),
+      y: Math.max(minY, Math.min(y, maxY)),
+    };
     setPos(newPos);
     localStorage.setItem(POS_KEY, JSON.stringify(newPos));
-  }, [updateWidget]);
+  }, []);
 
   const onPointerUp = useCallback(() => {
     dragging.current = false;
@@ -254,18 +253,15 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     }
   };
 
-  // Priority: ticker lock wins (explicit user choice), else glue under the
-  // clicker when it has been positioned, else the nav's own saved position,
-  // else the centered default. All modes use position: fixed so the nav
-  // stays anchored to the viewport — not to the scrollable document — on
-  // every page.
+  // position: fixed always — so the nav stays anchored to the viewport
+  // (following the user on scroll, on every page), never glued to the
+  // scrollable document. Priority: ticker lock > saved custom pos >
+  // centered default.
   const style = lockedToTicker
     ? { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' }
-    : isAttachedToClicker
-      ? { position: 'fixed', left: clickerPos.x, top: clickerPos.y + CLICKER_BLOCK, transform: 'none' }
-      : pos.x !== null
-        ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
-        : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
+    : pos.x !== null
+      ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
+      : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
 
   return (
     <>
