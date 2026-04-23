@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, Lock, Unlock } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import { playSound, VIBRATE } from '../lib/soundEngine';
 
@@ -48,12 +48,8 @@ const POS_KEY = 'floating_nav_pos';
 const ORIENTATION_KEY = 'floating_nav_orientation';
 const EXPANDED_KEY = 'floating_nav_expanded';
 const ROWS_KEY = 'floating_nav_rows';
-const LOCKED_KEY = 'floating_nav_locked';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
-const PREVIEW_EDGE_GAP = 14;
-const PREVIEW_BOTTOM_SAFE_OFFSET = 86;
-const PREVIEW_TOP_SAFE_OFFSET = 14;
 
 const FLOATING_WIDGETS = [
   { id: 'botMarket', label: 'Bot Market', icon: Cpu },
@@ -78,14 +74,6 @@ export default function FloatingNav({ onSearchOpen }) {
   });
   const [rows, setRows] = useState(() => {
     try { return JSON.parse(localStorage.getItem(ROWS_KEY)) || 1; } catch { return 1; }
-  });
-  const [isLocked, setIsLocked] = useState(() => {
-    try {
-      const stored = localStorage.getItem(LOCKED_KEY);
-      return stored === null ? false : JSON.parse(stored);
-    } catch {
-      return false;
-    }
   });
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
@@ -115,7 +103,6 @@ export default function FloatingNav({ onSearchOpen }) {
   const dragOffset = useRef({ x: 0, y: 0 });
   const navRef = useRef(null);
   const didDrag = useRef(false);
-  const [navSize, setNavSize] = useState({ width: 0, height: 0 });
   const [unavailableWidget, setUnavailableWidget] = useState(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
@@ -143,80 +130,6 @@ export default function FloatingNav({ onSearchOpen }) {
   const pinnedPages = ALL_PAGES.filter(p => pinned.includes(p.id));
   const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.id]?.visible);
   const navItems = [...pinnedPages, ...attachedWidgets];
-
-  useEffect(() => {
-    if (!navRef.current) return;
-
-    const updateNavSize = () => {
-      const rect = navRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setNavSize({ width: rect.width, height: rect.height });
-    };
-
-    updateNavSize();
-    const resizeObserver = new ResizeObserver(updateNavSize);
-    resizeObserver.observe(navRef.current);
-    window.addEventListener('resize', updateNavSize);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', updateNavSize);
-    };
-  }, [orientation, rows, navItems.length]);
-
-  const getViewportBounds = useCallback((width = navSize.width, height = navSize.height) => {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const safeWidth = Math.max(0, viewportWidth - width - PREVIEW_EDGE_GAP * 2);
-    const safeHeight = Math.max(0, viewportHeight - height - PREVIEW_TOP_SAFE_OFFSET - PREVIEW_BOTTOM_SAFE_OFFSET);
-
-    return {
-      minX: PREVIEW_EDGE_GAP,
-      maxX: PREVIEW_EDGE_GAP + safeWidth,
-      minY: PREVIEW_TOP_SAFE_OFFSET,
-      maxY: PREVIEW_TOP_SAFE_OFFSET + safeHeight,
-      viewportWidth,
-      viewportHeight,
-    };
-  }, [navSize.height, navSize.width]);
-
-  const clampToViewport = useCallback((nextPos, width = navSize.width, height = navSize.height) => {
-    const bounds = getViewportBounds(width, height);
-    return {
-      x: Math.min(Math.max(nextPos.x, bounds.minX), bounds.maxX),
-      y: Math.min(Math.max(nextPos.y, bounds.minY), bounds.maxY),
-    };
-  }, [getViewportBounds, navSize.height, navSize.width]);
-
-  const getDockedPosition = useCallback((currentPos = pos, width = navSize.width, height = navSize.height) => {
-    const bounds = getViewportBounds(width, height);
-    const x = currentPos?.x ?? Math.round((bounds.viewportWidth - width) / 2);
-    const y = currentPos?.y ?? bounds.maxY;
-    const clamped = clampToViewport({ x, y }, width, height);
-
-    const distances = {
-      left: Math.abs(clamped.x - bounds.minX),
-      right: Math.abs(bounds.maxX - clamped.x),
-      top: Math.abs(clamped.y - bounds.minY),
-      bottom: Math.abs(bounds.maxY - clamped.y),
-    };
-
-    const nearestEdge = Object.entries(distances).sort((a, b) => a[1] - b[1])[0]?.[0] || 'bottom';
-
-    if (nearestEdge === 'left') return { x: bounds.minX, y: clamped.y };
-    if (nearestEdge === 'right') return { x: bounds.maxX, y: clamped.y };
-    if (nearestEdge === 'top') return { x: clamped.x, y: bounds.minY };
-    return { x: clamped.x, y: bounds.maxY };
-  }, [clampToViewport, getViewportBounds, navSize.height, navSize.width, pos]);
-
-  useEffect(() => {
-    if (!navSize.width || !navSize.height) return;
-    const nextDocked = getDockedPosition(pos, navSize.width, navSize.height);
-    if (nextDocked.x !== pos?.x || nextDocked.y !== pos?.y) {
-      setPos(nextDocked);
-      localStorage.setItem(POS_KEY, JSON.stringify(nextDocked));
-    }
-  }, [getDockedPosition, navSize.height, navSize.width]);
 
   const savePinned = (next) => {
     setPinned(next);
@@ -251,12 +164,6 @@ export default function FloatingNav({ onSearchOpen }) {
     localStorage.setItem(EXPANDED_KEY, JSON.stringify(!isExpanded));
   };
 
-  const toggleLock = () => {
-    const nextLocked = !isLocked;
-    setIsLocked(nextLocked);
-    localStorage.setItem(LOCKED_KEY, JSON.stringify(nextLocked));
-  };
-
   const cycleRows = () => {
     const newRows = rows === 1 ? 2 : rows === 2 ? 3 : 1;
     setRows(newRows);
@@ -275,13 +182,13 @@ export default function FloatingNav({ onSearchOpen }) {
   };
 
   const onPointerDown = useCallback((e) => {
-    if (isLocked || e.target.closest('a, button')) return;
+    if (e.target.closest('a, button')) return;
     dragging.current = true;
     didDrag.current = false;
     const rect = navRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     navRef.current.setPointerCapture(e.pointerId);
-  }, [isLocked]);
+  }, []);
 
   const onPointerMove = useCallback((e) => {
     if (!dragging.current) return;
@@ -292,44 +199,31 @@ export default function FloatingNav({ onSearchOpen }) {
     didDrag.current = true;
     const x = e.clientX - dragOffset.current.x;
     const y = e.clientY - dragOffset.current.y;
-    const newPos = clampToViewport({ x, y }, navRef.current?.offsetWidth, navRef.current?.offsetHeight);
+    const maxX = window.innerWidth - navRef.current.offsetWidth;
+    const maxY = window.innerHeight - navRef.current.offsetHeight;
+    const newPos = { x: Math.max(0, Math.min(x, maxX)), y: Math.max(0, Math.min(y, maxY)) };
     setPos(newPos);
-  }, [clampToViewport]);
+    localStorage.setItem(POS_KEY, JSON.stringify(newPos));
+  }, []);
 
   const onPointerUp = useCallback(() => {
-    if (!dragging.current) return;
     dragging.current = false;
-    const nextPos = didDrag.current ? getDockedPosition(pos, navRef.current?.offsetWidth, navRef.current?.offsetHeight) : pos;
-    setPos(nextPos);
-    localStorage.setItem(POS_KEY, JSON.stringify(nextPos));
-    didDrag.current = false;
-  }, [getDockedPosition, pos]);
+  }, []);
 
-  const style = isLocked
-    ? {
-        position: 'fixed',
-        left: '50%',
-        bottom: '12px',
-        top: 'auto',
-        transform: 'translateX(-50%)'
-      }
-    : {
-        position: 'fixed',
-        left: pos?.x ?? PREVIEW_EDGE_GAP,
-        top: pos?.y ?? PREVIEW_TOP_SAFE_OFFSET,
-        transform: 'none'
-      };
+  const style = pos.x !== null
+    ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
+    : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
 
   return (
     <>
       {/* Floating nav */}
       <div
         ref={navRef}
-        style={{ ...style, zIndex: 50, touchAction: 'none', userSelect: 'none', maxWidth: 'calc(100vw - 28px)' }}
+        style={{ ...style, zIndex: 50, touchAction: 'none', userSelect: 'none' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
+        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl cursor-grab active:cursor-grabbing ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
@@ -359,17 +253,6 @@ export default function FloatingNav({ onSearchOpen }) {
             title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
           >
             {rows}
-          </button>
-          <button
-            onClick={() => {
-              playSound('toggle');
-              VIBRATE.toggle();
-              toggleLock();
-            }}
-            className={`transition-colors ${isLocked ? 'text-primary' : 'hover:text-primary'}`}
-            title={isLocked ? 'Unlock position' : 'Lock position'}
-          >
-            {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={() => {
@@ -575,10 +458,7 @@ export default function FloatingNav({ onSearchOpen }) {
             <p className="text-[10px] text-muted-foreground px-4 py-2 border-b border-border">Tap to add or remove pages and floating widgets.</p>
             <div className="overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] flex-1 min-h-0 px-4 py-3 space-y-4">
               <div>
-                <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pages</p>
-                <span className="text-[10px] text-muted-foreground">Position: {isLocked ? 'Locked' : 'Moveable'}</span>
-              </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Pages</p>
                 <div className="grid grid-cols-4 gap-3">
                   {ALL_PAGES.map(({ id, label, icon: Icon }) => {
                     const isPinned = pinned.includes(id);
