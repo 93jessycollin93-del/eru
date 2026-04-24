@@ -182,7 +182,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   };
 
   const cycleRows = () => {
-    const newRows = rows === 1 ? 2 : rows === 2 ? 3 : 1;
+    const newRows = rows === 1 ? 2 : rows === 2 ? 3 : rows === 3 ? 4 : 1;
     setRows(newRows);
     localStorage.setItem(ROWS_KEY, JSON.stringify(newRows));
   };
@@ -333,7 +333,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
-        <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
+        {/* Handle strip: always flex-row so the icon grid can start right
+            beneath it instead of leaving an empty column beside a vertical
+            stack of handle buttons. */}
+        <div className={`flex flex-row items-center gap-1 ${orientation === 'vertical' ? 'pb-1 justify-start' : 'pr-1'} text-muted-foreground/40`}>
           <GripHorizontal className={`w-3.5 h-3.5 ${lockedToTicker ? 'opacity-40' : ''}`} />
           <button
             onClick={() => {
@@ -587,7 +590,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                   Done
                 </button>
                 <div className="flex gap-1 bg-secondary rounded-xl p-1">
-                  {[1, 2, 3].map(r => (
+                  {[1, 2, 3, 4].map(r => (
                     <button
                       key={r}
                       onClick={() => {
