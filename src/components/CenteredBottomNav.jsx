@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import { playSound, VIBRATE } from '../lib/soundEngine';
 
@@ -32,6 +32,8 @@ const ALL_PAGES = [
   { id: 'bazar',      label: 'Bazar Stand',   icon: Coins,         to: '/bazar-stand' },
   { id: 'sfanalytics',label: 'SF Analytics',  icon: BarChart,      to: '/storefront-analytics' },
   { id: 'economy',    label: 'Economy',       icon: Award,         to: '/admin/economy' },
+  { id: 'sheets',     label: 'Sheets Sync',   icon: FileSpreadsheet, to: '/sheets-sync' },
+  { id: 'profileprefs', label: 'Profile Prefs', icon: UserCog,     to: '/profile-preferences' },
   { id: 'settings',   label: 'Settings',      icon: Settings,      to: '/settings' },
 ];
 
