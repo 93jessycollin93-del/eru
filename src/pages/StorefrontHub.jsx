@@ -11,6 +11,7 @@ import {
 import { Link } from 'react-router-dom';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ConditionBadge from '../components/storefront/ConditionBadge';
+import { Flame, ChevronRight as ChevronRightIcon } from 'lucide-react';
 
 // ─── CONNECTOR PRESETS (templates for adding new connectors) ──────────────────
 const CONNECTOR_TEMPLATES = [
@@ -667,6 +668,23 @@ export default function StorefrontHub() {
             {/* STOREFRONT TAB */}
             {tab === 'storefront' && (
               <div className="space-y-4">
+                {/* External portal cards — Lovable-powered modules */}
+                <Link
+                  to="/storefront/phoenix-investor"
+                  className="block rounded-2xl border border-primary/30 bg-gradient-to-br from-orange-500/10 via-primary/5 to-transparent hover:border-primary/60 transition-colors p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500/30 to-primary/30 border border-primary/40 flex items-center justify-center flex-shrink-0">
+                      <Flame className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">Phoenix Investor</p>
+                      <p className="text-[11px] text-muted-foreground truncate">External Lovable storefront/app portal</p>
+                    </div>
+                    <ChevronRightIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  </div>
+                </Link>
+
                 {/* Search + filters */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />

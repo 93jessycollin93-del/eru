@@ -63,6 +63,7 @@ import EscrowDashboard from './pages/EscrowDashboard';
 import ReferralDashboard from './pages/ReferralDashboard';
 import EruSwarmTest from './pages/EruSwarmTest';
 import SheetsSync from './pages/SheetsSync';
+import PhoenixInvestor from './pages/PhoenixInvestor';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -149,6 +150,7 @@ const AuthenticatedApp = () => {
         <Route path="/referrals" element={<ReferralDashboard />} />
         <Route path="/eru-swarm-test" element={<EruSwarmTest />} />
         <Route path="/sheets-sync" element={<SheetsSync />} />
+        <Route path="/storefront/phoenix-investor" element={<PhoenixInvestor />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
