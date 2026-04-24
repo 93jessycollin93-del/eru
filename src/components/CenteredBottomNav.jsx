@@ -385,83 +385,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           </button>
         </div>
 
-        {orientation === 'horizontal' ? (
-          // Horizontal with rows
-          <div className="flex flex-col gap-0.5">
-            {getPagesByRow().map((pageRow, rowIdx) => (
-              <div key={rowIdx} className="flex gap-0.5">
-                {pageRow.map(({ id, label, icon: Icon, to, widgetId }) => {
-                  const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
-                  const isJackiePanelLink = to?.startsWith('/jackie?panel=');
-                  const handleWidgetClick = () => {
-                    if (!widgetId) return;
-                    playSound('click');
-                    VIBRATE.click();
-                    if (widgetId === 'botChat') {
-                      window.dispatchEvent(new CustomEvent('open-bot-chat'));
-                    } else {
-                      window.dispatchEvent(new CustomEvent('toggle-widget-visibility', { detail: { widgetId } }));
-                    }
-                  };
-                  const handlePanelNavigation = () => {
-                    if (!isJackiePanelLink) return;
-                    playSound('click');
-                    VIBRATE.click();
-                    navigate(to);
-                  };
-
-                  if (to) {
-                    if (isJackiePanelLink) {
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={handlePanelNavigation}
-                          title={label}
-                          className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
-                            active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
-                          <span className="text-[8px] font-medium leading-none">{label}</span>
-                        </button>
-                      );
-                    }
-
-                    return (
-                      <Link
-                        key={id}
-                        to={to}
-                        title={label}
-                        className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
-                          active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
-                        <span className="text-[8px] font-medium leading-none">{label}</span>
-                      </Link>
-                    );
-                  }
-
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={handleWidgetClick}
-                      title={label}
-                      className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${unavailableWidget === id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                      <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
-                      <span className="text-[8px] font-medium leading-none">{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        ) : (
-          // Vertical (unchanged)
-          navItems.map(({ id, label, icon: Icon, to, widgetId }) => {
+        {(() => {
+          const renderNavItem = ({ id, label, icon: Icon, to, widgetId }) => {
             const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
             const isJackiePanelLink = to?.startsWith('/jackie?panel=');
             const handleWidgetClick = () => {
@@ -480,7 +405,6 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
               VIBRATE.click();
               navigate(to);
             };
-
             if (to) {
               if (isJackiePanelLink) {
                 return (
@@ -498,7 +422,6 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                   </button>
                 );
               }
-
               return (
                 <Link
                   key={id}
@@ -513,7 +436,6 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 </Link>
               );
             }
-
             return (
               <button
                 key={id}
@@ -526,8 +448,20 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 <span className="text-[8px] font-medium leading-none">{label}</span>
               </button>
             );
-          })
-        )}
+          };
+          // Horizontal: `rows` chunks stack vertically, items flow left→right within each row.
+          // Vertical:   `rows` chunks stack horizontally, items flow top→bottom within each column.
+          const isHorizontal = orientation === 'horizontal';
+          return (
+            <div className={`flex gap-0.5 ${isHorizontal ? 'flex-col' : 'flex-row'}`}>
+              {getPagesByRow().map((chunk, chunkIdx) => (
+                <div key={chunkIdx} className={`flex gap-0.5 ${isHorizontal ? 'flex-row' : 'flex-col'}`}>
+                  {chunk.map(renderNavItem)}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Search button */}
         <button
