@@ -116,7 +116,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const holdTimer = useRef(null);
   const holdStart = useRef({ x: 0, y: 0, pointerId: null });
   const [isHoldReady, setIsHoldReady] = useState(false);
-  const HOLD_MS = 350;
+  const HOLD_MS = 500;
   const [unavailableWidget, setUnavailableWidget] = useState(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
@@ -207,8 +207,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
 
   const onPointerDown = useCallback((e) => {
     if (lockedToTicker) return;
-    // Allow pressing links/buttons normally; hold must start on nav chrome.
-    if (e.target.closest('a, button')) return;
+    // Hold anywhere on the bar (including buttons/links) to start dragging.
     const rect = navRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     holdStart.current = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
@@ -256,6 +255,15 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     dragging.current = false;
     setIsHoldReady(false);
   }, [clearHold]);
+
+  // If a drag happened, swallow the click so the link/button underneath doesn't fire.
+  const onClickCapture = useCallback((e) => {
+    if (didDrag.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      didDrag.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     if (!lockedToTicker) return;
@@ -312,6 +320,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onClickCapture={onClickCapture}
         title={lockedToTicker ? '' : 'Press and hold to move'}
         className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
