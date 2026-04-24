@@ -29,6 +29,12 @@ export default function Trade() {
           </button>
         ))}
       </div>
+      <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border border-yellow-400/30 bg-yellow-400/5 px-3 py-2">
+        <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 flex-shrink-0" />
+        <p className="text-[11px] text-yellow-300/90 leading-relaxed">
+          Swap and order routing is not connected yet. Quotes shown use live reference prices, but no trade is submitted.
+        </p>
+      </div>
 
       <div className="px-4 py-4 space-y-3">
         {tab === 'swap' ? (

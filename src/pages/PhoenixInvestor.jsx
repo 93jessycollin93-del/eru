@@ -4,6 +4,9 @@ import { ArrowLeft, Flame, ShieldCheck, Settings2, ExternalLink, Check, X } from
 import LovableEmbed from '@/components/storefront/LovableEmbed';
 import { EXTERNAL_PORTALS, getPortalUrl, setPortalUrlOverride } from '@/lib/externalPortals';
 import { useAuth } from '@/lib/AuthContext';
+import { canManageExternalPortals } from '@/lib/permissions';
+import { isSafeEmbedUrl } from '@/lib/safeUrl';
+import { logAuditEvent } from '@/lib/auditEvents';
 
 /**
  * Phoenix Investor Portal
@@ -22,7 +25,7 @@ const PORTAL = EXTERNAL_PORTALS.phoenix_investor;
 
 export default function PhoenixInvestor() {
   const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
+  const canManage = canManageExternalPortals(currentUser);
 
   const [url, setUrl] = useState(() => getPortalUrl(PORTAL.id));
   const [editing, setEditing] = useState(false);
@@ -34,23 +37,52 @@ export default function PhoenixInvestor() {
   }, [url]);
 
   const saveUrl = () => {
-    const trimmed = draftUrl.trim();
-    if (trimmed && !/^https:\/\//i.test(trimmed)) {
-      setDraftError('URL must start with https://');
+    if (!canManage) {
+      logAuditEvent(currentUser, {
+        action: 'external_portal.update',
+        target_type: 'ExternalPortal',
+        target_id: PORTAL.id,
+        status: 'denied',
+        reason: 'missing_admin_permission',
+      });
+      setDraftError('You don’t have permission to change this portal.');
       return;
     }
+    const trimmed = draftUrl.trim();
+    if (trimmed && !isSafeEmbedUrl(trimmed)) {
+      setDraftError('URL must start with https:// and be a valid address.');
+      return;
+    }
+    const previous = url;
     setPortalUrlOverride(PORTAL.id, trimmed);
-    setUrl(getPortalUrl(PORTAL.id));
+    const nextUrl = getPortalUrl(PORTAL.id);
+    setUrl(nextUrl);
     setDraftError('');
     setEditing(false);
+    logAuditEvent(currentUser, {
+      action: 'external_portal.update',
+      target_type: 'ExternalPortal',
+      target_id: PORTAL.id,
+      before: { url: previous || null },
+      after: { url: nextUrl || null },
+    });
   };
 
   const clearUrl = () => {
+    if (!canManage) return;
+    const previous = url;
     setPortalUrlOverride(PORTAL.id, '');
     setUrl(getPortalUrl(PORTAL.id));
     setDraftUrl('');
     setDraftError('');
     setEditing(false);
+    logAuditEvent(currentUser, {
+      action: 'external_portal.clear',
+      target_type: 'ExternalPortal',
+      target_id: PORTAL.id,
+      before: { url: previous || null },
+      after: { url: null },
+    });
   };
 
   return (
@@ -80,7 +112,7 @@ export default function PhoenixInvestor() {
           <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] text-primary">
             <ShieldCheck className="w-3 h-3" /> External
           </span>
-          {isAdmin && (
+          {canManage && (
             <button
               onClick={() => setEditing((prev) => !prev)}
               className="p-1.5 rounded-lg bg-secondary hover:bg-border transition-colors"
@@ -94,7 +126,7 @@ export default function PhoenixInvestor() {
       </div>
 
       {/* Admin config row — only rendered when admin opens it */}
-      {isAdmin && editing && (
+      {canManage && editing && (
         <div className="px-4 py-3 border-b border-border bg-secondary/20 flex-shrink-0">
           <p className="text-[11px] text-muted-foreground mb-2">
             Paste the published Lovable app URL (https required). Saved to this browser only — for persistent config, set <code className="text-foreground">defaultUrl</code> in <code className="text-foreground">lib/externalPortals.js</code> or <code className="text-foreground">VITE_PHOENIX_INVESTOR_URL</code>.
@@ -135,7 +167,7 @@ export default function PhoenixInvestor() {
         {url ? (
           <LovableEmbed url={url} title={`${PORTAL.name} portal`} />
         ) : (
-          <NotConfiguredState isAdmin={isAdmin} onConfigure={() => setEditing(true)} />
+          <NotConfiguredState isAdmin={canManage} onConfigure={() => setEditing(true)} />
         )}
       </div>
     </div>

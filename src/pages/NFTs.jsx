@@ -6,6 +6,7 @@ import WalletConnectBar from '../components/WalletConnectBar';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ListingManager from '../components/storefront/ListingManager';
 import TelegramImportPanel from '../components/nfts/TelegramImportPanel';
+import DemoDataBanner from '../components/marketplace/DemoDataBanner';
 
 const COLLECTIONS = [
   { id: 1, name: 'TON Punks', floor: 12.5, volume: 4820, items: 10000, img: 'https://images.unsplash.com/photo-1635322966219-b75ed372eb01?w=100&h=100&fit=crop' },
@@ -100,9 +101,9 @@ export default function NFTs() {
           </div>
         </div>
         <div className="space-y-2 text-xs text-muted-foreground">
-          <div className="flex justify-between border-b border-border pb-2"><span>Ownership History</span><span>3 transfers</span></div>
-          <div className="flex justify-between border-b border-border pb-2"><span>Last Sale</span><span className="font-mono text-foreground">{(selected.price * 0.85).toFixed(1)} TON</span></div>
-          <div className="flex justify-between"><span>Token ID</span><span className="font-mono text-foreground">#{Math.floor(Math.random()*9999)}</span></div>
+          <div className="flex justify-between border-b border-border pb-2"><span>Ownership History</span><span className="text-muted-foreground/70">Not connected</span></div>
+          <div className="flex justify-between border-b border-border pb-2"><span>Last Sale</span><span className="text-muted-foreground/70">No data</span></div>
+          <div className="flex justify-between"><span>Token ID</span><span className="text-muted-foreground/70">Not connected</span></div>
         </div>
         {/* Wallet gate for purchasing */}
         {wallet.status !== 'connected' ? (
@@ -155,6 +156,7 @@ export default function NFTs() {
           <button onClick={() => setView('list')} className={`p-1.5 rounded ${view==='list'?'text-primary':'text-muted-foreground'}`}><List className="w-4 h-4"/></button>
         </div>
       </div>
+      <DemoDataBanner message="Explore and Collections lists below are illustrative placeholders. Floor prices, rarity, and collection volume are not live." />
 
       <div className="flex border-b border-border">
         {['explore','collections','my nfts'].map(t => (

@@ -3,6 +3,7 @@ import { Search, Star, ShoppingCart, Plus, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ListingManager from '../components/storefront/ListingManager';
+import DemoDataBanner from '../components/marketplace/DemoDataBanner';
 
 const POKEMON = [
   { id: 1, name: 'Charizard', set: 'Base Set', grade: 'PSA 9', price: 450, rarity: 'Holo Rare', img: 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=200&h=280&fit=crop' },
@@ -47,8 +48,8 @@ export default function Collectables() {
         </div>
         <div className="text-xs text-muted-foreground space-y-2">
           <div className="flex justify-between border-b border-border pb-2"><span>Condition</span><span className="text-foreground">{selected.grade}</span></div>
-          <div className="flex justify-between border-b border-border pb-2"><span>Authenticity</span><span className="text-green-400">Verified</span></div>
-          <div className="flex justify-between"><span>Payment</span><span className="text-foreground">TON, Stars, USDT</span></div>
+          <div className="flex justify-between border-b border-border pb-2"><span>Authenticity</span><span className="text-muted-foreground/70">Not verified</span></div>
+          <div className="flex justify-between"><span>Payment</span><span className="text-muted-foreground/70">Not connected</span></div>
         </div>
         <div className="flex gap-3">
           <button onClick={() => { setCart(p => [...p, selected]); setSelected(null); }}
@@ -86,6 +87,7 @@ export default function Collectables() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <DemoDataBanner message="Pokémon and nostalgic items shown here are sample placeholders — grades and prices are not authenticated or live." />
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-lg font-semibold">Collectables</h2>
         <div className="flex items-center gap-2">

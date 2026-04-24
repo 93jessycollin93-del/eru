@@ -12,6 +12,10 @@ import { Link } from 'react-router-dom';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ConditionBadge from '../components/storefront/ConditionBadge';
 import { Flame, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { canManageMarketplaceConfig, canEditListing } from '@/lib/permissions';
+import { validateListingDraft, validateListingEdit } from '@/lib/marketplaceValidation';
+import { logAuditEvent } from '@/lib/auditEvents';
+import PermissionGate from '@/components/PermissionGate';
 
 // ─── CONNECTOR PRESETS (templates for adding new connectors) ──────────────────
 const CONNECTOR_TEMPLATES = [
@@ -501,7 +505,16 @@ export default function StorefrontHub() {
   });
 
   const handleSaveConnector = async (data) => {
-    await base44.entities.MarketConnector.create({
+    if (!canManageMarketplaceConfig(currentUser)) {
+      logAuditEvent(currentUser, {
+        action: 'connector.create',
+        target_type: 'MarketConnector',
+        status: 'denied',
+        reason: 'missing_admin_permission',
+      });
+      return;
+    }
+    const created = await base44.entities.MarketConnector.create({
       ...data,
       price_adjustment_type: 'none',
       price_adjustment_value: 0,
@@ -509,31 +522,64 @@ export default function StorefrontHub() {
       simulation_mode: true,
       external_market_slug: data.name?.toLowerCase().includes('opensea') ? 'opensea' : '',
     });
+    logAuditEvent(currentUser, {
+      action: 'connector.create',
+      target_type: 'MarketConnector',
+      target_id: created?.id,
+      after: { name: data.name, connector_type: data.connector_type },
+    });
     setShowAddConnector(false);
     load();
   };
 
   const handleToggleConnector = async (c) => {
+    if (!canManageMarketplaceConfig(currentUser)) {
+      logAuditEvent(currentUser, { action: 'connector.toggle', target_type: 'MarketConnector', target_id: c.id, status: 'denied', reason: 'missing_admin_permission' });
+      return;
+    }
     await base44.entities.MarketConnector.update(c.id, { is_enabled: !c.is_enabled, status: !c.is_enabled ? 'pending_auth' : 'inactive' });
+    logAuditEvent(currentUser, { action: 'connector.toggle', target_type: 'MarketConnector', target_id: c.id, before: { is_enabled: c.is_enabled }, after: { is_enabled: !c.is_enabled } });
     load();
   };
 
   const handleDeleteConnector = async (c) => {
+    if (!canManageMarketplaceConfig(currentUser)) {
+      logAuditEvent(currentUser, { action: 'connector.delete', target_type: 'MarketConnector', target_id: c.id, status: 'denied', reason: 'missing_admin_permission' });
+      return;
+    }
     await base44.entities.MarketConnector.delete(c.id);
+    logAuditEvent(currentUser, { action: 'connector.delete', target_type: 'MarketConnector', target_id: c.id });
     load();
   };
 
   const handleCreateListing = async (data) => {
-    await base44.entities.StorefrontListing.create(data);
+    const draftCheck = validateListingDraft(data);
+    if (!draftCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.create', target_type: 'StorefrontListing', status: 'failure', reason: draftCheck.reason });
+      return;
+    }
+    const created = await base44.entities.StorefrontListing.create(data);
+    logAuditEvent(currentUser, { action: 'listing.create', target_type: 'StorefrontListing', target_id: created?.id, after: { title: data.title, base_price: data.base_price, currency: data.currency } });
     setShowCreateListing(false);
     load();
   };
 
   const handleUpdateListing = async (data) => {
+    const editCheck = validateListingEdit({ user: currentUser, listing: editingListing });
+    if (!editCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.update', target_type: 'StorefrontListing', target_id: editingListing?.id, status: 'denied', reason: editCheck.reason });
+      return;
+    }
+    const draftCheck = validateListingDraft(data);
+    if (!draftCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.update', target_type: 'StorefrontListing', target_id: editingListing?.id, status: 'failure', reason: draftCheck.reason });
+      return;
+    }
     await base44.entities.StorefrontListing.update(editingListing.id, {
       ...data,
       currency: data.crypto_currency,
     });
+    logAuditEvent(currentUser, { action: 'listing.update', target_type: 'StorefrontListing', target_id: editingListing.id, before: { base_price: editingListing.base_price, currency: editingListing.currency }, after: { base_price: data.base_price, currency: data.crypto_currency } });
     setEditingListing(null);
     load();
   };
@@ -821,12 +867,11 @@ export default function StorefrontHub() {
             {/* ADMIN TAB */}
             {tab === 'admin' && (
               <div className="space-y-4">
-                {!isAdmin ? (
-                  <div className="flex flex-col items-center py-12 gap-3">
-                    <Lock className="w-8 h-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Admin access required</p>
-                  </div>
-                ) : (
+                <PermissionGate
+                  allow={canManageMarketplaceConfig}
+                  deniedTitle="Admin access required"
+                  deniedMessage="Only admins can view the Storefront admin panel."
+                >
                   <>
                     <div className="p-4 bg-card rounded-xl border border-border space-y-3">
                       <div className="flex items-center gap-2 mb-1">
@@ -891,7 +936,7 @@ export default function StorefrontHub() {
                       ))}
                     </div>
                   </>
-                )}
+                </PermissionGate>
               </div>
             )}
           </>
