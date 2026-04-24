@@ -113,6 +113,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const dragOffset = useRef({ x: 0, y: 0 });
   const navRef = useRef(null);
   const didDrag = useRef(false);
+  const holdTimer = useRef(null);
+  const holdStart = useRef({ x: 0, y: 0, pointerId: null });
+  const [isHoldReady, setIsHoldReady] = useState(false);
+  const HOLD_MS = 350;
   const [unavailableWidget, setUnavailableWidget] = useState(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
@@ -194,16 +198,39 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     return rowArray;
   };
 
+  const clearHold = useCallback(() => {
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  }, []);
+
   const onPointerDown = useCallback((e) => {
-    if (lockedToTicker || e.target.closest('a, button')) return;
-    dragging.current = true;
-    didDrag.current = false;
+    if (lockedToTicker) return;
+    // Allow pressing links/buttons normally; hold must start on nav chrome.
+    if (e.target.closest('a, button')) return;
     const rect = navRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    navRef.current.setPointerCapture(e.pointerId);
-  }, [lockedToTicker]);
+    holdStart.current = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
+    didDrag.current = false;
+    clearHold();
+    holdTimer.current = setTimeout(() => {
+      dragging.current = true;
+      setIsHoldReady(true);
+      try { navRef.current?.setPointerCapture(holdStart.current.pointerId); } catch {}
+      VIBRATE.toggle?.();
+      playSound('toggle');
+    }, HOLD_MS);
+  }, [lockedToTicker, clearHold]);
 
   const onPointerMove = useCallback((e) => {
+    // Cancel hold if the user moves too far before the timer fires (it's a scroll/tap, not a hold).
+    if (!dragging.current && holdTimer.current) {
+      const dx = e.clientX - holdStart.current.x;
+      const dy = e.clientY - holdStart.current.y;
+      if (Math.hypot(dx, dy) > 8) clearHold();
+      return;
+    }
     if (!dragging.current) return;
     if (!didDrag.current) {
       playSound('whoosh');
@@ -214,7 +241,6 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     const y = e.clientY - dragOffset.current.y;
     const maxX = window.innerWidth - navRef.current.offsetWidth;
     const maxY = window.innerHeight - navRef.current.offsetHeight;
-    // Ticker guard: prevent the nav from overlapping the ticker bar.
     const ticker = document.getElementById(TICKER_BAR_ID);
     const minY = ticker ? (ticker.offsetHeight || 0) + 8 : 0;
     const newPos = {
@@ -223,11 +249,13 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     };
     setPos(newPos);
     localStorage.setItem(POS_KEY, JSON.stringify(newPos));
-  }, []);
+  }, [clearHold]);
 
   const onPointerUp = useCallback(() => {
+    clearHold();
     dragging.current = false;
-  }, []);
+    setIsHoldReady(false);
+  }, [clearHold]);
 
   useEffect(() => {
     if (!lockedToTicker) return;
@@ -279,11 +307,13 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
       {/* Floating nav */}
       <div
         ref={navRef}
-        style={{ ...style, zIndex: lockedToTicker ? 55 : 50, touchAction: 'none', userSelect: 'none' }}
+        style={{ ...style, zIndex: lockedToTicker ? 55 : 50, touchAction: 'pan-y', userSelect: 'none' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl ${lockedToTicker ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
+        onPointerCancel={onPointerUp}
+        title={lockedToTicker ? '' : 'Press and hold to move'}
+        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         <div className={`flex gap-1 ${orientation === 'vertical' ? 'flex-col pb-1' : 'flex-row items-center pr-1'} text-muted-foreground/40`}>
