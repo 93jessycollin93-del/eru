@@ -17,6 +17,7 @@ import Collectables from './pages/Collectables';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import UserSettings from './pages/UserSettings';
+import ProfilePreferences from './pages/ProfilePreferences';
 
 import CreatorHub from './pages/CreatorHub';
 import ThinkersClub from './pages/ThinkersClub';
@@ -101,6 +102,7 @@ const AuthenticatedApp = () => {
         <Route path="/messages" element={<Messages />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/user-settings" element={<UserSettings />} />
+        <Route path="/profile-preferences" element={<ProfilePreferences />} />
 
         <Route path="/creator" element={<CreatorHub />} />
         <Route path="/thinkers" element={<ThinkersClub />} />
