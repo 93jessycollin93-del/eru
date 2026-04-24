@@ -91,12 +91,12 @@ export default function Layout() {
         className="fixed inset-0 pointer-events-none"
         style={{
           zIndex: 0,
-          background: 'radial-gradient(circle at 50% 35%, rgba(78,119,255,0.16) 0%, rgba(20,28,58,0.1) 28%, rgba(5,8,18,0.96) 72%, rgba(2,4,10,1) 100%)',
+          background: 'radial-gradient(circle at 50% 26%, rgba(95,135,255,0.12) 0%, rgba(20,28,58,0.08) 24%, rgba(7,10,22,0.94) 66%, rgba(2,4,10,1) 100%)',
           ...globalThemeStyles,
         }}
       />
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: 'linear-gradient(180deg, rgba(120,180,255,0.04) 0%, rgba(7,10,22,0.08) 38%, rgba(3,4,10,0.18) 100%)' }} />
-      <AnimatedBackground type={NEUTRON_STAR_BG} opacity={0.95} />
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(60,96,210,0.03) 18%, rgba(7,10,22,0.07) 44%, rgba(3,4,10,0.16) 100%)' }} />
+      <AnimatedBackground type={NEUTRON_STAR_BG} opacity={0.78} />
       {bg !== 'none' && bg !== NEUTRON_STAR_BG ? <AnimatedBackground type={bg} opacity={Math.min(bgOpacity, 0.35)} /> : null}
 
       {/* App shell — transparent so background shows through */}

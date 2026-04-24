@@ -234,11 +234,11 @@ const ENGINES = {
     canvas.width = canvas.offsetWidth || window.innerWidth;
     canvas.height = canvas.offsetHeight || window.innerHeight;
 
-    const stars = Array.from({ length: Math.floor(180 * density) }, () => ({
+    const stars = Array.from({ length: Math.floor(90 * density) }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      r: Math.random() * 1.4 + 0.2,
-      a: 0.2 + Math.random() * 0.6,
+      r: Math.random() * 1.1 + 0.15,
+      a: 0.08 + Math.random() * 0.28,
       twinkle: Math.random() * Math.PI * 2,
     }));
 
@@ -251,85 +251,73 @@ const ENGINES = {
       const w = canvas.width;
       const h = canvas.height;
       const cx = w * 0.5;
-      const cy = h * 0.42;
-      const pulse = (Math.sin(t * 1.5) + 1) * 0.5;
+      const cy = h * 0.36;
+      const pulse = (Math.sin(t * 1.2) + 1) * 0.5;
 
       ctx.clearRect(0, 0, w, h);
 
-      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.9);
-      bg.addColorStop(0, 'rgba(40, 70, 180, 0.18)');
-      bg.addColorStop(0.3, 'rgba(12, 24, 68, 0.22)');
-      bg.addColorStop(0.7, 'rgba(5, 8, 20, 0.14)');
-      bg.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = bg;
+      const vignette = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.85);
+      vignette.addColorStop(0, 'rgba(50,90,210,0.08)');
+      vignette.addColorStop(0.28, 'rgba(18,28,72,0.1)');
+      vignette.addColorStop(0.68, 'rgba(6,10,24,0.06)');
+      vignette.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, w, h);
 
       stars.forEach((star) => {
-        star.twinkle += 0.01;
-        const alpha = star.a + Math.sin(star.twinkle) * 0.15;
+        star.twinkle += 0.006;
+        const alpha = star.a + Math.sin(star.twinkle) * 0.04;
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(220,235,255,${Math.max(0.08, alpha)})`;
+        ctx.fillStyle = `rgba(220,232,255,${Math.max(0.04, alpha)})`;
         ctx.fill();
       });
 
       ctx.save();
       ctx.translate(cx, cy);
-      ctx.rotate(t * 0.18);
+      ctx.rotate(t * 0.1);
 
-      for (let i = 0; i < 3; i++) {
-        ctx.save();
-        ctx.rotate((Math.PI / 3) * i);
-        const beam = ctx.createLinearGradient(-w * 0.35, 0, w * 0.35, 0);
-        beam.addColorStop(0, 'rgba(0,0,0,0)');
-        beam.addColorStop(0.2, `rgba(80,160,255,${0.05 + pulse * 0.04})`);
-        beam.addColorStop(0.5, `rgba(210,240,255,${0.24 + pulse * 0.16})`);
-        beam.addColorStop(0.8, `rgba(80,160,255,${0.05 + pulse * 0.04})`);
-        beam.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = beam;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, w * 0.42, 8 + pulse * 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
+      const beam = ctx.createLinearGradient(-w * 0.34, 0, w * 0.34, 0);
+      beam.addColorStop(0, 'rgba(0,0,0,0)');
+      beam.addColorStop(0.22, `rgba(92,146,255,${0.03 + pulse * 0.02})`);
+      beam.addColorStop(0.5, `rgba(214,236,255,${0.14 + pulse * 0.08})`);
+      beam.addColorStop(0.78, `rgba(92,146,255,${0.03 + pulse * 0.02})`);
+      beam.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w * 0.42, 5 + pulse * 3, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      for (let i = 0; i < 4; i++) {
-        ctx.save();
-        ctx.rotate(t * 0.35 + i * (Math.PI / 2));
-        const arcGradient = ctx.createRadialGradient(0, 0, w * 0.04, 0, 0, w * 0.22);
-        arcGradient.addColorStop(0, 'rgba(120,200,255,0)');
-        arcGradient.addColorStop(0.6, `rgba(90,170,255,${0.1 + pulse * 0.06})`);
-        arcGradient.addColorStop(1, 'rgba(120,200,255,0)');
-        ctx.strokeStyle = arcGradient;
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(0, 0, w * 0.16 + i * 10, -0.8, 0.8);
-        ctx.stroke();
-        ctx.restore();
-      }
+      ctx.rotate(Math.PI / 2);
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w * 0.22, 2.5 + pulse * 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
 
-      const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, 120 + pulse * 20);
-      halo.addColorStop(0, `rgba(230,245,255,${0.85 + pulse * 0.1})`);
-      halo.addColorStop(0.2, `rgba(160,220,255,${0.5 + pulse * 0.08})`);
-      halo.addColorStop(0.45, 'rgba(90,140,255,0.18)');
+      const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, 92 + pulse * 10);
+      halo.addColorStop(0, `rgba(240,248,255,${0.34 + pulse * 0.08})`);
+      halo.addColorStop(0.18, `rgba(166,210,255,${0.18 + pulse * 0.05})`);
+      halo.addColorStop(0.5, 'rgba(84,126,255,0.08)');
       halo.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.arc(0, 0, 120 + pulse * 20, 0, Math.PI * 2);
+      ctx.arc(0, 0, 92 + pulse * 10, 0, Math.PI * 2);
       ctx.fill();
 
-      const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 26 + pulse * 4);
-      core.addColorStop(0, 'rgba(255,255,255,1)');
-      core.addColorStop(0.4, 'rgba(210,235,255,0.98)');
-      core.addColorStop(0.7, 'rgba(120,180,255,0.92)');
-      core.addColorStop(1, 'rgba(20,40,110,0.25)');
+      const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 18 + pulse * 2.5);
+      core.addColorStop(0, 'rgba(255,255,255,0.98)');
+      core.addColorStop(0.42, 'rgba(222,238,255,0.95)');
+      core.addColorStop(0.78, 'rgba(110,164,255,0.7)');
+      core.addColorStop(1, 'rgba(26,44,112,0.08)');
       ctx.fillStyle = core;
       ctx.beginPath();
-      ctx.arc(0, 0, 26 + pulse * 4, 0, Math.PI * 2);
+      ctx.arc(0, 0, 18 + pulse * 2.5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
-      t += 0.01;
+      t += 0.008;
       raf = requestAnimationFrame(draw);
     };
 
