@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { PanelsTopLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import TickerBar from '../components/dashboard/TickerBar';
 import WidgetRulesPanel from '../components/dashboard/WidgetRulesPanel';
 import { DashboardEventsProvider } from '../context/DashboardEventsContext';
 import DataVisualizer from '../components/dashboard/DataVisualizer';
@@ -63,7 +62,6 @@ export default function Dashboard() {
           <ThemeToggle />
           <LanguageSwitcher />
         </div>
-        <TickerBar />
         <PortfolioSummary />
         <QuickActions />
         <div className="px-4 mt-4 space-y-4 pb-4">

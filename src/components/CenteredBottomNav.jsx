@@ -236,16 +236,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
       VIBRATE.click();
     }
     didDrag.current = true;
+    // Nav is sticky below the ticker — Y is pinned. Only X is user-adjustable.
     const x = e.clientX - dragOffset.current.x;
-    const y = e.clientY - dragOffset.current.y;
     const maxX = window.innerWidth - navRef.current.offsetWidth;
-    const maxY = window.innerHeight - navRef.current.offsetHeight;
-    const ticker = document.getElementById(TICKER_BAR_ID);
-    const minY = ticker ? (ticker.offsetHeight || 0) + 8 : 0;
-    const newPos = {
-      x: Math.max(0, Math.min(x, maxX)),
-      y: Math.max(minY, Math.min(y, maxY)),
-    };
+    const newPos = { x: Math.max(0, Math.min(x, maxX)), y: 0 };
     setPos(newPos);
     localStorage.setItem(POS_KEY, JSON.stringify(newPos));
   }, [clearHold]);
@@ -300,22 +294,36 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     }
   };
 
-  // position: fixed always — so the nav stays anchored to the viewport
-  // (following the user on scroll, on every page), never glued to the
-  // scrollable document. Priority: ticker lock > saved custom pos >
-  // centered default.
-  const style = lockedToTicker
-    ? { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' }
-    : pos.x !== null
-      ? { position: 'fixed', left: pos.x, top: pos.y, transform: 'none' }
-      : { position: 'fixed', top: pos.y, left: '50%', transform: 'translateX(-50%)' };
+  // Nav is always sticky below the TickerBar (which is mounted globally in
+  // Layout). Sticky is how the ticker already follows the user — using the
+  // same mechanism here means the nav follows scroll on every page too.
+  // The outer wrapper handles sticky + horizontal drag via marginLeft;
+  // the inner nav keeps its own styling untouched.
+  const TICKER_OFFSET = 44;
+  const outerStyle = {
+    position: 'sticky',
+    top: TICKER_OFFSET,
+    zIndex: 49,
+    width: '100%',
+    pointerEvents: 'none',
+  };
+  const innerStyle = {
+    marginLeft: pos.x !== null ? pos.x : 'auto',
+    marginRight: pos.x !== null ? 0 : 'auto',
+    width: 'fit-content',
+    pointerEvents: 'auto',
+    touchAction: 'none',
+    userSelect: 'none',
+  };
 
   return (
     <>
-      {/* Floating nav */}
+      {/* Sticky outer wrapper: follows the user below the ticker on every
+          page. Inner nav keeps its existing styling + drag handlers. */}
+      <div style={outerStyle}>
       <div
         ref={navRef}
-        style={{ ...style, zIndex: lockedToTicker ? 55 : 50, touchAction: 'pan-y', userSelect: 'none' }}
+        style={innerStyle}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -537,6 +545,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           <Search style={{ width: 18, height: 18 }} />
           <span className="text-[8px] font-medium leading-none">Search</span>
         </button>
+      </div>
       </div>
 
       <NavWalkthrough

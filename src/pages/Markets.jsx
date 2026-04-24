@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRealPrices } from '../hooks/useRealPrices';
-import TickerBar from '../components/dashboard/TickerBar';
 import { WifiOff, Loader2 } from 'lucide-react';
 import { useFeatureTracking, trackFeatureInteraction } from '../hooks/useFeatureTracking';
 import AssetComparisonDashboard from '../components/markets/AssetComparisonDashboard';
@@ -55,7 +54,6 @@ export default function Markets() {
 
   if (status === 'loading') return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <TickerBar />
       <div className="flex-1 flex items-center justify-center gap-2">
         <Loader2 className="w-5 h-5 text-primary animate-spin" />
         <span className="text-sm text-muted-foreground">Fetching live market data…</span>
@@ -65,7 +63,6 @@ export default function Markets() {
 
   if (status === 'error') return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <TickerBar />
       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
         <WifiOff className="w-10 h-10 text-muted-foreground/30" />
         <p className="font-semibold text-muted-foreground">No Market Data Available</p>
@@ -79,7 +76,6 @@ export default function Markets() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <TickerBar />
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-lg font-semibold">Markets</h2>
         <span className="text-[10px] text-green-400 font-mono">● LIVE · CoinGecko</span>

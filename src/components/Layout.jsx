@@ -5,6 +5,7 @@ import PageThemeLayer from '@/components/theme/PageThemeLayer';
 import { useTheme } from '../context/ThemeContext';
 import JackieFloat from './JackieFloat';
 import CenteredBottomNav from './CenteredBottomNav';
+import TickerBar from './dashboard/TickerBar';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
 import FloatingQuickActions from './FloatingQuickActions';
@@ -102,6 +103,9 @@ export default function Layout() {
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
+        {/* Ticker + nav render together at the top of every page. Both are
+            position: sticky so they ride the user's viewport on scroll. */}
+        <TickerBar />
         <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
         <main className="flex-1 min-w-0">
           <PageThemeLayer>
