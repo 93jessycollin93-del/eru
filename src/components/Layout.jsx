@@ -12,6 +12,8 @@ import ScreenVisualizer from './dashboard/ScreenVisualizer';
 import BazarStandDock from './bazar/BazarStandDock';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
+const NEUTRON_STAR_BG = 'neutron_star';
+
 
 
 function useFloatingWidgetPrefs() {
@@ -85,8 +87,17 @@ export default function Layout() {
   return (
     <>
       {/* Full-screen background — fixed, covers entire viewport */}
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: 'var(--app-bg, hsl(var(--background)))', ...globalThemeStyles }} />
-      <AnimatedBackground type={bg} opacity={bgOpacity} />
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          zIndex: 0,
+          background: 'radial-gradient(circle at 50% 35%, rgba(78,119,255,0.16) 0%, rgba(20,28,58,0.1) 28%, rgba(5,8,18,0.96) 72%, rgba(2,4,10,1) 100%)',
+          ...globalThemeStyles,
+        }}
+      />
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: 'linear-gradient(180deg, rgba(120,180,255,0.04) 0%, rgba(7,10,22,0.08) 38%, rgba(3,4,10,0.18) 100%)' }} />
+      <AnimatedBackground type={NEUTRON_STAR_BG} opacity={0.95} />
+      {bg !== 'none' && bg !== NEUTRON_STAR_BG ? <AnimatedBackground type={bg} opacity={Math.min(bgOpacity, 0.35)} /> : null}
 
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>

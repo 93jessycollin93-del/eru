@@ -229,6 +229,118 @@ const ENGINES = {
     return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
+  neutron_star: (canvas, density = 1) => {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
+
+    const stars = Array.from({ length: Math.floor(180 * density) }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.4 + 0.2,
+      a: 0.2 + Math.random() * 0.6,
+      twinkle: Math.random() * Math.PI * 2,
+    }));
+
+    let raf;
+    let cancelled = false;
+    let t = 0;
+
+    const draw = () => {
+      if (cancelled) return;
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w * 0.5;
+      const cy = h * 0.42;
+      const pulse = (Math.sin(t * 1.5) + 1) * 0.5;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.9);
+      bg.addColorStop(0, 'rgba(40, 70, 180, 0.18)');
+      bg.addColorStop(0.3, 'rgba(12, 24, 68, 0.22)');
+      bg.addColorStop(0.7, 'rgba(5, 8, 20, 0.14)');
+      bg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      stars.forEach((star) => {
+        star.twinkle += 0.01;
+        const alpha = star.a + Math.sin(star.twinkle) * 0.15;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(220,235,255,${Math.max(0.08, alpha)})`;
+        ctx.fill();
+      });
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(t * 0.18);
+
+      for (let i = 0; i < 3; i++) {
+        ctx.save();
+        ctx.rotate((Math.PI / 3) * i);
+        const beam = ctx.createLinearGradient(-w * 0.35, 0, w * 0.35, 0);
+        beam.addColorStop(0, 'rgba(0,0,0,0)');
+        beam.addColorStop(0.2, `rgba(80,160,255,${0.05 + pulse * 0.04})`);
+        beam.addColorStop(0.5, `rgba(210,240,255,${0.24 + pulse * 0.16})`);
+        beam.addColorStop(0.8, `rgba(80,160,255,${0.05 + pulse * 0.04})`);
+        beam.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = beam;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w * 0.42, 8 + pulse * 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (let i = 0; i < 4; i++) {
+        ctx.save();
+        ctx.rotate(t * 0.35 + i * (Math.PI / 2));
+        const arcGradient = ctx.createRadialGradient(0, 0, w * 0.04, 0, 0, w * 0.22);
+        arcGradient.addColorStop(0, 'rgba(120,200,255,0)');
+        arcGradient.addColorStop(0.6, `rgba(90,170,255,${0.1 + pulse * 0.06})`);
+        arcGradient.addColorStop(1, 'rgba(120,200,255,0)');
+        ctx.strokeStyle = arcGradient;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, w * 0.16 + i * 10, -0.8, 0.8);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, 120 + pulse * 20);
+      halo.addColorStop(0, `rgba(230,245,255,${0.85 + pulse * 0.1})`);
+      halo.addColorStop(0.2, `rgba(160,220,255,${0.5 + pulse * 0.08})`);
+      halo.addColorStop(0.45, 'rgba(90,140,255,0.18)');
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, 120 + pulse * 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 26 + pulse * 4);
+      core.addColorStop(0, 'rgba(255,255,255,1)');
+      core.addColorStop(0.4, 'rgba(210,235,255,0.98)');
+      core.addColorStop(0.7, 'rgba(120,180,255,0.92)');
+      core.addColorStop(1, 'rgba(20,40,110,0.25)');
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(0, 0, 26 + pulse * 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+      t += 0.01;
+      raf = requestAnimationFrame(draw);
+    };
+
+    raf = requestAnimationFrame(draw);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+  },
+
   none: () => null,
 };
 
