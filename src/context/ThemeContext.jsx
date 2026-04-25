@@ -7,6 +7,7 @@ export const BG_ENVS = {
   none:            { label: 'None',           cat: 'off'      },
   // Digital (animated)
   neural_mesh:     { label: 'Neural Mesh',    cat: 'digital'  },
+  matrix_rain:     { label: 'Matrix Rain',    cat: 'digital'  },
   // Space (animated)
   stars:           { label: 'Star Field',     cat: 'space'    },
   nebula:          { label: 'Nebula',         cat: 'space'    },
@@ -33,6 +34,7 @@ export const BG_ENVS = {
   still_telescope:  { label: 'Observatory Night', cat: 'still', url: 'https://images.unsplash.com/photo-1537420327992-d6e192287183?w=1920&q=95&fit=crop' },
   still_darksky:    { label: 'Dark Sky Desert',   cat: 'still', url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=95&fit=crop' },
   still_plasma:     { label: 'Plasma Storm',      cat: 'still', url: 'https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=1920&q=95&fit=crop' },
+  still_matrix:     { label: 'Matrix Code',       cat: 'still', url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1920&q=95&fit=crop' },
   // ── Wildlife & Nature Backdrops ──────────────────────────────────────────────
   wild_lion:        { label: 'Lion Portrait',       cat: 'wildlife', url: 'https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=1920&q=95&fit=crop' },
   wild_tiger:       { label: 'Bengal Tiger',        cat: 'wildlife', url: 'https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=1920&q=95&fit=crop' },

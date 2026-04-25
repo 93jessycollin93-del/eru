@@ -329,6 +329,53 @@ const ENGINES = {
     };
   },
 
+  matrix_rain: (canvas, density = 1) => {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
+    const fontSize = 14;
+    const cols = Math.floor(canvas.width / fontSize);
+    // density tunes how many columns rain at once + speed cadence
+    const drops = Array.from({ length: cols }, () => ({
+      y: Math.random() * -canvas.height / fontSize,
+      speed: 0.4 + Math.random() * 0.9 * density,
+      active: Math.random() < 0.6 + 0.3 * density,
+    }));
+    const glyphs = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ0123456789ABCDEF<>=*+-:.';
+    let frame = 0, raf, cancelled = false;
+    const draw = () => {
+      if (cancelled) return;
+      frame++;
+      if (frame % 2 === 0) {
+        // Trail effect: translucent black wash instead of full clear.
+        ctx.fillStyle = 'rgba(5,8,14,0.18)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+        ctx.textBaseline = 'top';
+        for (let i = 0; i < drops.length; i++) {
+          const d = drops[i];
+          if (!d.active) continue;
+          const ch = glyphs[Math.floor(Math.random() * glyphs.length)];
+          const x = i * fontSize;
+          const y = d.y * fontSize;
+          // Lead glyph bright, trail green.
+          ctx.fillStyle = 'rgba(190,255,210,0.95)';
+          ctx.fillText(ch, x, y);
+          ctx.fillStyle = 'rgba(0,230,118,0.75)';
+          ctx.fillText(ch, x, y - fontSize);
+          d.y += d.speed;
+          if (d.y * fontSize > canvas.height && Math.random() > 0.975) {
+            d.y = Math.random() * -20;
+            d.speed = 0.4 + Math.random() * 0.9 * density;
+          }
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
+  },
+
   none: () => null,
 };
 
