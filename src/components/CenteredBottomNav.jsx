@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
@@ -369,6 +369,23 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             beneath it instead of leaving an empty column beside a vertical
             stack of handle buttons. */}
         <div className={`flex flex-row items-center gap-1 ${orientation === 'vertical' ? 'pb-1 justify-start' : 'pr-1'} text-muted-foreground/40`}>
+          {/* Back — leftmost; uses router history, falls back to Home if there's nothing to pop */}
+          <button
+            onClick={() => {
+              playSound('click');
+              VIBRATE.click();
+              if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/');
+              }
+            }}
+            aria-label="Go back"
+            title="Back"
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border bg-secondary/60 text-muted-foreground transition-all hover:scale-110 hover:text-primary hover:border-primary/40 hover:bg-primary/10 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          >
+            <ArrowLeft className="w-3 h-3" />
+          </button>
           <GripHorizontal className={`w-3.5 h-3.5 ${lockedToTicker ? 'opacity-40' : ''}`} />
           <button
             onClick={() => {
