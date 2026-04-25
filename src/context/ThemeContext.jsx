@@ -244,6 +244,16 @@ export function ThemeProvider({ children }) {
     document.documentElement.style.setProperty('--glow-intensity', glowIntensity);
   }, [glowIntensity]);
 
+  // Map user's bgOpacity → density bucket on <body>. Surfaces using
+  // .eru-theme-* classes pick this up automatically via the
+  // [data-bg-density] selector in index.css.
+  useEffect(() => {
+    const op = Number(bgOpacity) || 0;
+    const bucket = op <= 0.3 ? 'subtle' : op >= 0.6 ? 'intense' : 'medium';
+    document.body.setAttribute('data-bg-density', bucket);
+    return () => { /* keep last value across page nav */ };
+  }, [bgOpacity]);
+
   const setUiScale = (val) => { setUiScaleRaw(val); save('uiScale', val); };
   const setColorMode = (mode) => { setColorModeRaw(mode); save('colorMode', mode); };
   const toggleColorMode = () => setColorMode(colorMode === 'dark' ? 'light' : 'dark');

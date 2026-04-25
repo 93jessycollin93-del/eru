@@ -216,6 +216,42 @@
   }
   .eru-theme-button:active { transform: translateY(0.5px); }
 
+  /* === Density variants =====================================================
+     Apply via className on any surface to tune translucency without touching
+     the central tokens. Also reachable via [data-bg-density] on <body> set
+     by ThemeContext (driven by user's bgOpacity). */
+  .eru-density-subtle  { --eru-card-opacity: 0.32; --eru-panel-opacity: 0.30; --eru-nav-opacity: 0.40; }
+  .eru-density-medium  { --eru-card-opacity: 0.55; --eru-panel-opacity: 0.50; --eru-nav-opacity: 0.60; }
+  .eru-density-intense { --eru-card-opacity: 0.80; --eru-panel-opacity: 0.78; --eru-nav-opacity: 0.86; }
+
+  body[data-bg-density="subtle"]  .eru-theme-card  { background-color: hsl(230 22% 9% / 0.32); }
+  body[data-bg-density="subtle"]  .eru-theme-panel,
+  body[data-bg-density="subtle"]  .eru-theme-modal { background-color: hsl(230 22% 9% / 0.62); }
+  body[data-bg-density="intense"] .eru-theme-card  { background-color: hsl(230 22% 9% / 0.80); }
+  body[data-bg-density="intense"] .eru-theme-panel,
+  body[data-bg-density="intense"] .eru-theme-modal { background-color: hsl(230 22% 9% / 0.92); }
+
+  /* === CTA accent =========================================================
+     Optional shimmer/glow for primary action surfaces — purely additive,
+     never blocks pointer events, never alters layout. Apply alongside an
+     existing button to give it ERU-flavored emphasis. */
+  .eru-cta-accent {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .eru-cta-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(120% 80% at 0% 0%, hsl(var(--eru-surface-glow)), transparent 60%);
+    opacity: calc(var(--eru-glow-strength) * 1);
+    transition: opacity 200ms ease;
+    z-index: -1;
+  }
+  .eru-cta-accent:hover::before { opacity: calc(var(--eru-glow-strength) * 1.6); }
+
   /* Reduced motion → drop blur cost & tone down glow. */
   @media (prefers-reduced-motion: reduce) {
     .eru-theme-surface,
