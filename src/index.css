@@ -31,9 +31,10 @@
     --eru-button-opacity:    0.4;
     --eru-nav-opacity:       0.6;
     --eru-modal-opacity:     0.78;
-    --eru-backdrop-blur:     14px;
-    --eru-backdrop-blur-strong: 22px;
-    --eru-backdrop-saturate: 140%;
+    /* Subtle by default — strong reserved for modals/drawers only. */
+    --eru-backdrop-blur:     6px;
+    --eru-backdrop-blur-strong: 12px;
+    --eru-backdrop-saturate: 125%;
     --eru-glow-strength:     0.35;
     --eru-vignette-strength: 0.18;
     --eru-particle-strength: 1;
@@ -82,6 +83,11 @@
     padding: 0;
     background-color: hsl(var(--background));
   }
+  /* Defensive clarity rule — guarantees the app shell and major content
+     wrappers can never inherit a stray filter:blur() from a parent. Local
+     glass on cards/modals/popovers (via .eru-theme-* classes) still works
+     because they use backdrop-filter, which is unaffected by this rule. */
+  html, body, #root, main { filter: none !important; }
   body {
     @apply text-foreground;
     font-family: 'Inter', sans-serif;
@@ -187,9 +193,22 @@
   }
 
   /* Nav surface — picks up just enough atmosphere without losing legibility
-     for tightly packed icon labels. */
+     for tightly packed icon labels. Blur intentionally OFF here so ticker
+     numbers and small nav icons stay razor-sharp. */
   .eru-theme-nav {
     background-color: hsl(var(--eru-surface-bg-strong));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* Header strip (sticky ticker+nav shell) — never blur the app shell.
+     Subtle translucent fill only, so foreground tickers/text stay crisp. */
+  .eru-theme-header {
+    background-color: hsl(230 22% 9% / 0.55);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: hsl(var(--eru-surface-border));
+    box-shadow: inset 0 -1px 0 hsl(var(--eru-surface-border));
   }
 
   /* Drawer/Sheet — bottom or side sheets need a stronger base since they
@@ -201,11 +220,10 @@
   }
 
   /* Translucent button — secondary/ghost glass affordance. Primary buttons
-     keep their solid color (intentionally untouched). */
+     keep their solid color (intentionally untouched). No blur here — buttons
+     contain icons/labels which must stay crisp. */
   .eru-theme-button {
     background-color: hsl(var(--eru-surface-bg-soft));
-    -webkit-backdrop-filter: blur(8px) saturate(var(--eru-backdrop-saturate));
-    backdrop-filter: blur(8px) saturate(var(--eru-backdrop-saturate));
     border: 1px solid hsl(var(--eru-surface-border));
     transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
   }
