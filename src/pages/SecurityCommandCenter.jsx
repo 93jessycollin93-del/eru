@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, AlertCircle, Lock } from 'lucide-react';
+import { Shield, RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, AlertCircle, Lock, FlaskConical } from 'lucide-react';
 import PermissionGate from '@/components/PermissionGate';
 import TruthState from '@/components/TruthState';
-import { isAdmin } from '@/lib/permissions';
+import { isAdmin, isOwner } from '@/lib/permissions';
+import { useAuth } from '@/lib/AuthContext';
 import { runAllChecks, summarize } from '@/lib/securityChecks';
 
 /**
@@ -31,6 +32,8 @@ export default function SecurityCommandCenter() {
 }
 
 function CommandCenterInner() {
+  const { user } = useAuth();
+  const ownerMode = isOwner(user);
   const [tick, setTick] = useState(0);
 
   // Re-run on mount and on manual refresh.
@@ -46,6 +49,7 @@ function CommandCenterInner() {
 
       <div className="p-4 space-y-4">
         <ScoreCard summary={summary} />
+        {ownerMode && <TestRunnerCallout />}
         <QuickLinks />
 
         <section className="space-y-2">
@@ -89,7 +93,10 @@ function Header({ onRefresh }) {
 }
 
 function ScoreCard({ summary }) {
-  const tone = summary.score >= 8 ? 'ok' : summary.score >= 5 ? 'warn' : 'fail';
+  // Cap at 8.0 until backend RLS / webhooks / chain ownership are formally
+  // reviewed. Surface this honestly instead of overstating posture.
+  const verifiedScore = Math.min(summary.score, 8.0);
+  const tone = verifiedScore >= 8 ? 'ok' : verifiedScore >= 5 ? 'warn' : 'fail';
   const ring = tone === 'ok' ? 'ring-primary/30' : tone === 'warn' ? 'ring-yellow-400/30' : 'ring-destructive/30';
   const text = tone === 'ok' ? 'text-primary' : tone === 'warn' ? 'text-yellow-300' : 'text-destructive';
 
@@ -98,8 +105,8 @@ function ScoreCard({ summary }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Frontend posture score</p>
-          <p className={`text-3xl font-bold ${text}`}>{summary.score.toFixed(1)}<span className="text-sm font-medium text-muted-foreground"> / 10</span></p>
-          <p className="text-[11px] text-muted-foreground mt-1">Honest measurement of what the client can verify.</p>
+          <p className={`text-3xl font-bold ${text}`}>{verifiedScore.toFixed(1)}<span className="text-sm font-medium text-muted-foreground"> / 10</span></p>
+          <p className="text-[11px] text-muted-foreground mt-1">Capped at 8.0 — 9/10 requires verified backend RLS, payment webhooks, and chain ownership.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 text-center text-[10px]">
           <Stat label="OK" value={summary.ok} tone="ok" />
@@ -122,6 +129,28 @@ function Stat({ label, value, tone }) {
       <p className={`text-base font-semibold ${cls}`}>{value}</p>
       <p className="text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+function TestRunnerCallout() {
+  return (
+    <Link
+      to="/admin/security-test"
+      className="block rounded-2xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors p-3"
+    >
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary flex-shrink-0">
+          <FlaskConical className="w-4 h-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground">Permission Attack Simulator</p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Owner-only · runs simulated route, action, ownership, embed and confirmation tests across 8 roles. Read-only.
+          </p>
+        </div>
+        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      </div>
+    </Link>
   );
 }
 

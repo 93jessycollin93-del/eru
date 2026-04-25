@@ -66,6 +66,7 @@ import SheetsSync from './pages/SheetsSync';
 import PhoenixInvestor from './pages/PhoenixInvestor';
 import AdminReviewCenter from './pages/AdminReviewCenter';
 import SecurityCommandCenter from './pages/SecurityCommandCenter';
+import SecurityTestRunner from './pages/SecurityTestRunner';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -155,6 +156,7 @@ const AuthenticatedApp = () => {
         <Route path="/storefront/phoenix-investor" element={<PhoenixInvestor />} />
         <Route path="/admin/review" element={<AdminReviewCenter />} />
         <Route path="/admin/security" element={<SecurityCommandCenter />} />
+        <Route path="/admin/security-test" element={<SecurityTestRunner />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
