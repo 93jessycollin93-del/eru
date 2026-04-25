@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
+import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
 
 const ALL_PAGES = [
   { id: 'home',       label: 'Home',         icon: Home,          to: '/' },
+  { id: 'jackie',     label: 'Jackie',        icon: Bot,           to: '/jackie' },
   { id: 'markets',    label: 'Markets',       icon: BarChart2,     to: '/markets' },
   { id: 'trade',      label: 'Trade',         icon: ArrowUpDown,   to: '/trade' },
   { id: 'nfts',       label: 'NFTs',          icon: ImageIcon,     to: '/nfts' },
@@ -46,11 +48,12 @@ const WIDGET_NAV_ITEMS = [
   { id: 'conversations', label: 'Conversations', icon: Library, to: '/jackie?panel=conversations' },
 ];
 
-const DEFAULT_PINNED = ['home', 'markets', 'trade', 'bazar', 'portfolio'];
+const DEFAULT_PINNED = ['home', 'jackie', 'markets', 'bazar', 'portfolio'];
 const STORAGE_KEY = 'floating_nav_pinned';
 const POS_KEY = 'floating_nav_pos';
 const ORIENTATION_KEY = 'floating_nav_orientation';
 const EXPANDED_KEY = 'floating_nav_expanded';
+const COLLAPSED_KEY = 'floating_nav_collapsed';
 const ROWS_KEY = 'floating_nav_rows';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
@@ -86,6 +89,9 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   });
   const [rows, setRows] = useState(() => {
     try { return JSON.parse(localStorage.getItem(ROWS_KEY)) || 1; } catch { return 1; }
+  });
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(COLLAPSED_KEY)) || false; } catch { return false; }
   });
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
@@ -187,6 +193,12 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     const newRows = rows === 1 ? 2 : rows === 2 ? 3 : rows === 3 ? 4 : 1;
     setRows(newRows);
     localStorage.setItem(ROWS_KEY, JSON.stringify(newRows));
+  };
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
   };
 
   // Distribute pinned pages across rows
@@ -382,9 +394,23 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
+          {/* Cute collapse / expand toggle — shrinks the nav into icon-only mode */}
+          <button
+            onClick={() => {
+              playSound('toggle');
+              VIBRATE.toggle();
+              toggleCollapsed();
+            }}
+            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            className={`ml-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-[0_0_10px_hsl(160_100%_45%/0.25)] transition-all hover:scale-110 hover:bg-primary/20 hover:shadow-[0_0_14px_hsl(160_100%_45%/0.55)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
+          >
+            {collapsed ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
+          </button>
         </div>
 
         {(() => {
+          const itemPad = collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5';
           const renderNavItem = ({ id, label, icon: Icon, to, widgetId }) => {
             const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
             const isJackiePanelLink = to?.startsWith('/jackie?panel=');
@@ -412,12 +438,12 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                     type="button"
                     onClick={handlePanelNavigation}
                     title={label}
-                    className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                    className={`flex flex-col items-center gap-0.5 ${itemPad} rounded-xl transition-colors ${
                       active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
-                    <span className="text-[8px] font-medium leading-none">{label}</span>
+                    {!collapsed && <span className="text-[8px] font-medium leading-none">{label}</span>}
                   </button>
                 );
               }
@@ -426,12 +452,12 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                   key={id}
                   to={to}
                   title={label}
-                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${
+                  className={`flex flex-col items-center gap-0.5 ${itemPad} rounded-xl transition-colors ${
                     active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
-                  <span className="text-[8px] font-medium leading-none">{label}</span>
+                  {!collapsed && <span className="text-[8px] font-medium leading-none">{label}</span>}
                 </Link>
               );
             }
@@ -441,10 +467,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 type="button"
                 onClick={handleWidgetClick}
                 title={label}
-                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-colors ${unavailableWidget === id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`flex flex-col items-center gap-0.5 ${itemPad} rounded-xl transition-colors ${unavailableWidget === id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
-                <span className="text-[8px] font-medium leading-none">{label}</span>
+                {!collapsed && <span className="text-[8px] font-medium leading-none">{label}</span>}
               </button>
             );
           };
@@ -462,6 +488,21 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           );
         })()}
 
+        {/* Quick Actions — replaces former floating Plus bubble */}
+        <QuickActionsPopover
+          trigger={({ onClick, open }) => (
+            <button
+              onClick={() => { playSound('click'); VIBRATE.click(); onClick(); }}
+              className={`flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary transition-colors`}
+              title="Quick Actions"
+              aria-label="Quick Actions"
+            >
+              <Plus style={{ width: 18, height: 18 }} className={`transition-transform ${open ? 'rotate-45 text-primary' : ''}`} />
+              {!collapsed && <span className="text-[8px] font-medium leading-none">Create</span>}
+            </button>
+          )}
+        />
+
         {/* Search button */}
         <button
           onClick={() => {
@@ -472,11 +513,12 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
               result.catch(() => {});
             }
           }}
-          className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-muted-foreground hover:text-primary transition-colors"
+          className={`flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary transition-colors`}
           title="Search"
+          aria-label="Search"
         >
           <Search style={{ width: 18, height: 18 }} />
-          <span className="text-[8px] font-medium leading-none">Search</span>
+          {!collapsed && <span className="text-[8px] font-medium leading-none">Search</span>}
         </button>
       </div>
       </div>

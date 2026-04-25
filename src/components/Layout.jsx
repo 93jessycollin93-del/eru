@@ -3,15 +3,18 @@ import { Outlet } from 'react-router-dom';
 import AnimatedBackground from './AnimatedBackground';
 import PageThemeLayer from '@/components/theme/PageThemeLayer';
 import { useTheme } from '../context/ThemeContext';
-import JackieFloat from './JackieFloat';
 import CenteredBottomNav from './CenteredBottomNav';
 import TickerBar from './dashboard/TickerBar';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
-import FloatingQuickActions from './FloatingQuickActions';
 import ScreenVisualizer from './dashboard/ScreenVisualizer';
-import BazarStandDock from './bazar/BazarStandDock';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
+
+// JackieFloat / FloatingQuickActions / BazarStandDock are intentionally NOT
+// mounted here anymore — their actions are now first-class items in the
+// CenteredBottomNav (Jackie link, Bazar pin, "Create" Quick Actions popover).
+// The components remain in the codebase to preserve their logic and so they
+// can be re-enabled if a future surface needs the loose floating presentation.
 
 const NEUTRON_STAR_BG = 'neutron_star';
 
@@ -118,9 +121,6 @@ export default function Layout() {
             <Outlet />
           </PageThemeLayer>
         </main>
-        <JackieFloat prefs={prefs} updateWidget={updateWidget} />
-        <BazarStandDock />
-        <FloatingQuickActions />
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
         <BotWidget prefs={prefs} updateWidget={updateWidget} />
         <ScreenVisualizer prefs={prefs} updateWidget={updateWidget} />
