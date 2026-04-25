@@ -62,6 +62,7 @@ import BazarStand from './pages/BazarStand';
 import EscrowDashboard from './pages/EscrowDashboard';
 import ReferralDashboard from './pages/ReferralDashboard';
 import EruSwarmTest from './pages/EruSwarmTest';
+import EruRedteamTest from './pages/EruRedteamTest';
 import SheetsSync from './pages/SheetsSync';
 import PhoenixInvestor from './pages/PhoenixInvestor';
 import AdminReviewCenter from './pages/AdminReviewCenter';
@@ -152,6 +153,7 @@ const AuthenticatedApp = () => {
         <Route path="/escrow-dashboard" element={<EscrowDashboard />} />
         <Route path="/referrals" element={<ReferralDashboard />} />
         <Route path="/eru-swarm-test" element={<EruSwarmTest />} />
+        <Route path="/eru-redteam-test" element={<EruRedteamTest />} />
         <Route path="/sheets-sync" element={<SheetsSync />} />
         <Route path="/storefront/phoenix-investor" element={<PhoenixInvestor />} />
         <Route path="/admin/review" element={<AdminReviewCenter />} />
