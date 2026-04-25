@@ -258,9 +258,9 @@ function BackgroundsTab() {
       <div className="space-y-3 p-3 bg-card rounded-xl border border-border">
         <div className="space-y-1">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Background Layers</p>
-          <p className="text-xs text-muted-foreground">Adjust the app atmosphere here. Surface layer colors live in the Themes tab.</p>
+          <p className="text-xs text-muted-foreground">These only affect the background art — foreground UI stays crisp.</p>
         </div>
-        <SliderRow label="Background Opacity" value={bgOpacity} min={0} max={1} step={0.05} onChange={setBgOpacity} />
+        <SliderRow label="Background Opacity / Dimmer" value={bgOpacity} min={0.15} max={1} step={0.05} onChange={setBgOpacity} />
         <SliderRow label="Particle Density" value={particleDensity} min={0.1} max={2} step={0.1} onChange={setParticleDensity} />
       </div>
     </div>
@@ -285,10 +285,11 @@ function MotionTab() {
       <SectionHeader icon={Zap} label="Motion & Interaction" sub="Global animation rules and feedback" />
 
       <div className="space-y-3 p-3 bg-card rounded-xl border border-border">
-        <SliderRow label="Motion Intensity" value={motionIntensity} onChange={setMotionIntensity} locked={isLocked('motionIntensity')} />
-        <SliderRow label="Animation Speed" value={animSpeed} onChange={setAnimSpeed} locked={isLocked('animSpeed')} />
-        <SliderRow label="Glow Intensity" value={glowIntensity} onChange={setGlowIntensity} locked={isLocked('glowIntensity')} />
-        <SliderRow label="Blur / Glass Level" value={blurLevel} onChange={setBlurLevel} locked={isLocked('blurLevel')} />
+        <SliderRow label="Motion Intensity" value={motionIntensity} min={0} max={2} onChange={setMotionIntensity} locked={isLocked('motionIntensity')} />
+        <SliderRow label="Animation Speed" value={animSpeed} min={0} max={2.5} onChange={setAnimSpeed} locked={isLocked('animSpeed')} />
+        <SliderRow label="Glow Intensity" value={glowIntensity} min={0} max={2} onChange={setGlowIntensity} locked={isLocked('glowIntensity')} />
+        <SliderRow label="Background Blur (art only)" value={blurLevel} min={1} max={3} step={0.1} onChange={setBlurLevel} locked={isLocked('blurLevel')} />
+        <p className="text-[10px] text-muted-foreground/70">Blur affects only background art. Foreground UI is never blurred.</p>
       </div>
 
       {/* Motion language presets */}
@@ -409,9 +410,16 @@ function DisplayTab() {
       <SectionHeader icon={Sliders} label="Display & Typography" sub="Color grading and font system" />
 
       <div className="space-y-3 p-3 bg-card rounded-xl border border-border">
-        <SliderRow label="Brightness" value={brightness} min={0.5} max={1.5} onChange={setBrightness} locked={isLocked('brightness')} />
-        <SliderRow label="Contrast" value={contrast} min={0.5} max={2} onChange={setContrast} locked={isLocked('contrast')} />
-        <SliderRow label="Saturation" value={saturation} min={0} max={2} onChange={setSaturation} locked={isLocked('saturation')} />
+        <SliderRow label="Background Brightness" value={brightness} min={0.65} max={1.4} onChange={setBrightness} locked={isLocked('brightness')} />
+        <SliderRow label="Background Contrast"   value={contrast}   min={0.75} max={1.35} onChange={setContrast}   locked={isLocked('contrast')} />
+        <SliderRow label="Background Saturation" value={saturation} min={0.5}  max={1.8}  onChange={setSaturation} locked={isLocked('saturation')} />
+        <p className="text-[10px] text-muted-foreground/70">Color grading targets background art only — readable UI stays untouched.</p>
+        <button
+          onClick={() => { setBrightness(1); setContrast(1); setSaturation(1); }}
+          className="w-full mt-1 py-2 text-xs rounded-lg bg-secondary border border-border text-muted-foreground hover:text-foreground"
+        >
+          Reset color grading
+        </button>
       </div>
 
       <div className="space-y-2">

@@ -90,19 +90,31 @@ export default function Layout() {
 
   return (
     <>
-      {/* Full-screen vignette — softened so the animated background reads
-          through every page, not only the top strip. The radial fade keeps
-          edges grounded; the linear pass adds a subtle top→bottom depth cue. */}
+      {/* Background filter wrapper — applies user's brightness/contrast/
+          saturation/blur to ONLY the decorative background layers below.
+          Foreground UI lives outside this wrapper so it always stays crisp. */}
       <div
         className="fixed inset-0 pointer-events-none eru-background-layer"
-        style={{
-          background: 'radial-gradient(circle at 50% 26%, rgba(95,135,255,0.14) 0%, rgba(20,28,58,0.06) 28%, rgba(7,10,22,0.34) 72%, rgba(2,4,10,0.55) 100%)',
-          ...globalThemeStyles,
-        }}
+        style={{ filter: 'var(--eru-bg-filter)', WebkitFilter: 'var(--eru-bg-filter)' }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(circle at 50% 26%, rgba(95,135,255,0.14) 0%, rgba(20,28,58,0.06) 28%, rgba(7,10,22,0.34) 72%, rgba(2,4,10,0.55) 100%)',
+            ...globalThemeStyles,
+          }}
+        />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(60,96,210,0.025) 18%, rgba(7,10,22,0.04) 44%, rgba(3,4,10,0.08) 100%)' }} />
+        <AnimatedBackground type={NEUTRON_STAR_BG} opacity={0.78} />
+        {bg !== 'none' && bg !== NEUTRON_STAR_BG ? <AnimatedBackground type={bg} opacity={Math.min(bgOpacity, 0.35)} /> : null}
+      </div>
+      {/* Dimmer overlay — lives ABOVE the background filter wrapper but BELOW
+          all foreground UI. Driven by --eru-bg-dim (mapped from bgOpacity). */}
+      <div
+        className="fixed inset-0 pointer-events-none eru-background-layer"
+        style={{ background: `rgba(0,0,0,var(--eru-bg-dim,0))` }}
+        aria-hidden="true"
       />
-      <div className="fixed inset-0 pointer-events-none eru-background-layer" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(60,96,210,0.025) 18%, rgba(7,10,22,0.04) 44%, rgba(3,4,10,0.08) 100%)' }} />
-      <AnimatedBackground type={NEUTRON_STAR_BG} opacity={0.78} />
-      {bg !== 'none' && bg !== NEUTRON_STAR_BG ? <AnimatedBackground type={bg} opacity={Math.min(bgOpacity, 0.35)} /> : null}
 
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>

@@ -232,28 +232,54 @@ export function ThemeProvider({ children }) {
     document.body.style.zoom = uiScale;
   }, [uiScale]);
 
-  // Apply filter effects
+  // Apply background-only filter effects (brightness/contrast/saturation/blur).
+  // CRITICAL: these are NOT applied to <body> anymore — that would blur every
+  // foreground UI element (text, icons, cards, nav). Instead we publish them
+  // as CSS vars consumed by the .eru-background-layer surfaces in Layout.
   useEffect(() => {
-    const filter = lowPowerMode
-      ? 'none'
-      : `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
-    document.documentElement.style.setProperty('--vse-filter', filter);
-    document.body.style.filter = filter === 'none' ? '' : filter;
-  }, [brightness, contrast, saturation, lowPowerMode]);
+    const root = document.documentElement;
+    const lp = lowPowerMode;
+    const b = lp ? 1 : Math.min(1.4, Math.max(0.65, Number(brightness) || 1));
+    const c = lp ? 1 : Math.min(1.35, Math.max(0.75, Number(contrast)   || 1));
+    const s = lp ? 1 : Math.min(1.8,  Math.max(0.5,  Number(saturation) || 1));
+    // Background-only blur: clamp 0–16px, only kicks in when user explicitly
+    // moves the slider above 1 (default). Default 1 = 0px (crisp).
+    const bl = lp ? 0 : Math.min(16, Math.max(0, ((Number(blurLevel) || 1) - 1) * 8));
+    root.style.setProperty('--eru-bg-brightness', String(b));
+    root.style.setProperty('--eru-bg-contrast',   String(c));
+    root.style.setProperty('--eru-bg-saturation', String(s));
+    root.style.setProperty('--eru-bg-blur',       `${bl}px`);
+    root.style.setProperty('--eru-bg-filter', `brightness(${b}) contrast(${c}) saturate(${s}) blur(${bl}px)`);
+    // Cleanup: if a previous version applied body.style.filter, undo it.
+    if (document.body.style.filter) document.body.style.filter = '';
+  }, [brightness, contrast, saturation, blurLevel, lowPowerMode]);
 
-  // Apply glow CSS var
+  // Apply glow + motion + particle CSS vars (clamped to safe ranges).
   useEffect(() => {
-    document.documentElement.style.setProperty('--glow-intensity', glowIntensity);
-  }, [glowIntensity]);
+    const root = document.documentElement;
+    const g = Math.min(2, Math.max(0, Number(glowIntensity) || 0));
+    const m = Math.min(2, Math.max(0, Number(motionIntensity) || 0));
+    const p = Math.min(2, Math.max(0, Number(particleDensity) || 0));
+    const a = Math.min(2.5, Math.max(0, Number(animSpeed) || 0));
+    root.style.setProperty('--glow-intensity', String(g));
+    root.style.setProperty('--eru-glow-intensity', String(g));
+    root.style.setProperty('--eru-glow-strength', String(0.35 * g));
+    root.style.setProperty('--eru-motion-intensity', String(m));
+    root.style.setProperty('--eru-particle-density', String(p));
+    root.style.setProperty('--eru-anim-speed', String(a));
+  }, [glowIntensity, motionIntensity, particleDensity, animSpeed]);
 
-  // Map user's bgOpacity → density bucket on <body>. Surfaces using
-  // .eru-theme-* classes pick this up automatically via the
-  // [data-bg-density] selector in index.css.
+  // bgOpacity drives a real dimmer overlay (--eru-bg-dim) AND the surface
+  // density bucket. Higher opacity = brighter background = lower dim.
   useEffect(() => {
-    const op = Number(bgOpacity) || 0;
+    const root = document.documentElement;
+    const op = Math.min(1, Math.max(0.15, Number(bgOpacity) || 0.4));
+    root.style.setProperty('--eru-bg-opacity', String(op));
+    // Dimmer overlay: 0 (no dim) at op=1, up to 0.85 at op=0.15.
+    const dim = Math.min(0.85, Math.max(0, (1 - op) * 0.85));
+    root.style.setProperty('--eru-bg-dim', String(dim));
     const bucket = op <= 0.3 ? 'subtle' : op >= 0.6 ? 'intense' : 'medium';
     document.body.setAttribute('data-bg-density', bucket);
-    return () => { /* keep last value across page nav */ };
   }, [bgOpacity]);
 
   const setUiScale = (val) => { setUiScaleRaw(val); save('uiScale', val); };

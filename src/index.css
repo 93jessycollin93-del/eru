@@ -39,6 +39,20 @@
     --eru-vignette-strength: 0.18;
     --eru-particle-strength: 1;
     --eru-motion-strength:   1;
+    /* User-controllable background filter pipeline (set by ThemeContext).
+       Defaults render the background crisp and unmodified — sliders push
+       these values without ever touching foreground UI. */
+    --eru-bg-brightness: 1;
+    --eru-bg-contrast:   1;
+    --eru-bg-saturation: 1;
+    --eru-bg-blur:       0px;
+    --eru-bg-opacity:    0.78;
+    --eru-bg-dim:        0;
+    --eru-bg-filter:     brightness(1) contrast(1) saturate(1) blur(0px);
+    --eru-glow-intensity:    1;
+    --eru-motion-intensity:  1;
+    --eru-particle-density:  1;
+    --eru-anim-speed:        1;
     --primary: 160 100% 45%;
     --primary-foreground: 0 0% 5%;
     --secondary: 230 18% 14%;
