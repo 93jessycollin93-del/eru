@@ -54,6 +54,8 @@ const POS_KEY = 'floating_nav_pos';
 const ORIENTATION_KEY = 'floating_nav_orientation';
 const EXPANDED_KEY = 'floating_nav_expanded';
 const COLLAPSED_KEY = 'floating_nav_collapsed';
+const NAV_MODE_KEY = 'floating_nav_mode'; // 'expanded' | 'icons' | 'controls'
+const NAV_MODE_CYCLE = ['expanded', 'icons', 'controls'];
 const ROWS_KEY = 'floating_nav_rows';
 const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
@@ -90,9 +92,20 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const [rows, setRows] = useState(() => {
     try { return JSON.parse(localStorage.getItem(ROWS_KEY)) || 1; } catch { return 1; }
   });
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(COLLAPSED_KEY)) || false; } catch { return false; }
+  // Three-stage nav mode: 'expanded' (full labels) → 'icons' (icon-only)
+  // → 'controls' (ultra-compact, only the manipulation strip).
+  // Reads the new key first; falls back to the legacy boolean `collapsed`
+  // for users who already persisted icon-only mode.
+  const [navMode, setNavMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(NAV_MODE_KEY);
+      if (saved && NAV_MODE_CYCLE.includes(saved)) return saved;
+      const legacy = JSON.parse(localStorage.getItem(COLLAPSED_KEY) || 'false');
+      return legacy ? 'icons' : 'expanded';
+    } catch { return 'expanded'; }
   });
+  const collapsed = navMode === 'icons'; // preserve icon-only padding/label logic
+  const isControlsOnly = navMode === 'controls';
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
   });
@@ -195,11 +208,22 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     localStorage.setItem(ROWS_KEY, JSON.stringify(newRows));
   };
 
-  const toggleCollapsed = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+  const cycleNavMode = () => {
+    const idx = NAV_MODE_CYCLE.indexOf(navMode);
+    const next = NAV_MODE_CYCLE[(idx + 1) % NAV_MODE_CYCLE.length];
+    setNavMode(next);
+    try {
+      localStorage.setItem(NAV_MODE_KEY, next);
+      // Keep legacy key in sync for any other readers.
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next === 'icons'));
+    } catch {}
   };
+
+  const nextModeLabel = navMode === 'expanded'
+    ? 'Collapse to icons'
+    : navMode === 'icons'
+      ? 'Collapse to control bar'
+      : 'Expand navigation';
 
   // Distribute pinned pages across rows
   const getPagesByRow = () => {
@@ -394,22 +418,42 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
-          {/* Cute collapse / expand toggle — shrinks the nav into icon-only mode */}
+          {/* Cycle nav mode: expanded → icons → controls-only → expanded */}
           <button
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
-              toggleCollapsed();
+              cycleNavMode();
             }}
-            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            aria-label={nextModeLabel}
+            title={nextModeLabel}
             className={`ml-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-[0_0_10px_hsl(160_100%_45%/0.25)] transition-all hover:scale-110 hover:bg-primary/20 hover:shadow-[0_0_14px_hsl(160_100%_45%/0.55)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
           >
-            {collapsed ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
+            {navMode === 'expanded' ? (
+              <Minimize2 className="w-3 h-3" />
+            ) : navMode === 'icons' ? (
+              // Icon hint that the next click hides the nav body (controls-only).
+              <Minimize2 className="w-3 h-3 opacity-70" />
+            ) : (
+              <Maximize2 className="w-3 h-3" />
+            )}
           </button>
+          {/* Tiny mode pip — three dots indicating current stage. Purely cosmetic, mobile-safe. */}
+          <span
+            aria-hidden="true"
+            className="ml-0.5 hidden sm:inline-flex items-center gap-[2px]"
+            title={`Mode: ${navMode}`}
+          >
+            {NAV_MODE_CYCLE.map((m) => (
+              <span
+                key={m}
+                className={`block w-1 h-1 rounded-full transition-colors ${m === navMode ? 'bg-primary shadow-[0_0_4px_hsl(160_100%_45%/0.8)]' : 'bg-muted-foreground/30'}`}
+              />
+            ))}
+          </span>
         </div>
 
-        {(() => {
+        {!isControlsOnly && (() => {
           const itemPad = collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5';
           const renderNavItem = ({ id, label, icon: Icon, to, widgetId }) => {
             const active = to ? (to.startsWith('/jackie?panel=') ? pathname === '/jackie' : pathname === to || (to !== '/' && pathname.startsWith(to))) : false;
@@ -489,7 +533,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         })()}
 
         {/* Quick Actions — replaces former floating Plus bubble */}
-        <QuickActionsPopover
+        {!isControlsOnly && <QuickActionsPopover
           trigger={({ onClick, open }) => (
             <button
               onClick={() => { playSound('click'); VIBRATE.click(); onClick(); }}
@@ -501,10 +545,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
               {!collapsed && <span className="text-[8px] font-medium leading-none">Create</span>}
             </button>
           )}
-        />
+        />}
 
         {/* Search button */}
-        <button
+        {!isControlsOnly && <button
           onClick={() => {
             playSound('click');
             VIBRATE.click();
@@ -519,7 +563,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         >
           <Search style={{ width: 18, height: 18 }} />
           {!collapsed && <span className="text-[8px] font-medium leading-none">Search</span>}
-        </button>
+        </button>}
       </div>
       </div>
 
