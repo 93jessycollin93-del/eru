@@ -103,10 +103,16 @@ export default function Layout() {
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
-        {/* Ticker + nav render together at the top of every page. Both are
-            position: sticky so they ride the user's viewport on scroll. */}
-        <TickerBar />
-        <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
+        {/* Unified sticky shell — ticker + nav move as ONE unit on scroll so
+            they remain visible together across long-scroll pages and small
+            mobile viewports. Respect safe-area insets for iOS / Telegram. */}
+        <div
+          className="sticky z-50 bg-background/0"
+          style={{ top: 'env(safe-area-inset-top, 0px)' }}
+        >
+          <TickerBar />
+          <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
+        </div>
         <main className="flex-1 min-w-0">
           <PageThemeLayer>
             <Outlet />

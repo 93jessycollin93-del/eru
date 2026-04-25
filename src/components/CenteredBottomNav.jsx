@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import { playSound, VIBRATE } from '../lib/soundEngine';
 
@@ -34,6 +34,7 @@ const ALL_PAGES = [
   { id: 'economy',    label: 'Economy',       icon: Award,         to: '/admin/economy' },
   { id: 'sheets',     label: 'Sheets Sync',   icon: FileSpreadsheet, to: '/sheets-sync' },
   { id: 'profileprefs', label: 'Profile Prefs', icon: UserCog,     to: '/profile-preferences' },
+  { id: 'adminreview',label: 'Admin Review',  icon: ShieldAlert,   to: '/admin/review' },
   { id: 'settings',   label: 'Settings',      icon: Settings,      to: '/settings' },
 ];
 
@@ -294,16 +295,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     }
   };
 
-  // Nav is always sticky below the TickerBar (which is mounted globally in
-  // Layout). Sticky is how the ticker already follows the user — using the
-  // same mechanism here means the nav follows scroll on every page too.
-  // The outer wrapper handles sticky + horizontal drag via marginLeft;
-  // the inner nav keeps its own styling untouched.
-  const TICKER_OFFSET = 44;
+  // Layout owns the sticky behavior of the ticker+nav shell. This wrapper
+  // is now a normal flow element so both pieces move together on scroll
+  // without competing sticky layers.
   const outerStyle = {
-    position: 'sticky',
-    top: TICKER_OFFSET,
-    zIndex: 49,
     width: '100%',
     pointerEvents: 'none',
   };
