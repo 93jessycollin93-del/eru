@@ -8,10 +8,36 @@
   :root {
     --background: 230 25% 6%;
     --foreground: 220 20% 92%;
+    /* Card/popover are intentionally consumed via hsl(var(--card) / <alpha>) in
+       atmospheric surfaces — the raw value stays opaque for legacy callers. */
     --card: 230 22% 9%;
     --card-foreground: 220 20% 92%;
     --popover: 230 22% 9%;
     --popover-foreground: 220 20% 92%;
+
+    /* === ERU Atmosphere / Glass tokens =====================================
+       Single source of truth for translucent surfaces so the active animated
+       background continues through every panel/card/modal. Tune here once →
+       updates the entire app. */
+    --eru-surface-bg:        230 22% 9% / 0.55;
+    --eru-surface-bg-strong: 230 22% 9% / 0.78;
+    --eru-surface-bg-soft:   230 22% 9% / 0.32;
+    --eru-surface-border:    220 30% 60% / 0.14;
+    --eru-surface-border-strong: 220 30% 60% / 0.22;
+    --eru-surface-glow:      160 100% 45% / 0.08;
+    --eru-surface-highlight: 220 100% 100% / 0.04;
+    --eru-card-opacity:      0.55;
+    --eru-panel-opacity:     0.5;
+    --eru-button-opacity:    0.4;
+    --eru-nav-opacity:       0.6;
+    --eru-modal-opacity:     0.78;
+    --eru-backdrop-blur:     14px;
+    --eru-backdrop-blur-strong: 22px;
+    --eru-backdrop-saturate: 140%;
+    --eru-glow-strength:     0.35;
+    --eru-vignette-strength: 0.18;
+    --eru-particle-strength: 1;
+    --eru-motion-strength:   1;
     --primary: 160 100% 45%;
     --primary-foreground: 0 0% 5%;
     --secondary: 230 18% 14%;
@@ -91,6 +117,136 @@
 @keyframes flash-red { 0%,100% { background: transparent; } 50% { background: hsl(350 100% 60% / 0.2); } }
 .flash-green { animation: flash-green 0.4s ease; }
 .flash-red { animation: flash-red 0.4s ease; }
+
+/* ============================================================================
+   ERU Atmospheric Glass System
+   Reusable layer classes consumed by shared primitives (Card / Dialog / Sheet /
+   Drawer / Popover / DropdownMenu) and any page-level container that wants to
+   feel like frosted glass over the animated background.
+   - Translucent fill via CSS vars (tunable centrally)
+   - backdrop-filter blur+saturate where supported (Safari/iOS prefixed)
+   - Subtle inner highlight + outer glow
+   - Never blocks pointer events, never alters layout
+   ============================================================================ */
+@layer components {
+  /* Root atmosphere: ensures the background fills the full scrollable height
+     and stays behind everything. Layout already mounts the animated bg; this
+     class is opt-in for any page that wants to host one. */
+  .eru-atmosphere-root {
+    position: relative;
+    isolation: isolate;
+    min-height: 100dvh;
+  }
+  .eru-background-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Base translucent surface — apply on any container that previously used a
+     flat `bg-card` / `bg-background`. Falls back gracefully when
+     backdrop-filter is unsupported (still translucent, just less blurry). */
+  .eru-theme-surface,
+  .eru-theme-panel,
+  .eru-theme-card,
+  .eru-theme-nav,
+  .eru-theme-widget,
+  .eru-theme-modal,
+  .eru-theme-drawer,
+  .eru-theme-header,
+  .eru-theme-storefront {
+    background-color: hsl(var(--eru-surface-bg));
+    -webkit-backdrop-filter: blur(var(--eru-backdrop-blur)) saturate(var(--eru-backdrop-saturate));
+    backdrop-filter: blur(var(--eru-backdrop-blur)) saturate(var(--eru-backdrop-saturate));
+    border-color: hsl(var(--eru-surface-border));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--eru-surface-highlight)),
+      0 8px 24px -12px hsl(0 0% 0% / 0.5),
+      0 0 0 1px hsl(var(--eru-surface-border));
+  }
+
+  /* Stronger panel for dense content where text legibility matters most
+     (wallet panels, modals, forms). */
+  .eru-theme-panel,
+  .eru-theme-modal {
+    background-color: hsl(var(--eru-surface-bg-strong));
+    -webkit-backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+    backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+  }
+
+  /* Cards — slightly softer; gives the card a frosted quality but keeps a
+     readable contrast layer behind text. */
+  .eru-theme-card {
+    background-image: linear-gradient(
+      180deg,
+      hsl(var(--eru-surface-highlight)) 0%,
+      transparent 40%,
+      hsl(0 0% 0% / 0.12) 100%
+    );
+  }
+
+  /* Nav surface — picks up just enough atmosphere without losing legibility
+     for tightly packed icon labels. */
+  .eru-theme-nav {
+    background-color: hsl(var(--eru-surface-bg-strong));
+  }
+
+  /* Drawer/Sheet — bottom or side sheets need a stronger base since they
+     partially cover content. */
+  .eru-theme-drawer {
+    background-color: hsl(var(--eru-surface-bg-strong));
+    -webkit-backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+    backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+  }
+
+  /* Translucent button — secondary/ghost glass affordance. Primary buttons
+     keep their solid color (intentionally untouched). */
+  .eru-theme-button {
+    background-color: hsl(var(--eru-surface-bg-soft));
+    -webkit-backdrop-filter: blur(8px) saturate(var(--eru-backdrop-saturate));
+    backdrop-filter: blur(8px) saturate(var(--eru-backdrop-saturate));
+    border: 1px solid hsl(var(--eru-surface-border));
+    transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .eru-theme-button:hover {
+    background-color: hsl(var(--eru-surface-bg));
+    border-color: hsl(var(--eru-surface-border-strong));
+    box-shadow: 0 0 0 1px hsl(var(--eru-surface-border-strong)), 0 0 18px hsl(var(--eru-surface-glow));
+  }
+  .eru-theme-button:active { transform: translateY(0.5px); }
+
+  /* Reduced motion → drop blur cost & tone down glow. */
+  @media (prefers-reduced-motion: reduce) {
+    .eru-theme-surface,
+    .eru-theme-panel,
+    .eru-theme-card,
+    .eru-theme-nav,
+    .eru-theme-widget,
+    .eru-theme-modal,
+    .eru-theme-drawer,
+    .eru-theme-header,
+    .eru-theme-storefront,
+    .eru-theme-button {
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+  }
+
+  /* Safari < 14 / older WebKit fallback (no backdrop-filter): bump opacity so
+     surfaces remain readable without the blur effect. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .eru-theme-surface,
+    .eru-theme-card,
+    .eru-theme-widget,
+    .eru-theme-storefront,
+    .eru-theme-header { background-color: hsl(230 22% 9% / 0.85); }
+    .eru-theme-panel,
+    .eru-theme-modal,
+    .eru-theme-nav,
+    .eru-theme-drawer { background-color: hsl(230 22% 9% / 0.92); }
+  }
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }

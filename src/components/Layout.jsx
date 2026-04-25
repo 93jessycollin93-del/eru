@@ -90,16 +90,17 @@ export default function Layout() {
 
   return (
     <>
-      {/* Full-screen background — fixed, covers entire viewport */}
+      {/* Full-screen vignette — softened so the animated background reads
+          through every page, not only the top strip. The radial fade keeps
+          edges grounded; the linear pass adds a subtle top→bottom depth cue. */}
       <div
-        className="fixed inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none eru-background-layer"
         style={{
-          zIndex: 0,
-          background: 'radial-gradient(circle at 50% 26%, rgba(95,135,255,0.12) 0%, rgba(20,28,58,0.08) 24%, rgba(7,10,22,0.94) 66%, rgba(2,4,10,1) 100%)',
+          background: 'radial-gradient(circle at 50% 26%, rgba(95,135,255,0.14) 0%, rgba(20,28,58,0.06) 28%, rgba(7,10,22,0.34) 72%, rgba(2,4,10,0.55) 100%)',
           ...globalThemeStyles,
         }}
       />
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(60,96,210,0.03) 18%, rgba(7,10,22,0.07) 44%, rgba(3,4,10,0.16) 100%)' }} />
+      <div className="fixed inset-0 pointer-events-none eru-background-layer" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(60,96,210,0.025) 18%, rgba(7,10,22,0.04) 44%, rgba(3,4,10,0.08) 100%)' }} />
       <AnimatedBackground type={NEUTRON_STAR_BG} opacity={0.78} />
       {bg !== 'none' && bg !== NEUTRON_STAR_BG ? <AnimatedBackground type={bg} opacity={Math.min(bgOpacity, 0.35)} /> : null}
 
@@ -110,7 +111,7 @@ export default function Layout() {
             they remain visible together across long-scroll pages and small
             mobile viewports. Respect safe-area insets for iOS / Telegram. */}
         <div
-          className="sticky z-50 bg-background/0"
+          className="sticky z-50 eru-theme-header"
           style={{ top: 'env(safe-area-inset-top, 0px)' }}
         >
           <TickerBar />
