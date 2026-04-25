@@ -65,6 +65,7 @@ import EruSwarmTest from './pages/EruSwarmTest';
 import SheetsSync from './pages/SheetsSync';
 import PhoenixInvestor from './pages/PhoenixInvestor';
 import AdminReviewCenter from './pages/AdminReviewCenter';
+import SecurityCommandCenter from './pages/SecurityCommandCenter';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -153,6 +154,7 @@ const AuthenticatedApp = () => {
         <Route path="/sheets-sync" element={<SheetsSync />} />
         <Route path="/storefront/phoenix-investor" element={<PhoenixInvestor />} />
         <Route path="/admin/review" element={<AdminReviewCenter />} />
+        <Route path="/admin/security" element={<SecurityCommandCenter />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

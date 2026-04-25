@@ -35,6 +35,7 @@ const ALL_PAGES = [
   { id: 'sheets',     label: 'Sheets Sync',   icon: FileSpreadsheet, to: '/sheets-sync' },
   { id: 'profileprefs', label: 'Profile Prefs', icon: UserCog,     to: '/profile-preferences' },
   { id: 'adminreview',label: 'Admin Review',  icon: ShieldAlert,   to: '/admin/review' },
+  { id: 'security',   label: 'Security',      icon: Shield,        to: '/admin/security' },
   { id: 'settings',   label: 'Settings',      icon: Settings,      to: '/settings' },
 ];
 

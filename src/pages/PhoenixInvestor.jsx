@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Flame, ShieldCheck, Settings2, ExternalLink, Check, X } from 'lucide-react';
+import { ArrowLeft, Flame, ShieldCheck, Settings2, ExternalLink } from 'lucide-react';
 import LovableEmbed from '@/components/storefront/LovableEmbed';
+import ExternalEmbedConfigurator from '@/components/storefront/ExternalEmbedConfigurator';
 import { EXTERNAL_PORTALS, getPortalUrl, setPortalUrlOverride } from '@/lib/externalPortals';
 import { useAuth } from '@/lib/AuthContext';
 import { canManageExternalPortals } from '@/lib/permissions';
-import { isSafeEmbedUrl } from '@/lib/safeUrl';
-import { logAuditEvent } from '@/lib/auditEvents';
 
 /**
  * Phoenix Investor Portal
@@ -29,60 +28,16 @@ export default function PhoenixInvestor() {
 
   const [url, setUrl] = useState(() => getPortalUrl(PORTAL.id));
   const [editing, setEditing] = useState(false);
-  const [draftUrl, setDraftUrl] = useState(url);
-  const [draftError, setDraftError] = useState('');
 
   useEffect(() => {
-    setDraftUrl(url);
-  }, [url]);
-
-  const saveUrl = () => {
-    if (!canManage) {
-      logAuditEvent(currentUser, {
-        action: 'external_portal.update',
-        target_type: 'ExternalPortal',
-        target_id: PORTAL.id,
-        status: 'denied',
-        reason: 'missing_admin_permission',
-      });
-      setDraftError('You don’t have permission to change this portal.');
-      return;
-    }
-    const trimmed = draftUrl.trim();
-    if (trimmed && !isSafeEmbedUrl(trimmed)) {
-      setDraftError('URL must start with https:// and be a valid address.');
-      return;
-    }
-    const previous = url;
-    setPortalUrlOverride(PORTAL.id, trimmed);
-    const nextUrl = getPortalUrl(PORTAL.id);
-    setUrl(nextUrl);
-    setDraftError('');
-    setEditing(false);
-    logAuditEvent(currentUser, {
-      action: 'external_portal.update',
-      target_type: 'ExternalPortal',
-      target_id: PORTAL.id,
-      before: { url: previous || null },
-      after: { url: nextUrl || null },
-    });
-  };
-
-  const clearUrl = () => {
-    if (!canManage) return;
-    const previous = url;
-    setPortalUrlOverride(PORTAL.id, '');
+    // Re-read in case another admin tab updated the override.
     setUrl(getPortalUrl(PORTAL.id));
-    setDraftUrl('');
-    setDraftError('');
+  }, []);
+
+  const handleConfigSave = (nextUrl) => {
+    setPortalUrlOverride(PORTAL.id, nextUrl || '');
+    setUrl(getPortalUrl(PORTAL.id));
     setEditing(false);
-    logAuditEvent(currentUser, {
-      action: 'external_portal.clear',
-      target_type: 'ExternalPortal',
-      target_id: PORTAL.id,
-      before: { url: previous || null },
-      after: { url: null },
-    });
   };
 
   return (
@@ -125,37 +80,15 @@ export default function PhoenixInvestor() {
         </div>
       </div>
 
-      {/* Admin config row — only rendered when admin opens it */}
+      {/* Admin config row — owner/admin only, fully audit-logged & validated */}
       {canManage && editing && (
-        <div className="px-4 py-3 border-b border-border bg-secondary/20 flex-shrink-0">
-          <p className="text-[11px] text-muted-foreground mb-2">
-            Paste the published Lovable app URL (https required). Saved to this browser only — for persistent config, set <code className="text-foreground">defaultUrl</code> in <code className="text-foreground">lib/externalPortals.js</code> or <code className="text-foreground">VITE_PHOENIX_INVESTOR_URL</code>.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              value={draftUrl}
-              onChange={(e) => { setDraftUrl(e.target.value); setDraftError(''); }}
-              placeholder="https://your-phoenix-investor.lovable.app"
-              className="flex-1 h-10 rounded-xl border border-border bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={saveUrl}
-                className="h-10 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold inline-flex items-center gap-1"
-              >
-                <Check className="w-3.5 h-3.5" /> Save
-              </button>
-              {url && (
-                <button
-                  onClick={clearUrl}
-                  className="h-10 px-3 rounded-xl border border-border text-xs font-medium text-muted-foreground inline-flex items-center gap-1"
-                >
-                  <X className="w-3.5 h-3.5" /> Clear
-                </button>
-              )}
-            </div>
-          </div>
-          {draftError && <p className="mt-2 text-[11px] text-red-400">{draftError}</p>}
+        <div className="px-4 py-3 border-b border-border bg-secondary/10 flex-shrink-0">
+          <ExternalEmbedConfigurator
+            user={currentUser}
+            portalId={PORTAL.id}
+            currentUrl={url}
+            onSave={handleConfigSave}
+          />
         </div>
       )}
 
