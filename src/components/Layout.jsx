@@ -123,7 +123,7 @@ export default function Layout() {
             they remain visible together across long-scroll pages and small
             mobile viewports. Respect safe-area insets for iOS / Telegram. */}
         <div
-          className="sticky z-50 eru-theme-header"
+          className="sticky z-50 eru-theme-header eru-enter"
           style={{ top: 'env(safe-area-inset-top, 0px)' }}
         >
           <TickerBar />

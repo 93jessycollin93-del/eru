@@ -64,7 +64,7 @@ export default function Dashboard() {
         </div>
         <PortfolioSummary />
         <QuickActions />
-        <div className="px-4 mt-4 space-y-4 pb-4">
+        <div className="px-4 mt-4 space-y-4 pb-4 eru-enter eru-enter-delay-1">
           <TelegramFirstBanner />
           <SharedDashboardCollabBar />
           <SharedDashboardPresence />
