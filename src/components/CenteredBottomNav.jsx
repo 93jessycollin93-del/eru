@@ -305,31 +305,11 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     }
   }, []);
 
-  useEffect(() => {
-    if (!lockedToTicker) return;
-
-    let frameId;
-
-    const syncToTicker = () => {
-      const ticker = document.getElementById(TICKER_BAR_ID);
-      if (!ticker) {
-        frameId = window.requestAnimationFrame(syncToTicker);
-        return;
-      }
-
-      const rect = ticker.getBoundingClientRect();
-      const nextY = Math.max(8, rect.bottom + 8);
-      setPos((prev) => (prev?.x === null && prev?.y === nextY ? prev : { x: null, y: nextY }));
-      frameId = window.requestAnimationFrame(syncToTicker);
-    };
-
-    syncToTicker();
-    window.addEventListener('resize', syncToTicker);
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.removeEventListener('resize', syncToTicker);
-    };
-  }, [lockedToTicker]);
+  // NOTE: The Layout shell already pins ticker + nav together as a single
+  // sticky unit, so the legacy "lock to ticker" rAF loop is no longer needed
+  // (it ran every frame indefinitely, draining mobile battery and fighting
+  // the parent sticky). Kept the toggle for backwards-compat but stopped
+  // the per-frame sync — position simply stays where the user dropped it.
 
   const toggleTickerLock = () => {
     const next = !lockedToTicker;
@@ -563,8 +543,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             <button
               onClick={() => { playSound('click'); VIBRATE.click(); onClick(); }}
               className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
-              title="Quick Actions"
-              aria-label="Quick Actions"
+              title={t('nav.create', undefined, 'Quick Actions')}
+              aria-label={t('nav.create', undefined, 'Quick Actions')}
             >
               <Plus style={{ width: 18, height: 18 }} className={`transition-transform ${open ? 'rotate-45 text-primary' : ''}`} />
               {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.create', undefined, 'Create')}</span>}
@@ -583,8 +563,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             }
           }}
           className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
-          title="Search"
-          aria-label="Search"
+          title={t('nav.search', undefined, 'Search')}
+          aria-label={t('nav.search', undefined, 'Search')}
         >
           <Search style={{ width: 18, height: 18 }} />
           {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.search', undefined, 'Search')}</span>}

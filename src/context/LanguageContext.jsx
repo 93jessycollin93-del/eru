@@ -17,13 +17,14 @@ import translations from '@/lib/translations.json';
 const LanguageContext = createContext();
 
 // Order matters — this is the rendering order in the language switcher.
+// Only locales with full coverage are exposed to users. fr/es are kept in
+// translations.json as scaffolding for future expansion but are not selectable
+// to avoid showing partial translations in production.
 export const LANGUAGES = {
   en: 'English',
   uk: 'Українська',
   zh: '中文',
   ru: 'Русский',
-  fr: 'Français',
-  es: 'Español',
 };
 
 // Resolve a dotted key path against a translations object.

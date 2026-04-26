@@ -25,12 +25,14 @@ export default function LanguageDiagnostics() {
   const { lang, setLang, t } = useLanguage();
 
   // Coverage report — what % of EN keys exist in each locale, and which are missing.
+  // Only report on locales that are actually exposed to end users.
   const report = useMemo(() => {
     const enKeys = collectKeys(translations.en || {});
     const enSet = new Set(enKeys);
     const out = { totalEn: enKeys.length, locales: {} };
-    for (const code of Object.keys(translations)) {
-      if (code === 'en') continue;
+    const exposed = Object.keys(LANGUAGES);
+    for (const code of exposed) {
+      if (code === 'en' || !translations[code]) continue;
       const local = new Set(collectKeys(translations[code] || {}));
       const missing = enKeys.filter((k) => !local.has(k));
       const extra = [...local].filter((k) => !enSet.has(k));
