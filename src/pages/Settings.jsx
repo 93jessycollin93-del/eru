@@ -178,7 +178,7 @@ function SettingsSheet({ type, onClose }) {
 }
 
 export default function Settings() {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const { currentUser } = useAuth();
   const [showSheet, setShowSheet] = useState(null);
   const [biometricOpen, setBiometricOpen] = useState(false);
@@ -197,7 +197,7 @@ export default function Settings() {
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-lg font-semibold">Settings</h2>
+        <h2 className="text-lg font-semibold">{t('settings.title', undefined, 'Settings')}</h2>
       </div>
 
       <div className="px-4 py-4">
@@ -219,7 +219,7 @@ export default function Settings() {
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Language</p>
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">{t('settings.language', undefined, 'Language')}</p>
           <div className="grid grid-cols-2 gap-2">
             {Object.entries(LANGUAGES).map(([code, name]) => (
               <button
@@ -236,7 +236,7 @@ export default function Settings() {
           </div>
           <Link to="/language-diagnostics" className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors text-xs">
             <Globe className="w-3.5 h-3.5 text-primary" />
-            <span className="flex-1 text-left">Translation diagnostics</span>
+            <span className="flex-1 text-left">{t('settings.translationDiagnostics', undefined, 'Translation diagnostics')}</span>
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
           </Link>
         </div>
@@ -341,7 +341,7 @@ export default function Settings() {
           </div>
         )}
         <button className="w-full mt-3 py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
-          Sign Out
+          {t('security.signOut', undefined, 'Sign Out')}
         </button>
       </div>
       <BiometricAuth

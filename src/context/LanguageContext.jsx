@@ -1,14 +1,28 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import translations from '@/lib/translations.json';
 
+/**
+ * Central i18n provider for the entire ERU application.
+ *
+ * Production rules:
+ * - Single source of truth: lib/translations.json (categorized by domain).
+ * - Persistence: selected language saved in localStorage and reflected on
+ *   <html lang> for screen readers, browser auto-translate, and SEO.
+ * - Fallback chain: current language → English → caller fallback → key path.
+ * - Interpolation: `{{token}}` placeholders are replaced from a `vars` object.
+ * - Dev guard: missing keys are reported (warn-once per key) on
+ *   window.__i18nMissing for easy auditing without console spam.
+ */
+
 const LanguageContext = createContext();
 
+// Order matters — this is the rendering order in the language switcher.
 export const LANGUAGES = {
   en: 'English',
-  fr: 'Français',
-  zh: '中文',
   uk: 'Українська',
+  zh: '中文',
   ru: 'Русский',
+  fr: 'Français',
   es: 'Español',
 };
 
@@ -29,6 +43,23 @@ function interpolate(template, vars) {
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (m, name) =>
     vars[name] !== undefined && vars[name] !== null ? String(vars[name]) : ''
   );
+}
+
+// Dev-only missing-key warning (warn-once-per-key, never in production).
+const __warned = new Set();
+function reportMissing(key, lang) {
+  if (typeof window === 'undefined') return;
+  const id = `${lang}::${key}`;
+  if (__warned.has(id)) return;
+  __warned.add(id);
+  if (!window.__i18nMissing) window.__i18nMissing = {};
+  if (!window.__i18nMissing[lang]) window.__i18nMissing[lang] = [];
+  window.__i18nMissing[lang].push(key);
+  // Soft signal — never crashes, never spams.
+  if (import.meta && import.meta.env && import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.warn(`[i18n] missing key "${key}" for "${lang}" — falling back`);
+  }
 }
 
 export function LanguageProvider({ children }) {
@@ -57,8 +88,10 @@ export function LanguageProvider({ children }) {
   // t(key, vars?, fallback?)
   // - Tries current language → English → fallback → key.
   // - Supports {{var}} interpolation from vars.
+  // - Reports missing keys in dev for auditing.
   const t = useCallback((key, vars, fallback) => {
     const fromLang = resolvePath(translations[lang], key);
+    if (fromLang === undefined && lang !== 'en') reportMissing(key, lang);
     const fromEn = fromLang === undefined ? resolvePath(translations.en, key) : fromLang;
     const raw = fromEn !== undefined ? fromEn : (fallback !== undefined ? fallback : key);
     return interpolate(raw, vars);
