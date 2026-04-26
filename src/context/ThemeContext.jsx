@@ -242,14 +242,13 @@ export function ThemeProvider({ children }) {
     const b = lp ? 1 : Math.min(1.4, Math.max(0.65, Number(brightness) || 1));
     const c = lp ? 1 : Math.min(1.35, Math.max(0.75, Number(contrast)   || 1));
     const s = lp ? 1 : Math.min(1.8,  Math.max(0.5,  Number(saturation) || 1));
-    // Background-only blur: clamp 0–16px, only kicks in when user explicitly
-    // moves the slider above 1 (default). Default 1 = 0px (crisp).
-    const bl = lp ? 0 : Math.min(16, Math.max(0, ((Number(blurLevel) || 1) - 1) * 8));
+    // Background blur permanently disabled — kept the var for compatibility
+    // but it no longer participates in the filter pipeline.
     root.style.setProperty('--eru-bg-brightness', String(b));
     root.style.setProperty('--eru-bg-contrast',   String(c));
     root.style.setProperty('--eru-bg-saturation', String(s));
-    root.style.setProperty('--eru-bg-blur',       `${bl}px`);
-    root.style.setProperty('--eru-bg-filter', `brightness(${b}) contrast(${c}) saturate(${s}) blur(${bl}px)`);
+    root.style.setProperty('--eru-bg-blur',       '0px');
+    root.style.setProperty('--eru-bg-filter', `brightness(${b}) contrast(${c}) saturate(${s})`);
     // Cleanup: if a previous version applied body.style.filter, undo it.
     if (document.body.style.filter) document.body.style.filter = '';
   }, [brightness, contrast, saturation, blurLevel, lowPowerMode]);
