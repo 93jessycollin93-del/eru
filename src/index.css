@@ -284,7 +284,64 @@
   }
   .eru-cta-accent:hover::before { opacity: calc(var(--eru-glow-strength) * 1.6); }
 
-  /* Reduced motion → drop blur cost & tone down glow. */
+  /* === Soft motion layer ===================================================
+     Consistent, low-cost transitions that make the app feel modern without
+     adding clutter or layout shift. Purely opt-in via classes — does not
+     affect components that don't use these classes. All animations honor
+     prefers-reduced-motion further down. */
+  .eru-theme-card,
+  .eru-theme-surface,
+  .eru-theme-widget,
+  .eru-theme-storefront {
+    transition:
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 220ms ease,
+      background-color 220ms ease;
+    will-change: transform;
+  }
+  /* Soft hover lift — only when the card is interactive (link/button or
+     marked .eru-interactive). Pure cards stay still. */
+  a.eru-theme-card:hover,
+  button.eru-theme-card:hover,
+  .eru-theme-card.eru-interactive:hover,
+  a.eru-theme-surface:hover,
+  button.eru-theme-surface:hover,
+  .eru-theme-surface.eru-interactive:hover {
+    transform: translateY(-2px);
+    border-color: hsl(var(--eru-surface-border-strong));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--eru-surface-highlight)),
+      0 14px 32px -16px hsl(0 0% 0% / 0.6),
+      0 0 0 1px hsl(var(--eru-surface-border-strong)),
+      0 0 22px hsl(var(--eru-surface-glow));
+  }
+  a.eru-theme-card:active,
+  button.eru-theme-card:active,
+  .eru-theme-card.eru-interactive:active { transform: translateY(0); }
+
+  /* Gentle, generic entry fade for any element opting in. Never required. */
+  @keyframes eru-fade-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0);   }
+  }
+  .eru-enter { animation: eru-fade-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .eru-enter-delay-1 { animation-delay: 60ms; }
+  .eru-enter-delay-2 { animation-delay: 120ms; }
+  .eru-enter-delay-3 { animation-delay: 180ms; }
+
+  /* Universal nav-item rhythm — apply on any nav button/link to get the
+     consistent soft press + hover feel without touching component code. */
+  .eru-nav-item {
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .eru-nav-item:hover { transform: translateY(-1px); }
+  .eru-nav-item:active { transform: translateY(0.5px); }
+
+  /* Reduced motion → drop blur cost, tone down glow, kill all transforms. */
   @media (prefers-reduced-motion: reduce) {
     .eru-theme-surface,
     .eru-theme-panel,
@@ -298,6 +355,16 @@
     .eru-theme-button {
       -webkit-backdrop-filter: blur(6px);
       backdrop-filter: blur(6px);
+    }
+    .eru-theme-card,
+    .eru-theme-surface,
+    .eru-theme-widget,
+    .eru-theme-storefront,
+    .eru-nav-item,
+    .eru-enter {
+      transition: none !important;
+      animation: none !important;
+      transform: none !important;
     }
   }
 

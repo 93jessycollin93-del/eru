@@ -499,8 +499,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                     type="button"
                     onClick={handlePanelNavigation}
                     title={label}
-                    className={`flex flex-col items-center gap-0.5 ${itemPad} rounded-xl transition-colors ${
-                      active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                    className={`eru-nav-item flex flex-col items-center gap-0.5 ${itemPad} rounded-xl ${
+                      active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
@@ -513,8 +513,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                   key={id}
                   to={to}
                   title={label}
-                  className={`flex flex-col items-center gap-0.5 ${itemPad} rounded-xl transition-colors ${
-                    active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+                  className={`eru-nav-item flex flex-col items-center gap-0.5 ${itemPad} rounded-xl ${
+                    active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                   }`}
                 >
                   <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
@@ -528,7 +528,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 type="button"
                 onClick={handleWidgetClick}
                 title={label}
-                className={`flex flex-col items-center gap-0.5 ${itemPad} rounded-xl transition-colors ${unavailableWidget === id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`eru-nav-item flex flex-col items-center gap-0.5 ${itemPad} rounded-xl ${unavailableWidget === id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'}`}
               >
                 <Icon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
                 {!collapsed && <span className="text-[8px] font-medium leading-none">{label}</span>}
@@ -554,7 +554,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           trigger={({ onClick, open }) => (
             <button
               onClick={() => { playSound('click'); VIBRATE.click(); onClick(); }}
-              className={`flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary transition-colors`}
+              className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
               title="Quick Actions"
               aria-label="Quick Actions"
             >
@@ -574,7 +574,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
               result.catch(() => {});
             }
           }}
-          className={`flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary transition-colors`}
+          className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
           title="Search"
           aria-label="Search"
         >
