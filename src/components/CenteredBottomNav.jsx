@@ -4,41 +4,45 @@ import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lig
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
+import { useLanguage } from '@/context/LanguageContext';
 
+// Labels are derived from translations via t('nav.<key>') in the component.
+// `labelKey` lets us swap copy when the user changes language without touching
+// the rest of the nav state. `fallback` is the English copy used when a locale
+// is missing the key.
 const ALL_PAGES = [
-  { id: 'home',       label: 'Home',         icon: Home,          to: '/' },
-  { id: 'jackie',     label: 'Jackie',        icon: Bot,           to: '/jackie' },
-  { id: 'markets',    label: 'Markets',       icon: BarChart2,     to: '/markets' },
-  { id: 'trade',      label: 'Trade',         icon: ArrowUpDown,   to: '/trade' },
-  { id: 'nfts',       label: 'NFTs',          icon: ImageIcon,     to: '/nfts' },
-  { id: 'portfolio',  label: 'Portfolio',     icon: Wallet,        to: '/portfolio' },
-  { id: 'collect',    label: 'Collectables',  icon: ShoppingBag,   to: '/collectables' },
-  { id: 'messages',   label: 'Messages',      icon: Mail,          to: '/messages' },
-  { id: 'creator',    label: 'Creator Hub',   icon: Lightbulb,     to: '/creator' },
-  { id: 'thinkers',   label: 'Thinkers',      icon: Brain,         to: '/thinkers' },
-  { id: 'review',     label: 'App Review',    icon: Shield,        to: '/review' },
-  { id: 'reputation', label: 'Reputation',    icon: Award,         to: '/reputation' },
-  { id: 'tgapps',     label: 'TG Apps',       icon: Send,          to: '/tgapps' },
-  { id: 'jackie',     label: 'Jackie AI',     icon: Bot,           to: '/jackie' },
-  { id: 'ailab',      label: 'AI Lab',        icon: FlaskConical,  to: '/ailab' },
-  { id: 'botmarket',  label: 'Bot Market',    icon: Cpu,           to: '/bot-marketplace' },
-  { id: 'botfarm',    label: 'Bot Farm',      icon: Factory,       to: '/bot-farm' },
-  { id: 'apikeys',    label: 'API Keys',      icon: KeyRound,      to: '/apikeys' },
-  { id: 'builder',    label: 'ERU',           icon: Wand2,         to: '/builder' },
-  { id: 'pipeline',   label: 'Pipeline',      icon: Layers,        to: '/pipeline' },
-  { id: 'jta',        label: 'Jade Atelier',  icon: Gem,           to: '/jta' },
-  { id: 'visual',     label: 'Visual',        icon: Sparkles,      to: '/visual' },
-  { id: 'arena',      label: 'Card Arena',    icon: Sword,         to: '/arena' },
-  { id: 'creatures',  label: 'Creatures',     icon: Dna,           to: '/creatures' },
-  { id: 'storefront', label: 'Storefront',    icon: Store,         to: '/storefront' },
-  { id: 'bazar',      label: 'Bazar Stand',   icon: Coins,         to: '/bazar-stand' },
-  { id: 'sfanalytics',label: 'SF Analytics',  icon: BarChart,      to: '/storefront-analytics' },
-  { id: 'economy',    label: 'Economy',       icon: Award,         to: '/admin/economy' },
-  { id: 'sheets',     label: 'Sheets Sync',   icon: FileSpreadsheet, to: '/sheets-sync' },
-  { id: 'profileprefs', label: 'Profile Prefs', icon: UserCog,     to: '/profile-preferences' },
-  { id: 'adminreview',label: 'Admin Review',  icon: ShieldAlert,   to: '/admin/review' },
-  { id: 'security',   label: 'Security',      icon: Shield,        to: '/admin/security' },
-  { id: 'settings',   label: 'Settings',      icon: Settings,      to: '/settings' },
+  { id: 'home',         labelKey: 'nav.home',         fallback: 'Home',         icon: Home,          to: '/' },
+  { id: 'jackie',       labelKey: 'nav.jackie',       fallback: 'Jackie',       icon: Bot,           to: '/jackie' },
+  { id: 'markets',      labelKey: 'nav.markets',      fallback: 'Markets',      icon: BarChart2,     to: '/markets' },
+  { id: 'trade',        labelKey: 'nav.trade',        fallback: 'Trade',        icon: ArrowUpDown,   to: '/trade' },
+  { id: 'nfts',         labelKey: 'nav.nfts',         fallback: 'NFTs',         icon: ImageIcon,     to: '/nfts' },
+  { id: 'portfolio',    labelKey: 'nav.portfolio',    fallback: 'Portfolio',    icon: Wallet,        to: '/portfolio' },
+  { id: 'collect',      labelKey: 'nav.collect',      fallback: 'Collectables', icon: ShoppingBag,   to: '/collectables' },
+  { id: 'messages',     labelKey: 'nav.messages',     fallback: 'Messages',     icon: Mail,          to: '/messages' },
+  { id: 'creator',      labelKey: 'nav.creator',      fallback: 'Creator Hub',  icon: Lightbulb,     to: '/creator' },
+  { id: 'thinkers',     labelKey: 'nav.thinkers',     fallback: 'Thinkers',     icon: Brain,         to: '/thinkers' },
+  { id: 'review',       labelKey: 'nav.review',       fallback: 'App Review',   icon: Shield,        to: '/review' },
+  { id: 'reputation',   labelKey: 'nav.reputation',   fallback: 'Reputation',   icon: Award,         to: '/reputation' },
+  { id: 'tgapps',       labelKey: 'nav.tgapps',       fallback: 'TG Apps',      icon: Send,          to: '/tgapps' },
+  { id: 'ailab',        labelKey: 'nav.ailab',        fallback: 'AI Lab',       icon: FlaskConical,  to: '/ailab' },
+  { id: 'botmarket',    labelKey: 'nav.botmarket',    fallback: 'Bot Market',   icon: Cpu,           to: '/bot-marketplace' },
+  { id: 'botfarm',      labelKey: 'nav.botfarm',      fallback: 'Bot Farm',     icon: Factory,       to: '/bot-farm' },
+  { id: 'apikeys',      labelKey: 'nav.apikeys',      fallback: 'API Keys',     icon: KeyRound,      to: '/apikeys' },
+  { id: 'builder',      labelKey: 'nav.builder',      fallback: 'ERU',          icon: Wand2,         to: '/builder' },
+  { id: 'pipeline',     labelKey: 'nav.pipeline',     fallback: 'Pipeline',     icon: Layers,        to: '/pipeline' },
+  { id: 'jta',          labelKey: 'nav.jta',          fallback: 'Jade Atelier', icon: Gem,           to: '/jta' },
+  { id: 'visual',       labelKey: 'nav.visual',       fallback: 'Visual',       icon: Sparkles,      to: '/visual' },
+  { id: 'arena',        labelKey: 'nav.arena',        fallback: 'Card Arena',   icon: Sword,         to: '/arena' },
+  { id: 'creatures',    labelKey: 'nav.creatures',    fallback: 'Creatures',    icon: Dna,           to: '/creatures' },
+  { id: 'storefront',   labelKey: 'nav.storefront',   fallback: 'Storefront',   icon: Store,         to: '/storefront' },
+  { id: 'bazar',        labelKey: 'nav.bazar',        fallback: 'Bazar Stand',  icon: Coins,         to: '/bazar-stand' },
+  { id: 'sfanalytics',  labelKey: 'nav.sfanalytics',  fallback: 'SF Analytics', icon: BarChart,      to: '/storefront-analytics' },
+  { id: 'economy',      labelKey: 'nav.economy',      fallback: 'Economy',      icon: Award,         to: '/admin/economy' },
+  { id: 'sheets',       labelKey: 'nav.sheets',       fallback: 'Sheets Sync',  icon: FileSpreadsheet, to: '/sheets-sync' },
+  { id: 'profileprefs', labelKey: 'nav.profileprefs', fallback: 'Profile Prefs',icon: UserCog,       to: '/profile-preferences' },
+  { id: 'adminreview',  labelKey: 'nav.adminreview',  fallback: 'Admin Review', icon: ShieldAlert,   to: '/admin/review' },
+  { id: 'security',     labelKey: 'nav.security',     fallback: 'Security',     icon: Shield,        to: '/admin/security' },
+  { id: 'settings',     labelKey: 'nav.settings',     fallback: 'Settings',     icon: Settings,      to: '/settings' },
 ];
 
 const WIDGET_NAV_ITEMS = [
@@ -74,6 +78,7 @@ const FLOATING_WIDGETS = [
 export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const clickerPos = prefs?.botChat;
   const isAttachedToClicker =
     !!clickerPos && clickerPos.x !== null && clickerPos.x !== undefined &&
@@ -165,7 +170,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     } catch {}
   }, []);
 
-  const pinnedPages = ALL_PAGES.filter(p => pinned.includes(p.id));
+  // Resolve translated labels — falls back to English when a locale is missing.
+  const pinnedPages = ALL_PAGES
+    .filter(p => pinned.includes(p.id))
+    .map(p => ({ ...p, label: t(p.labelKey, undefined, p.fallback) }));
   const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.id]?.visible);
   const navItems = [...pinnedPages, ...attachedWidgets];
 
@@ -380,8 +388,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 navigate('/');
               }
             }}
-            aria-label="Go back"
-            title="Back"
+            aria-label={t('nav.back', undefined, 'Go back')}
+            title={t('nav.back', undefined, 'Back')}
             className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border bg-secondary/60 text-muted-foreground transition-all hover:scale-110 hover:text-primary hover:border-primary/40 hover:bg-primary/10 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             <ArrowLeft className="w-3 h-3" />
@@ -559,7 +567,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
               aria-label="Quick Actions"
             >
               <Plus style={{ width: 18, height: 18 }} className={`transition-transform ${open ? 'rotate-45 text-primary' : ''}`} />
-              {!collapsed && <span className="text-[8px] font-medium leading-none">Create</span>}
+              {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.create', undefined, 'Create')}</span>}
             </button>
           )}
         />}
@@ -579,7 +587,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           aria-label="Search"
         >
           <Search style={{ width: 18, height: 18 }} />
-          {!collapsed && <span className="text-[8px] font-medium leading-none">Search</span>}
+          {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.search', undefined, 'Search')}</span>}
         </button>}
       </div>
       </div>

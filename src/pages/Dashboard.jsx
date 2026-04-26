@@ -7,6 +7,7 @@ import DataVisualizer from '../components/dashboard/DataVisualizer';
 import WidgetLibrary from '../components/dashboard/WidgetLibrary';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
+import { useLanguage } from '@/context/LanguageContext';
 import AppDock from '../components/dashboard/AppDock';
 import FinanceModule from '../components/dashboard/FinanceModule';
 import PortfolioSummary from '../components/dashboard/PortfolioSummary';
@@ -26,6 +27,7 @@ import { useRealPrices } from '../hooks/useRealPrices';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
+  const { t } = useLanguage();
   const { prices } = useRealPrices();
   const { data: alerts } = useRealtimeEntityList('PriceAlert', { sort: '-created_date', limit: 50 });
   const { data: notifications } = useRealtimeEntityList('AppNotification', { sort: '-created_date', limit: 50 });
@@ -48,7 +50,7 @@ export default function Dashboard() {
     <DashboardEventsProvider>
       <div className="flex flex-col min-h-screen bg-background pb-24 md:pb-8">
         <div className="px-4 py-3 border-b border-border bg-card/80 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Dashboard</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t('dashboard.title', undefined, 'Dashboard')}</h2>
           <ExportButton appData={appData} />
         </div>
         <div className="px-4 py-2 flex justify-end gap-2 bg-background">
@@ -57,7 +59,7 @@ export default function Dashboard() {
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:border-primary/40"
           >
             <PanelsTopLeft className="w-3.5 h-3.5 text-primary" />
-            Mini Browser
+            {t('dashboard.miniBrowser', undefined, 'Mini Browser')}
           </button>
           <ThemeToggle />
           <LanguageSwitcher />
@@ -76,11 +78,11 @@ export default function Dashboard() {
               <div className="rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Analytics moved to a dedicated hub</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Open the full analytics page for performance monitoring, trends, and usage insights.</p>
+                    <p className="text-sm font-semibold text-foreground">{t('dashboard.analyticsMoved', undefined, 'Analytics moved to a dedicated hub')}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{t('dashboard.analyticsMovedDesc', undefined, 'Open the full analytics page for performance monitoring, trends, and usage insights.')}</p>
                   </div>
                   <Link to="/analytics" className="rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
-                    Open Analytics
+                    {t('dashboard.openAnalytics', undefined, 'Open Analytics')}
                   </Link>
                 </div>
               </div>

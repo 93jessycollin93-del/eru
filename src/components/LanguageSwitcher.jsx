@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Globe, Check } from 'lucide-react';
 
+// All-languages list (current + future) lives in LANGUAGES; we render every
+// entry so users can always switch to any supported locale.
+
 /**
  * Compact, mobile-first language switcher.
  * - Click/tap to toggle (works on touch — hover dropdowns don't).
@@ -9,7 +12,7 @@ import { Globe, Check } from 'lucide-react';
  * - Reflects active language with a check + accent.
  */
 export default function LanguageSwitcher() {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -36,7 +39,7 @@ export default function LanguageSwitcher() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Change language"
+        aria-label={t('common.changeLanguage', undefined, 'Change language')}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-border transition-colors text-xs font-medium"
       >
         <Globe className="w-3.5 h-3.5" />
