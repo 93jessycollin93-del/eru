@@ -128,6 +128,12 @@ Deno.serve(async (req) => {
     }
 
     const bot = await base44.entities.UserBot.get(botId);
+    if (!bot) {
+      return Response.json({ error: 'Bot not found' }, { status: 404 });
+    }
+    if (bot.created_by !== user.email && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
     const source = (bot.data_sources || [])[sourceIndex];
     if (!source) {
       return Response.json({ error: 'Configured data source not found' }, { status: 404 });

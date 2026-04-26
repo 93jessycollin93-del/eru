@@ -7,11 +7,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await req.json();
     const { walletId, userEmail } = body;
 
     if (!walletId || !userEmail) {
       return Response.json({ error: 'Missing walletId or userEmail' }, { status: 400 });
+    }
+    if (userEmail !== user.email && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const wallet = await base44.asServiceRole.entities.ConnectedWallet.filter(
@@ -22,6 +29,9 @@ Deno.serve(async (req) => {
 
     if (!wallet || wallet.length === 0) {
       return Response.json({ error: 'Wallet not found' }, { status: 404 });
+    }
+    if (wallet[0].user_email !== user.email && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const w = wallet[0];

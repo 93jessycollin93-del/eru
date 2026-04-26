@@ -13,6 +13,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'botId is required' }, { status: 400 });
     }
 
+    const existing = await base44.entities.TelegramBot.get(payload.botId);
+    if (!existing) {
+      return Response.json({ error: 'Bot not found' }, { status: 404 });
+    }
+    if (existing.created_by !== user.email && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const updated = await base44.entities.TelegramBot.update(payload.botId, {
       system_prompt: payload.system_prompt,
       greeting_message: payload.greeting_message,
