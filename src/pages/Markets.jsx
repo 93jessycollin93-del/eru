@@ -3,6 +3,7 @@ import { useRealPrices } from '../hooks/useRealPrices';
 import { WifiOff, Loader2 } from 'lucide-react';
 import { useFeatureTracking, trackFeatureInteraction } from '../hooks/useFeatureTracking';
 import AssetComparisonDashboard from '../components/markets/AssetComparisonDashboard';
+import { useLanguage } from '@/context/LanguageContext';
 
 function PriceRow({ asset, onClick, selected }) {
   const prevRef = useRef(asset.price);
@@ -39,6 +40,7 @@ function PriceRow({ asset, onClick, selected }) {
 
 export default function Markets() {
   useFeatureTracking('Markets');
+  const { t } = useLanguage();
   const { prices, status } = useRealPrices();
   const [selected, setSelected] = useState(null);
   const [interval, setIntervalLabel] = useState('1D');
@@ -56,7 +58,7 @@ export default function Markets() {
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <div className="flex-1 flex items-center justify-center gap-2">
         <Loader2 className="w-5 h-5 text-primary animate-spin" />
-        <span className="text-sm text-muted-foreground">Fetching live market data…</span>
+        <span className="text-sm text-muted-foreground">{t('markets.loading', undefined, 'Fetching live market data…')}</span>
       </div>
     </div>
   );
@@ -65,8 +67,8 @@ export default function Markets() {
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
         <WifiOff className="w-10 h-10 text-muted-foreground/30" />
-        <p className="font-semibold text-muted-foreground">No Market Data Available</p>
-        <p className="text-xs text-muted-foreground/60">Could not reach CoinGecko API. Check your connection.</p>
+        <p className="font-semibold text-muted-foreground">{t('markets.noData', undefined, 'No Market Data Available')}</p>
+        <p className="text-xs text-muted-foreground/60">{t('markets.noDataDesc', undefined, 'Could not reach data source. Check your connection.')}</p>
       </div>
     </div>
   );
@@ -77,8 +79,8 @@ export default function Markets() {
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Markets</h2>
-        <span className="text-[10px] text-green-400 font-mono">● LIVE · CoinGecko</span>
+        <h2 className="text-lg font-semibold">{t('markets.title', undefined, 'Markets')}</h2>
+        <span className="text-[10px] text-green-400 font-mono">● {t('markets.live', undefined, 'LIVE')} · CoinGecko</span>
       </div>
 
       {selected && (
@@ -102,8 +104,8 @@ export default function Markets() {
           </div>
           <div className="h-40 mt-3 flex items-center justify-center bg-secondary/40 rounded-xl border border-border">
             <div className="text-center">
-              <p className="text-xs text-muted-foreground">Historical chart requires a paid data API</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Current price shown above is live from CoinGecko</p>
+              <p className="text-xs text-muted-foreground">{t('markets.chartUnavailable', undefined, 'Historical chart requires a paid data API')}</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">{t('markets.chartLive', undefined, 'Current price shown above is live')}</p>
             </div>
           </div>
         </div>
@@ -112,7 +114,7 @@ export default function Markets() {
       {/* Heatmap */}
       <div className="px-4 py-3 space-y-4">
         <div>
-          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-2">Top Movers</p>
+          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-2">{t('markets.topMovers', undefined, 'Top Movers')}</p>
           <div className="grid grid-cols-3 gap-1.5 mb-4">
             {prices.slice(0, 6).map(p => {
               const ch = p.change ?? 0;
