@@ -68,6 +68,7 @@ import PhoenixInvestor from './pages/PhoenixInvestor';
 import AdminReviewCenter from './pages/AdminReviewCenter';
 import SecurityCommandCenter from './pages/SecurityCommandCenter';
 import SecurityTestRunner from './pages/SecurityTestRunner';
+import LanguageDiagnostics from './pages/LanguageDiagnostics';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -159,6 +160,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/review" element={<AdminReviewCenter />} />
         <Route path="/admin/security" element={<SecurityCommandCenter />} />
         <Route path="/admin/security-test" element={<SecurityTestRunner />} />
+        <Route path="/language-diagnostics" element={<LanguageDiagnostics />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

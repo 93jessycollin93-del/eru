@@ -234,6 +234,11 @@ export default function Settings() {
               </button>
             ))}
           </div>
+          <Link to="/language-diagnostics" className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors text-xs">
+            <Globe className="w-3.5 h-3.5 text-primary" />
+            <span className="flex-1 text-left">Translation diagnostics</span>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+          </Link>
         </div>
 
         <div className="bg-card border border-border rounded-xl divide-y divide-border">
