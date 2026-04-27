@@ -1,0 +1,91 @@
+{
+  "name": "CollectorRewardProfile",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the collector this profile belongs to"
+    },
+    "current_portfolio_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Current calculated portfolio value at last sync"
+    },
+    "portfolio_growth_pct": {
+      "type": "number",
+      "default": 0,
+      "description": "Percentage growth since the previous sync"
+    },
+    "successful_trades": {
+      "type": "number",
+      "default": 0,
+      "description": "Total verified trade count"
+    },
+    "login_streak": {
+      "type": "number",
+      "default": 1,
+      "description": "Consecutive day login streak"
+    },
+    "last_login_date": {
+      "type": "string",
+      "description": "ISO date (YYYY-MM-DD) of the last counted login"
+    },
+    "status_icon": {
+      "type": "string",
+      "enum": [
+        "seed",
+        "spark",
+        "shield",
+        "flame",
+        "crown"
+      ],
+      "default": "seed",
+      "description": "Earned status icon based on engagement metrics"
+    },
+    "badge_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Earned reward badge IDs"
+    }
+  },
+  "required": [
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "user_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
