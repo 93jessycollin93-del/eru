@@ -103,15 +103,18 @@ export const TYPOGRAPHY_PACKS = {
 const DEFAULTS = {
   colorMode: 'dark',
   bg: 'none',
-  bgOpacity: 0.4,
+  // Brighter, more vivid defaults — background is more visible and saturated
+  // out of the box. Users who already tuned their own values keep theirs;
+  // these only apply on first load / after Reset.
+  bgOpacity: 0.7,
   motionIntensity: 1,
   glowIntensity: 1,
   blurLevel: 1,
   particleDensity: 1,
   animSpeed: 1,
-  brightness: 1,
-  contrast: 1,
-  saturation: 1,
+  brightness: 1.15,
+  contrast: 1.05,
+  saturation: 1.35,
   typography: 'modern',
   lowPowerMode: false,
   lockedSettings: [],
