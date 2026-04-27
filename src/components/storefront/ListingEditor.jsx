@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ImagePlus, Video, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import CurrencyConverter from './CurrencyConverter';
 import ListingAIAssistant from './ListingAIAssistant';
+import MediaUploader from './MediaUploader';
 
 const DEFAULT_FORM = {
   title: '',
@@ -19,16 +20,10 @@ const DEFAULT_FORM = {
 };
 
 export default function ListingEditor({ initialValue = {}, onSave, submitLabel = 'Save Listing' }) {
-  const [form, setForm] = useState({ ...DEFAULT_FORM, ...initialValue, media_urls: initialValue.media_urls?.length ? initialValue.media_urls : [''] });
+  const [form, setForm] = useState({ ...DEFAULT_FORM, ...initialValue, media_urls: (initialValue.media_urls || []).filter(Boolean) });
   const [saving, setSaving] = useState(false);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
-  const setMedia = (index, value) => {
-    const next = [...form.media_urls];
-    next[index] = value;
-    setField('media_urls', next);
-  };
-  const addMedia = () => setField('media_urls', [...form.media_urls, '']);
   const applyAICopy = (values) => {
     setForm((prev) => ({ ...prev, ...values }));
   };
@@ -95,16 +90,7 @@ export default function ListingEditor({ initialValue = {}, onSave, submitLabel =
         <input type="range" min="1" max="10" value={form.condition_score} onChange={(e) => setField('condition_score', e.target.value)} className="w-full accent-primary" />
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">Media for buyers</p>
-          <button onClick={addMedia} className="text-xs text-primary flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Add media</button>
-        </div>
-        {form.media_urls.map((url, index) => (
-          <input key={index} value={url} onChange={(e) => setMedia(index, e.target.value)} placeholder={index === 0 ? 'Image URL' : 'Image or video URL'} className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
-        ))}
-        <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Video className="w-3.5 h-3.5" /> Paste image or video URLs for preview media</div>
-      </div>
+      <MediaUploader urls={form.media_urls} onChange={(next) => setField('media_urls', next)} max={6} />
 
       <input value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="Tags (comma separated)" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
 

@@ -13,28 +13,26 @@ export default function SellerDashboard() {
   const [escrows, setEscrows] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      const me = await base44.auth.me();
-      const [listingRows, orderRows, escrowRows] = await Promise.all([
-        base44.entities.StorefrontListing.list('-updated_date', 200),
-        base44.entities.Order.list('-created_date', 200),
-        base44.entities.Escrow.list('-updated_date', 200).catch(() => []),
-      ]);
+  const load = async () => {
+    const me = await base44.auth.me();
+    const [listingRows, orderRows, escrowRows] = await Promise.all([
+      base44.entities.StorefrontListing.list('-updated_date', 200),
+      base44.entities.Order.list('-created_date', 200),
+      base44.entities.Escrow.list('-updated_date', 200).catch(() => []),
+    ]);
 
-      const sellerListings = (listingRows || []).filter((item) => item.created_by === me.email);
-      const listingIds = new Set(sellerListings.map((item) => item.asset_id));
-      const sellerOrders = (orderRows || []).filter((item) => listingIds.has(item.asset_id));
-      const sellerEscrows = (escrowRows || []).filter((item) => item.seller_email === me.email);
+    const sellerListings = (listingRows || []).filter((item) => item.created_by === me.email);
+    const listingIds = new Set(sellerListings.map((item) => item.asset_id));
+    const sellerOrders = (orderRows || []).filter((item) => listingIds.has(item.asset_id));
+    const sellerEscrows = (escrowRows || []).filter((item) => item.seller_email === me.email);
 
-      setListings(sellerListings);
-      setOrders(sellerOrders);
-      setEscrows(sellerEscrows);
-      setLoading(false);
-    };
+    setListings(sellerListings);
+    setOrders(sellerOrders);
+    setEscrows(sellerEscrows);
+    setLoading(false);
+  };
 
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const stats = useMemo(() => {
     const earnedFunds = orders.filter((item) => item.status === 'paid').reduce((sum, item) => sum + Number(item.amount_paid || item.base_price || 0), 0)
@@ -78,7 +76,7 @@ export default function SellerDashboard() {
       <SellerDashboardSummary stats={stats} />
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <SellerOrderTable orders={orders} />
-        <SellerInventoryPanel listings={listings} />
+        <SellerInventoryPanel listings={listings} onChanged={load} />
       </div>
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <SellerSalesAnalytics data={analyticsData} />
