@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
@@ -50,6 +50,7 @@ const WIDGET_NAV_ITEMS = [
   { id: 'botChat', label: 'Bot Chat', icon: MessageSquare, widgetId: 'botChat' },
   { id: 'promptLibrary', label: 'Prompt Library', icon: BookText, to: '/jackie?panel=promptLibrary' },
   { id: 'conversations', label: 'Conversations', icon: Library, to: '/jackie?panel=conversations' },
+  { id: 'notes', label: 'Notes', icon: StickyNote, widgetId: 'notes' },
 ];
 
 const DEFAULT_PINNED = ['home', 'jackie', 'markets', 'bazar', 'portfolio'];
@@ -73,6 +74,7 @@ const FLOATING_WIDGETS = [
   { id: 'botChat', label: 'Bot Chat', icon: MessageSquare },
   { id: 'promptLibrary', label: 'Prompt Library', icon: BookText },
   { id: 'conversations', label: 'Conversations', icon: Library },
+  { id: 'notes', label: 'Notes', icon: StickyNote },
 ];
 
 export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
@@ -122,6 +124,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         botChat: { visible: true, x: null, y: null },
         promptLibrary: { visible: true, x: 16, y: 212 },
         conversations: { visible: true, x: 16, y: 268 },
+        notes: { visible: true, x: null, y: null },
         ...JSON.parse(localStorage.getItem(FLOATING_WIDGETS_KEY) || '{}')
       };
     } catch {
@@ -131,6 +134,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         botChat: { visible: true, x: null, y: null },
         promptLibrary: { visible: true, x: 16, y: 212 },
         conversations: { visible: true, x: 16, y: 268 },
+        notes: { visible: true, x: null, y: null },
       };
     }
   });

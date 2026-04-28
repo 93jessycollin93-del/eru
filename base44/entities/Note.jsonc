@@ -1,0 +1,72 @@
+{
+  "name": "Note",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Note title"
+    },
+    "body": {
+      "type": "string",
+      "description": "Note body content (markdown / plain text)"
+    },
+    "color": {
+      "type": "string",
+      "enum": [
+        "default",
+        "amber",
+        "rose",
+        "emerald",
+        "sky",
+        "violet"
+      ],
+      "default": "default",
+      "description": "Visual color tag for the note"
+    },
+    "pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this note is pinned to the top"
+    },
+    "shared_with": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Emails of users this note is shared with (read-only viewers)"
+    },
+    "is_public": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, anyone in the workspace can view this note"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "shared_with": "{{user.email}}"
+        },
+        {
+          "is_public": true
+        }
+      ]
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

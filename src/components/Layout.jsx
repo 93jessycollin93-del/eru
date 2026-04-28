@@ -8,6 +8,7 @@ import TickerBar from './dashboard/TickerBar';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
 import ScreenVisualizer from './dashboard/ScreenVisualizer';
+import NotesWidgetMount from './notes/NotesWidgetMount';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
 // JackieFloat / FloatingQuickActions / BazarStandDock are intentionally NOT
@@ -137,6 +138,7 @@ export default function Layout() {
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
         <BotWidget prefs={prefs} updateWidget={updateWidget} />
         <ScreenVisualizer prefs={prefs} updateWidget={updateWidget} />
+        <NotesWidgetMount />
       </div>
     </>
   );
