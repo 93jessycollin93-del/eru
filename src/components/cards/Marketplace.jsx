@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
-import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter, Repeat, Send, Handshake } from 'lucide-react';
+import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter, Repeat, Send, Handshake, Edit2, Check } from 'lucide-react';
 
 const LISTING_FEE_PCT = 0.05; // 5% listing fee
 
@@ -27,6 +27,8 @@ export default function Marketplace({ gold, onGoldChange }) {
   const [listPrice, setListPrice] = useState('');
   const [posting, setPosting] = useState(false);
   const [buying, setBuying] = useState(null);
+  const [editingListingId, setEditingListingId] = useState(null);
+  const [editingListingPrice, setEditingListingPrice] = useState('');
   const [proposalActionId, setProposalActionId] = useState(null);
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
@@ -102,6 +104,27 @@ export default function Marketplace({ gold, onGoldChange }) {
   const cancelListing = async (listing) => {
     await base44.entities.CardListing.update(listing.id, { status: 'cancelled' });
     showToast('Listing cancelled');
+    await loadAll();
+  };
+
+  // Edit a card listing's price. Soft-edit only — keeps status and audit
+  // trail intact. Ownership is enforced by Base44 entity rules; the UI
+  // gate below only shows Edit on the seller's own listings (myListings).
+  const startEditListing = (listing) => {
+    setEditingListingId(listing.id);
+    setEditingListingPrice(String(listing.price_gold ?? ''));
+  };
+  const cancelEditListing = () => {
+    setEditingListingId(null);
+    setEditingListingPrice('');
+  };
+  const saveEditListing = async (listing) => {
+    const next = parseInt(editingListingPrice);
+    if (!next || next < 1) { showToast('Enter a valid price', 'error'); return; }
+    if (next === listing.price_gold) { cancelEditListing(); return; }
+    await base44.entities.CardListing.update(listing.id, { price_gold: next });
+    showToast(`Price updated to ${next}g`);
+    cancelEditListing();
     await loadAll();
   };
 
@@ -474,13 +497,42 @@ export default function Marketplace({ gold, onGoldChange }) {
                         <p className="text-[10px] text-green-400 mt-0.5">● Active</p>
                       </div>
                       <div className="text-right flex-shrink-0 space-y-1">
-                        <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
-                          <Coins className="w-3 h-3" />{l.price_gold}g
-                        </p>
-                        <button onClick={() => cancelListing(l)}
-                          className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors">
-                          <X className="w-3 h-3" /> Cancel
-                        </button>
+                        {editingListingId === l.id ? (
+                          <div className="flex items-center gap-1 justify-end">
+                            <input
+                              type="number"
+                              value={editingListingPrice}
+                              onChange={(e) => setEditingListingPrice(e.target.value)}
+                              className="w-16 bg-secondary border border-border rounded-md px-1 py-0.5 text-xs text-right outline-none"
+                              placeholder="g"
+                              autoFocus
+                            />
+                            <button onClick={() => saveEditListing(l)} className="p-1 rounded text-green-400 hover:bg-green-500/10" title="Save price">
+                              <Check className="w-3 h-3" />
+                            </button>
+                            <button onClick={cancelEditListing} className="p-1 rounded text-muted-foreground hover:bg-secondary" title="Cancel edit">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
+                            <Coins className="w-3 h-3" />{l.price_gold}g
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 justify-end">
+                          {editingListingId !== l.id && (
+                            <button onClick={() => startEditListing(l)}
+                              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                              title="Edit price">
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                          )}
+                          <button onClick={() => cancelListing(l)}
+                            className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors"
+                            title="Cancel listing (soft delete)">
+                            <X className="w-3 h-3" /> Cancel
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

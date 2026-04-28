@@ -9,6 +9,7 @@ const DEFAULT_FORM = {
   description: '',
   asset_type: 'collectible',
   sale_mode: 'sell',
+  status: 'active',
   ask_price_fiat: '',
   fiat_currency: 'USD',
   crypto_currency: 'TON',
@@ -48,7 +49,7 @@ export default function ListingEditor({ initialValue = {}, onSave, submitLabel =
       <input value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="Listing title" className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" />
       <textarea value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Description for buyers" className="w-full min-h-[90px] bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none resize-none" />
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <select value={form.asset_type} onChange={(e) => setField('asset_type', e.target.value)} className="bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none">
           {['nft', 'collectible', 'item', 'card', 'jade', 'bot'].map((type) => <option key={type} value={type}>{type}</option>)}
         </select>
@@ -56,6 +57,11 @@ export default function ListingEditor({ initialValue = {}, onSave, submitLabel =
           <option value="sell">For sale</option>
           <option value="trade">For trade</option>
           <option value="sell_or_trade">Sell or trade</option>
+        </select>
+        <select value={form.status} onChange={(e) => setField('status', e.target.value)} className="bg-secondary border border-border rounded-xl px-3 py-2 text-sm outline-none" title="Listing visibility">
+          <option value="active">Published</option>
+          <option value="paused">Paused</option>
+          <option value="draft">Draft</option>
         </select>
       </div>
 

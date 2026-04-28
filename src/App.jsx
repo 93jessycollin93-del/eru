@@ -69,6 +69,7 @@ import AdminReviewCenter from './pages/AdminReviewCenter';
 import SecurityCommandCenter from './pages/SecurityCommandCenter';
 import SecurityTestRunner from './pages/SecurityTestRunner';
 import LanguageDiagnostics from './pages/LanguageDiagnostics';
+import AdminBazarProducts from './pages/AdminBazarProducts';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -155,6 +156,7 @@ const AuthenticatedApp = () => {
         <Route path="/referrals" element={<ReferralDashboard />} />
         <Route path="/eru-swarm-test" element={<EruSwarmTest />} />
         <Route path="/eru-redteam-test" element={<EruRedteamTest />} />
+        <Route path="/admin/bazar-products" element={<AdminBazarProducts />} />
         <Route path="/sheets-sync" element={<SheetsSync />} />
         <Route path="/storefront/phoenix-investor" element={<PhoenixInvestor />} />
         <Route path="/admin/review" element={<AdminReviewCenter />} />

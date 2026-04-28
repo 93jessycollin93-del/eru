@@ -6,7 +6,8 @@ import {
   Clock, XCircle, Search, Filter, Gem, Image, Bot, Sword, Package,
   Globe, Lock, ChevronRight, Wifi, WifiOff, Loader2, ExternalLink,
   ToggleLeft, ToggleRight, Edit2, Trash2, Shield, Activity,
-  Square, CheckSquare, Send, BarChart2, SlidersHorizontal, Zap
+  Square, CheckSquare, Send, BarChart2, SlidersHorizontal, Zap,
+  Pause, Play
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ListingEditor from '../components/storefront/ListingEditor';
@@ -117,7 +118,7 @@ function ConnectorCard({ connector, onToggle, onEdit, onDelete, isAdmin }) {
   );
 }
 
-function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected, onSelect, onRunSync }) {
+function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected, onSelect, onRunSync, onTogglePause, onDelete }) {
   const AssetIcon = ASSET_ICONS[listing.asset_type] || Package;
   const syncs = listing.external_syndications || [];
   const syncedCount = syncs.filter(s => s.sync_status === 'synced').length;
@@ -196,15 +197,31 @@ function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected,
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
+      <div className="grid grid-cols-5 gap-2 pt-2 border-t border-border">
         <button onClick={(e) => { e.stopPropagation(); onRunSync(listing.id); }} className="rounded-lg bg-primary/10 px-2 py-2 text-[10px] font-medium text-primary flex items-center justify-center gap-1">
           <Zap className="w-3 h-3" /> Sync
         </button>
         <button onClick={(e) => { e.stopPropagation(); onSyndicationEdit(listing); }} className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
-          <SlidersHorizontal className="w-3 h-3" /> Syndication
+          <SlidersHorizontal className="w-3 h-3" /> Syndicate
         </button>
         <button onClick={(e) => { e.stopPropagation(); onEdit(listing); }} className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
           <Edit2 className="w-3 h-3" /> Edit
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onTogglePause && onTogglePause(listing); }}
+          className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1"
+          title={listing.status === 'active' ? 'Pause (unpublish)' : 'Activate (publish)'}
+        >
+          {listing.status === 'active'
+            ? <><Pause className="w-3 h-3" /> Pause</>
+            : <><Play className="w-3 h-3" /> Publish</>}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete && onDelete(listing); }}
+          className="rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-2 text-[10px] font-medium flex items-center justify-center gap-1"
+          title="Delete listing"
+        >
+          <Trash2 className="w-3 h-3" /> Delete
         </button>
       </div>
     </div>
@@ -584,6 +601,32 @@ export default function StorefrontHub() {
     load();
   };
 
+  // Pause / publish toggle: edit gate guards ownership + admin role.
+  const handleTogglePause = async (listing) => {
+    const editCheck = validateListingEdit({ user: currentUser, listing });
+    if (!editCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.toggle_pause', target_type: 'StorefrontListing', target_id: listing.id, status: 'denied', reason: editCheck.reason });
+      return;
+    }
+    const nextStatus = listing.status === 'active' ? 'paused' : 'active';
+    await base44.entities.StorefrontListing.update(listing.id, { status: nextStatus });
+    logAuditEvent(currentUser, { action: 'listing.toggle_pause', target_type: 'StorefrontListing', target_id: listing.id, before: { status: listing.status }, after: { status: nextStatus } });
+    load();
+  };
+
+  // Delete: same edit gate, plus a confirm() guard since this is destructive.
+  const handleDeleteListing = async (listing) => {
+    const editCheck = validateListingEdit({ user: currentUser, listing });
+    if (!editCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.delete', target_type: 'StorefrontListing', target_id: listing.id, status: 'denied', reason: editCheck.reason });
+      return;
+    }
+    if (!confirm(`Delete "${listing.title}"? This cannot be undone.`)) return;
+    await base44.entities.StorefrontListing.delete(listing.id);
+    logAuditEvent(currentUser, { action: 'listing.delete', target_type: 'StorefrontListing', target_id: listing.id, before: { title: listing.title, status: listing.status } });
+    load();
+  };
+
   const handleSaveSyndication = async (items) => {
     await base44.entities.StorefrontListing.update(syndicationListing.id, {
       external_syndications: items.map((item) => ({
@@ -808,7 +851,9 @@ export default function StorefrontHub() {
                           onSelect={toggleSelect}
                           onEdit={setEditingListing}
                           onSyndicationEdit={setSyndicationListing}
-                          onRunSync={handleRunSync} />
+                          onRunSync={handleRunSync}
+                          onTogglePause={handleTogglePause}
+                          onDelete={handleDeleteListing} />
                         {syncingListingId === l.id && <p className="text-[10px] text-primary">Running sync...</p>}
                       </div>
                     ))}
