@@ -5,6 +5,8 @@ import BazarBalanceCard from '@/components/bazar/BazarBalanceCard';
 import BazarProductCard from '@/components/bazar/BazarProductCard';
 import BazarCheckoutDialog, { priceInGold } from '@/components/bazar/BazarCheckoutDialog';
 import { createPendingTransaction, markPendingVerification, verifyTransaction, failTransaction } from '@/lib/paymentGuards';
+import { generateTonPaymentRef } from '@/lib/tonPayment';
+import { FALLBACK_TON_USD } from '@/lib/tonConfig';
 
 const DEFAULT_PRODUCTS = [
   {
@@ -178,18 +180,34 @@ export default function BazarStand() {
 
       // External methods (card / crypto) — mark pending verification, await admin/webhook
       await markPendingVerification(transactionId, priceUsd);
+
+      // For TON crypto, generate a unique payment reference + indicative TON amount
+      // and attach it to the transaction so the verifier can match the on-chain transfer.
+      let tonPayment = null;
+      if (method === 'crypto') {
+        const paymentRef = generateTonPaymentRef();
+        const amountTon = Number((priceUsd / FALLBACK_TON_USD).toFixed(4));
+        await base44.entities.Transaction.update(transactionId, {
+          metadata: { chain: 'ton', network: 'mainnet', payment_ref: paymentRef, amount_ton: amountTon },
+        }).catch(() => null);
+        tonPayment = { transactionId, paymentRef, amountTon };
+      }
+
       await base44.entities.EconomyAuditLog.create({
         action: 'bazar_purchase_pending',
         user_email: me?.email,
         amount: priceUsd,
         reason: `Pending ${method} verification — ${product.title}`,
-        metadata: { order_id: orderId, transaction_id: transactionId, method },
+        metadata: { order_id: orderId, transaction_id: transactionId, method, ...(tonPayment || {}) },
         status: 'pending',
       }).catch(() => null);
 
       return {
         ok: true,
-        message: `Order received. Your ${product.title} will be delivered after payment is verified.`,
+        message: method === 'crypto'
+          ? `Send the exact TON amount with the payment comment below, then tap "verify".`
+          : `Order received. Your ${product.title} will be delivered after payment is verified.`,
+        tonPayment,
       };
     } catch (err) {
       if (transactionId) await failTransaction(transactionId, err?.message || 'Checkout error').catch(() => null);

@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { X, Coins, CreditCard, Wallet, ShieldCheck, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
+import TonPaymentPanel from './TonPaymentPanel';
+import { FALLBACK_TON_USD } from '@/lib/tonConfig';
 
 /**
  * BazarCheckoutDialog
@@ -58,6 +60,11 @@ export default function BazarCheckoutDialog({ product, walletGold = 0, onClose, 
   const goldCost = useMemo(() => priceInGold(product?.price_usd), [product]);
   const canAffordWallet = walletGold >= goldCost;
 
+  const tonAmount = useMemo(() => {
+    const usd = Number(product?.price_usd || 0);
+    return Number((usd / FALLBACK_TON_USD).toFixed(4));
+  }, [product]);
+
   // Auto-fall back to card when wallet balance is too low
   useEffect(() => {
     if (method === 'wallet' && !canAffordWallet) setMethod('card');
@@ -77,6 +84,9 @@ export default function BazarCheckoutDialog({ product, walletGold = 0, onClose, 
       setSubmitting(false);
     }
   };
+
+  // TON crypto flow: result includes { tonPayment: { transactionId, paymentRef, amountTon } }
+  const tonPayment = result?.ok && method === 'crypto' ? result.tonPayment : null;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center" onClick={onClose}>
@@ -165,6 +175,16 @@ export default function BazarCheckoutDialog({ product, walletGold = 0, onClose, 
                 {result.message || (result.ok ? 'Payment verified — rewards delivered.' : 'Payment could not be completed.')}
               </p>
             </div>
+          )}
+
+          {/* TON payment instructions — shown after order is placed and crypto was selected */}
+          {tonPayment && (
+            <TonPaymentPanel
+              amountTon={tonPayment.amountTon || tonAmount}
+              paymentRef={tonPayment.paymentRef}
+              transactionId={tonPayment.transactionId}
+              onVerified={() => setResult({ ok: true, message: 'Payment verified on-chain — rewards will be delivered shortly.' })}
+            />
           )}
         </div>
 
