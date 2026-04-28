@@ -106,10 +106,64 @@
     @apply text-foreground;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     overflow-x: hidden;
     overflow-y: auto;
   }
   .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* === Global smoothing layer ==============================================
+     Subtle, app-wide polish — never alters layout or business logic.
+     - Smooth anchor/scroll behavior across the whole document
+     - Momentum scrolling on iOS/Safari for any scroll container
+     - Gentle default transition on common interactive primitives so hover/
+       focus/active states feel continuous instead of instantaneous
+     - Smoother focus ring (avoids the harsh 0ms outline snap)
+     - Image/SVG transforms get GPU smoothing
+     - Honors prefers-reduced-motion further down (existing rule)
+     ========================================================================= */
+  html { scroll-behavior: smooth; }
+  /* Momentum scroll on every scrollable surface (lists, drawers, modals). */
+  *, *::before, *::after { -webkit-overflow-scrolling: touch; }
+
+  /* Default soft transition on the most-used interactive elements. Targets
+     opacity/color/bg/border/shadow/transform only — never width/height/top/
+     left, so layout never animates. Components that opt out can override. */
+  a, button, [role="button"], summary,
+  input, select, textarea,
+  [data-state], [data-radix-collection-item] {
+    transition:
+      background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* Soft press feedback for tappable controls — tiny, mobile-friendly. */
+  button:active, [role="button"]:active, a:active { transform: translateY(0.5px); }
+
+  /* Smoother, less jarring focus rings (keeps a11y, removes the snap). */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.55);
+    transition: box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* GPU-friendly image rendering for scaled thumbnails/avatars. */
+  img, svg, video { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+
+  /* Honor user's OS-level reduced-motion preference globally. */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    a, button, [role="button"], summary,
+    input, select, textarea,
+    [data-state], [data-radix-collection-item] {
+      transition: none !important;
+    }
+    button:active, [role="button"]:active, a:active { transform: none !important; }
+  }
 }
 
 /* Ticker animation */
