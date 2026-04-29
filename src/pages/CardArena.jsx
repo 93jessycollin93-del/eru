@@ -7,13 +7,14 @@ import { DECK_MODE_OPTIONS, DEFAULT_DECK_MODE, buildDeckModeSummary, calculateDe
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
 import ChallengePanel from '../components/cards/ChallengePanel';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy, Wand2, ArrowLeftRight } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy, Wand2, ArrowLeftRight, BookOpen } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 import CardLorePanel from '../components/cards/CardLorePanel';
 import RealityPressureMeter from '../components/cards/RealityPressureMeter';
 import ExcavationPackPanel from '../components/cards/ExcavationPackPanel';
 import TransmutationPanel from '../components/cards/TransmutationPanel';
+import ForgeRecipesPanel from '../components/cards/ForgeRecipesPanel';
 import TradingPanel from '../components/cards/TradingPanel';
 import { ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard, createCardWithLore } from '@/lib/cardLore';
 
@@ -77,6 +78,7 @@ export default function CardArena() {
   const [openChallenges, setOpenChallenges] = useState([]);
   const [copyingDeck, setCopyingDeck] = useState(false);
   const [loreCard, setLoreCard] = useState(null);
+  const [forgeView, setForgeView] = useState('transmute'); // 'transmute' | 'recipes'
 
   useEffect(() => {
     loadCards();
@@ -934,14 +936,42 @@ export default function CardArena() {
         )}
 
         {tab === 'forge' && (
-          <TransmutationPanel
-            cards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
-            onCardForged={(result) => {
-              if (!result?.card) return;
-              const burned = new Set(result.card.transmuted_from_card_ids || []);
-              setCards((prev) => [result.card, ...prev.filter((c) => !burned.has(c.id))]);
-            }}
-          />
+          <div className="space-y-4">
+            <div className="flex gap-1 bg-secondary rounded-xl p-1">
+              {[
+                { id: 'transmute', label: 'Transmute', icon: Wand2 },
+                { id: 'recipes',   label: 'Recipes',   icon: BookOpen },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setForgeView(opt.id)}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors
+                    ${forgeView === opt.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <opt.icon className="w-3.5 h-3.5" /> {opt.label}
+                </button>
+              ))}
+            </div>
+            {forgeView === 'transmute' ? (
+              <TransmutationPanel
+                cards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
+                onCardForged={(result) => {
+                  if (!result?.card) return;
+                  const burned = new Set(result.card.transmuted_from_card_ids || []);
+                  setCards((prev) => [result.card, ...prev.filter((c) => !burned.has(c.id))]);
+                }}
+              />
+            ) : (
+              <ForgeRecipesPanel
+                cards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
+                onCardForged={(result) => {
+                  if (!result?.card) return;
+                  const consumed = new Set(result.card.transmuted_from_card_ids || []);
+                  setCards((prev) => [result.card, ...prev.filter((c) => !consumed.has(c.id))]);
+                }}
+              />
+            )}
+          </div>
         )}
 
         {tab === 'trading' && (
