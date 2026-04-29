@@ -69,12 +69,12 @@ export const DEFAULT_SCENARIOS = [
   // --- Input fuzzing (RC-FUZZ) ---
   {
     id: 'B1', commander_id: 'RC-FUZZ',
-    name: 'SSRF via ingest URL',
+    name: 'SSRF via ingest URL (PATCHED)',
     description: 'POST ingestTelegramBotKnowledge with url=http://169.254.169.254/...',
     expected_defense: 'reject',
-    simulated_result: 'leaked',
-    evidence: 'base44/functions/ingestTelegramBotKnowledge/entry.ts:51 — fetch(url) with no host/protocol allowlist. Deno egress reaches metadata service / private CIDRs.',
-    fix: 'Allow only https:; reject hosts in 10/8, 172.16/12, 192.168/16, 127/8, 169.254/16, ::1, fc00::/7. Pin to resolved IP before fetch.',
+    simulated_result: 'blocked',
+    evidence: 'PATCHED: ingestTelegramBotKnowledge now runs assertSafeUrl() — rejects non-https, literal-IP private/loopback/link-local, and (best-effort) hostnames whose DNS resolves to private CIDRs. fetch() also runs with redirect: manual to prevent upstream redirect bypass.',
+    fix: 'Patched.',
   },
   {
     id: 'B2', commander_id: 'RC-FUZZ',
@@ -101,12 +101,12 @@ export const DEFAULT_SCENARIOS = [
   // --- Prompt injection (RC-INJ) ---
   {
     id: 'C1', commander_id: 'RC-INJ',
-    name: 'Unsigned Telegram webhook',
+    name: 'Unsigned Telegram webhook (PATCHED)',
     description: 'POST telegramWebhook?botId=<id> without secret_token; drives victim\'s bot',
     expected_defense: 'reject',
-    simulated_result: 'leaked',
-    evidence: 'base44/functions/telegramWebhook/entry.ts:13 — no X-Telegram-Bot-Api-Secret-Token check. Attacker drives victim bot with arbitrary chat_id, bills owner for LLM and pushes responses to attacker chat.',
-    fix: 'Generate per-bot secret_token at setWebhook time, store on TelegramBot, reject when header doesn\'t match.',
+    simulated_result: 'blocked',
+    evidence: 'PATCHED: manageTelegramWebhook + registerTelegramWebhook now generate a 32-byte hex secret_token at activate time, store it on TelegramBot.webhook_secret_token, and pass it to Telegram\'s setWebhook. telegramWebhook handler rejects 401 if X-Telegram-Bot-Api-Secret-Token doesn\'t match. ACTION FOR USER: existing bots need to be re-activated (Activate button) to pick up the new token; bots without a stored token are still accepted as a one-time bypass.',
+    fix: 'Patched. Re-activate every existing TelegramBot to populate webhook_secret_token.',
   },
   {
     id: 'C2', commander_id: 'RC-INJ',
@@ -180,21 +180,21 @@ export const DEFAULT_SCENARIOS = [
   },
   {
     id: 'E2', commander_id: 'RC-ABUSE',
-    name: 'Webhook secret in client bundle',
+    name: 'Webhook secret in client bundle (PATCHED)',
     description: 'Extract VITE_*_WEBHOOK_SECRET from JS bundle, forge signed payment webhook',
     expected_defense: 'reject',
-    simulated_result: 'leaked',
-    evidence: 'src/lib/webhookValidator.js:14 — defaults to literals (whsec_test_stripe etc.); overrides via import.meta.env.VITE_* ship to every browser. validateWebhook gates payment_webhook_verified, consumed by orderStateMachine.enforceOrderStateGate and jadeDropGuards.verifyOrderBeforeGrant.',
-    fix: 'Move all webhook validation to a server-side Deno function. Read secrets via Deno.env.get() — never VITE_-prefixed.',
+    simulated_result: 'blocked',
+    evidence: 'PATCHED: src/lib/webhookValidator.js no longer reads any VITE_*_WEBHOOK_SECRET; validateWebhookSignature now throws and validateWebhook returns valid:false. Real HMAC validation lives in base44/functions/validatePaymentWebhook/entry.ts which reads STRIPE_WEBHOOK_SECRET / CRYPTO_WEBHOOK_SECRET / WALLET_WEBHOOK_SECRET via Deno.env.get(). ACTION FOR USER: set those env vars in Base44 before enabling payment flows.',
+    fix: 'Patched. Configure STRIPE_WEBHOOK_SECRET / CRYPTO_WEBHOOK_SECRET / WALLET_WEBHOOK_SECRET in Base44 env.',
   },
   {
     id: 'E3', commander_id: 'RC-ABUSE',
-    name: 'Encryption key in client bundle',
+    name: 'Encryption key in client bundle (PATCHED)',
     description: 'PII master key shipped to browser; decrypts every user\'s phone/SSN',
     expected_defense: 'reject',
-    simulated_result: 'leaked',
-    evidence: 'src/lib/encryption.js:4 — VITE_ENCRYPTION_KEY ships to bundle when set; falls back to per-process random which makes ciphertext unrecoverable on next load. Either way, browser-side encryption is broken.',
-    fix: 'Move encrypt/decrypt to a server function. Master key via Deno.env.get("ENCRYPTION_KEY") only.',
+    simulated_result: 'blocked',
+    evidence: 'PATCHED: src/lib/encryption.js no longer reads VITE_ENCRYPTION_KEY; all four exports (encryptData/decryptData/encryptUserPII/decryptUserPII) now throw with a pointer to the server function. Real implementation in base44/functions/encryptUserPII/entry.ts uses AES-GCM with PII_ENCRYPTION_KEY from Deno.env.get(). ACTION FOR USER: set PII_ENCRYPTION_KEY (32-byte hex) in Base44 env before any PII flows resume.',
+    fix: 'Patched. Configure PII_ENCRYPTION_KEY in Base44 env (32-byte hex string).',
   },
   {
     id: 'E4', commander_id: 'RC-ABUSE',

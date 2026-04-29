@@ -29,10 +29,16 @@ Deno.serve(async (req) => {
     const appBaseUrl = Deno.env.get('BASE44_APP_BASE_URL') || Deno.env.get('APP_BASE_URL') || '';
     const webhookUrl = `${appBaseUrl}/functions/telegramWebhook`;
 
+    // Per-bot secret_token Telegram echoes back as a header on every call —
+    // the webhook handler rejects mismatches. Stored on the bot entity.
+    const secretBytes = new Uint8Array(32);
+    crypto.getRandomValues(secretBytes);
+    const webhookSecret = Array.from(secretBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+
     const response = await fetch(`${TELEGRAM_API}/bot${token}/setWebhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: webhookUrl })
+      body: JSON.stringify({ url: webhookUrl, secret_token: webhookSecret })
     });
 
     const result = await response.json();
@@ -48,6 +54,7 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.TelegramBot.update(botId, {
       status: 'active',
       webhook_url: webhookUrl,
+      webhook_secret_token: webhookSecret,
       token_label: 'TELEGRAM_BOT_TOKEN',
       last_error: ''
     });
