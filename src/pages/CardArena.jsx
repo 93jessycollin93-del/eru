@@ -10,6 +10,10 @@ import ChallengePanel from '../components/cards/ChallengePanel';
 import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
+import CardLorePanel from '../components/cards/CardLorePanel';
+import RealityPressureMeter from '../components/cards/RealityPressureMeter';
+import ExcavationPackPanel from '../components/cards/ExcavationPackPanel';
+import { ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard } from '@/lib/cardLore';
 
 const TOURNAMENT_ROUNDS = [
   { id: 1, name: 'Novice Challenger', difficulty: 1, faction: 'Ember Clan',    prize: { gold: 50,  discover: true } },
@@ -68,6 +72,7 @@ export default function CardArena() {
   const [arenaUsers, setArenaUsers] = useState([]);
   const [openChallenges, setOpenChallenges] = useState([]);
   const [copyingDeck, setCopyingDeck] = useState(false);
+  const [loreCard, setLoreCard] = useState(null);
 
   useEffect(() => {
     loadCards();
@@ -456,6 +461,33 @@ export default function CardArena() {
     setRoundResults(newResults);
     await saveBattleHistory(won, round, battleData);
 
+    // Lore side-effects — never blocks battle flow, errors are swallowed.
+    try {
+      const playedDeck = battleData?.playerDeck || deck;
+      const opponent = activeOpponentName || currentRound?.name || round?.name || 'Unknown';
+      const highPowerPlays = playedDeck.filter(isHighPowerCard);
+      // 1) append a battle entry to each owned card's historical log
+      await Promise.all(playedDeck
+        .filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))
+        .map((c) => base44.entities.Card.update(c.id, {
+          historical_log: appendLogEntry(c, {
+            event_type: 'battle',
+            summary: `${won ? 'Victory' : 'Defeat'} vs ${opponent}`,
+            actor: opponent,
+            result: won ? 'win' : 'loss',
+            metadata: { mode: battleMode, round: tournamentRound },
+          }),
+        }).catch(() => null)));
+      // 2) bump global Reality Pressure based on high-power activations
+      if (highPowerPlays.length > 0) {
+        const updated = await bumpPressure({
+          amount: Math.min(10, highPowerPlays.length * 2),
+          summary: `${highPowerPlays.length} high-power card${highPowerPlays.length === 1 ? '' : 's'} engaged vs ${opponent}`,
+        });
+        if (updated) window.dispatchEvent(new CustomEvent('reality-pressure-changed', { detail: updated }));
+      }
+    } catch (_) { /* non-fatal */ }
+
     if (battleMode === 'pvp_ladder' || battleMode === 'pvp_duo' || battleMode === 'direct_challenge' || battleMode === 'training' || battleMode === 'tutorial' || battleMode === 'jackie_ai' || battleMode === 'ai_campaign') {
       setBattling(false);
       return;
@@ -534,9 +566,12 @@ export default function CardArena() {
           </h2>
           <p className="text-[10px] text-muted-foreground">Deck · Battle · Tournament</p>
         </div>
-        <div className="flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-3 py-1.5">
-          <Coins className="w-3.5 h-3.5 text-yellow-400" />
-          <span className="text-sm font-bold text-yellow-400">{gold.toLocaleString()}</span>
+        <div className="flex items-center gap-2">
+          <RealityPressureMeter />
+          <div className="flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-3 py-1.5">
+            <Coins className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="text-sm font-bold text-yellow-400">{gold.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
@@ -559,9 +594,20 @@ export default function CardArena() {
             ) : (
               <div className="flex flex-wrap gap-2 justify-center">
                 {cards.map(card => (
-                  <CardDisplay key={card.id} card={card} size="md"
-                    selected={deck.some(c => c.id === card.id)}
-                    onClick={toggleDeckCard} />
+                  <div key={card.id} className="relative">
+                    <CardDisplay card={card} size="md"
+                      selected={deck.some(c => c.id === card.id)}
+                      onClick={toggleDeckCard} />
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setLoreCard(card); }}
+                      className="absolute bottom-1 right-1 z-20 inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/40 bg-black/70 text-[9px] font-bold text-cyan-200 backdrop-blur-sm hover:bg-cyan-500/20"
+                      title="View lore"
+                      aria-label="View lore"
+                    >
+                      ℒ
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -881,9 +927,60 @@ export default function CardArena() {
         )}
 
         {tab === 'market' && (
-          <Marketplace gold={gold} onGoldChange={saveGold} />
+          <div className="space-y-6">
+            <ExcavationPackPanel
+              gold={gold}
+              onGoldChange={saveGold}
+              ownedCards={cards}
+              onCardsAdded={(added) => setCards((prev) => [...prev, ...added])}
+            />
+            <Marketplace gold={gold} onGoldChange={saveGold} />
+          </div>
         )}
       </div>
+
+      {/* Card Lore detail dialog — opened from the ℒ badge on collection cards. */}
+      <AnimatePresence>
+        {loreCard && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setLoreCard(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 12 }}
+              transition={{ duration: 0.22 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#06070d]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="pointer-events-none absolute inset-0 lore-distort-faint" aria-hidden="true" />
+              <div className="relative max-h-[85vh] overflow-y-auto p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300">Card Lore</p>
+                    <h4 className="text-base font-semibold text-white truncate">{loreCard.name}</h4>
+                    <p className="mt-0.5 text-[11px] text-white/55">{loreCard.faction} · {loreCard.rarity}</p>
+                  </div>
+                  <button onClick={() => setLoreCard(null)} className="rounded-full p-1.5 text-white/60 hover:bg-white/5 hover:text-white" aria-label="Close">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex justify-center mb-3">
+                  <CardDisplay card={loreCard} size="lg" />
+                </div>
+                {loreCard.flavor_text && (
+                  <p className="mb-2 text-center text-[11px] italic text-white/60">"{loreCard.flavor_text}"</p>
+                )}
+                <CardLorePanel card={ensureLoreProfile(loreCard)} defaultOpen />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

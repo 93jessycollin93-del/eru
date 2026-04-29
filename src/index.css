@@ -437,6 +437,52 @@
   }
 }
 
+/* ============================================================================
+   Lore system — signal distortion overlay
+   Used by CardLorePanel / ExcavationPackPanel. Pure cosmetic SVG-noise +
+   slow drift; pointer-events:none so it never blocks UI. Stronger variants
+   are reserved for low-stability cards / fracturing packs.
+   ============================================================================ */
+@keyframes lore-drift-slow {
+  0%   { transform: translate3d(0, 0, 0) scale(1.02); opacity: 0.55; }
+  50%  { transform: translate3d(-1.5%, 0.8%, 0) scale(1.04); opacity: 0.85; }
+  100% { transform: translate3d(0, 0, 0) scale(1.02); opacity: 0.55; }
+}
+@keyframes lore-flicker {
+  0%, 100% { opacity: 1; }
+  47%      { opacity: 0.92; }
+  49%      { opacity: 1; }
+  51%      { opacity: 0.85; }
+  53%      { opacity: 1; }
+}
+.lore-distort-none { display: none; }
+.lore-distort-faint,
+.lore-distort-soft,
+.lore-distort-strong,
+.lore-distort-fracture {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(120, 80, 255, 0.10) 0%, transparent 45%),
+    radial-gradient(circle at 82% 78%, rgba(0, 200, 180, 0.08) 0%, transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  mix-blend-mode: screen;
+  animation: lore-drift-slow 12s ease-in-out infinite;
+}
+.lore-distort-soft     { opacity: 0.75; animation-duration: 9s; }
+.lore-distort-strong   { opacity: 0.9;  animation-duration: 6s; }
+.lore-distort-fracture { opacity: 1;    animation: lore-drift-slow 4s ease-in-out infinite, lore-flicker 1.8s steps(2, end) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lore-distort-faint, .lore-distort-soft, .lore-distort-strong, .lore-distort-fracture {
+    animation: none !important;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: hsl(230 25% 6%); }

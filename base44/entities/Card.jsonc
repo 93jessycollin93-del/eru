@@ -108,6 +108,57 @@
         }
       },
       "default": []
+    },
+    "lore_origin": {
+      "type": "string",
+      "description": "Signal source / where this card was first detected (e.g. 'Echo Drift 7-\u03a3', 'Monolith Sector 12')"
+    },
+    "lore_tag": {
+      "type": "string",
+      "description": "Narrative tag from the excavation event that surfaced it"
+    },
+    "stability_visible": {
+      "type": "number",
+      "description": "Public stability rating 0-100, shown to the player"
+    },
+    "stability_hidden": {
+      "type": "number",
+      "description": "True stability rating 0-100, used for narrative drift only \u2014 never affects battle math"
+    },
+    "historical_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "origin",
+              "battle",
+              "ownership",
+              "pack",
+              "drift"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "default": [],
+      "description": "Immutable lore log of battles, ownership transfers, and excavation events"
     }
   },
   "required": [

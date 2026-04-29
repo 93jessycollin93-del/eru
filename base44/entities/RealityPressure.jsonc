@@ -1,0 +1,57 @@
+{
+  "name": "RealityPressure",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Owner of this pressure meter (one per player)"
+    },
+    "pressure": {
+      "type": "number",
+      "default": 0,
+      "description": "Current Reality Pressure 0-100. Rises when high-power cards are used frequently."
+    },
+    "high_power_uses": {
+      "type": "number",
+      "default": 0,
+      "description": "Cumulative count of high-power (epic+) card activations"
+    },
+    "last_event_at": {
+      "type": "string",
+      "description": "ISO timestamp of last pressure event"
+    },
+    "last_event_summary": {
+      "type": "string",
+      "description": "Human-readable summary of the last event that moved the meter"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "calm",
+        "humming",
+        "unstable",
+        "fracturing",
+        "critical"
+      ],
+      "default": "calm",
+      "description": "Narrative phase derived from current pressure"
+    }
+  },
+  "required": [
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "user_email": "{{user.email}}"
+    },
+    "read": {
+      "user_email": "{{user.email}}"
+    },
+    "update": {
+      "user_email": "{{user.email}}"
+    },
+    "delete": {
+      "user_email": "{{user.email}}"
+    }
+  }
+}

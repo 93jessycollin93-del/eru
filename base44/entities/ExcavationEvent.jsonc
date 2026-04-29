@@ -1,0 +1,71 @@
+{
+  "name": "ExcavationEvent",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "pack_name": {
+      "type": "string",
+      "description": "Display name of the excavation event (e.g. 'Echo Drift Excavation')"
+    },
+    "origin": {
+      "type": "string",
+      "description": "Signal origin of the dig site (e.g. 'Drift 7-\u03a3', 'Monolith Sector 12')"
+    },
+    "lore_tag": {
+      "type": "string",
+      "description": "Narrative tag attached to all cards surfaced in this event"
+    },
+    "rarity_bias": {
+      "type": "string",
+      "enum": [
+        "common",
+        "rare",
+        "epic",
+        "legendary",
+        "mythic"
+      ],
+      "default": "common",
+      "description": "Minimum guaranteed rarity floor for the event"
+    },
+    "card_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Card IDs surfaced from this event"
+    },
+    "cards_surfaced_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
+    },
+    "stability_drift": {
+      "type": "number",
+      "default": 0,
+      "description": "How much this event nudged the global Reality Pressure"
+    }
+  },
+  "required": [
+    "pack_name",
+    "origin"
+  ],
+  "rls": {
+    "create": {
+      "user_email": "{{user.email}}"
+    },
+    "read": {
+      "user_email": "{{user.email}}"
+    },
+    "update": {
+      "user_email": "{{user.email}}"
+    },
+    "delete": {
+      "user_email": "{{user.email}}"
+    }
+  }
+}
