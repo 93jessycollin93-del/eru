@@ -72,6 +72,7 @@ import LanguageDiagnostics from './pages/LanguageDiagnostics';
 import AdminBazarProducts from './pages/AdminBazarProducts';
 import PlayerProgress from './pages/PlayerProgress';
 import LoreInsights from './pages/LoreInsights';
+import Preferences from './pages/Preferences';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -167,6 +168,7 @@ const AuthenticatedApp = () => {
         <Route path="/language-diagnostics" element={<LanguageDiagnostics />} />
         <Route path="/player-progress" element={<PlayerProgress />} />
         <Route path="/lore-insights" element={<LoreInsights />} />
+        <Route path="/preferences" element={<Preferences />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
