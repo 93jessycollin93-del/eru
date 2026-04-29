@@ -278,25 +278,30 @@ export default function Marketplace({ gold, onGoldChange }) {
                   <p className="text-[10px] mt-1 opacity-60">Be the first to list a card!</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {filtered.map(l => {
                     const card = l.card_data;
                     const el = ELEMENT_COLORS[card?.element] || ELEMENT_COLORS.fire;
                     const rar = RARITY_STYLES[card?.rarity] || RARITY_STYLES.common;
                     const canAfford = gold >= l.price_gold;
                     return (
-                      <motion.div key={l.id} layout
-                        className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-                        <div className="flex-shrink-0">
+                      <motion.div
+                        key={l.id}
+                        layout
+                        whileHover={{ y: -2 }}
+                        transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                        className="group relative bg-card border border-border rounded-xl px-3 py-3.5 flex items-center gap-4 hover:border-primary/40 hover:shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.35)] transition-colors duration-200"
+                      >
+                        <div className="flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-[1.04]">
                           {card && <CardDisplay card={card} size="sm" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">{l.card_name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors duration-200">{l.card_name}</p>
+                          <div className="flex items-center gap-2 mt-1">
                             <span className={`text-[10px] ${rar.color}`}>{rar.label}</span>
                             <span className={`text-[10px] ${el.text}`}>{el.icon} {card?.element}</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">by @{l.seller_display}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">by @{l.seller_display}</p>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
@@ -305,8 +310,8 @@ export default function Marketplace({ gold, onGoldChange }) {
                           <button
                             onClick={() => buyCard(l)}
                             disabled={!canAfford || buying === l.id}
-                            className={`mt-1 px-3 py-1 rounded-lg text-xs font-semibold transition-colors
-                              ${canAfford ? 'bg-primary text-primary-foreground hover:opacity-90' : 'bg-secondary text-muted-foreground cursor-not-allowed'}`}>
+                            className={`mt-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200
+                              ${canAfford ? 'bg-primary text-primary-foreground hover:opacity-90 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)] active:scale-95' : 'bg-secondary text-muted-foreground cursor-not-allowed'}`}>
                             {buying === l.id ? <Loader2 className="w-3 h-3 animate-spin" /> : canAfford ? 'Buy' : 'No gold'}
                           </button>
                         </div>
@@ -488,7 +493,7 @@ export default function Marketplace({ gold, onGoldChange }) {
 
           {/* MY LISTINGS */}
           {tab === 'my_listings' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {myListings.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
                   <Tag className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -500,12 +505,20 @@ export default function Marketplace({ gold, onGoldChange }) {
                   const card = l.card_data;
                   const rar = RARITY_STYLES[card?.rarity] || RARITY_STYLES.common;
                   return (
-                    <div key={l.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-                      {card && <CardDisplay card={card} size="sm" />}
+                    <motion.div
+                      key={l.id}
+                      layout
+                      whileHover={{ y: -2 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                      className="group bg-card border border-border rounded-xl px-3 py-3.5 flex items-center gap-4 hover:border-primary/40 hover:shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.35)] transition-colors duration-200"
+                    >
+                      <div className="flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-[1.04]">
+                        {card && <CardDisplay card={card} size="sm" />}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{l.card_name}</p>
-                        <p className={`text-[10px] ${rar.color}`}>{rar.label}</p>
-                        <p className="text-[10px] text-green-400 mt-0.5">● Active</p>
+                        <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors duration-200">{l.card_name}</p>
+                        <p className={`text-[10px] mt-1 ${rar.color}`}>{rar.label}</p>
+                        <p className="text-[10px] text-green-400 mt-1">● Active</p>
                       </div>
                       <div className="text-right flex-shrink-0 space-y-1">
                         {editingListingId === l.id ? (
@@ -545,7 +558,7 @@ export default function Marketplace({ gold, onGoldChange }) {
                           </button>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })
               )}
