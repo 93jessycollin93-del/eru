@@ -77,6 +77,7 @@ import Library from './pages/Library';
 import DeckBuilder from './pages/DeckBuilder';
 import Guilds from './pages/Guilds';
 import About from './pages/About';
+import AppStore from './pages/AppStore';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -177,6 +178,7 @@ const AuthenticatedApp = () => {
         <Route path="/deck-builder" element={<DeckBuilder />} />
         <Route path="/guilds" element={<Guilds />} />
         <Route path="/about" element={<About />} />
+        <Route path="/app-store" element={<AppStore />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

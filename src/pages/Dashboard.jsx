@@ -23,6 +23,7 @@ import ExportButton from '../components/dashboard/ExportButton';
 import NotificationCenter from '../components/notifications/NotificationCenter';
 import TelegramFirstBanner from '../components/telegram/TelegramFirstBanner';
 import EruHero from '../components/dashboard/EruHero';
+import InstalledModulesRenderer from '../components/appstore/InstalledModulesRenderer';
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
@@ -93,6 +94,7 @@ export default function Dashboard() {
             }
           />
           <WidgetLibrary prices={prices} sections={['market-pins', 'news-feed', 'ai-insights', 'dashboard-actions']} />
+          <InstalledModulesRenderer />
           <AppDock />
           <NotificationCenter />
           <AlertManager />
