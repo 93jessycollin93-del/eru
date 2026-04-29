@@ -1,0 +1,89 @@
+{
+  "name": "DailyQuest",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Owner of this quest record"
+    },
+    "quest_date": {
+      "type": "string",
+      "description": "YYYY-MM-DD local date the quest set was generated for"
+    },
+    "template_id": {
+      "type": "string",
+      "description": "Stable id of the quest template used"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "pvp_win",
+        "transmutation",
+        "element_play",
+        "match_win",
+        "card_acquired",
+        "level_up"
+      ],
+      "description": "Which gameplay event progresses this quest"
+    },
+    "target_filter": {
+      "type": "object",
+      "description": "Extra constraints checked against the event payload (e.g. { element: 'fire' } or { mode: 'pvp_ladder' })"
+    },
+    "goal": {
+      "type": "number",
+      "default": 1,
+      "description": "Required event count to complete the quest"
+    },
+    "progress": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "claimed"
+      ],
+      "default": "active"
+    },
+    "reward_gold": {
+      "type": "number",
+      "default": 0
+    },
+    "completed_at": {
+      "type": "string"
+    },
+    "claimed_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "quest_date",
+    "template_id",
+    "event_type",
+    "goal"
+  ],
+  "rls": {
+    "create": {
+      "user_email": "{{user.email}}"
+    },
+    "read": {
+      "user_email": "{{user.email}}"
+    },
+    "update": {
+      "user_email": "{{user.email}}"
+    },
+    "delete": {
+      "user_email": "{{user.email}}"
+    }
+  }
+}

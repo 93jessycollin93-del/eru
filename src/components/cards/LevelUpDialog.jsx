@@ -13,6 +13,7 @@ import {
   runLevelUp,
 } from '@/lib/cardLeveling';
 import { deductGold } from '@/lib/economyApi';
+import { reportQuestEvent } from '@/lib/dailyQuests';
 
 /**
  * LevelUpDialog
@@ -57,6 +58,7 @@ export default function LevelUpDialog({ card, ownedCards = [], gold = 0, onClose
     }
     setSuccess(result);
     onLeveled?.(result);
+    reportQuestEvent('level_up', { card_id: card.id, new_level: result.newLevel });
   };
 
   if (!card) return null;

@@ -11,6 +11,7 @@ import {
   transmutableRarities,
   runTransmutation,
 } from '@/lib/transmutation';
+import { reportQuestEvent } from '@/lib/dailyQuests';
 
 /**
  * TransmutationPanel
@@ -79,6 +80,7 @@ export default function TransmutationPanel({ cards = [], onCardForged }) {
     setForged(result);
     setStep(3);
     onCardForged?.(result);
+    reportQuestEvent('transmutation', { source_rarity: result.sourceRarity, target_rarity: result.targetRarity });
   };
 
   // ────────────────────────────────────────────────────────────────────────

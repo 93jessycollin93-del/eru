@@ -4,6 +4,7 @@ import { BookOpen, Hammer, CheckCircle2, AlertTriangle, Loader2, X, Sparkles, Ch
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES } from './StarterCards';
 import { FORGE_RECIPES, evaluateRecipe, runRecipeCraft } from '@/lib/forgeRecipes';
+import { reportQuestEvent } from '@/lib/dailyQuests';
 
 /**
  * ForgeRecipesPanel
@@ -38,6 +39,7 @@ export default function ForgeRecipesPanel({ cards = [], onCardForged }) {
     }
     setCrafted(result);
     onCardForged?.(result);
+    reportQuestEvent('transmutation', { recipe_id: recipe.id });
   };
 
   return (

@@ -7,7 +7,9 @@ import { DECK_MODE_OPTIONS, DEFAULT_DECK_MODE, buildDeckModeSummary, calculateDe
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
 import ChallengePanel from '../components/cards/ChallengePanel';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy, Wand2, ArrowLeftRight, BookOpen } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy, Wand2, ArrowLeftRight, BookOpen, Target } from 'lucide-react';
+import { reportQuestEvent } from '@/lib/dailyQuests';
+import DailyQuestPanel from '../components/quests/DailyQuestPanel';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 import CardLorePanel from '../components/cards/CardLorePanel';
@@ -33,6 +35,7 @@ const TABS = [
   { id: 'history',    label: 'History',    icon: History },
   { id: 'forge',      label: 'Forge',      icon: Wand2 },
   { id: 'trading',    label: 'Trading',    icon: ArrowLeftRight },
+  { id: 'quests',     label: 'Quests',     icon: Target },
   { id: 'market',     label: 'Market',     icon: ShoppingCart },
 ];
 
@@ -468,6 +471,26 @@ export default function CardArena() {
     const newResults = [...roundResults, { round: tournamentRound, won }];
     setRoundResults(newResults);
     await saveBattleHistory(won, round, battleData);
+
+    // Daily quest event hooks — non-blocking, errors are swallowed by the engine.
+    try {
+      const playedDeck = battleData?.playerDeck || deck;
+      // Element plays — one increment per played card, grouped by element.
+      const elementCounts = playedDeck.reduce((acc, c) => {
+        if (!c?.element) return acc;
+        acc[c.element] = (acc[c.element] || 0) + 1;
+        return acc;
+      }, {});
+      Object.entries(elementCounts).forEach(([element, count]) => {
+        reportQuestEvent('element_play', { element }, count);
+      });
+      if (won) {
+        reportQuestEvent('match_win', { mode: battleMode });
+        if (['pvp_ladder', 'pvp_duo', 'direct_challenge'].includes(battleMode)) {
+          reportQuestEvent('pvp_win', { mode: battleMode });
+        }
+      }
+    } catch (_) { /* non-fatal */ }
 
     // Lore side-effects — never blocks battle flow, errors are swallowed.
     try {
@@ -992,6 +1015,10 @@ export default function CardArena() {
 
         {tab === 'trading' && (
           <TradingPanel gold={gold} onGoldChange={saveGold} />
+        )}
+
+        {tab === 'quests' && (
+          <DailyQuestPanel onGoldChange={(newBalance) => setGold(newBalance)} />
         )}
 
         {tab === 'market' && (
