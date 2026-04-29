@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Library as LibraryIcon, Loader2, Search, BookOpen, Filter } from 'lucide-react';
+import { Library as LibraryIcon, Loader2, Search, BookOpen, Filter, BarChart3 } from 'lucide-react';
 import { loadCardCatalog, summarizeCatalog, uniqueOrigins } from '@/lib/cardCatalog';
 import LibraryCardTile from '@/components/library/LibraryCardTile';
+import CardAnalyticsPanel from '@/components/library/CardAnalyticsPanel';
 
 const ELEMENT_OPTIONS = ['all', 'fire', 'water', 'earth', 'wind', 'shadow', 'light'];
 const RARITY_OPTIONS = ['all', 'common', 'rare', 'epic', 'legendary', 'mythic'];
@@ -22,6 +23,7 @@ const STATUS_OPTIONS = [
  * pack/expansion seeds) does not require changes to this page.
  */
 export default function Library() {
+  const [view, setView] = useState('catalog'); // 'catalog' | 'analytics'
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [element, setElement] = useState('all');
@@ -75,6 +77,25 @@ export default function Library() {
       </div>
 
       <div className="px-4 py-4 max-w-5xl mx-auto space-y-4">
+        {/* View tabs */}
+        <div className="flex gap-1 bg-secondary rounded-xl p-1">
+          {[
+            { id: 'catalog',   label: 'Catalog',   icon: BookOpen },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => setView(opt.id)}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors
+                ${view === opt.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <opt.icon className="w-3.5 h-3.5" /> {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {view === 'analytics' ? <CardAnalyticsPanel /> : (
+        <>
         {/* Summary */}
         <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
           <div className="flex items-end gap-3 flex-wrap">
@@ -141,6 +162,8 @@ export default function Library() {
               <LibraryCardTile key={entry.key} entry={entry} />
             ))}
           </div>
+        )}
+        </>
         )}
       </div>
     </div>
