@@ -7,12 +7,13 @@ import { DECK_MODE_OPTIONS, DEFAULT_DECK_MODE, buildDeckModeSummary, calculateDe
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
 import ChallengePanel from '../components/cards/ChallengePanel';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy, Wand2 } from 'lucide-react';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 import CardLorePanel from '../components/cards/CardLorePanel';
 import RealityPressureMeter from '../components/cards/RealityPressureMeter';
 import ExcavationPackPanel from '../components/cards/ExcavationPackPanel';
+import TransmutationPanel from '../components/cards/TransmutationPanel';
 import { ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard, createCardWithLore } from '@/lib/cardLore';
 
 const TOURNAMENT_ROUNDS = [
@@ -27,6 +28,7 @@ const TABS = [
   { id: 'lobby',      label: 'Lobby',      icon: Radar },
   { id: 'tournament', label: 'Tournament', icon: Trophy },
   { id: 'history',    label: 'History',    icon: History },
+  { id: 'forge',      label: 'Forge',      icon: Wand2 },
   { id: 'market',     label: 'Market',     icon: ShoppingCart },
 ];
 
@@ -926,6 +928,17 @@ export default function CardArena() {
             selectedMatch={selectedBattle}
             onSelect={setSelectedBattle}
             loading={historyLoading}
+          />
+        )}
+
+        {tab === 'forge' && (
+          <TransmutationPanel
+            cards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
+            onCardForged={(result) => {
+              if (!result?.card) return;
+              const burned = new Set(result.card.transmuted_from_card_ids || []);
+              setCards((prev) => [result.card, ...prev.filter((c) => !burned.has(c.id))]);
+            }}
           />
         )}
 
