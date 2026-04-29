@@ -33,6 +33,13 @@ export default function CardDisplay({ card, size = 'md', selected, onClick, glow
         <span className={`${s.cost} font-bold text-yellow-300 leading-none`} style={{ fontSize: '11px' }}>{card.cost}</span>
       </div>
 
+      {/* Level badge — only shown for leveled cards (level > 1) */}
+      {Number(card.level || 1) > 1 && (
+        <div className="absolute top-7 left-1.5 z-10 flex items-center gap-0.5 rounded-full border border-amber-400/60 bg-amber-500/90 px-1.5 py-0.5 shadow-md shadow-amber-500/40">
+          <span className="text-[8px] font-bold text-black leading-none">L{card.level}</span>
+        </div>
+      )}
+
       {/* Element icon */}
       <div className="absolute top-1.5 right-1.5 text-base leading-none z-10">{el.icon}</div>
 

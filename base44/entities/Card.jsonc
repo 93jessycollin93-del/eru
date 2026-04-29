@@ -16,11 +16,55 @@
     },
     "power": {
       "type": "number",
-      "description": "Board power contribution"
+      "description": "Board power contribution (current, includes level bonuses)"
     },
     "guard": {
       "type": "number",
-      "description": "Damage absorption"
+      "description": "Damage absorption (current, includes level bonuses)"
+    },
+    "base_power": {
+      "type": "number",
+      "description": "Original power before any level-up bonuses (locked at creation)"
+    },
+    "base_guard": {
+      "type": "number",
+      "description": "Original guard before any level-up bonuses (locked at creation)"
+    },
+    "level": {
+      "type": "number",
+      "default": 1,
+      "description": "Current card level (1-10)"
+    },
+    "level_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "number"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "gold",
+              "duplicate"
+            ]
+          },
+          "cost": {
+            "type": "number"
+          },
+          "consumed_card_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
     },
     "element": {
       "type": "string",

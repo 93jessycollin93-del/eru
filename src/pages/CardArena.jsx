@@ -16,6 +16,7 @@ import ExcavationPackPanel from '../components/cards/ExcavationPackPanel';
 import TransmutationPanel from '../components/cards/TransmutationPanel';
 import ForgeRecipesPanel from '../components/cards/ForgeRecipesPanel';
 import TradingPanel from '../components/cards/TradingPanel';
+import LevelUpDialog from '../components/cards/LevelUpDialog';
 import { ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard, createCardWithLore } from '@/lib/cardLore';
 
 const TOURNAMENT_ROUNDS = [
@@ -78,6 +79,7 @@ export default function CardArena() {
   const [openChallenges, setOpenChallenges] = useState([]);
   const [copyingDeck, setCopyingDeck] = useState(false);
   const [loreCard, setLoreCard] = useState(null);
+  const [levelUpCard, setLevelUpCard] = useState(null);
   const [forgeView, setForgeView] = useState('transmute'); // 'transmute' | 'recipes'
 
   useEffect(() => {
@@ -602,22 +604,36 @@ export default function CardArena() {
               <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
             ) : (
               <div className="flex flex-wrap gap-2 justify-center">
-                {cards.map(card => (
-                  <div key={card.id} className="relative">
-                    <CardDisplay card={card} size="md"
-                      selected={deck.some(c => c.id === card.id)}
-                      onClick={toggleDeckCard} />
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setLoreCard(card); }}
-                      className="absolute bottom-1 right-1 z-20 inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/40 bg-black/70 text-[9px] font-bold text-cyan-200 backdrop-blur-sm hover:bg-cyan-500/20"
-                      title="View lore"
-                      aria-label="View lore"
-                    >
-                      ℒ
-                    </button>
-                  </div>
-                ))}
+                {cards.map(card => {
+                  const isOwned = card?.id && !String(card.id).startsWith('s') && !String(card.id).startsWith('ai_');
+                  return (
+                    <div key={card.id} className="relative">
+                      <CardDisplay card={card} size="md"
+                        selected={deck.some(c => c.id === card.id)}
+                        onClick={toggleDeckCard} />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setLoreCard(card); }}
+                        className="absolute bottom-1 right-1 z-20 inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/40 bg-black/70 text-[9px] font-bold text-cyan-200 backdrop-blur-sm hover:bg-cyan-500/20"
+                        title="View lore"
+                        aria-label="View lore"
+                      >
+                        ℒ
+                      </button>
+                      {isOwned && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setLevelUpCard(card); }}
+                          className="absolute bottom-1 left-1 z-20 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400/50 bg-black/70 text-[9px] font-bold text-amber-200 backdrop-blur-sm hover:bg-amber-500/20"
+                          title="Level up"
+                          aria-label="Level up"
+                        >
+                          ↑
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -990,6 +1006,27 @@ export default function CardArena() {
           </div>
         )}
       </div>
+
+      {/* Level Up dialog — opened from the ↑ badge on owned collection cards. */}
+      <AnimatePresence>
+        {levelUpCard && (
+          <LevelUpDialog
+            card={levelUpCard}
+            ownedCards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
+            gold={gold}
+            onClose={() => setLevelUpCard(null)}
+            onLeveled={(result) => {
+              if (!result?.card) return;
+              const consumed = new Set(result.consumedIds || []);
+              setCards((prev) => prev
+                .filter((c) => !consumed.has(c.id))
+                .map((c) => (c.id === result.card.id ? result.card : c)));
+              if (result.goldSpent) setGold((prev) => Math.max(0, prev - result.goldSpent));
+              setLevelUpCard(result.card);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Card Lore detail dialog — opened from the ℒ badge on collection cards. */}
       <AnimatePresence>
