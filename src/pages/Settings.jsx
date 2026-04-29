@@ -1,31 +1,45 @@
 import { useMemo, useState } from 'react';
-import BiometricAuth from '../components/BiometricAuth';
-import { useAuth } from '@/lib/AuthContext';
-import { Shield, FileText, Bell, Download, ChevronRight, Lock, AlertTriangle, ExternalLink, Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send, Globe, Copy, CheckCircle2 } from 'lucide-react';
-import SoundSettings from '../components/SoundSettings';
-import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
+import {
+  Shield, FileText, Bell, ChevronRight, Lock, AlertTriangle, ExternalLink,
+  Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send, Globe,
+  Copy, CheckCircle2, Sparkles, SlidersHorizontal, User2,
+} from 'lucide-react';
+import BiometricAuth from '../components/BiometricAuth';
+import SoundSettings from '../components/SoundSettings';
 import TelegramSettings from '../components/TelegramSettings';
-import Base44ThemeEditor from '@/components/theme/Base44ThemeEditor';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
+import { useAuth } from '@/lib/AuthContext';
+import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 
-const SECTIONS = [
-  { icon: Shield, label: 'Security & 2FA', badge: 'Active' },
-  { icon: Bell, label: 'Notifications', badge: null },
-  { icon: Download, label: 'Export Trade History', badge: null },
-  { icon: FileText, label: 'Documents & Disclaimers', badge: null },
-  { icon: Lock, label: 'Session Timeout', badge: '15 min' },
-];
+/**
+ * Settings
+ * ----------------------------------------------------------------------------
+ * Reorganized for clarity. ALL theme / visual / typography / motion /
+ * background / layout-density controls are owned by /visual (Visual Engine).
+ * This page focuses on:
+ *   1. Account shortcut          → /user-settings, /preferences
+ *   2. Appearance entry point    → /visual
+ *   3. Language                  (live)
+ *   4. Security & privacy        (legal docs, biometric, audit, compliance)
+ *   5. Sound & haptics           (inline)
+ *   6. Telegram                  (inline sheet)
+ *   7. Domain (advanced)         (inline)
+ *   8. Admin tools               (admin role only)
+ *
+ * Removed: SECTIONS placeholder rows that linked nowhere, the embedded
+ * Base44ThemeEditor (now reachable via Visual Engine), and the duplicate
+ * "Risk Warning" tile (already inside Legal Documents → Non-Liability).
+ */
 
+// ─── Domain card (kept — works inline, no theme dep) ─────────────────────────
 function DomainRecordRow({ label, value }) {
   const [copied, setCopied] = useState(false);
-
   const handleCopy = async () => {
     await navigator.clipboard.writeText(value);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
   };
-
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5">
       <div className="min-w-0 flex-1">
@@ -40,8 +54,8 @@ function DomainRecordRow({ label, value }) {
 }
 
 function DomainSettingsCard() {
+  const [open, setOpen] = useState(false);
   const [domain, setDomain] = useState('');
-
   const cleanedDomain = useMemo(() => domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''), [domain]);
   const hostLabel = useMemo(() => {
     if (!cleanedDomain) return 'www';
@@ -51,18 +65,28 @@ function DomainSettingsCard() {
   }, [cleanedDomain]);
   const isSubdomain = useMemo(() => cleanedDomain.split('.').filter(Boolean).length > 2 && !cleanedDomain.startsWith('www.'), [cleanedDomain]);
 
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="w-full flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
+        <Globe className="w-4 h-4 text-muted-foreground" />
+        <span className="flex-1 text-sm text-left">Custom domain</span>
+        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      </button>
+    );
+  }
+
   return (
-    <div className="mt-4 rounded-xl border border-border bg-card p-4 space-y-4">
+    <div className="p-4 space-y-4">
       <div className="flex items-start gap-3">
         <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5">
           <Globe className="w-4 h-4 text-primary" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">Custom Domain</p>
           <p className="mt-1 text-xs text-muted-foreground">Connect your own domain and point it to your hosted site with the DNS records below.</p>
         </div>
+        <button onClick={() => setOpen(false)} className="text-xs text-muted-foreground">Close</button>
       </div>
-
       <div className="space-y-2">
         <label className="text-xs font-medium text-foreground">Your domain</label>
         <input
@@ -71,9 +95,7 @@ function DomainSettingsCard() {
           placeholder="example.com or app.example.com"
           className="w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none"
         />
-        <p className="text-[11px] text-muted-foreground">Enter either your root domain or a subdomain you want to use.</p>
       </div>
-
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
         <p className="text-xs font-semibold text-foreground">DNS setup</p>
         {isSubdomain ? (
@@ -90,97 +112,117 @@ function DomainSettingsCard() {
           </>
         )}
       </div>
-
-      <div className="space-y-2 rounded-xl border border-border bg-secondary/30 p-3">
-        <p className="text-xs font-semibold text-foreground">Setup steps</p>
-        <ol className="space-y-2 text-xs text-muted-foreground list-decimal pl-4">
-          <li>Open your domain registrar or DNS provider.</li>
-          <li>Create the record shown above for your domain.</li>
-          <li>If you are using the root domain, also add the <span className="text-foreground">www</span> CNAME to <span className="text-foreground">base44.onrender.com</span>.</li>
-          <li>Remove conflicting AAAA records for the same host if they exist.</li>
-          <li>If you use Cloudflare, set the record to <span className="text-foreground">DNS only</span> while connecting.</li>
-          <li>Then go to your app dashboard domain settings and verify the domain.</li>
-        </ol>
-      </div>
-
       <div className="flex items-start gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-[11px] text-muted-foreground">
         <ExternalLink className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-        <p>DNS changes can take up to 48–72 hours to fully propagate, and SSL is issued automatically after verification.</p>
+        <p>DNS changes can take up to 48–72 hours to fully propagate. SSL is issued automatically after verification.</p>
       </div>
     </div>
   );
 }
 
-function SettingsSheet({ type, onClose }) {
+// ─── Legal docs sheet (kept) ─────────────────────────────────────────────────
+function LegalDocsSheet({ onClose }) {
   const [tab, setTab] = useState('disclaimer');
-
-  if (type === 'telegram') {
-    return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <button onClick={onClose} className="text-muted-foreground text-sm">← Back</button>
-          <h3 className="font-medium text-sm">Telegram</h3>
-          <span/>
-        </div>
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <TelegramSettings />
-        </div>
+  return (
+    <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+        <button onClick={onClose} className="text-muted-foreground text-sm">← Back</button>
+        <h3 className="font-medium text-sm">Legal Documents</h3>
+        <span/>
       </div>
-    );
-  }
-
-  if (type === 'disclaimer') {
-    return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <button onClick={onClose} className="text-muted-foreground text-sm">← Back</button>
-          <h3 className="font-medium text-sm">Legal Documents</h3>
-          <span/>
-        </div>
-        <div className="flex border-b border-border overflow-x-auto">
-          {['disclaimer','terms','privacy','tax'].map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-2.5 text-xs font-medium capitalize whitespace-nowrap ${tab===t?'text-primary border-b-2 border-primary':'text-muted-foreground'}`}>
-              {t === 'disclaimer' ? 'Non-Liability' : t === 'tax' ? 'Tax Notice' : t.charAt(0).toUpperCase()+t.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="flex-1 overflow-y-auto px-4 py-4 text-sm text-muted-foreground leading-relaxed space-y-4">
-          {tab === 'disclaimer' && <>
-            <h4 className="text-foreground font-semibold">Non-Liability Disclaimer</h4>
-            <p>This platform does not provide financial, investment, or legal advice. All trading and investment decisions are made solely by the user and at their own risk. Past performance of any asset does not guarantee future results.</p>
-            <p>The platform is not responsible for any losses, damages, or adverse outcomes resulting from the use of this service. Cryptocurrency markets are highly volatile and speculative. You may lose some or all of your invested capital.</p>
-            <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0"/>
-              <p className="text-xs">Trading involves significant risk. Only invest what you can afford to lose.</p>
-            </div>
-          </>}
-          {tab === 'terms' && <>
-            <h4 className="text-foreground font-semibold">Terms of Use</h4>
-            <p>By using this platform, you agree to comply with all applicable laws and regulations in your jurisdiction. Misuse of the platform, including fraudulent transactions or market manipulation, is strictly prohibited and may result in account suspension.</p>
-            <p>We reserve the right to update these terms at any time. Continued use of the platform following updates constitutes acceptance of the revised terms.</p>
-          </>}
-          {tab === 'privacy' && <>
-            <h4 className="text-foreground font-semibold">Privacy Policy</h4>
-            <p>We collect only the information necessary to provide our services. We do not sell your personal data to third parties. All data is encrypted in transit and at rest.</p>
-            <p>Transaction data is retained for regulatory compliance purposes. You may request export or deletion of your personal data at any time.</p>
-          </>}
-          {tab === 'tax' && <>
-            <h4 className="text-foreground font-semibold">Tax Disclaimer</h4>
-            <p>Users are solely responsible for reporting and paying any applicable taxes on gains from cryptocurrency trading, NFT sales, or other transactions conducted on this platform.</p>
-            <p>We provide transaction history export to assist with tax reporting, but this does not constitute tax advice. Consult a qualified tax professional in your jurisdiction.</p>
-          </>}
-          <p className="text-xs text-muted-foreground/50 border-t border-border pt-4">Last updated: April 2026 · All documents are tied to your account and timestamped.</p>
-        </div>
+      <div className="flex border-b border-border overflow-x-auto">
+        {['disclaimer','terms','privacy','tax'].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-3 py-2.5 text-xs font-medium capitalize whitespace-nowrap ${tab===t?'text-primary border-b-2 border-primary':'text-muted-foreground'}`}>
+            {t === 'disclaimer' ? 'Non-Liability' : t === 'tax' ? 'Tax Notice' : t.charAt(0).toUpperCase()+t.slice(1)}
+          </button>
+        ))}
       </div>
-    );
-  }
+      <div className="flex-1 overflow-y-auto px-4 py-4 text-sm text-muted-foreground leading-relaxed space-y-4">
+        {tab === 'disclaimer' && <>
+          <h4 className="text-foreground font-semibold">Non-Liability Disclaimer</h4>
+          <p>This platform does not provide financial, investment, or legal advice. All trading and investment decisions are made solely by the user and at their own risk. Past performance of any asset does not guarantee future results.</p>
+          <p>The platform is not responsible for any losses, damages, or adverse outcomes resulting from the use of this service. Cryptocurrency markets are highly volatile and speculative. You may lose some or all of your invested capital.</p>
+          <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0"/>
+            <p className="text-xs">Trading involves significant risk. Only invest what you can afford to lose.</p>
+          </div>
+        </>}
+        {tab === 'terms' && <>
+          <h4 className="text-foreground font-semibold">Terms of Use</h4>
+          <p>By using this platform, you agree to comply with all applicable laws and regulations in your jurisdiction. Misuse of the platform, including fraudulent transactions or market manipulation, is strictly prohibited and may result in account suspension.</p>
+          <p>We reserve the right to update these terms at any time. Continued use of the platform following updates constitutes acceptance of the revised terms.</p>
+        </>}
+        {tab === 'privacy' && <>
+          <h4 className="text-foreground font-semibold">Privacy Policy</h4>
+          <p>We collect only the information necessary to provide our services. We do not sell your personal data to third parties. All data is encrypted in transit and at rest.</p>
+          <p>Transaction data is retained for regulatory compliance purposes. You may request export or deletion of your personal data at any time.</p>
+        </>}
+        {tab === 'tax' && <>
+          <h4 className="text-foreground font-semibold">Tax Disclaimer</h4>
+          <p>Users are solely responsible for reporting and paying any applicable taxes on gains from cryptocurrency trading, NFT sales, or other transactions conducted on this platform.</p>
+          <p>We provide transaction history export to assist with tax reporting, but this does not constitute tax advice. Consult a qualified tax professional in your jurisdiction.</p>
+        </>}
+        <p className="text-xs text-muted-foreground/50 border-t border-border pt-4">Last updated: April 2026 · All documents are tied to your account and timestamped.</p>
+      </div>
+    </div>
+  );
 }
 
+function TelegramSheet({ onClose }) {
+  return (
+    <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+        <button onClick={onClose} className="text-muted-foreground text-sm">← Back</button>
+        <h3 className="font-medium text-sm">Telegram</h3>
+        <span/>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <TelegramSettings />
+      </div>
+    </div>
+  );
+}
+
+// ─── Reusable row primitive ──────────────────────────────────────────────────
+function Row({ icon: Icon, label, sublabel, badge, badgeTone = 'default', to, onClick, accent }) {
+  const tone = {
+    default: 'text-muted-foreground bg-secondary',
+    primary: 'text-primary bg-primary/10 border border-primary/20',
+    warn: 'text-yellow-400 bg-yellow-400/10 border border-yellow-400/20',
+  }[badgeTone];
+  const content = (
+    <>
+      <Icon className={`w-4 h-4 ${accent || 'text-muted-foreground'}`} />
+      <div className="flex-1 min-w-0 text-left">
+        <p className="text-sm text-foreground truncate">{label}</p>
+        {sublabel && <p className="text-[11px] text-muted-foreground truncate">{sublabel}</p>}
+      </div>
+      {badge && <span className={`text-[10px] px-2 py-0.5 rounded-full ${tone}`}>{badge}</span>}
+      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+    </>
+  );
+  const className = "w-full flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors";
+  if (to) return <Link to={to} className={className}>{content}</Link>;
+  return <button onClick={onClick} className={className}>{content}</button>;
+}
+
+function GroupCard({ title, children }) {
+  return (
+    <section className="space-y-2">
+      {title && <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1">{title}</p>}
+      <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+// ─── MAIN ────────────────────────────────────────────────────────────────────
 export default function Settings() {
   const { lang, setLang, t } = useLanguage();
   const { currentUser } = useAuth();
-  const [showSheet, setShowSheet] = useState(null);
+  const [sheet, setSheet] = useState(null);
   const [biometricOpen, setBiometricOpen] = useState(false);
   const [biometricAction, setBiometricAction] = useState('');
   const [showSoundSettings, setShowSoundSettings] = useState(false);
@@ -188,44 +230,48 @@ export default function Settings() {
   const requireBiometric = (action, fn) => {
     setBiometricAction(action);
     setBiometricOpen(true);
-    // fn stored via callback in onSuccess
     window._biometricCallback = fn;
   };
 
-  if (showSheet) return <SettingsSheet type={showSheet} onClose={() => setShowSheet(null)} />;
+  if (sheet === 'legal') return <LegalDocsSheet onClose={() => setSheet(null)} />;
+  if (sheet === 'telegram') return <TelegramSheet onClose={() => setSheet(null)} />;
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
-      <div className="px-4 py-3 border-b border-border">
+    <div className="flex flex-col min-h-screen bg-background pb-24">
+      <div className="px-4 py-3 border-b border-border bg-card/80 backdrop-blur-sm">
         <h2 className="text-lg font-semibold">{t('settings.title', undefined, 'Settings')}</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Account, language, security, and shortcuts. Visual styling lives in the Visual Engine.</p>
       </div>
 
-      <div className="px-4 py-4">
-        <Link to="/user-settings" className="mb-4 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 hover:bg-primary/10 transition-colors">
-          <Shield className="w-4 h-4 text-primary" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground">Open User Settings</p>
-            <p className="text-xs text-muted-foreground">Profile, alerts, language, and integrations in one place.</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        </Link>
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-lg font-bold text-primary">T</div>
-          <div>
-            <p className="font-medium">Trader</p>
-            <p className="text-xs text-muted-foreground">Premium Account</p>
-          </div>
-          <div className="ml-auto bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">PRO</div>
-        </div>
+      <div className="px-4 py-4 space-y-5 max-w-2xl mx-auto w-full">
+        {/* Account */}
+        <GroupCard title="Account">
+          <Row icon={User2} label="User Settings" sublabel="Profile, alerts, and integrations" to="/user-settings" accent="text-primary" />
+          <Row icon={SlidersHorizontal} label="Preferences" sublabel="Display, saved content, payment defaults" to="/preferences" />
+        </GroupCard>
 
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">{t('settings.language', undefined, 'Language')}</p>
+        {/* Appearance — single entry point to Visual Engine */}
+        <GroupCard title="Appearance">
+          <Row
+            icon={Sparkles}
+            label="Visual Engine"
+            sublabel="Themes, colors, backgrounds, motion, typography, layout"
+            to="/visual"
+            badge="Open"
+            badgeTone="primary"
+            accent="text-primary"
+          />
+        </GroupCard>
+
+        {/* Language */}
+        <section className="space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1">{t('settings.language', undefined, 'Language')}</p>
           <div className="grid grid-cols-2 gap-2">
             {Object.entries(LANGUAGES).map(([code, name]) => (
               <button
                 key={code}
                 onClick={() => setLang(code)}
-                className={`px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
                   lang === code
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-card hover:border-primary/30'
@@ -234,78 +280,42 @@ export default function Settings() {
               </button>
             ))}
           </div>
-          <Link to="/language-diagnostics" className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors text-xs">
+          <Link to="/language-diagnostics" className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors text-xs">
             <Globe className="w-3.5 h-3.5 text-primary" />
             <span className="flex-1 text-left">{t('settings.translationDiagnostics', undefined, 'Translation diagnostics')}</span>
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
           </Link>
-        </div>
+        </section>
 
-        <div className="bg-card border border-border rounded-xl divide-y divide-border">
-          {SECTIONS.map((s, i) => (
-            <button key={i} onClick={s.label.includes('Documents') ? () => setShowSheet('disclaimer') : undefined}
-              className="w-full flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
-              <s.icon className="w-4 h-4 text-muted-foreground"/>
-              <span className="flex-1 text-sm text-left">{s.label}</span>
-              {s.badge && <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{s.badge}</span>}
-              <ChevronRight className="w-4 h-4 text-muted-foreground"/>
-            </button>
-          ))}
-        </div>
+        {/* Security & Privacy */}
+        <GroupCard title="Security & Privacy">
+          <Row
+            icon={Fingerprint}
+            label="Biometric authentication"
+            badge="FaceID / Touch"
+            badgeTone="primary"
+            onClick={() => requireBiometric('wallet access', () => {})}
+            accent="text-primary"
+          />
+          <Row icon={ClipboardList} label="Activity audit log" to="/audit" />
+          <Row icon={Activity} label="Performance monitor" to="/performance" />
+          <Row icon={Scale} label="Compliance & privacy" to="/compliance" />
+          <Row icon={FileText} label="Legal documents" sublabel="Disclaimer, Terms, Privacy, Tax" onClick={() => setSheet('legal')} />
+          <Row icon={Lock} label="Session timeout" badge="15 min" />
+        </GroupCard>
 
-        <DomainSettingsCard />
+        {/* Notifications & Telegram */}
+        <GroupCard title="Notifications & Channels">
+          <Row icon={Bell} label="Notification preferences" sublabel="Manage alerts in User Settings" to="/user-settings" />
+          <Row icon={Send} label="Telegram integration" sublabel="Link account, bot tokens, deployment" onClick={() => setSheet('telegram')} accent="text-primary" />
+          <Row icon={Send} label="Telegram deployment hub" to="/tgapps" />
+        </GroupCard>
 
-        <div className="mt-4">
-          <EscrowProfilePanel userEmail={currentUser?.email || ''} compact />
-        </div>
-
-        <div className="mt-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4 text-yellow-400"/>
-            <p className="text-sm font-medium text-yellow-400">Risk Warning</p>
-          </div>
-          <p className="text-xs text-muted-foreground">Cryptocurrency trading carries significant risk. This platform does not provide financial advice. All trading is at your own risk.</p>
-        </div>
-
-        {/* Biometric & security quick links */}
-        <div className="mt-4 bg-card border border-border rounded-xl divide-y divide-border">
-          <button onClick={() => requireBiometric('wallet access', () => {})} className="w-full flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
-            <Fingerprint className="w-4 h-4 text-primary" />
-            <span className="flex-1 text-sm text-left">Biometric Authentication</span>
-            <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">FaceID / Touch</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-          <Link to="/audit" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
-            <ClipboardList className="w-4 h-4 text-muted-foreground" />
-            <span className="flex-1 text-sm">Activity Audit Log</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <Link to="/performance" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
-            <Activity className="w-4 h-4 text-muted-foreground" />
-            <span className="flex-1 text-sm">Performance Monitor</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <Link to="/compliance" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
-            <Scale className="w-4 h-4 text-muted-foreground" />
-            <span className="flex-1 text-sm">Compliance & Privacy</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <Link to="/tgapps" className="flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
-            <Send className="w-4 h-4 text-muted-foreground" />
-            <span className="flex-1 text-sm">Telegram Deployment Hub</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <Base44ThemeEditor />
-        </div>
-
-        {/* Sound & Haptics */}
-        <div className="mt-4 space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Sound & Haptics</p>
+        {/* Sound & Haptics — inline, expandable */}
+        <section className="space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1">Sound & Haptics</p>
           {showSoundSettings ? (
-            <div className="bg-card border border-border rounded-xl p-4">
+            <div className="bg-card border border-border rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Volume2 className="w-4 h-4 text-primary" />
@@ -316,34 +326,39 @@ export default function Settings() {
               <SoundSettings />
             </div>
           ) : (
-            <button onClick={() => setShowSoundSettings(true)}
-              className="w-full flex items-center px-4 py-3.5 gap-3 bg-card border border-border rounded-xl hover:bg-secondary/40 transition-colors">
+            <button
+              onClick={() => setShowSoundSettings(true)}
+              className="w-full flex items-center px-4 py-3.5 gap-3 bg-card border border-border rounded-2xl hover:bg-secondary/40 transition-colors"
+            >
               <Volume2 className="w-4 h-4 text-muted-foreground" />
-              <span className="flex-1 text-sm text-left">Sound & Haptics</span>
-              <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">3 Packs</span>
+              <span className="flex-1 text-sm text-left">Sound & haptics</span>
+              <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">3 packs</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
-        </div>
+        </section>
 
+        {/* Advanced */}
+        <GroupCard title="Advanced">
+          <DomainSettingsCard />
+        </GroupCard>
+
+        {/* Escrow profile (kept — useful summary) */}
+        <EscrowProfilePanel userEmail={currentUser?.email || ''} compact />
+
+        {/* Admin */}
         {currentUser?.role === 'admin' && (
-          <div className="space-y-2 mt-4">
-            <Link to="/admin/blockchain"
-              className="w-full flex items-center gap-2 px-4 py-3 text-primary text-sm font-medium border border-primary/20 bg-primary/5 rounded-xl">
-              <Blocks className="w-4 h-4" /> Blockchain Admin Panel
-              <ChevronRight className="w-4 h-4 ml-auto" />
-            </Link>
-            <Link to="/security-dashboard"
-              className="w-full flex items-center gap-2 px-4 py-3 text-orange-500 text-sm font-medium border border-orange-500/20 bg-orange-500/5 rounded-xl">
-              <Activity className="w-4 h-4" /> Security Audit Log
-              <ChevronRight className="w-4 h-4 ml-auto" />
-            </Link>
-          </div>
+          <GroupCard title="Admin">
+            <Row icon={Blocks} label="Blockchain admin panel" to="/admin/blockchain" accent="text-primary" />
+            <Row icon={Activity} label="Security audit log" to="/security-dashboard" accent="text-orange-500" />
+          </GroupCard>
         )}
-        <button className="w-full mt-3 py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
+
+        <button className="w-full py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
           {t('security.signOut', undefined, 'Sign Out')}
         </button>
       </div>
+
       <BiometricAuth
         open={biometricOpen}
         onClose={() => setBiometricOpen(false)}
