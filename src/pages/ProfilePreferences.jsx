@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { User2, Bot, MessageSquare, Sparkles, Bell, Save, CheckCircle2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import BadgeShowcase from '@/components/profile/BadgeShowcase';
+import ReputationSnapshot from '@/components/profile/ReputationSnapshot';
 
 const DEFAULT_BOT_PREFS = {
   autoReply: true,
@@ -40,6 +42,8 @@ export default function ProfilePreferences() {
   const [botPrefs, setBotPrefs] = useState(DEFAULT_BOT_PREFS);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
+  const [rewardProfile, setRewardProfile] = useState(null);
+  const [loadingRewards, setLoadingRewards] = useState(true);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -49,6 +53,23 @@ export default function ProfilePreferences() {
       ...(currentUser.bot_preferences || {}),
     });
   }, [currentUser]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadRewards = async () => {
+      if (!currentUser?.email) return;
+      setLoadingRewards(true);
+      const rows = await base44.entities.CollectorRewardProfile
+        .filter({ user_email: currentUser.email }, '-updated_date', 1)
+        .catch(() => []);
+      if (mounted) {
+        setRewardProfile(rows?.[0] || null);
+        setLoadingRewards(false);
+      }
+    };
+    loadRewards();
+    return () => { mounted = false; };
+  }, [currentUser?.email]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -76,6 +97,13 @@ export default function ProfilePreferences() {
       </div>
 
       <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
+        <ReputationSnapshot profile={rewardProfile} loading={loadingRewards} />
+
+        <BadgeShowcase
+          earnedIds={rewardProfile?.badge_ids || []}
+          subtitle="Earn badges by trading, logging in daily, and growing your portfolio."
+        />
+
         <section className="bg-card border border-border rounded-2xl p-4 space-y-3">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Display name</h3>
