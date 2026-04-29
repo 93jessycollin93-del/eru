@@ -2,6 +2,11 @@
   "name": "BotFarmMetric",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "total_bots": {
       "type": "number",
       "default": 0

@@ -2,6 +2,11 @@
   "name": "PriceAlert",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "asset_symbol": {
       "type": "string",
       "description": "e.g., BTC, ETH, DOGE"

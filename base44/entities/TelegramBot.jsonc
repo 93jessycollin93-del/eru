@@ -2,6 +2,11 @@
   "name": "TelegramBot",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "name": {
       "type": "string",
       "description": "Internal bot name"
@@ -21,10 +26,6 @@
     "webhook_url": {
       "type": "string",
       "description": "Webhook endpoint URL"
-    },
-    "webhook_secret_token": {
-      "type": "string",
-      "description": "Per-bot secret echoed back by Telegram in the X-Telegram-Bot-Api-Secret-Token header. Verified server-side to reject forged webhooks."
     },
     "status": {
       "type": "string",

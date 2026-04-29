@@ -1,0 +1,83 @@
+{
+  "name": "PortfolioThreshold",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User email for this threshold"
+    },
+    "threshold_type": {
+      "type": "string",
+      "enum": [
+        "absolute_value",
+        "percentage_change",
+        "specific_asset"
+      ],
+      "description": "Type of threshold (e.g., portfolio worth $50k, 10% drop, BTC above $50k)"
+    },
+    "threshold_value": {
+      "type": "number",
+      "description": "Threshold value (e.g., 50000 for dollar amount, 10 for percentage)"
+    },
+    "asset_symbol": {
+      "type": "string",
+      "description": "Asset symbol if threshold_type is specific_asset (e.g., BTC, ETH)"
+    },
+    "comparison_type": {
+      "type": "string",
+      "enum": [
+        "above",
+        "below",
+        "crosses"
+      ],
+      "description": "Trigger when value goes above/below/crosses threshold"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notify_method": {
+      "type": "string",
+      "enum": [
+        "email",
+        "push",
+        "both"
+      ],
+      "default": "both"
+    },
+    "last_triggered": {
+      "type": "string",
+      "description": "ISO timestamp of last alert trigger"
+    },
+    "cooldown_minutes": {
+      "type": "number",
+      "default": 60,
+      "description": "Minutes to wait before sending another alert for same threshold"
+    }
+  },
+  "required": [
+    "user_email",
+    "threshold_type",
+    "threshold_value",
+    "comparison_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

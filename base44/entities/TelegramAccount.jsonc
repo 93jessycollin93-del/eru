@@ -2,6 +2,11 @@
   "name": "TelegramAccount",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "telegram_user_id": {
       "type": "string",
       "description": "Unique Telegram user ID from Telegram Bot API"
