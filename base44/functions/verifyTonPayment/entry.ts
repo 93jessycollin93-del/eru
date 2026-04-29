@@ -66,9 +66,10 @@ Deno.serve(async (req) => {
 
     // Mark the Transaction as verified. Service-role allowed since payment
     // verification is system-level (user already authenticated above).
+    const tonAmount = matched.value / 1e9;
     await base44.asServiceRole.entities.Transaction.update(transactionId, {
       status: 'verified',
-      amount: matched.value / 1e9, // store in TON
+      amount: tonAmount,
       verified_at: new Date().toISOString(),
       verified_by: 'ton_chain_verifier',
       metadata: {
@@ -80,6 +81,26 @@ Deno.serve(async (req) => {
         comment: matched.comment,
       },
     });
+
+    // Fire-and-forget Gmail receipt. We never let an email failure block
+    // the verification response — the on-chain truth is already recorded.
+    try {
+      const tx = await base44.asServiceRole.entities.Transaction.get(transactionId);
+      if (tx?.buyer_email) {
+        await base44.functions.invoke('sendPurchaseReceipt', {
+          to: tx.buyer_email,
+          orderNumber: tx.order_id || transactionId,
+          productTitle: tx.asset_id || 'Bazar Purchase',
+          amountUsd: tx.expected_amount,
+          amountPaid: tonAmount,
+          currency: 'TON',
+          txHash: matched.hash,
+          paymentRef,
+        });
+      }
+    } catch (mailErr) {
+      console.warn('Receipt email failed (non-fatal):', mailErr?.message);
+    }
 
     return Response.json({ ok: true, verified: true, txHash: matched.hash });
   } catch (error) {
