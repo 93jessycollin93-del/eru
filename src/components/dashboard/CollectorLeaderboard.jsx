@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Crown, Gem, Activity, Sparkles, Trophy } from 'lucide-react';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
+import { maskEmail } from '@/lib/privacy';
 
 function getOwnerEmail(record, fallbackField) {
   return record?.[fallbackField] || record?.created_by || 'unknown';
@@ -60,11 +61,6 @@ function buildCollectorMap({ jadeAssets, cards, transactions, listings }) {
     ...collector,
     totalScore: Number((collector.portfolioValue + collector.rareCards * 180 + collector.marketActivity * 90 + collector.activeListings * 75).toFixed(2)),
   })).sort((a, b) => b.totalScore - a.totalScore);
-}
-
-function maskEmail(email) {
-  const [name, domain] = String(email || 'collector@platform').split('@');
-  return `${name?.slice(0, 3) || 'col'}***@${domain || 'platform'}`;
 }
 
 export default function CollectorLeaderboard() {
