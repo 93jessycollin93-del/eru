@@ -1,0 +1,127 @@
+{
+  "name": "Guild",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name (3-32 chars, must be unique within active guilds)"
+    },
+    "tag": {
+      "type": "string",
+      "description": "Short uppercase tag, 2-5 chars (e.g. EMBR)"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "faction": {
+      "type": "string",
+      "enum": [
+        "Ember Clan",
+        "Tide Order",
+        "Stone Legion",
+        "Gale Court",
+        "Void Syndicate",
+        "Dawn Conclave",
+        "Neutral"
+      ],
+      "default": "Neutral",
+      "description": "Aligned faction \u2014 drives cosmetic theming"
+    },
+    "leader_email": {
+      "type": "string",
+      "description": "Email of the founding leader"
+    },
+    "join_policy": {
+      "type": "string",
+      "enum": [
+        "open",
+        "request",
+        "invite_only"
+      ],
+      "default": "open"
+    },
+    "member_count": {
+      "type": "number",
+      "default": 1
+    },
+    "max_members": {
+      "type": "number",
+      "default": 50
+    },
+    "bank_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Pooled gold in the shared Guild Bank"
+    },
+    "total_donated": {
+      "type": "number",
+      "default": 0,
+      "description": "All-time gold donated, never decreases (drives bank prestige)"
+    },
+    "rank_points": {
+      "type": "number",
+      "default": 0,
+      "description": "Cached rank score derived from pooled win-rates \u00d7 bank prestige"
+    },
+    "guild_rank": {
+      "type": "string",
+      "enum": [
+        "bronze",
+        "silver",
+        "gold",
+        "platinum",
+        "diamond",
+        "mythic"
+      ],
+      "default": "bronze"
+    },
+    "unlocked_cosmetics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Cosmetic ids the guild has earned (banners, card backings)"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "name",
+    "tag",
+    "leader_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "leader_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "leader_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

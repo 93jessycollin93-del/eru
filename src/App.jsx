@@ -75,6 +75,7 @@ import LoreInsights from './pages/LoreInsights';
 import Preferences from './pages/Preferences';
 import Library from './pages/Library';
 import DeckBuilder from './pages/DeckBuilder';
+import Guilds from './pages/Guilds';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -173,6 +174,7 @@ const AuthenticatedApp = () => {
         <Route path="/preferences" element={<Preferences />} />
         <Route path="/library" element={<Library />} />
         <Route path="/deck-builder" element={<DeckBuilder />} />
+        <Route path="/guilds" element={<Guilds />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

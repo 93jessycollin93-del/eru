@@ -1,0 +1,89 @@
+{
+  "name": "GuildMembership",
+  "type": "object",
+  "properties": {
+    "guild_id": {
+      "type": "string"
+    },
+    "guild_name": {
+      "type": "string",
+      "description": "Denormalized for fast directory rendering"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "leader",
+        "officer",
+        "member"
+      ],
+      "default": "member"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "pending",
+        "left",
+        "kicked"
+      ],
+      "default": "active"
+    },
+    "wins_contributed": {
+      "type": "number",
+      "default": 0,
+      "description": "Cached wins counted toward this guild's pooled win-rate"
+    },
+    "losses_contributed": {
+      "type": "number",
+      "default": 0
+    },
+    "gold_donated": {
+      "type": "number",
+      "default": 0,
+      "description": "All-time gold this member has donated to the guild bank"
+    },
+    "joined_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "guild_id",
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "user_email": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

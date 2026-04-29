@@ -10,6 +10,7 @@ import ChallengePanel from '../components/cards/ChallengePanel';
 import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy, Wand2, ArrowLeftRight, BookOpen, Target } from 'lucide-react';
 import { reportQuestEvent } from '@/lib/dailyQuests';
 import DailyQuestPanel from '../components/quests/DailyQuestPanel';
+import { recordGuildBattleResult } from '@/lib/guildSystem';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 import CardLorePanel from '../components/cards/CardLorePanel';
@@ -490,6 +491,8 @@ export default function CardArena() {
           reportQuestEvent('pvp_win', { mode: battleMode });
         }
       }
+      // Pool result into the player's guild (if any) — fire-and-forget.
+      recordGuildBattleResult(won);
     } catch (_) { /* non-fatal */ }
 
     // Lore side-effects — never blocks battle flow, errors are swallowed.
