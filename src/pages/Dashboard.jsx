@@ -22,8 +22,7 @@ import AlertManager from '../components/AlertManager';
 import ExportButton from '../components/dashboard/ExportButton';
 import NotificationCenter from '../components/notifications/NotificationCenter';
 import TelegramFirstBanner from '../components/telegram/TelegramFirstBanner';
-import EruHero from '../components/dashboard/EruHero';
-import EruAboutLegend from '../components/dashboard/EruAboutLegend';
+import EruHero from '../components/dashboard/EruHero.jsx';
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
@@ -68,7 +67,6 @@ export default function Dashboard() {
         </div>
         <div className="px-4 pt-4 space-y-4">
           <EruHero />
-          <EruAboutLegend />
         </div>
         <PortfolioSummary />
         <QuickActions />
