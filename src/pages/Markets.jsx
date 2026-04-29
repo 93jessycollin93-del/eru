@@ -3,6 +3,7 @@ import { useRealPrices } from '../hooks/useRealPrices';
 import { WifiOff, Loader2 } from 'lucide-react';
 import { useFeatureTracking, trackFeatureInteraction } from '../hooks/useFeatureTracking';
 import AssetComparisonDashboard from '../components/markets/AssetComparisonDashboard';
+import MarketAssetInsightsWidget from '../components/markets/MarketAssetInsightsWidget';
 import { useLanguage } from '@/context/LanguageContext';
 
 function PriceRow({ asset, onClick, selected }) {
@@ -131,6 +132,8 @@ export default function Markets() {
             })}
           </div>
         </div>
+
+        <MarketAssetInsightsWidget />
 
         <AssetComparisonDashboard prices={prices} />
       </div>
