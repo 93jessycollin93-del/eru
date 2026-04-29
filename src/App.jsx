@@ -74,6 +74,7 @@ import PlayerProgress from './pages/PlayerProgress';
 import LoreInsights from './pages/LoreInsights';
 import Preferences from './pages/Preferences';
 import Library from './pages/Library';
+import DeckBuilder from './pages/DeckBuilder';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -171,6 +172,7 @@ const AuthenticatedApp = () => {
         <Route path="/lore-insights" element={<LoreInsights />} />
         <Route path="/preferences" element={<Preferences />} />
         <Route path="/library" element={<Library />} />
+        <Route path="/deck-builder" element={<DeckBuilder />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
