@@ -138,6 +138,43 @@ export function appendLogEntry(card, entry) {
   ].slice(-50); // cap at 50 entries to keep the doc small
 }
 
+/**
+ * Centralized Card.create wrapper — guarantees every newly created card
+ * carries a full lore profile (origin, stability, historical log) regardless
+ * of where it was minted (excavation pack, tournament reward, swap accept,
+ * future card sets, etc.). This is the ONLY path new cards should take.
+ *
+ * @param {object} seed     - card data (rarity, name, faction, etc.)
+ * @param {object} [opts]   - { source, summary, actor, metadata, origin, lore_tag }
+ *                            source: short event_type tag for the seed log entry
+ *                                    (defaults to 'origin')
+ * @returns {Promise<object|null>} created Card record (or null if create failed)
+ */
+export async function createCardWithLore(seed, opts = {}) {
+  if (!seed) return null;
+  const profile = ensureLoreProfile({
+    ...seed,
+    id: undefined,
+    quantity: seed.quantity || 1,
+    // Allow caller to override origin/tag (e.g. excavation packs).
+    lore_origin: opts.origin || seed.lore_origin,
+    lore_tag: opts.lore_tag || seed.lore_tag,
+  });
+  // Replace the auto-seeded "origin" entry with a richer one when caller gave context.
+  if (opts.summary || opts.source) {
+    profile.historical_log = appendLogEntry(
+      { ...profile, historical_log: [] }, // start clean so we get exactly one creation entry
+      {
+        event_type: opts.source || 'origin',
+        summary: opts.summary || `Surfaced from ${profile.lore_origin}.`,
+        actor: opts.actor,
+        metadata: opts.metadata,
+      },
+    );
+  }
+  return base44.entities.Card.create(profile).catch(() => null);
+}
+
 // ---------------------------------------------------------------------------
 // Reality Pressure — per-user meter. We keep it per-user (not truly global)
 // so RLS works cleanly without a service role; "global" reads as global to

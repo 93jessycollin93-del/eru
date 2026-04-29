@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
+import { createCardWithLore } from '@/lib/cardLore';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
 import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter, Repeat, Send, Handshake, Edit2, Check } from 'lucide-react';
@@ -183,8 +184,18 @@ export default function Marketplace({ gold, onGoldChange }) {
         setProposalActionId(null);
         return;
       }
-      await base44.entities.Card.create({ ...proposal.offered_card_snapshot, id: undefined, quantity: 1 });
-      await base44.entities.Card.create({ ...myRequestedCard, id: undefined, quantity: 1 });
+      await createCardWithLore(proposal.offered_card_snapshot, {
+        source: 'ownership',
+        summary: `Acquired via swap from ${proposal.proposer_email}.`,
+        actor: proposal.proposer_email,
+        metadata: { proposal_id: proposal.id, kind: 'swap_in' },
+      });
+      await createCardWithLore(myRequestedCard, {
+        source: 'ownership',
+        summary: `Sent via swap to ${proposal.proposer_email}.`,
+        actor: user?.email,
+        metadata: { proposal_id: proposal.id, kind: 'swap_out' },
+      });
       await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed' });
       showToast('Swap completed');
     }

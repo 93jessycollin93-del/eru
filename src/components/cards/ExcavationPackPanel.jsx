@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Pickaxe, Radio, Sparkles, Lock, X, Coins } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { awardGold, fetchUserGold } from '@/lib/economyApi';
-import { EXCAVATION_PACKS, ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard } from '@/lib/cardLore';
+import { EXCAVATION_PACKS, bumpPressure, isHighPowerCard, createCardWithLore } from '@/lib/cardLore';
 import { STARTER_CARDS, RARITY_STYLES } from './StarterCards';
 import CardDisplay from './CardDisplay';
 import CardLorePanel from './CardLorePanel';
@@ -81,23 +81,18 @@ export default function ExcavationPackPanel({ gold = 0, onGoldChange, ownedCards
         return { ...seed, rarity };
       });
 
-      // Persist each card with full lore profile + log seeded with the event.
+      // Persist each card via the centralized lore helper so every newly
+      // minted card across the app gets the same lore guarantees.
       const created = [];
       for (const seed of rolls) {
-        const profile = ensureLoreProfile({
-          ...seed,
-          id: undefined,
-          quantity: 1,
-          lore_origin: pack.origin,
-          lore_tag: pack.lore_tag,
-        });
-        profile.historical_log = appendLogEntry(profile, {
-          event_type: 'pack',
+        const saved = await createCardWithLore(seed, {
+          source: 'pack',
           summary: `Surfaced from ${pack.name} (${pack.origin}).`,
           actor: 'excavation',
+          origin: pack.origin,
+          lore_tag: pack.lore_tag,
           metadata: { pack_id: pack.id, rarity_bias: pack.rarity_bias },
         });
-        const saved = await base44.entities.Card.create(profile).catch(() => null);
         if (saved) created.push(saved);
       }
 

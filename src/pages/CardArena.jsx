@@ -13,7 +13,7 @@ import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
 import CardLorePanel from '../components/cards/CardLorePanel';
 import RealityPressureMeter from '../components/cards/RealityPressureMeter';
 import ExcavationPackPanel from '../components/cards/ExcavationPackPanel';
-import { ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard } from '@/lib/cardLore';
+import { ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard, createCardWithLore } from '@/lib/cardLore';
 
 const TOURNAMENT_ROUNDS = [
   { id: 1, name: 'Novice Challenger', difficulty: 1, faction: 'Ember Clan',    prize: { gold: 50,  discover: true } },
@@ -518,13 +518,16 @@ export default function CardArena() {
         const rewardPool = factionPool.length > 0 ? factionPool : fallbackPool;
         const discovered = rewardPool[Math.floor(Math.random() * rewardPool.length)];
         if (discovered) {
-          const saved = await base44.entities.Card.create({
-            ...discovered,
-            id: undefined,
-            quantity: 1,
+          const saved = await createCardWithLore(discovered, {
+            source: 'origin',
+            summary: `Discovered after defeating ${battleData?.opponentFaction || round.faction}.`,
+            actor: 'tournament',
+            metadata: { round: tournamentRound, faction: targetFaction },
           });
-          setDiscoveredCard({ ...saved, rewardFaction: targetFaction });
-          setCards(prev => [...prev, saved]);
+          if (saved) {
+            setDiscoveredCard({ ...saved, rewardFaction: targetFaction });
+            setCards(prev => [...prev, saved]);
+          }
         }
       }
 
