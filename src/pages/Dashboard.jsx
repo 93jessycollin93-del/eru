@@ -22,7 +22,7 @@ import AlertManager from '../components/AlertManager';
 import ExportButton from '../components/dashboard/ExportButton';
 import NotificationCenter from '../components/notifications/NotificationCenter';
 import TelegramFirstBanner from '../components/telegram/TelegramFirstBanner';
-import EruHero from '../components/dashboard/EruHero.jsx';
+import EruHero from '../components/dashboard/EruHero';
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
