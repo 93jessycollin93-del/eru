@@ -81,6 +81,7 @@ import About from './pages/About';
 import AppStore from './pages/AppStore';
 import JackieDevLab from './pages/JackieDevLab';
 import CardScanner from './pages/CardScanner';
+import IntegrationHub from './pages/IntegrationHub';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -184,6 +185,7 @@ const AuthenticatedApp = () => {
         <Route path="/app-store" element={<AppStore />} />
         <Route path="/dev-lab" element={<JackieDevLab />} />
         <Route path="/card-scanner" element={<CardScanner />} />
+        <Route path="/integrations" element={<IntegrationHub />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

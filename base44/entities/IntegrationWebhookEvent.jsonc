@@ -1,0 +1,78 @@
+{
+  "name": "IntegrationWebhookEvent",
+  "type": "object",
+  "properties": {
+    "providerId": {
+      "type": "string"
+    },
+    "providerKey": {
+      "type": "string"
+    },
+    "eventType": {
+      "type": "string",
+      "description": "Provider-specific event name, e.g. messages, status, payment.intent.succeeded"
+    },
+    "receivedAt": {
+      "type": "string"
+    },
+    "verificationStatus": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "rejected",
+        "unverified",
+        "skipped"
+      ],
+      "default": "unverified"
+    },
+    "processingStatus": {
+      "type": "string",
+      "enum": [
+        "received",
+        "processed",
+        "failed",
+        "ignored"
+      ],
+      "default": "received"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Short human-readable summary, never the full payload"
+    },
+    "errorMessage": {
+      "type": "string"
+    },
+    "rawPayloadStoredSafely": {
+      "type": "boolean",
+      "default": false,
+      "description": "True only when payload was stored in private file storage, never inline."
+    }
+  },
+  "required": [
+    "providerKey",
+    "eventType"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
