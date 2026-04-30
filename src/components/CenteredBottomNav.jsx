@@ -377,9 +377,12 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         userSelect: 'none',
       }
     : {
+        // Default snap: directly under the ticker bar. The ticker lives at
+        // the very top of the app shell; we offset by its height + a small
+        // gutter so the nav sits flush beneath it.
         position: 'absolute',
         left: '50%',
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+        top: 'calc(env(safe-area-inset-top, 0px) + 56px)',
         transform: 'translateX(-50%)',
         width: 'fit-content',
         pointerEvents: 'auto',
