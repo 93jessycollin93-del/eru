@@ -99,33 +99,41 @@ export const TYPOGRAPHY_PACKS = {
   minimal: { label:'Minimal',  font:'"DM Sans", sans-serif',      mono:'"DM Mono", monospace' },
 };
 
-// ─── DEFAULTS ────────────────────────────────────────────────────────────────
+// ─── DEFAULTS — "NEON ORACLE" FOUNDATION ─────────────────────────────────────
+// Eru's foundational aesthetic, derived from the cyberpunk reference palette:
+// deep cosmic violet base, holographic magenta primary, electric cyan-leaning
+// borders, dramatic glow + saturation. Applies on first load / after Reset.
+// Existing users keep whatever they have set in localStorage.
+//
+// References mapped to tokens:
+//   - Hot magenta hair / glowing skin → primary 305° / sat 100 / light 62
+//   - Deep violet city sky           → bg / card 268° at very low lightness
+//   - Cyan tech filigree             → border 280° (slight cool drift)
+//   - Wet neon street reflections    → bgOpacity 0.78 + saturation 1.55
+//   - Holographic bloom              → glowIntensity 1.4
 const DEFAULTS = {
   colorMode: 'dark',
   bg: 'none',
-  // Brighter, more vivid defaults — background is more visible and saturated
-  // out of the box. Users who already tuned their own values keep theirs;
-  // these only apply on first load / after Reset.
-  bgOpacity: 0.7,
-  motionIntensity: 1,
-  glowIntensity: 1,
+  bgOpacity: 0.78,
+  motionIntensity: 1.1,
+  glowIntensity: 1.4,
   blurLevel: 1,
-  particleDensity: 1,
+  particleDensity: 1.1,
   animSpeed: 1,
-  brightness: 1.15,
-  contrast: 1.05,
-  saturation: 1.35,
+  brightness: 1.18,
+  contrast: 1.12,
+  saturation: 1.55,
   typography: 'modern',
   lowPowerMode: false,
   lockedSettings: [],
   uiScale: 1,
-  // Color wheel hues (0-360) + lightness overrides
-  primaryHue: 160,
-  bgHue: 230,
-  cardHue: 230,
-  borderHue: 230,
+  // Color wheel: hot magenta over deep cosmic violet.
+  primaryHue: 305,
+  bgHue: 268,
+  cardHue: 268,
+  borderHue: 280,
   primarySat: 100,
-  primaryLight: 45,
+  primaryLight: 62,
 };
 
 function load(key) {
