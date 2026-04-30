@@ -152,16 +152,15 @@ export default function Layout() {
         <NotesWidgetMount />
       </div>
 
-      {/* Bottom nav — mounted OUTSIDE the centered app shell so it's
-          fixed to the true viewport on every screen size. Acts as a
-          native-style mobile tab bar; honors iOS/Telegram safe areas. */}
+      {/* Free-floating nav — mounted OUTSIDE the centered app shell. The
+          CenteredBottomNav positions itself absolutely within this overlay
+          (fully draggable on both axes), so this wrapper is a transparent,
+          click-through layer covering the full viewport. */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 eru-theme-header eru-enter pointer-events-none"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="fixed inset-0 z-50 pointer-events-none eru-enter"
+        aria-hidden="false"
       >
-        <div className="pointer-events-auto">
-          <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
-        </div>
+        <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
       </div>
     </>
   );

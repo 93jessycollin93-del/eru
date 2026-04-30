@@ -113,24 +113,31 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   });
   const collapsed = navMode === 'icons'; // preserve icon-only padding/label logic
   const isControlsOnly = navMode === 'controls';
+  // Free-float position: x AND y are user-draggable. Defaults to null →
+  // anchored bottom-center on first paint. Once the user drags, we store
+  // viewport coords (in px) and switch to absolute fixed positioning.
   const [pos, setPos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
+    try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: null }; } catch { return { x: null, y: null }; }
   });
 
-  // Safety net: if a saved x offset would render the nav offscreen on the
-  // current viewport, snap it back into view. Runs on mount and on resize.
+  // Safety net: if the saved x/y would render the nav offscreen on the
+  // current viewport (e.g. rotation, window resize), clamp it back inside.
   useEffect(() => {
     const clamp = () => {
-      const navWidth = navRef.current?.offsetWidth || 0;
-      const maxX = Math.max(0, window.innerWidth - navWidth - 8);
+      const navEl = navRef.current;
+      if (!navEl) return;
+      const w = navEl.offsetWidth;
+      const h = navEl.offsetHeight;
+      const maxX = Math.max(0, window.innerWidth - w - 8);
+      const maxY = Math.max(0, window.innerHeight - h - 8);
       setPos((prev) => {
-        if (prev?.x == null) return prev;
-        if (prev.x < 0 || prev.x > maxX) {
-          const next = { ...prev, x: null };
-          try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch {}
-          return next;
-        }
-        return prev;
+        if (prev?.x == null && prev?.y == null) return prev;
+        const nx = prev.x == null ? null : Math.max(8, Math.min(prev.x, maxX));
+        const ny = prev.y == null ? null : Math.max(8, Math.min(prev.y, maxY));
+        if (nx === prev.x && ny === prev.y) return prev;
+        const next = { x: nx, y: ny };
+        try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch {}
+        return next;
       });
     };
     clamp();
@@ -307,10 +314,18 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
       VIBRATE.click();
     }
     didDrag.current = true;
-    // Nav is sticky below the ticker — Y is pinned. Only X is user-adjustable.
+    // Free-float: drag on both X and Y, clamped to viewport with an 8px gutter.
+    const navEl = navRef.current;
+    const w = navEl.offsetWidth;
+    const h = navEl.offsetHeight;
     const x = e.clientX - dragOffset.current.x;
-    const maxX = window.innerWidth - navRef.current.offsetWidth;
-    const newPos = { x: Math.max(0, Math.min(x, maxX)), y: 0 };
+    const y = e.clientY - dragOffset.current.y;
+    const maxX = Math.max(0, window.innerWidth - w - 8);
+    const maxY = Math.max(0, window.innerHeight - h - 8);
+    const newPos = {
+      x: Math.max(8, Math.min(x, maxX)),
+      y: Math.max(8, Math.min(y, maxY)),
+    };
     setPos(newPos);
     localStorage.setItem(POS_KEY, JSON.stringify(newPos));
   }, [clearHold]);
@@ -345,27 +360,38 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     }
   };
 
-  // Layout owns the sticky behavior of the ticker+nav shell. This wrapper
-  // is now a normal flow element so both pieces move together on scroll
-  // without competing sticky layers.
-  const outerStyle = {
-    width: '100%',
-    pointerEvents: 'none',
-  };
-  const innerStyle = {
-    marginLeft: pos.x !== null ? pos.x : 'auto',
-    marginRight: pos.x !== null ? 0 : 'auto',
-    width: 'fit-content',
-    pointerEvents: 'auto',
-    touchAction: 'none',
-    userSelect: 'none',
-  };
+  // Free-floating: nav is absolutely positioned inside the Layout's
+  // full-viewport overlay. Default (x/y null) anchors bottom-center; once
+  // the user drags, we pin it to the dragged coords. Pointer events are
+  // re-enabled only on the nav itself so the rest of the overlay stays
+  // click-through.
+  const isFloating = pos?.x != null && pos?.y != null;
+  const innerStyle = isFloating
+    ? {
+        position: 'absolute',
+        left: pos.x,
+        top: pos.y,
+        width: 'fit-content',
+        pointerEvents: 'auto',
+        touchAction: 'none',
+        userSelect: 'none',
+      }
+    : {
+        position: 'absolute',
+        left: '50%',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+        transform: 'translateX(-50%)',
+        width: 'fit-content',
+        pointerEvents: 'auto',
+        touchAction: 'none',
+        userSelect: 'none',
+      };
 
   return (
     <>
-      {/* Sticky outer wrapper: follows the user below the ticker on every
-          page. Inner nav keeps its existing styling + drag handlers. */}
-      <div style={outerStyle}>
+      {/* Free-floating nav: positioned absolutely inside the Layout's
+          full-viewport overlay so the user can drag it anywhere on screen
+          (both X and Y). Default state anchors bottom-center. */}
       <div
         ref={navRef}
         style={innerStyle}
@@ -605,7 +631,6 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           <Search style={{ width: 18, height: 18 }} />
           {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.search', undefined, 'Search')}</span>}
         </button>}
-      </div>
       </div>
 
       <NavWalkthrough
