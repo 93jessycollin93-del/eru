@@ -488,4 +488,53 @@
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: hsl(230 25% 6%); }
 ::-webkit-scrollbar-thumb { background: hsl(230 18% 20%); border-radius: 2px; }
+
+/* ─── Per-component skin classes ──────────────────────────────────────────────
+ * SkinPicker writes the chosen background into ThemeContext, which publishes
+ * CSS vars `--eru-skin-<scope>-bg-image` (and friends) on :root. Any component
+ * that wants to be skinnable just adds the matching `eru-skin-<scope>` class
+ * to its outer element. When the user clears the skin, the var is removed
+ * and the rule falls back to no-op.
+ *
+ * To make a NEW surface skinnable: pick a stable scope_key (e.g. `card.foo`),
+ * register it in COMPONENT_TARGETS in src/components/theme/SkinPicker.jsx,
+ * add a class rule below mirroring this pattern, and add the class to the
+ * surface's outermost element.
+ */
+.eru-skin-nav-floating {
+  background-image: var(--eru-skin-nav-floating-bg-image, none);
+  background-color: var(--eru-skin-nav-floating-bg-color, transparent);
+  background-size: var(--eru-skin-nav-floating-bg-size, cover);
+  background-position: var(--eru-skin-nav-floating-bg-position, center);
+}
+.eru-skin-ticker-bar {
+  background-image: var(--eru-skin-ticker-bar-bg-image, none);
+  background-color: var(--eru-skin-ticker-bar-bg-color, transparent);
+  background-size: var(--eru-skin-ticker-bar-bg-size, cover);
+  background-position: var(--eru-skin-ticker-bar-bg-position, center);
+}
+.eru-skin-widget-bot {
+  background-image: var(--eru-skin-widget-bot-bg-image, none);
+  background-color: var(--eru-skin-widget-bot-bg-color, transparent);
+  background-size: var(--eru-skin-widget-bot-bg-size, cover);
+  background-position: var(--eru-skin-widget-bot-bg-position, center);
+}
+.eru-skin-page-header {
+  background-image: var(--eru-skin-page-header-bg-image, none);
+  background-color: var(--eru-skin-page-header-bg-color, transparent);
+  background-size: var(--eru-skin-page-header-bg-size, cover);
+  background-position: var(--eru-skin-page-header-bg-position, center);
+}
+.eru-skin-card-surface {
+  background-image: var(--eru-skin-card-surface-bg-image, none);
+  background-color: var(--eru-skin-card-surface-bg-color, transparent);
+  background-size: var(--eru-skin-card-surface-bg-size, cover);
+  background-position: var(--eru-skin-card-surface-bg-position, center);
+}
+.eru-skin-button-cta {
+  background-image: var(--eru-skin-button-cta-bg-image, none);
+  background-color: var(--eru-skin-button-cta-bg-color, transparent);
+  background-size: var(--eru-skin-button-cta-bg-size, cover);
+  background-position: var(--eru-skin-button-cta-bg-position, center);
+}
 ::-webkit-scrollbar-thumb:hover { background: hsl(160 100% 45% / 0.5); }

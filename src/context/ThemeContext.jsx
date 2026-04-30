@@ -284,6 +284,32 @@ export function ThemeProvider({ children }) {
     document.body.setAttribute('data-bg-density', bucket);
   }, [bgOpacity]);
 
+  // Publish per-component skin styles as CSS custom properties on :root so
+  // any component can opt in with a single utility class without importing
+  // hooks. The SkinPicker writes componentBackgrounds entries on the active
+  // CustomThemeSetting; we mirror them as `--eru-skin-<scope>-bg-image` /
+  // `--eru-skin-<scope>-bg-color`. Index.css defines the consumer classes
+  // (eru-skin-nav-floating, eru-skin-ticker-bar, etc.) that read these vars.
+  useEffect(() => {
+    const root = document.documentElement;
+    const componentSkins = themeLayers.componentBackgrounds || {};
+    // Clear any previously published skin vars before re-applying — avoids
+    // stale skins lingering after the user removes a component override.
+    const stalePrefix = '--eru-skin-';
+    for (const sty of Array.from(root.style)) {
+      if (sty.startsWith(stalePrefix)) root.style.removeProperty(sty);
+    }
+    for (const [scopeKey, styles] of Object.entries(componentSkins)) {
+      if (!styles || typeof styles !== 'object') continue;
+      const cssKey = scopeKey.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      if (styles.backgroundImage) root.style.setProperty(`--eru-skin-${cssKey}-bg-image`, styles.backgroundImage);
+      if (styles.background) root.style.setProperty(`--eru-skin-${cssKey}-bg`, styles.background);
+      if (styles.backgroundColor) root.style.setProperty(`--eru-skin-${cssKey}-bg-color`, styles.backgroundColor);
+      if (styles.backgroundSize) root.style.setProperty(`--eru-skin-${cssKey}-bg-size`, styles.backgroundSize);
+      if (styles.backgroundPosition) root.style.setProperty(`--eru-skin-${cssKey}-bg-position`, styles.backgroundPosition);
+    }
+  }, [themeLayers.componentBackgrounds]);
+
   const setUiScale = (val) => { setUiScaleRaw(val); save('uiScale', val); };
   const setColorMode = (mode) => { setColorModeRaw(mode); save('colorMode', mode); };
   const toggleColorMode = () => setColorMode(colorMode === 'dark' ? 'light' : 'dark');

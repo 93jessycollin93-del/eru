@@ -4,6 +4,7 @@ import { useTheme, BG_ENVS, MOTION_PRESETS, TYPOGRAPHY_PACKS } from '../context/
 import AnimatedBackground from '../components/AnimatedBackground';
 import PageTemplateLibrary from '../components/theme/PageTemplateLibrary';
 import AdvancedThemeStudio from '../components/theme/AdvancedThemeStudio';
+import SkinPicker from '../components/theme/SkinPicker';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const THEME_CATS = {
@@ -445,9 +446,52 @@ function TemplatesTab() {
 }
 
 function LayersTab() {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerScope, setPickerScope] = useState({ type: 'global' });
+
+  const openWith = (scope) => { setPickerScope(scope); setPickerOpen(true); };
+
   return (
     <div className="space-y-4">
       <SectionHeader icon={Brush} label="Front Layer Skin Studio" sub="Use your own visuals as skins for app layers, pages, panels, buttons, inputs, and widgets." />
+
+      {/* Quick-pick skin shortcuts — most common scopes one click away. */}
+      <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <p className="text-sm font-semibold">Apply a skin</p>
+        </div>
+        <p className="text-xs text-muted-foreground">Pick a background and a target — the whole app, just this page, or one specific surface (nav bar, ticker, bot widget…).</p>
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => openWith({ type: 'global' })}
+            className="px-3 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold">
+            Skin everywhere
+          </button>
+          <button onClick={() => openWith({ type: 'page' })}
+            className="px-3 py-2.5 rounded-xl border border-border bg-card text-xs font-medium">
+            Skin this page
+          </button>
+          <button onClick={() => openWith({ type: 'component', key: 'nav.floating' })}
+            className="px-3 py-2.5 rounded-xl border border-border bg-card text-xs font-medium">
+            Skin nav bar
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => openWith({ type: 'component', key: 'ticker.bar' })}
+            className="px-3 py-2 rounded-lg border border-border bg-secondary text-[11px]">
+            Ticker
+          </button>
+          <button onClick={() => openWith({ type: 'component', key: 'widget.bot' })}
+            className="px-3 py-2 rounded-lg border border-border bg-secondary text-[11px]">
+            Bot widget
+          </button>
+          <button onClick={() => openWith({ type: 'component' })}
+            className="px-3 py-2 rounded-lg border border-border bg-secondary text-[11px]">
+            Other component…
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
         <div className="flex items-start gap-3">
           <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5">
@@ -460,6 +504,8 @@ function LayersTab() {
         </div>
       </div>
       <AdvancedThemeStudio />
+
+      <SkinPicker open={pickerOpen} onClose={() => setPickerOpen(false)} defaultScope={pickerScope} />
     </div>
   );
 }
