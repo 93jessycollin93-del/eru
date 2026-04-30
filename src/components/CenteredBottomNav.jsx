@@ -114,26 +114,43 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const collapsed = navMode === 'icons'; // preserve icon-only padding/label logic
   const isControlsOnly = navMode === 'controls';
   // Free-float position: x AND y are user-draggable. Defaults to null →
-  // anchored bottom-center on first paint. Once the user drags, we store
-  // viewport coords (in px) and switch to absolute fixed positioning.
+  // anchored just below the ticker on first paint. Once the user drags,
+  // we store viewport coords (in px) and switch to fixed positioning.
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: null }; } catch { return { x: null, y: null }; }
   });
+  // Measured ticker height — used as the default top offset so the nav
+  // never overlaps the ticker regardless of its current rendered height.
+  const [tickerOffset, setTickerOffset] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const el = document.getElementById(TICKER_BAR_ID);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setTickerOffset(Math.ceil(rect.bottom));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const id = window.setInterval(measure, 1000); // catch font/data-driven height changes
+    return () => { window.removeEventListener('resize', measure); window.clearInterval(id); };
+  }, []);
 
-  // Safety net: if the saved x/y would render the nav offscreen on the
-  // current viewport (e.g. rotation, window resize), clamp it back inside.
+  // Safety net: clamp saved x/y inside the viewport AND below the ticker
+  // so the nav can never collide with the ticker on mount/resize.
   useEffect(() => {
     const clamp = () => {
       const navEl = navRef.current;
       if (!navEl) return;
       const w = navEl.offsetWidth;
       const h = navEl.offsetHeight;
+      const tickerEl = document.getElementById(TICKER_BAR_ID);
+      const minY = (tickerEl ? Math.ceil(tickerEl.getBoundingClientRect().bottom) : 0) + 4;
       const maxX = Math.max(0, window.innerWidth - w - 8);
-      const maxY = Math.max(0, window.innerHeight - h - 8);
+      const maxY = Math.max(minY, window.innerHeight - h - 8);
       setPos((prev) => {
         if (prev?.x == null && prev?.y == null) return prev;
         const nx = prev.x == null ? null : Math.max(8, Math.min(prev.x, maxX));
-        const ny = prev.y == null ? null : Math.max(8, Math.min(prev.y, maxY));
+        const ny = prev.y == null ? null : Math.max(minY, Math.min(prev.y, maxY));
         if (nx === prev.x && ny === prev.y) return prev;
         const next = { x: nx, y: ny };
         try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch {}
@@ -143,6 +160,14 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     clamp();
     window.addEventListener('resize', clamp);
     return () => window.removeEventListener('resize', clamp);
+  }, []);
+
+  // Reset to default snap (under the ticker). Exposed via the handle strip
+  // so the user can recover from a stuck/colliding position with one tap.
+  const resetPosition = useCallback(() => {
+    const next = { x: null, y: null };
+    setPos(next);
+    try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch {}
   }, []);
   const [floatingWidgets, setFloatingWidgets] = useState(() => {
     try {
@@ -377,12 +402,12 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         userSelect: 'none',
       }
     : {
-        // Default snap: directly under the ticker bar. The ticker lives at
-        // the very top of the app shell; we offset by its height + a small
-        // gutter so the nav sits flush beneath it.
+        // Default snap: directly under the live ticker bar. Uses the
+        // measured ticker height so it never collides regardless of the
+        // ticker's current rendered size.
         position: 'absolute',
         left: '50%',
-        top: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+        top: (tickerOffset || 48) + 6,
         transform: 'translateX(-50%)',
         width: 'fit-content',
         pointerEvents: 'auto',
@@ -436,6 +461,20 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             <ArrowLeft style={{ width: 8, height: 8 }} />
           </button>
           <GripHorizontal style={{ width: 10, height: 10 }} className={lockedToTicker ? 'opacity-40' : ''} />
+          {/* Reset to default snap position (under the ticker) */}
+          <button
+            data-no-min-touch
+            onClick={(e) => {
+              e.stopPropagation();
+              playSound('toggle');
+              VIBRATE.toggle();
+              resetPosition();
+            }}
+            className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary text-[8px] font-bold"
+            title="Reset position (snap under ticker)"
+          >
+            ⟲
+          </button>
           <button
             data-no-min-touch
             onClick={() => {
