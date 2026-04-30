@@ -362,8 +362,11 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             stack of handle buttons. */}
         {/* Compacted handle strip — micro-controls (icons ~10px, gap ~2px,
             buttons 14px). Opt-out of the global 44×44 min touch target via
-            data-no-min-touch since this strip is intentionally dense. */}
-        <div className={`flex flex-row items-center gap-[2px] ${orientation === 'vertical' ? 'pb-0.5 justify-start' : 'pr-0.5'} text-muted-foreground/40`}>
+            data-no-min-touch since this strip is intentionally dense.
+            Layout flips opposite to the nav: when nav is HORIZONTAL the
+            handle stacks VERTICALLY (saves width); when nav is VERTICAL
+            the handle stacks HORIZONTALLY (saves height). */}
+        <div className={`flex items-center gap-[2px] text-muted-foreground/40 ${orientation === 'vertical' ? 'flex-row pb-0.5 justify-start' : 'flex-col pr-0.5 justify-center'}`}>
           {/* Back — leftmost; uses router history, falls back to Home if there's nothing to pop */}
           <button
             data-no-min-touch
