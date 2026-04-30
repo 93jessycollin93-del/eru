@@ -360,9 +360,13 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         {/* Handle strip: always flex-row so the icon grid can start right
             beneath it instead of leaving an empty column beside a vertical
             stack of handle buttons. */}
-        <div className={`flex flex-row items-center gap-1 ${orientation === 'vertical' ? 'pb-1 justify-start' : 'pr-1'} text-muted-foreground/40`}>
+        {/* Compacted handle strip — micro-controls (icons ~10px, gap ~2px,
+            buttons 14px). Opt-out of the global 44×44 min touch target via
+            data-no-min-touch since this strip is intentionally dense. */}
+        <div className={`flex flex-row items-center gap-[2px] ${orientation === 'vertical' ? 'pb-0.5 justify-start' : 'pr-0.5'} text-muted-foreground/40`}>
           {/* Back — leftmost; uses router history, falls back to Home if there's nothing to pop */}
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('click');
               VIBRATE.click();
@@ -374,61 +378,66 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             }}
             aria-label={t('nav.back', undefined, 'Go back')}
             title={t('nav.back', undefined, 'Back')}
-            className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border bg-secondary/60 text-muted-foreground transition-all hover:scale-110 hover:text-primary hover:border-primary/40 hover:bg-primary/10 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-border bg-secondary/60 text-muted-foreground transition-all hover:scale-110 hover:text-primary hover:border-primary/40 hover:bg-primary/10 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
-            <ArrowLeft className="w-3 h-3" />
+            <ArrowLeft style={{ width: 8, height: 8 }} />
           </button>
-          <GripHorizontal className={`w-3.5 h-3.5 ${lockedToTicker ? 'opacity-40' : ''}`} />
+          <GripHorizontal style={{ width: 10, height: 10 }} className={lockedToTicker ? 'opacity-40' : ''} />
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
               toggleOrientation();
             }}
-            className="transition-colors hover:text-primary"
+            className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary"
             title={orientation === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}
           >
             {orientation === 'horizontal' ? (
-              <ArrowUpRightFromSquare className="w-3.5 h-3.5" />
+              <ArrowUpRightFromSquare style={{ width: 10, height: 10 }} />
             ) : (
-              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <ArrowLeftRight style={{ width: 10, height: 10 }} />
             )}
           </button>
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
               cycleRows();
             }}
-            className="transition-colors hover:text-primary text-[10px] font-bold w-3.5 h-3.5 flex items-center justify-center"
+            className="transition-colors hover:text-primary text-[9px] font-bold w-3 h-3 flex items-center justify-center"
             title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
           >
             {rows}
           </button>
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
               toggleTickerLock();
             }}
-            className={`transition-colors hover:text-primary ${lockedToTicker ? 'text-primary' : ''}`}
+            className={`inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary ${lockedToTicker ? 'text-primary' : ''}`}
             title={lockedToTicker ? 'Unlock from Ticker' : 'Lock to Ticker'}
           >
-            <ArrowUpRightFromSquare className="w-3.5 h-3.5" />
+            <ArrowUpRightFromSquare style={{ width: 10, height: 10 }} />
           </button>
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('click');
               VIBRATE.click();
               setEditMode(true);
             }}
-            className="transition-colors hover:text-primary"
+            className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary"
             title="Edit"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil style={{ width: 10, height: 10 }} />
           </button>
           {/* Cycle nav mode: expanded → icons → controls-only → expanded */}
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
@@ -436,27 +445,26 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             }}
             aria-label={nextModeLabel}
             title={nextModeLabel}
-            className={`ml-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-[0_0_10px_hsl(160_100%_45%/0.25)] transition-all hover:scale-110 hover:bg-primary/20 hover:shadow-[0_0_14px_hsl(160_100%_45%/0.55)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
+            className={`ml-px inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-[0_0_8px_hsl(160_100%_45%/0.25)] transition-all hover:scale-110 hover:bg-primary/20 hover:shadow-[0_0_12px_hsl(160_100%_45%/0.55)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
           >
             {navMode === 'expanded' ? (
-              <Minimize2 className="w-3 h-3" />
+              <Minimize2 style={{ width: 8, height: 8 }} />
             ) : navMode === 'icons' ? (
-              // Icon hint that the next click hides the nav body (controls-only).
-              <Minimize2 className="w-3 h-3 opacity-70" />
+              <Minimize2 style={{ width: 8, height: 8 }} className="opacity-70" />
             ) : (
-              <Maximize2 className="w-3 h-3" />
+              <Maximize2 style={{ width: 8, height: 8 }} />
             )}
           </button>
           {/* Tiny mode pip — three dots indicating current stage. Purely cosmetic, mobile-safe. */}
           <span
             aria-hidden="true"
-            className="ml-0.5 hidden sm:inline-flex items-center gap-[2px]"
+            className="ml-px hidden sm:inline-flex items-center gap-[1px]"
             title={`Mode: ${navMode}`}
           >
             {NAV_MODE_CYCLE.map((m) => (
               <span
                 key={m}
-                className={`block w-1 h-1 rounded-full transition-colors ${m === navMode ? 'bg-primary shadow-[0_0_4px_hsl(160_100%_45%/0.8)]' : 'bg-muted-foreground/30'}`}
+                className={`block w-[3px] h-[3px] rounded-full transition-colors ${m === navMode ? 'bg-primary shadow-[0_0_3px_hsl(160_100%_45%/0.8)]' : 'bg-muted-foreground/30'}`}
               />
             ))}
           </span>
