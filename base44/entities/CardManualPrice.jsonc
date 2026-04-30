@@ -1,0 +1,72 @@
+{
+  "name": "CardManualPrice",
+  "type": "object",
+  "properties": {
+    "scan_id": {
+      "type": "string"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "card_name": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "default": "CAD"
+    },
+    "condition_basis": {
+      "type": "string",
+      "enum": [
+        "raw_nm",
+        "raw_lp",
+        "raw_mp",
+        "raw_hp",
+        "raw_dmg",
+        "graded",
+        "sealed",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "grade": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "owner_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "amount"
+  ],
+  "rls": {
+    "create": {
+      "owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "owner_email": "{{user.email}}"
+    },
+    "delete": {
+      "owner_email": "{{user.email}}"
+    }
+  }
+}

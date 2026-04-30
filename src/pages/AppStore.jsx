@@ -90,7 +90,7 @@ export default function AppStore() {
 
       {/* Featured rooms — full pages users can open (not installable widgets) */}
       {category === 'All' && !query && (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 space-y-3">
           <Link
             to="/dev-lab"
             className="block rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-card p-4 transition-colors hover:border-primary/50"
@@ -104,6 +104,24 @@ export default function AppStore() {
                 <p className="mt-0.5 text-sm font-bold text-foreground">Jackie Dev Lab</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   Plan/Agent workspace for app changes — honest templates, manual patches, no fake AI.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 flex-shrink-0 text-primary" />
+            </div>
+          </Link>
+          <Link
+            to="/card-scanner"
+            className="block rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-card p-4 transition-colors hover:border-primary/50"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">Verified Pricing Only</p>
+                <p className="mt-0.5 text-sm font-bold text-foreground">Pokémon Card Scanner</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Identify and price cards using only real, verified sources. Zero fake data — ever.
                 </p>
               </div>
               <ArrowRight className="mt-1 h-4 w-4 flex-shrink-0 text-primary" />

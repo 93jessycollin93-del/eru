@@ -80,6 +80,7 @@ import Guilds from './pages/Guilds';
 import About from './pages/About';
 import AppStore from './pages/AppStore';
 import JackieDevLab from './pages/JackieDevLab';
+import CardScanner from './pages/CardScanner';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -182,6 +183,7 @@ const AuthenticatedApp = () => {
         <Route path="/about" element={<About />} />
         <Route path="/app-store" element={<AppStore />} />
         <Route path="/dev-lab" element={<JackieDevLab />} />
+        <Route path="/card-scanner" element={<CardScanner />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

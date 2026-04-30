@@ -64,6 +64,7 @@ const ALL_APPS = [
   { id: 'jackie_conversations', label: 'Conversations', emoji: '🗂️', url: '/jackie', category: 'App Pages' },
   { id: 'ailab', label: 'AI Lab', emoji: '🧪', url: '/ailab', category: 'App Pages' },
   { id: 'devlab', label: 'Dev Lab', emoji: '🧰', url: '/dev-lab', category: 'App Pages' },
+  { id: 'cardscan', label: 'Card Scan', emoji: '🃏', url: '/card-scanner', category: 'App Pages' },
   { id: 'bot_marketplace', label: 'Bot Marketplace', emoji: '🤖', url: '/bot-marketplace', category: 'App Pages' },
   { id: 'apikeys', label: 'API Keys', emoji: '🔑', url: '/apikeys', category: 'App Pages' },
   { id: 'builder', label: 'System Builder', emoji: '🏗️', url: '/builder', category: 'App Pages' },

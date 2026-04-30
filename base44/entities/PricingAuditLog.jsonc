@@ -1,0 +1,130 @@
+{
+  "name": "PricingAuditLog",
+  "type": "object",
+  "properties": {
+    "scan_id": {
+      "type": "string"
+    },
+    "card_id": {
+      "type": "string"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "description": "Real source name e.g. tcgplayer, cardmarket, ebay_sold, manual_owner"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "marketplace",
+        "sold_comps",
+        "price_index",
+        "manual_owner",
+        "card_database",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "request_status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "no_data",
+        "rate_limited",
+        "stale",
+        "failed",
+        "not_connected",
+        "needs_review"
+      ],
+      "default": "no_data"
+    },
+    "returned_value": {
+      "type": "number",
+      "description": "Raw value as returned by the source"
+    },
+    "normalized_value": {
+      "type": "number",
+      "description": "Optional value after currency or condition normalization"
+    },
+    "currency": {
+      "type": "string",
+      "description": "ISO currency code from the source"
+    },
+    "conversion_source": {
+      "type": "string"
+    },
+    "conversion_timestamp": {
+      "type": "string"
+    },
+    "condition_basis": {
+      "type": "string",
+      "enum": [
+        "raw_nm",
+        "raw_lp",
+        "raw_mp",
+        "raw_hp",
+        "raw_dmg",
+        "graded",
+        "sealed",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "grade": {
+      "type": "string",
+      "description": "e.g. PSA 9, BGS 9.5 \u2014 only when actually graded"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "0\u2013100"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "user_label_shown": {
+      "type": "string",
+      "description": "The exact label shown to the user, e.g. Verified Price, No Verified Price"
+    },
+    "owner_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "source",
+    "request_status",
+    "user_label_shown"
+  ],
+  "rls": {
+    "create": {
+      "owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
