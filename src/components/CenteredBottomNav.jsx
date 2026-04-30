@@ -116,6 +116,27 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
   });
+
+  // Safety net: if a saved x offset would render the nav offscreen on the
+  // current viewport, snap it back into view. Runs on mount and on resize.
+  useEffect(() => {
+    const clamp = () => {
+      const navWidth = navRef.current?.offsetWidth || 0;
+      const maxX = Math.max(0, window.innerWidth - navWidth - 8);
+      setPos((prev) => {
+        if (prev?.x == null) return prev;
+        if (prev.x < 0 || prev.x > maxX) {
+          const next = { ...prev, x: null };
+          try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch {}
+          return next;
+        }
+        return prev;
+      });
+    };
+    clamp();
+    window.addEventListener('resize', clamp);
+    return () => window.removeEventListener('resize', clamp);
+  }, []);
   const [floatingWidgets, setFloatingWidgets] = useState(() => {
     try {
       return {

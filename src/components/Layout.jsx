@@ -122,20 +122,12 @@ export default function Layout() {
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
-        {/* Ticker stays sticky at the top. The nav is now anchored to the
-            bottom of the viewport (fixed) so it behaves like a native mobile
-            tab bar. Both layers honor safe-area insets for iOS / Telegram. */}
+        {/* Ticker stays sticky at the top inside the centered app shell. */}
         <div
           className="sticky z-50 eru-theme-header eru-enter"
           style={{ top: 'env(safe-area-inset-top, 0px)' }}
         >
           <TickerBar />
-        </div>
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50 eru-theme-header eru-enter"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-        >
-          <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
         </div>
         <main className="flex-1 min-w-0 overflow-hidden">
           <PageThemeLayer>
@@ -158,6 +150,18 @@ export default function Layout() {
         <BotWidget prefs={prefs} updateWidget={updateWidget} />
         <ScreenVisualizer prefs={prefs} updateWidget={updateWidget} />
         <NotesWidgetMount />
+      </div>
+
+      {/* Bottom nav — mounted OUTSIDE the centered app shell so it's
+          fixed to the true viewport on every screen size. Acts as a
+          native-style mobile tab bar; honors iOS/Telegram safe areas. */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 eru-theme-header eru-enter pointer-events-none"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="pointer-events-auto">
+          <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
+        </div>
       </div>
     </>
   );
