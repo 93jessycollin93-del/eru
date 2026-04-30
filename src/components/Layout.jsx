@@ -122,14 +122,19 @@ export default function Layout() {
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
-        {/* Unified sticky shell — ticker + nav move as ONE unit on scroll so
-            they remain visible together across long-scroll pages and small
-            mobile viewports. Respect safe-area insets for iOS / Telegram. */}
+        {/* Ticker stays sticky at the top. The nav is now anchored to the
+            bottom of the viewport (fixed) so it behaves like a native mobile
+            tab bar. Both layers honor safe-area insets for iOS / Telegram. */}
         <div
           className="sticky z-50 eru-theme-header eru-enter"
           style={{ top: 'env(safe-area-inset-top, 0px)' }}
         >
           <TickerBar />
+        </div>
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50 eru-theme-header eru-enter"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
           <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
         </div>
         <main className="flex-1 min-w-0 overflow-hidden">

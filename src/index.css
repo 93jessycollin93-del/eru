@@ -114,6 +114,10 @@
     /* Mobile-native: prevent rubber-band overscroll on Android/iOS so pull-
        to-refresh and bottom sheets feel anchored, not bouncy. */
     overscroll-behavior-y: none;
+    /* Reserve vertical space at the bottom of every page so the fixed bottom
+       nav (mobile tab bar) never obscures page content. Pages that already
+       set their own bottom padding stack on top of this safely. */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
   /* Mobile-native: kill text selection on tappable controls so long-press
      never highlights button/nav labels. Inputs, textareas, and content with

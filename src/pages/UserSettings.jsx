@@ -8,6 +8,7 @@ import SoundSettings from '@/components/SoundSettings';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
 import MaskedEmail from '@/components/privacy/MaskedEmail';
 import SecretArea from '@/components/privacy/SecretArea';
+import DeleteAccountButton from '@/components/settings/DeleteAccountButton';
 import { maskEmail } from '@/lib/privacy';
 
 const DEFAULT_PREFS = {
@@ -369,6 +370,13 @@ export default function UserSettings() {
           <LogOut className="w-4 h-4" />
           Sign out
         </button>
+
+        {/* Delete account — destructive, gated by ConfirmDialog inside the
+            DeleteAccountButton component. Calls the existing deleteMyData
+            backend function and signs the user out on success. */}
+        <SectionCard title="Delete account" subtitle="Permanently remove your account and all associated data. This cannot be undone.">
+          <DeleteAccountButton />
+        </SectionCard>
       </div>
     </div>
   );
