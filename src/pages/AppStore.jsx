@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Store, ArrowLeft, Sparkles } from 'lucide-react';
+import { Search, Store, ArrowLeft, Sparkles, Code2, ArrowRight } from 'lucide-react';
 import { APP_STORE_MODULES, APP_STORE_CATEGORIES } from '@/lib/appStoreModules';
 import { useInstalledModules } from '@/hooks/useInstalledModules';
 import ModuleCard from '@/components/appstore/ModuleCard';
@@ -87,6 +87,30 @@ export default function AppStore() {
           </div>
         </div>
       </div>
+
+      {/* Featured rooms — full pages users can open (not installable widgets) */}
+      {category === 'All' && !query && (
+        <div className="px-4 pt-4">
+          <Link
+            to="/dev-lab"
+            className="block rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-card p-4 transition-colors hover:border-primary/50"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+                <Code2 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">New Room</p>
+                <p className="mt-0.5 text-sm font-bold text-foreground">Jackie Dev Lab</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Plan/Agent workspace for app changes — honest templates, manual patches, no fake AI.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 flex-shrink-0 text-primary" />
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* Featured strip */}
       {category === 'All' && !query && (

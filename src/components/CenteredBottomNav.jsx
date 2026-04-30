@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2 } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
@@ -25,6 +25,7 @@ const ALL_PAGES = [
   { id: 'reputation',   labelKey: 'nav.reputation',   fallback: 'Reputation',   icon: Award,         to: '/reputation' },
   { id: 'tgapps',       labelKey: 'nav.tgapps',       fallback: 'TG Apps',      icon: Send,          to: '/tgapps' },
   { id: 'ailab',        labelKey: 'nav.ailab',        fallback: 'AI Lab',       icon: FlaskConical,  to: '/ailab' },
+  { id: 'devlab',       labelKey: 'nav.devlab',       fallback: 'Dev Lab',      icon: Code2,         to: '/dev-lab' },
   { id: 'botmarket',    labelKey: 'nav.botmarket',    fallback: 'Bot Market',   icon: Cpu,           to: '/bot-marketplace' },
   { id: 'botfarm',      labelKey: 'nav.botfarm',      fallback: 'Bot Farm',     icon: Factory,       to: '/bot-farm' },
   { id: 'apikeys',      labelKey: 'nav.apikeys',      fallback: 'API Keys',     icon: KeyRound,      to: '/apikeys' },
