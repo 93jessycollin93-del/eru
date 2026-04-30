@@ -60,7 +60,13 @@ export default function Dashboard() {
   return (
     <DashboardEventsProvider>
       <PullToRefresh onRefresh={handleRefresh}>
-      <div className="flex flex-col min-h-screen bg-background pb-24 md:pb-8">
+      <div
+        className="flex flex-col min-h-screen bg-background pb-24 md:pb-8"
+        style={{
+          paddingLeft: 'env(safe-area-inset-left, 0px)',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+        }}
+      >
         <div className="px-4 py-3 border-b border-border bg-card/80 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">{t('dashboard.title', undefined, 'Dashboard')}</h2>
           <ExportButton appData={appData} />

@@ -5,6 +5,7 @@ import AnimatedBackground from './AnimatedBackground';
 import PageThemeLayer from '@/components/theme/PageThemeLayer';
 import { useTheme } from '../context/ThemeContext';
 import CenteredBottomNav from './CenteredBottomNav';
+import MobileTabBar from './mobile/MobileTabBar';
 import TickerBar from './dashboard/TickerBar';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
@@ -155,13 +156,18 @@ export default function Layout() {
       {/* Free-floating nav — mounted OUTSIDE the centered app shell. The
           CenteredBottomNav positions itself absolutely within this overlay
           (fully draggable on both axes), so this wrapper is a transparent,
-          click-through layer covering the full viewport. */}
+          click-through layer covering the full viewport.
+          Hidden on mobile (< md): mobile uses the fixed MobileTabBar below
+          for native-feeling navigation. The floating nav stays on tablet/desktop. */}
       <div
-        className="fixed inset-0 z-50 pointer-events-none eru-enter"
+        className="hidden md:block fixed inset-0 z-50 pointer-events-none eru-enter"
         aria-hidden="false"
       >
         <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
       </div>
+
+      {/* Fixed iOS-style mobile tab bar — only visible on phone-sized screens. */}
+      <MobileTabBar />
     </>
   );
 }
