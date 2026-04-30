@@ -31,9 +31,10 @@
     --eru-button-opacity:    0.4;
     --eru-nav-opacity:       0.6;
     --eru-modal-opacity:     0.78;
-    /* Subtle by default — strong reserved for modals/drawers only. */
-    --eru-backdrop-blur:     6px;
-    --eru-backdrop-blur-strong: 12px;
+    /* Backdrop blur disabled by default for clearer background visibility.
+       Translucent surfaces stay translucent — only the blur is removed. */
+    --eru-backdrop-blur:     0px;
+    --eru-backdrop-blur-strong: 0px;
     --eru-backdrop-saturate: 125%;
     --eru-glow-strength:     0.35;
     --eru-vignette-strength: 0.18;
