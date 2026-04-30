@@ -27,12 +27,21 @@ import InstalledModulesRenderer from '../components/appstore/InstalledModulesRen
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
+import PullToRefresh from '../components/mobile/PullToRefresh';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
   const { t } = useLanguage();
   const { prices } = useRealPrices();
   const { data: alerts } = useRealtimeEntityList('PriceAlert', { sort: '-created_date', limit: 50 });
   const { data: notifications } = useRealtimeEntityList('AppNotification', { sort: '-created_date', limit: 50 });
+
+  // Pull-to-refresh: brief await so the spinner is visible, then dispatch a
+  // global "refresh" event other widgets can listen to. The live websocket
+  // hook keeps streaming on its own.
+  const handleRefresh = async () => {
+    window.dispatchEvent(new CustomEvent('app:refresh', { detail: { source: 'dashboard' } }));
+    await new Promise((r) => setTimeout(r, 400));
+  };
 
   const portfolioData = useMemo(() => ({
     totalBalance: 15250.50,
@@ -50,6 +59,7 @@ export default function Dashboard() {
 
   return (
     <DashboardEventsProvider>
+      <PullToRefresh onRefresh={handleRefresh}>
       <div className="flex flex-col min-h-screen bg-background pb-24 md:pb-8">
         <div className="px-4 py-3 border-b border-border bg-card/80 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">{t('dashboard.title', undefined, 'Dashboard')}</h2>
@@ -103,6 +113,7 @@ export default function Dashboard() {
           <FinanceModule />
         </div>
       </div>
+      </PullToRefresh>
     </DashboardEventsProvider>
   );
 }

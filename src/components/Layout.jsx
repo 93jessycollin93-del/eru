@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import AnimatedBackground from './AnimatedBackground';
 import PageThemeLayer from '@/components/theme/PageThemeLayer';
 import { useTheme } from '../context/ThemeContext';
@@ -66,6 +67,7 @@ export default function Layout() {
   const globalThemeStyles = themeCtx?.globalThemeStyles || {};
   const [searchOpen, setSearchOpen] = useState(false);
   const { prefs, updateWidget } = useFloatingWidgetPrefs();
+  const location = useLocation();
 
   const handleSearchOpen = useCallback(() => setSearchOpen(true), []);
 
@@ -130,9 +132,21 @@ export default function Layout() {
           <TickerBar />
           <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
         </div>
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 overflow-hidden">
           <PageThemeLayer>
-            <Outlet />
+            {/* Mobile-native route transition — slide-left on every route
+                change. Honors prefers-reduced-motion via framer-motion. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={location.pathname}
+                initial={{ x: 24, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -24, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </PageThemeLayer>
         </main>
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />

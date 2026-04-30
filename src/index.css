@@ -111,7 +111,35 @@
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
     overflow-y: auto;
+    /* Mobile-native: prevent rubber-band overscroll on Android/iOS so pull-
+       to-refresh and bottom sheets feel anchored, not bouncy. */
+    overscroll-behavior-y: none;
   }
+  /* Mobile-native: kill text selection on tappable controls so long-press
+     never highlights button/nav labels. Inputs, textareas, and content with
+     a `data-selectable` attribute are intentionally exempt. */
+  button, a, [role="button"], nav, nav * {
+    -webkit-user-select: none;
+            user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  input, textarea, [contenteditable="true"], [data-selectable] {
+    -webkit-user-select: text;
+            user-select: text;
+  }
+  /* Mobile-native: enforce a 44×44 minimum touch target on icon-only buttons
+     and nav controls. Components that already size larger are unaffected;
+     this only floors the size on tiny icon hit areas. */
+  button:not([data-no-min-touch]),
+  a[role="button"]:not([data-no-min-touch]),
+  [role="button"]:not([data-no-min-touch]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* But don't break inline-link buttons inside paragraphs / chips / pills
+     that explicitly opt out via .inline-control. */
+  .inline-control { min-height: 0 !important; min-width: 0 !important; }
   .font-mono { font-family: 'JetBrains Mono', monospace; }
 
   /* === Global smoothing layer ==============================================

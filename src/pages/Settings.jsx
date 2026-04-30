@@ -9,6 +9,7 @@ import BiometricAuth from '../components/BiometricAuth';
 import SoundSettings from '../components/SoundSettings';
 import TelegramSettings from '../components/TelegramSettings';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
+import DeleteAccountButton from '@/components/settings/DeleteAccountButton';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 
@@ -357,6 +358,12 @@ export default function Settings() {
         <button className="w-full py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
           {t('security.signOut', undefined, 'Sign Out')}
         </button>
+
+        {/* Danger zone — permanent account + data deletion */}
+        <div className="pt-2">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1 mb-2">Danger zone</p>
+          <DeleteAccountButton />
+        </div>
       </div>
 
       <BiometricAuth

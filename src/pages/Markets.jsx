@@ -4,6 +4,7 @@ import { WifiOff, Loader2 } from 'lucide-react';
 import { useFeatureTracking, trackFeatureInteraction } from '../hooks/useFeatureTracking';
 import AssetComparisonDashboard from '../components/markets/AssetComparisonDashboard';
 import MarketAssetInsightsWidget from '../components/markets/MarketAssetInsightsWidget';
+import PullToRefresh from '../components/mobile/PullToRefresh';
 import { useLanguage } from '@/context/LanguageContext';
 
 function PriceRow({ asset, onClick, selected }) {
@@ -77,7 +78,14 @@ export default function Markets() {
   const selPrice = selected?.price ?? 0;
   const selChange = selected?.change ?? 0;
 
+  // Pull-to-refresh: brief await + global event so listeners can refetch.
+  const handleRefresh = async () => {
+    window.dispatchEvent(new CustomEvent('app:refresh', { detail: { source: 'markets' } }));
+    await new Promise((r) => setTimeout(r, 400));
+  };
+
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t('markets.title', undefined, 'Markets')}</h2>
@@ -144,5 +152,6 @@ export default function Markets() {
         ))}
       </div>
     </div>
+    </PullToRefresh>
   );
 }
