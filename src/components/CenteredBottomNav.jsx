@@ -162,12 +162,19 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     return () => window.removeEventListener('resize', clamp);
   }, []);
 
-  // Reset to default snap (under the ticker). Exposed via the handle strip
-  // so the user can recover from a stuck/colliding position with one tap.
+  // Reset to default snap (single horizontal row under the ticker).
+  // Restores position, orientation, and row count to the canonical layout
+  // shown in the design reference — one tap to recover from any drift.
   const resetPosition = useCallback(() => {
-    const next = { x: null, y: null };
-    setPos(next);
-    try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch {}
+    const nextPos = { x: null, y: null };
+    setPos(nextPos);
+    setOrientation('horizontal');
+    setRows(1);
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify(nextPos));
+      localStorage.setItem(ORIENTATION_KEY, 'horizontal');
+      localStorage.setItem(ROWS_KEY, JSON.stringify(1));
+    } catch {}
   }, []);
   const [floatingWidgets, setFloatingWidgets] = useState(() => {
     try {
