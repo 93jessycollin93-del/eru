@@ -10,6 +10,71 @@ const sendTelegramMessage = async (token, chatId, text) => {
   });
 };
 
+// --- Knowledge base retrieval (inline, no auth needed — service role) -------
+// Lightweight lexical match over docs linked to this bot. Mirrors the scoring
+// in retrieveKnowledgeBaseContext.js but skips the per-doc usage_count writes
+// to keep the webhook fast.
+const tokenize = (text) => Array.from(new Set(String(text || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9+#.\s/-]/g, ' ')
+  .split(/\s+/)
+  .filter((w) => w.length > 2)));
+
+const buildSearchText = (doc) => {
+  const faqText = (doc.faq_items || []).map((i) => `${i.question} ${i.answer}`).join(' ');
+  return [doc.title, doc.content, doc.file_name, faqText, ...(doc.keywords || [])]
+    .filter(Boolean).join(' ').toLowerCase().slice(0, 12000);
+};
+
+const buildSnippet = (doc, queryTokens) => {
+  if (doc.source_type === 'faq') {
+    const best = (doc.faq_items || []).find((i) =>
+      queryTokens.some((t) => `${i.question} ${i.answer}`.toLowerCase().includes(t)));
+    if (best) return `Q: ${best.question}\nA: ${best.answer}`;
+  }
+  const text = doc.content || doc.file_name || '';
+  if (!text) return doc.title || '';
+  const lower = text.toLowerCase();
+  const hit = queryTokens.find((t) => lower.includes(t));
+  if (!hit) return text.slice(0, 400);
+  const idx = lower.indexOf(hit);
+  return text.slice(Math.max(0, idx - 160), Math.min(text.length, idx + 280)).trim();
+};
+
+const retrieveKbContext = async (base44, botId, query) => {
+  try {
+    const queryTokens = tokenize(query);
+    if (queryTokens.length === 0) return '';
+
+    // Pull docs linked to this bot (or unrestricted ones owned by anyone — the
+    // webhook runs server-side so RLS doesn't filter by owner here).
+    const docs = await base44.asServiceRole.entities.KnowledgeBaseDocument.list('-updated_date', 200);
+    const linked = (docs || []).filter((d) => {
+      if (d.status && d.status !== 'active') return false;
+      const ids = d.linked_bot_ids || [];
+      return ids.includes(botId);
+    });
+    if (linked.length === 0) return '';
+
+    const ranked = linked.map((d) => {
+      const searchText = buildSearchText(d);
+      let score = 0;
+      for (const tok of queryTokens) {
+        if ((d.title || '').toLowerCase().includes(tok)) score += 8;
+        if (searchText.includes(tok)) score += 4;
+      }
+      return { doc: d, score, snippet: buildSnippet(d, queryTokens) };
+    }).filter((r) => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
+
+    if (ranked.length === 0) return '';
+    return ranked.map((r, i) => `Source ${i + 1} — ${r.doc.title}:\n${r.snippet}`).join('\n\n');
+  } catch {
+    return '';
+  }
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -157,8 +222,26 @@ Deno.serve(async (req) => {
       });
       replyText = 'Conversation memory reset.';
     } else {
+      // Pull knowledge-base snippets linked to this bot, if any. The agent
+      // will ground its answer in this context and admit when it doesn't know.
+      const kbContext = await retrieveKbContext(base44, bot.id, text);
+      const isSupportAgent = bot.front_door_role === 'support';
+
+      const groundingInstruction = kbContext
+        ? `Answer the user's question using ONLY the knowledge base sources below. If the sources don't contain the answer, say so honestly and suggest contacting human support — do NOT invent facts.\n\nKnowledge base:\n${kbContext}`
+        : (isSupportAgent
+            ? 'You are a customer support agent. If you do not know the answer from your instructions, say so honestly and offer to escalate to a human teammate.'
+            : '');
+
       const aiResponse = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a Telegram AI agent.\n\nSystem prompt:\n${bot.system_prompt}\n\nConversation memory:\n${session.memory_summary || 'No prior memory.'}\n\nUser message:\n${text}\n\nWrite a concise Telegram-ready reply in plain text.`,
+        prompt: [
+          'You are a Telegram AI agent.',
+          `System prompt:\n${bot.system_prompt}`,
+          groundingInstruction,
+          `Conversation memory:\n${session.memory_summary || 'No prior memory.'}`,
+          `User message:\n${text}`,
+          'Write a concise Telegram-ready reply in plain text.'
+        ].filter(Boolean).join('\n\n'),
         model: 'automatic'
       });
       replyText = typeof aiResponse === 'string' ? aiResponse : String(aiResponse);

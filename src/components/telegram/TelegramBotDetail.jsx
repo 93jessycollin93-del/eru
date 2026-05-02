@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2, Save, Trash2 } from 'lucide-react';
+import TelegramKnowledgeLinkPanel from './TelegramKnowledgeLinkPanel';
 
 export default function TelegramBotDetail({ bot, onSaved, onDeleted }) {
   const [form, setForm] = useState(bot);
@@ -70,6 +71,8 @@ export default function TelegramBotDetail({ bot, onSaved, onDeleted }) {
           {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
         </button>
       </div>
+
+      <TelegramKnowledgeLinkPanel bot={bot} />
     </div>
   );
 }
