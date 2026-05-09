@@ -46,8 +46,6 @@ const retrieveKbContext = async (base44, botId, query) => {
     const queryTokens = tokenize(query);
     if (queryTokens.length === 0) return '';
 
-    // Pull docs linked to this bot (or unrestricted ones owned by anyone — the
-    // webhook runs server-side so RLS doesn't filter by owner here).
     const docs = await base44.asServiceRole.entities.KnowledgeBaseDocument.list('-updated_date', 200);
     const linked = (docs || []).filter((d) => {
       if (d.status && d.status !== 'active') return false;
@@ -73,6 +71,49 @@ const retrieveKbContext = async (base44, botId, query) => {
   } catch {
     return '';
   }
+};
+
+const selectSpecialistBot = async (base44, routerBot, session, userText) => {
+  const specialistIds = (routerBot.specialist_bot_ids || []).slice(0, Number(routerBot.max_specialists_per_request || 6));
+  if (!routerBot.swarm_enabled || specialistIds.length === 0) return null;
+
+  const allBots = await base44.asServiceRole.entities.TelegramBot.list('-updated_date', 200);
+  const specialists = allBots.filter((item) => specialistIds.includes(item.id) && item.status === 'active');
+  if (specialists.length === 0) return null;
+
+  const specialistDirectory = specialists.map((item, index) => {
+    const linkedCount = Array.isArray(item.specialist_bot_ids) ? item.specialist_bot_ids.length : 0;
+    return `${index + 1}. ${item.name}\nRole: ${item.front_door_role || 'specialist'}\nPrompt: ${item.system_prompt || ''}\nRouting notes: ${item.swarm_goal_template || ''}\nLinked specialists: ${linkedCount}`;
+  }).join('\n\n');
+
+  const routing = await base44.integrations.Core.InvokeLLM({
+    prompt: [
+      'You are a Telegram front-door router.',
+      `Front door role: ${routerBot.front_door_role || 'general'}`,
+      routerBot.swarm_goal_template ? `Router instructions:\n${routerBot.swarm_goal_template}` : '',
+      `Conversation memory:\n${session.memory_summary || 'No prior memory.'}`,
+      `Incoming user message:\n${userText}`,
+      `Available specialists:\n${specialistDirectory}`,
+      'Pick the single best specialist for this request. Return JSON only.'
+    ].filter(Boolean).join('\n\n'),
+    response_json_schema: {
+      type: 'object',
+      properties: {
+        specialist_name: { type: 'string' },
+        routing_reason: { type: 'string' },
+        delegated_task: { type: 'string' }
+      },
+      required: ['specialist_name']
+    },
+    model: 'automatic'
+  });
+
+  const selected = specialists.find((item) => item.name === routing.specialist_name) || specialists[0];
+  return {
+    bot: selected,
+    routing_reason: routing.routing_reason || '',
+    delegated_task: routing.delegated_task || userText
+  };
 };
 
 Deno.serve(async (req) => {
@@ -207,6 +248,8 @@ Deno.serve(async (req) => {
     }
 
     let replyText = bot.greeting_message || 'Hello.';
+    let activeResponderBot = bot;
+    let routingSummary = '';
 
     if (text === '/start') {
       replyText = bot.greeting_message || 'Welcome. Your AI bot is ready.';
@@ -218,14 +261,23 @@ Deno.serve(async (req) => {
         last_user_message: '',
         last_bot_response: 'Conversation memory reset',
         message_count: 0,
-        last_message_at: new Date().toISOString()
+        last_message_at: new Date().toISOString(),
+        active_specialist_bot_id: '',
+        specialist_handoff_note: ''
       });
       replyText = 'Conversation memory reset.';
     } else {
-      // Pull knowledge-base snippets linked to this bot, if any. The agent
-      // will ground its answer in this context and admit when it doesn't know.
-      const kbContext = await retrieveKbContext(base44, bot.id, text);
-      const isSupportAgent = bot.front_door_role === 'support';
+      const selectedSpecialist = await selectSpecialistBot(base44, bot, session, text);
+      if (selectedSpecialist?.bot) {
+        activeResponderBot = selectedSpecialist.bot;
+        routingSummary = `Delegated by ${bot.name} to ${selectedSpecialist.bot.name}. ${selectedSpecialist.routing_reason}`.trim();
+      }
+
+      const kbContext = await retrieveKbContext(base44, activeResponderBot.id, text);
+      const isSupportAgent = activeResponderBot.front_door_role === 'support';
+      const specialistContext = activeResponderBot.id !== bot.id
+        ? `You are responding as specialist bot "${activeResponderBot.name}" after being selected by front-door bot "${bot.name}". Keep continuity with the existing conversation and do not mention internal routing unless helpful.`
+        : '';
 
       const groundingInstruction = kbContext
         ? `Answer the user's question using ONLY the knowledge base sources below. If the sources don't contain the answer, say so honestly and suggest contacting human support — do NOT invent facts.\n\nKnowledge base:\n${kbContext}`
@@ -236,8 +288,11 @@ Deno.serve(async (req) => {
       const aiResponse = await base44.integrations.Core.InvokeLLM({
         prompt: [
           'You are a Telegram AI agent.',
-          `System prompt:\n${bot.system_prompt}`,
+          specialistContext,
+          `System prompt:\n${activeResponderBot.system_prompt || bot.system_prompt}`,
+          activeResponderBot.swarm_goal_template ? `Specialist instructions:\n${activeResponderBot.swarm_goal_template}` : '',
           groundingInstruction,
+          routingSummary ? `Routing summary:\n${routingSummary}` : '',
           `Conversation memory:\n${session.memory_summary || 'No prior memory.'}`,
           `User message:\n${text}`,
           'Write a concise Telegram-ready reply in plain text.'
@@ -269,9 +324,11 @@ Deno.serve(async (req) => {
       telegram_username: incomingMessage.from?.username || session.telegram_username || '',
       last_user_message: text,
       last_bot_response: replyText,
-      memory_summary: `Latest user intent: ${text}. Latest assistant reply: ${replyText}`,
+      memory_summary: `Latest user intent: ${text}. Latest assistant reply: ${replyText}${routingSummary ? `. ${routingSummary}` : ''}`,
       message_count: Number(session.message_count || 0) + 1,
       last_message_at: new Date().toISOString(),
+      active_specialist_bot_id: activeResponderBot?.id || '',
+      specialist_handoff_note: routingSummary,
       human_handoff_status: session.human_handoff_status === 'resolved' ? 'resolved' : 'none',
       human_handoff_requested: false
     });
@@ -292,7 +349,10 @@ Deno.serve(async (req) => {
         input: text,
         output: replyText,
         latency_ms: latencyMs,
-        telegram_ok: !!telegramResult.ok
+        telegram_ok: !!telegramResult.ok,
+        responder_bot_id: activeResponderBot?.id || bot.id,
+        responder_bot_name: activeResponderBot?.name || bot.name,
+        routing_summary: routingSummary
       }
     });
 

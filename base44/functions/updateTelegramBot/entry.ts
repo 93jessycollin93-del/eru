@@ -26,9 +26,17 @@ Deno.serve(async (req) => {
       greeting_message: payload.greeting_message,
       flow_blocks: payload.flow_blocks,
       memory_enabled: payload.memory_enabled,
-      max_memory_messages: payload.max_memory_messages,
+      memory_message_limit: payload.memory_message_limit,
       tool_modules: payload.tool_modules,
       status: payload.status,
+      swarm_enabled: payload.swarm_enabled,
+      router_bot_id: payload.router_bot_id,
+      specialist_bot_ids: payload.specialist_bot_ids,
+      swarm_goal_template: payload.swarm_goal_template,
+      front_door_role: payload.front_door_role,
+      backend_swarm_size: payload.backend_swarm_size,
+      swarm_execution_mode: payload.swarm_execution_mode,
+      max_specialists_per_request: payload.max_specialists_per_request,
     });
 
     return Response.json({ bot: updated });
