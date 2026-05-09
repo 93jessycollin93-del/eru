@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/AuthContext';
 import DisplayPreferencesSection from '@/components/preferences/DisplayPreferencesSection';
 import SavedContentSection from '@/components/preferences/SavedContentSection';
 import PaymentDefaultsSection from '@/components/preferences/PaymentDefaultsSection';
+import IntegrationQuotaSection from '@/components/preferences/IntegrationQuotaSection';
+import TelegramConnectSection from '@/components/preferences/TelegramConnectSection';
 
 /**
  * Preferences
@@ -63,6 +65,10 @@ export default function Preferences() {
         <DisplayPreferencesSection />
 
         <SavedContentSection userEmail={currentUser?.email} />
+
+        <IntegrationQuotaSection />
+
+        <TelegramConnectSection />
 
         <PaymentDefaultsSection prefs={paymentPrefs} onChange={setPaymentPrefs} />
 

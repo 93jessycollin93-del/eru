@@ -297,7 +297,7 @@
      for tightly packed icon labels. Blur intentionally OFF here so ticker
      numbers and small nav icons stay razor-sharp. */
   .eru-theme-nav {
-    background-color: hsl(var(--eru-surface-bg-strong));
+    background-color: hsl(230 22% 9% / 0.88);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

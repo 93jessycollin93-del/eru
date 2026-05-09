@@ -33,7 +33,7 @@ export default function MobileTabBar() {
     <nav
       role="navigation"
       aria-label="Primary"
-      className="md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur-md"
+      className="md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card backdrop-blur-md"
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         paddingLeft: 'env(safe-area-inset-left, 0px)',
