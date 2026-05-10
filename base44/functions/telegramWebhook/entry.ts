@@ -123,6 +123,52 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const botId = url.searchParams.get('botId') || url.searchParams.get('bot_id');
 
+    if (payload.pre_checkout_query) {
+      const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
+      if (!token) {
+        return Response.json({ success: false, error: 'Missing bot token' }, { status: 500 });
+      }
+
+      await fetch(`${TELEGRAM_API}/bot${token}/answerPreCheckoutQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pre_checkout_query_id: payload.pre_checkout_query.id,
+          ok: true
+        })
+      });
+
+      return Response.json({ success: true, handled: 'pre_checkout_query' });
+    }
+
+    if (payload.message?.successful_payment) {
+      const payment = payload.message.successful_payment;
+      const invoicePayload = String(payment.invoice_payload || '');
+      if (invoicePayload.startsWith('integration_topup:')) {
+        const [, orderId] = invoicePayload.split(':');
+        const order = await base44.asServiceRole.entities.IntegrationTopupOrder.get(orderId);
+        if (order && order.payment_status !== 'paid') {
+          await base44.asServiceRole.entities.IntegrationTopupOrder.update(order.id, {
+            payment_status: 'paid',
+            fulfilled_at: new Date().toISOString(),
+            external_payment_id: payment.telegram_payment_charge_id || invoicePayload
+          });
+
+          await base44.asServiceRole.entities.IntegrationUsageEvent.create({
+            user_email: order.user_email,
+            provider_key: 'telegram_stars',
+            action_type: 'integration_topup',
+            counted_units: Number(order.extra_uses || 0),
+            status: 'topup_applied',
+            usage_date: new Date().toISOString().slice(0, 10),
+            details: `Top-up paid via Telegram Stars: ${order.pack_name || ''}`.trim()
+          });
+        }
+      }
+
+      return Response.json({ success: true, handled: 'successful_payment' });
+    }
+
     const incomingMessage = payload.message || payload.edited_message;
     if (!incomingMessage?.chat?.id) {
       return Response.json({ success: true, ignored: true });

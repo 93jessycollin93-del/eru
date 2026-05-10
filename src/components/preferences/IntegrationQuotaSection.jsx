@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Gauge, AlertTriangle, Star, Loader2 } from 'lucide-react';
+import { Gauge, AlertTriangle, Star, Loader2, ExternalLink } from 'lucide-react';
 
 export default function IntegrationQuotaSection() {
   const [quota, setQuota] = useState(null);
   const [loading, setLoading] = useState(true);
   const [creatingOrder, setCreatingOrder] = useState(false);
+  const [invoiceUrl, setInvoiceUrl] = useState('');
 
   const loadQuota = async () => {
     setLoading(true);
@@ -18,14 +19,29 @@ export default function IntegrationQuotaSection() {
 
   const createStarsOrder = async () => {
     setCreatingOrder(true);
-    await base44.entities.IntegrationTopupOrder.create({
-      user_email: (await base44.auth.me()).email,
+    setInvoiceUrl('');
+    const me = await base44.auth.me();
+    const order = await base44.entities.IntegrationTopupOrder.create({
+      user_email: me.email,
       pack_name: '100 extra uses',
       extra_uses: 100,
       price_usd: 4.99,
       payment_provider: 'telegram_stars',
       payment_status: 'draft'
     });
+
+    const telegramAccount = await base44.entities.TelegramAccount.filter({ user_email: me.email }, '-created_date', 1);
+    const chatId = telegramAccount?.[0]?.telegram_user_id;
+    if (!chatId) {
+      setCreatingOrder(false);
+      return;
+    }
+
+    const response = await base44.functions.invoke('createTelegramStarsInvoice', {
+      orderId: order.id,
+      chatId
+    });
+    setInvoiceUrl(response.data?.invoice_url || '');
     setCreatingOrder(false);
   };
 
@@ -82,6 +98,21 @@ export default function IntegrationQuotaSection() {
             {creatingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
             Buy 100 extra uses · $4.99 · Stars
           </button>
+
+          {!creatingOrder && invoiceUrl && (
+            <a
+              href={invoiceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full h-11 rounded-xl border border-primary/20 bg-primary/10 text-primary text-sm font-medium inline-flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" /> Open Telegram Stars checkout
+            </a>
+          )}
+
+          {!creatingOrder && !invoiceUrl && (
+            <p className="text-[11px] text-muted-foreground text-center">Stars checkout opens after we detect your linked Telegram account.</p>
+          )}
         </>
       )}
     </section>
