@@ -6,8 +6,6 @@ import { createCardWithLore } from '@/lib/cardLore';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
 import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter, Repeat, Send, Handshake, Edit2, Check } from 'lucide-react';
-import MobileSelect from '@/components/mobile/MobileSelect';
-import PullToRefresh from '@/components/mobile/PullToRefresh';
 
 const LISTING_FEE_PCT = 0.05; // 5% listing fee
 
@@ -222,13 +220,7 @@ export default function Marketplace({ gold, onGoldChange }) {
 
   const fee = listPrice ? Math.ceil(parseInt(listPrice || 0) * LISTING_FEE_PCT) : 0;
 
-  // Pull-to-refresh: re-runs the existing data loader.
-  const handleRefresh = async () => {
-    await loadAll();
-  };
-
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-4">
       {/* Toast */}
       <AnimatePresence>
@@ -266,25 +258,17 @@ export default function Marketplace({ gold, onGoldChange }) {
           {tab === 'browse' && (
             <div className="space-y-3">
               {/* Filters */}
-              <div className="grid grid-cols-2 gap-2">
-                <MobileSelect
-                  value={filterRarity}
-                  onChange={setFilterRarity}
-                  title="Filter by rarity"
-                  options={[
-                    { value: 'all', label: 'All Rarities' },
-                    ...['common','rare','epic','legendary','mythic'].map(r => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) })),
-                  ]}
-                />
-                <MobileSelect
-                  value={filterElement}
-                  onChange={setFilterElement}
-                  title="Filter by element"
-                  options={[
-                    { value: 'all', label: 'All Elements' },
-                    ...['fire','water','earth','wind','shadow','light'].map(e => ({ value: e, label: e.charAt(0).toUpperCase() + e.slice(1) })),
-                  ]}
-                />
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <select value={filterRarity} onChange={e => setFilterRarity(e.target.value)}
+                  className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs outline-none flex-shrink-0">
+                  <option value="all">All Rarities</option>
+                  {['common','rare','epic','legendary','mythic'].map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <select value={filterElement} onChange={e => setFilterElement(e.target.value)}
+                  className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs outline-none flex-shrink-0">
+                  <option value="all">All Elements</option>
+                  {['fire','water','earth','wind','shadow','light'].map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
               </div>
 
               {filtered.length === 0 ? (
@@ -422,13 +406,12 @@ export default function Marketplace({ gold, onGoldChange }) {
                     <p className="text-sm font-semibold">Create proposal</p>
                   </div>
 
-                  <MobileSelect
-                    value={tradeRecipient}
-                    onChange={setTradeRecipient}
-                    placeholder="Choose player"
-                    title="Choose recipient"
-                    options={users.map((row) => ({ value: row.email, label: row.full_name || row.email }))}
-                  />
+                  <select value={tradeRecipient} onChange={(e) => setTradeRecipient(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none">
+                    <option value="">Choose player</option>
+                    {users.map((row) => (
+                      <option key={row.id} value={row.email}>{row.full_name || row.email}</option>
+                    ))}
+                  </select>
 
                   <div className="flex gap-2">
                     <button onClick={() => setTradeType('swap')} className={`flex-1 rounded-xl px-3 py-2 text-xs font-semibold ${tradeType === 'swap' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
@@ -584,6 +567,5 @@ export default function Marketplace({ gold, onGoldChange }) {
         </>
       )}
     </div>
-    </PullToRefresh>
   );
 }

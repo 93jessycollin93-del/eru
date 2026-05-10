@@ -9,20 +9,7 @@ const getCtx = () => {
 };
 
 const STORAGE_KEY = 'sound_prefs';
-const defaults = {
-  enabled: true,
-  volume: 0.5,
-  vibration: true,
-  // 0 = off, 0.25 = subtle, 0.5 = default, 0.75 = strong, 1 = max.
-  // Patterns are scaled by this multiplier so users can dial down without
-  // disabling vibration entirely.
-  vibrationIntensity: 0.5,
-  // 'standard' = navigator.vibrate patterns (Android, most desktop).
-  // 'ios' = WebKit haptic taptic feedback (iOS Safari + Telegram WebView).
-  // 'auto' picks the best available — recommended.
-  hapticEngine: 'auto',
-  pack: 'cyber',
-};
+const defaults = { enabled: true, volume: 0.5, vibration: true, pack: 'cyber' };
 
 export function getSoundPrefs() {
   try { return { ...defaults, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') }; }
@@ -33,96 +20,10 @@ export function saveSoundPrefs(prefs) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...getSoundPrefs(), ...prefs }));
 }
 
-// ─── HAPTIC FEEDBACK ──────────────────────────────────────────────────────────
-//
-// Two engines, picked at call time:
-//   - "ios"      → window.webkit.messageHandlers.haptic (Telegram WebView,
-//                  some PWAs) OR Telegram WebApp's HapticFeedback API.
-//                  Returns crisp single taps with system-defined intensity;
-//                  ignores duration arrays.
-//   - "standard" → navigator.vibrate(pattern). Honors the full
-//                  [duration, pause, duration, ...] pattern. Android +
-//                  desktop Chrome/Firefox.
-//
-// hapticEngine: 'auto' picks ios when iOS-style API is detected, else
-// standard. 'ios' / 'standard' force a specific engine for testing.
-//
-// vibrationIntensity scales pattern durations linearly so users can dial
-// it down without flipping vibration off entirely. 0 = no vibration; 1 =
-// full pattern length. iOS-style haptics map intensity to the {light,
-// medium, heavy} scale.
-
-function detectIosHaptic() {
-  // Telegram Mini App
-  const tg = (typeof window !== 'undefined') && window.Telegram?.WebApp?.HapticFeedback;
-  if (tg) {
-    return {
-      impact: (style) => tg.impactOccurred(style), // 'light' | 'medium' | 'heavy'
-      notification: (kind) => tg.notificationOccurred(kind), // 'success' | 'warning' | 'error'
-      selection: () => tg.selectionChanged(),
-    };
-  }
-  // WebKit message handler bridge (custom iOS PWA shells).
-  const wk = (typeof window !== 'undefined') && window.webkit?.messageHandlers?.haptic;
-  if (wk) {
-    return {
-      impact: (style) => wk.postMessage({ type: 'impact', style }),
-      notification: (kind) => wk.postMessage({ type: 'notification', kind }),
-      selection: () => wk.postMessage({ type: 'selection' }),
-    };
-  }
-  return null;
-}
-
-function pickEngine(prefs) {
-  if (prefs.hapticEngine === 'ios') return detectIosHaptic();
-  if (prefs.hapticEngine === 'standard') return null;
-  return detectIosHaptic(); // auto
-}
-
-// Map a multi-pulse pattern to the closest iOS-style impact category by
-// total energy. Used when iOS engine is selected but caller passed a
-// duration-array pattern.
-function patternToImpactStyle(pattern, intensity) {
-  const total = (Array.isArray(pattern) ? pattern : [pattern])
-    .filter((_, i) => i % 2 === 0)
-    .reduce((a, b) => a + b, 0);
-  const scaled = total * intensity;
-  if (scaled < 12) return 'light';
-  if (scaled < 30) return 'medium';
-  return 'heavy';
-}
-
-function scalePattern(pattern, intensity) {
-  if (!Array.isArray(pattern)) pattern = [pattern];
-  return pattern.map((v) => Math.max(1, Math.round(v * intensity)));
-}
-
-function vibrate(pattern, hint) {
+// ─── VIBRATION ────────────────────────────────────────────────────────────────
+function vibrate(pattern) {
   const prefs = getSoundPrefs();
-  if (!prefs.vibration) return;
-  const intensity = Math.max(0, Math.min(1, Number(prefs.vibrationIntensity ?? 0.5)));
-  if (intensity === 0) return;
-
-  const ios = pickEngine(prefs);
-  if (ios) {
-    // Notification-style hints (success/error/warning) get the dedicated
-    // iOS notification haptic — distinct from a plain impact.
-    if (hint && ios.notification && (hint === 'success' || hint === 'warning' || hint === 'error')) {
-      ios.notification(hint);
-      return;
-    }
-    if (hint === 'selection' && ios.selection) {
-      ios.selection();
-      return;
-    }
-    ios.impact(patternToImpactStyle(pattern, intensity));
-    return;
-  }
-  // Standard navigator.vibrate path.
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    navigator.vibrate(scalePattern(pattern, intensity));
-  }
+  if (prefs.vibration && navigator.vibrate) navigator.vibrate(pattern);
 }
 
 // ─── SOUND PACKS ─────────────────────────────────────────────────────────────
@@ -347,19 +248,11 @@ export const SOUND_PACKS = {
   void:   { label: 'Void Core',      desc: 'Deep sub-bass textures — dark and immersive' },
 };
 
-// Vibration patterns for different actions. Each pattern is the
-// "standard" navigator.vibrate sequence; the second arg is a semantic
-// hint so the iOS engine can pick a richer haptic (notification vs
-// impact, success vs error). Existing call sites that don't pass a hint
-// still work — VIBRATE.click() etc. is unchanged.
+// Vibration patterns for different actions
 export const VIBRATE = {
-  click:     () => vibrate([10],          'selection'),
-  toggle:    () => vibrate([15],          'selection'),
-  tap:       () => vibrate([8],           'selection'),
-  press:     () => vibrate([18],          null),         // medium impact
-  longPress: () => vibrate([28],          null),         // heavy impact
-  success:   () => vibrate([20, 50, 20],  'success'),
-  warning:   () => vibrate([22, 40, 22],  'warning'),
-  error:     () => vibrate([30, 30, 30],  'error'),
-  notify:    () => vibrate([10, 20, 10],  null),
+  click:   () => vibrate([10]),
+  success: () => vibrate([20, 50, 20]),
+  error:   () => vibrate([30, 30, 30]),
+  toggle:  () => vibrate([15]),
+  notify:  () => vibrate([10, 20, 10]),
 };

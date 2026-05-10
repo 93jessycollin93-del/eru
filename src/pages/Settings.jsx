@@ -9,10 +9,6 @@ import BiometricAuth from '../components/BiometricAuth';
 import SoundSettings from '../components/SoundSettings';
 import TelegramSettings from '../components/TelegramSettings';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
-import DeleteAccountButton from '@/components/settings/DeleteAccountButton';
-import ZeroFakeDataPolicyCard from '@/components/pricing/ZeroFakeDataPolicyCard';
-import ZeroFakeDataModeToggle from '@/components/pricing/ZeroFakeDataModeToggle';
-import { getZeroFakeDataMode } from '@/lib/zeroFakeData';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 
@@ -248,10 +244,6 @@ export default function Settings() {
       </div>
 
       <div className="px-4 py-4 space-y-5 max-w-2xl mx-auto w-full">
-        {/* Pricing trust policy — visible to every user */}
-        <ZeroFakeDataPolicyCard mode={getZeroFakeDataMode()} expand />
-        <ZeroFakeDataModeToggle user={currentUser} />
-
         {/* Account */}
         <GroupCard title="Account">
           <Row icon={User2} label="User Settings" sublabel="Profile, alerts, and integrations" to="/user-settings" accent="text-primary" />
@@ -365,12 +357,6 @@ export default function Settings() {
         <button className="w-full py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
           {t('security.signOut', undefined, 'Sign Out')}
         </button>
-
-        {/* Danger zone — permanent account + data deletion */}
-        <div className="pt-2">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1 mb-2">Danger zone</p>
-          <DeleteAccountButton />
-        </div>
       </div>
 
       <BiometricAuth

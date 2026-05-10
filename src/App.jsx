@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -79,9 +78,6 @@ import DeckBuilder from './pages/DeckBuilder';
 import Guilds from './pages/Guilds';
 import About from './pages/About';
 import AppStore from './pages/AppStore';
-import JackieDevLab from './pages/JackieDevLab';
-import CardScanner from './pages/CardScanner';
-import IntegrationHub from './pages/IntegrationHub';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -183,9 +179,6 @@ const AuthenticatedApp = () => {
         <Route path="/guilds" element={<Guilds />} />
         <Route path="/about" element={<About />} />
         <Route path="/app-store" element={<AppStore />} />
-        <Route path="/dev-lab" element={<JackieDevLab />} />
-        <Route path="/card-scanner" element={<CardScanner />} />
-        <Route path="/integrations" element={<IntegrationHub />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
@@ -194,25 +187,6 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-  // Mobile-native: sync the Tailwind `dark` class on <html> with the OS-level
-  // `prefers-color-scheme` media query. We only auto-apply when the user
-  // hasn't explicitly chosen a color mode (preserving ThemeContext choice).
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => {
-      let userPref = null;
-      try { userPref = JSON.parse(localStorage.getItem('vse_colorMode')); } catch { /* ignore */ }
-      const isDark = userPref ? userPref === 'dark' : mq.matches;
-      document.documentElement.classList.toggle('dark', isDark);
-    };
-    apply();
-    mq.addEventListener?.('change', apply);
-    window.addEventListener('storage', apply);
-    return () => {
-      mq.removeEventListener?.('change', apply);
-      window.removeEventListener('storage', apply);
-    };
-  }, []);
 
   return (
     <ThemeProvider>

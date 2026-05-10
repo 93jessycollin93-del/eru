@@ -4,7 +4,6 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { useDashboardEvents } from '@/context/DashboardEventsContext';
 import { getTelegramAccount } from '@/lib/telegramConnector';
-import MobileSelect from '@/components/mobile/MobileSelect';
 
 export default function AlertManager() {
   const [alerts, setAlerts] = useState([]);
@@ -197,32 +196,33 @@ export default function AlertManager() {
               Link Telegram in your account settings to receive price alerts away from the dashboard.
             </div>
           )}
-          <MobileSelect
+          <select
             value={formData.asset_symbol}
-            onChange={(v) => setFormData({ ...formData, asset_symbol: v })}
-            placeholder="Select a holding"
-            title="Choose holding"
-            options={[...new Set(holdings.map((h) => h.token_symbol).filter(Boolean))].map((s) => ({ value: s, label: s }))}
-          />
+            onChange={e => setFormData({ ...formData, asset_symbol: e.target.value })}
+            className="w-full px-3 py-2 bg-card border border-border rounded text-xs text-foreground"
+          >
+            <option value="">Select a holding</option>
+            {[...new Set(holdings.map((holding) => holding.token_symbol).filter(Boolean))].map((symbol) => (
+              <option key={symbol} value={symbol}>{symbol}</option>
+            ))}
+          </select>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <MobileSelect
+            <select
               value={formData.trigger_basis}
-              onChange={(v) => setFormData({ ...formData, trigger_basis: v })}
-              title="Trigger basis"
-              options={[
-                { value: 'price', label: 'Price level' },
-                { value: 'percent_change', label: '24h % change' },
-              ]}
-            />
-            <MobileSelect
+              onChange={e => setFormData({ ...formData, trigger_basis: e.target.value })}
+              className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground"
+            >
+              <option value="price">Price level</option>
+              <option value="percent_change">24h % change</option>
+            </select>
+            <select
               value={formData.alert_type}
-              onChange={(v) => setFormData({ ...formData, alert_type: v })}
-              title="Alert direction"
-              options={[
-                { value: 'above', label: 'Above' },
-                { value: 'below', label: 'Below' },
-              ]}
-            />
+              onChange={e => setFormData({ ...formData, alert_type: e.target.value })}
+              className="px-3 py-2 bg-card border border-border rounded text-xs text-foreground"
+            >
+              <option value="above">Above</option>
+              <option value="below">Below</option>
+            </select>
             {formData.trigger_basis === 'price' ? (
               <input
                 type="number"

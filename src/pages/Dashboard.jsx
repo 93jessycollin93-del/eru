@@ -27,27 +27,12 @@ import InstalledModulesRenderer from '../components/appstore/InstalledModulesRen
 import { useFeatureTracking } from '../hooks/useFeatureTracking';
 import { useRealPrices } from '../hooks/useRealPrices';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
-import PullToRefresh from '../components/mobile/PullToRefresh';
-import TelegramRevenuePanel from '../components/dashboard/TelegramRevenuePanel';
-import TelegramKnowledgeGapPanel from '../components/dashboard/TelegramKnowledgeGapPanel';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
   const { t } = useLanguage();
   const { prices } = useRealPrices();
   const { data: alerts } = useRealtimeEntityList('PriceAlert', { sort: '-created_date', limit: 50 });
   const { data: notifications } = useRealtimeEntityList('AppNotification', { sort: '-created_date', limit: 50 });
-  const { data: telegramBots } = useRealtimeEntityList('TelegramBot', { sort: '-updated_date', limit: 100 });
-  const { data: telegramLogs } = useRealtimeEntityList('TelegramBotLog', { sort: '-created_date', limit: 200 });
-  const { data: topupOrders } = useRealtimeEntityList('IntegrationTopupOrder', { sort: '-created_date', limit: 200 });
-  const { data: telegramKnowledgeGaps } = useRealtimeEntityList('TelegramKnowledgeGap', { sort: '-created_date', limit: 100 });
-
-  // Pull-to-refresh: brief await so the spinner is visible, then dispatch a
-  // global "refresh" event other widgets can listen to. The live websocket
-  // hook keeps streaming on its own.
-  const handleRefresh = async () => {
-    window.dispatchEvent(new CustomEvent('app:refresh', { detail: { source: 'dashboard' } }));
-    await new Promise((r) => setTimeout(r, 400));
-  };
 
   const portfolioData = useMemo(() => ({
     totalBalance: 15250.50,
@@ -65,14 +50,7 @@ export default function Dashboard() {
 
   return (
     <DashboardEventsProvider>
-      <PullToRefresh onRefresh={handleRefresh}>
-      <div
-        className="flex flex-col min-h-screen bg-background pb-24 md:pb-8"
-        style={{
-          paddingLeft: 'env(safe-area-inset-left, 0px)',
-          paddingRight: 'env(safe-area-inset-right, 0px)',
-        }}
-      >
+      <div className="flex flex-col min-h-screen bg-background pb-24 md:pb-8">
         <div className="px-4 py-3 border-b border-border bg-card/80 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">{t('dashboard.title', undefined, 'Dashboard')}</h2>
           <ExportButton appData={appData} />
@@ -114,8 +92,6 @@ export default function Dashboard() {
                 </div>
               </div>
             }
-            telegramRevenue={<TelegramRevenuePanel bots={telegramBots || []} orders={topupOrders || []} logs={telegramLogs || []} />}
-            knowledgeGaps={<TelegramKnowledgeGapPanel gaps={telegramKnowledgeGaps || []} bots={telegramBots || []} />}
           />
           <WidgetLibrary prices={prices} sections={['market-pins', 'news-feed', 'ai-insights', 'dashboard-actions']} />
           <InstalledModulesRenderer />
@@ -127,7 +103,6 @@ export default function Dashboard() {
           <FinanceModule />
         </div>
       </div>
-      </PullToRefresh>
     </DashboardEventsProvider>
   );
 }

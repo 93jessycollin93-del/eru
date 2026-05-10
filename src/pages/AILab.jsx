@@ -36,7 +36,6 @@ import KnowledgeBaseManager from '../components/ailab/KnowledgeBaseManager';
 import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
 import { runRegressionSuite } from '../components/ailab/regressionTesting';
 import { base44 } from '@/api/base44Client';
-import MobileSelect from '../components/mobile/MobileSelect';
 
 const ROLES = [
   { id: 'assistant',   label: 'Assistant',    icon: '🤖', desc: 'General help & answers' },
@@ -298,13 +297,7 @@ export default function AILab() {
   ];
 
   return (
-    <div
-      className="flex flex-col min-h-screen bg-background pb-20"
-      style={{
-        paddingLeft: 'env(safe-area-inset-left, 0px)',
-        paddingRight: 'env(safe-area-inset-right, 0px)',
-      }}
-    >
+    <div className="flex flex-col min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border">
         <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -343,51 +336,41 @@ export default function AILab() {
                     className="flex-1 bg-transparent text-xs outline-none text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
-                <MobileSelect
-                  value={roleFilter}
-                  onChange={setRoleFilter}
-                  title="Filter by role"
-                  options={[
-                    { value: 'all', label: 'All roles' },
-                    ...ROLES.map((role) => ({ value: role.id, label: role.label })),
-                  ]}
-                />
-                <MobileSelect
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  title="Filter by status"
-                  options={[
-                    { value: 'all', label: 'All statuses' },
-                    { value: 'active', label: 'Active' },
-                    { value: 'paused', label: 'Paused' },
-                  ]}
-                />
-                <MobileSelect
-                  value={sortBy}
-                  onChange={setSortBy}
-                  title="Sort by"
-                  options={[
-                    { value: 'newest', label: 'Newest' },
-                    { value: 'name', label: 'Name' },
-                    { value: 'role', label: 'Role' },
-                    { value: 'level', label: 'Level' },
-                    { value: 'status', label: 'Status' },
-                  ]}
-                />
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                  <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-full bg-transparent text-xs outline-none text-foreground">
+                    <option value="all">All roles</option>
+                    {ROLES.map((role) => <option key={role.id} value={role.id}>{role.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                  <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full bg-transparent text-xs outline-none text-foreground">
+                    <option value="all">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full bg-transparent text-xs outline-none text-foreground">
+                    <option value="newest">Newest</option>
+                    <option value="name">Name</option>
+                    <option value="role">Role</option>
+                    <option value="level">Level</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
               </div>
               <div className="flex gap-2 flex-col sm:flex-row">
-                <div className="sm:w-48">
-                  <MobileSelect
-                    value={levelFilter}
-                    onChange={setLevelFilter}
-                    title="Filter by level"
-                    options={[
-                      { value: 'all', label: 'All levels' },
-                      { value: '1-3', label: 'Level 1-3' },
-                      { value: '4-6', label: 'Level 4-6' },
-                      { value: '7+', label: 'Level 7+' },
-                    ]}
-                  />
+                <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs text-muted-foreground sm:w-48">
+                  <Filter className="w-3.5 h-3.5" />
+                  <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="w-full bg-transparent outline-none text-foreground">
+                    <option value="all">All levels</option>
+                    <option value="1-3">Level 1-3</option>
+                    <option value="4-6">Level 4-6</option>
+                    <option value="7+">Level 7+</option>
+                  </select>
                 </div>
                 <div className="flex items-center justify-between gap-3 flex-1 flex-wrap">
                   <button
@@ -401,20 +384,17 @@ export default function AILab() {
                 </div>
               </div>
               <div className="flex gap-2 flex-col sm:flex-row">
-                <div className="flex-1">
-                  <MobileSelect
-                    value={bulkAction}
-                    onChange={setBulkAction}
-                    title="Bulk action"
-                    options={[
-                      { value: 'publish', label: 'Publish selected' },
-                      { value: 'unpublish', label: 'Unpublish selected' },
-                      { value: 'activate', label: 'Set active' },
-                      { value: 'pause', label: 'Set paused' },
-                      { value: 'delete', label: 'Delete selected' },
-                    ]}
-                  />
-                </div>
+                <select
+                  value={bulkAction}
+                  onChange={(e) => setBulkAction(e.target.value)}
+                  className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs outline-none text-foreground"
+                >
+                  <option value="publish">Publish selected</option>
+                  <option value="unpublish">Unpublish selected</option>
+                  <option value="activate">Set active</option>
+                  <option value="pause">Set paused</option>
+                  <option value="delete">Delete selected</option>
+                </select>
                 <button
                   onClick={applyBulkAction}
                   disabled={selectedBotIds.length === 0}
@@ -586,25 +566,20 @@ export default function AILab() {
 
           <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
             <label className="text-xs text-muted-foreground">Prompt Template</label>
-            <MobileSelect
-              value={form.prompt_template_id || ''}
-              onChange={(value) => {
-                const selectedTemplate = promptTemplates.find((template) => template.id === value);
-                setForm((prev) => ({
-                  ...prev,
-                  prompt_template_id: value,
-                  prompt_template_name: selectedTemplate?.name || '',
-                  prompt_template_values: selectedTemplate
-                    ? Object.fromEntries((selectedTemplate.variables || []).map((item) => [item.key, item.default_value || '']))
-                    : {},
-                }));
-              }}
-              title="Prompt template"
-              options={[
-                { value: '', label: 'No prompt template' },
-                ...promptTemplates.map((template) => ({ value: template.id, label: template.name })),
-              ]}
-            />
+            <select value={form.prompt_template_id || ''} onChange={(e) => {
+              const selectedTemplate = promptTemplates.find((template) => template.id === e.target.value);
+              setForm((prev) => ({
+                ...prev,
+                prompt_template_id: e.target.value,
+                prompt_template_name: selectedTemplate?.name || '',
+                prompt_template_values: selectedTemplate
+                  ? Object.fromEntries((selectedTemplate.variables || []).map((item) => [item.key, item.default_value || '']))
+                  : {},
+              }));
+            }} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none">
+              <option value="">No prompt template</option>
+              {promptTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+            </select>
             {selectedPromptTemplate?.variables?.map((variable) => (
               <input
                 key={variable.key}

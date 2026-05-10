@@ -7,8 +7,6 @@ const DEFAULT_PANELS = [
   { id: 'collector-rewards', label: 'Collector Reward Status', visible: true },
   { id: 'active-bots', label: 'Active Bots', visible: true },
   { id: 'quick-stats', label: 'Quick Stats', visible: true },
-  { id: 'telegram-revenue', label: 'Telegram Revenue', visible: true },
-  { id: 'knowledge-gaps', label: 'Knowledge Gaps', visible: true },
 ];
 
 function loadPanels() {
@@ -52,7 +50,7 @@ function PanelCard({ panel, children, editing, onToggle, onDragStart, onDragOver
   );
 }
 
-export default function DashboardPanelManager({ collectorRewards, activeBots, quickStats, telegramRevenue, knowledgeGaps }) {
+export default function DashboardPanelManager({ collectorRewards, activeBots, quickStats }) {
   const [editing, setEditing] = useState(false);
   const [panels, setPanels] = useState(DEFAULT_PANELS);
   const [dragId, setDragId] = useState(null);
@@ -69,9 +67,7 @@ export default function DashboardPanelManager({ collectorRewards, activeBots, qu
     'collector-rewards': collectorRewards,
     'active-bots': activeBots,
     'quick-stats': quickStats,
-    'telegram-revenue': telegramRevenue,
-    'knowledge-gaps': knowledgeGaps,
-  }), [collectorRewards, activeBots, quickStats, telegramRevenue, knowledgeGaps]);
+  }), [collectorRewards, activeBots, quickStats]);
 
   const toggleVisibility = (id) => {
     setPanels((prev) => prev.map((panel) => panel.id === id ? { ...panel, visible: !panel.visible } : panel));

@@ -26,7 +26,7 @@ export default function TickerBar() {
   // here — it would create two competing sticky layers on small viewports.
   if (status === 'loading') {
     return (
-      <div id="app-ticker-bar" className="eru-skin-ticker-bar bg-card border-b border-border flex items-center gap-2 px-4 py-2">
+      <div id="app-ticker-bar" className="bg-card border-b border-border flex items-center gap-2 px-4 py-2">
         <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
         <span className="text-xs text-muted-foreground font-mono">Fetching live prices…</span>
       </div>
@@ -35,7 +35,7 @@ export default function TickerBar() {
 
   if (status === 'error' || prices.length === 0) {
     return (
-      <div id="app-ticker-bar" className="eru-skin-ticker-bar bg-card border-b border-border flex items-center gap-2 px-4 py-2">
+      <div id="app-ticker-bar" className="bg-card border-b border-border flex items-center gap-2 px-4 py-2">
         <WifiOff className="w-3 h-3 text-red-400" />
         <span className="text-xs text-red-400 font-mono">Market data unavailable — no data source connected</span>
       </div>
@@ -44,7 +44,7 @@ export default function TickerBar() {
 
   const items = [...prices, ...prices];
   return (
-    <div id="app-ticker-bar" className="eru-skin-ticker-bar bg-card border-b border-border overflow-hidden">
+    <div id="app-ticker-bar" className="bg-card border-b border-border overflow-hidden">
       <div className="flex ticker-track whitespace-nowrap">
         {items.map((p, i) => (
           <span key={i} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-mono">
