@@ -29,6 +29,7 @@ import { useRealPrices } from '../hooks/useRealPrices';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import PullToRefresh from '../components/mobile/PullToRefresh';
 import TelegramRevenuePanel from '../components/dashboard/TelegramRevenuePanel';
+import TelegramKnowledgeGapPanel from '../components/dashboard/TelegramKnowledgeGapPanel';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
   const { t } = useLanguage();
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const { data: telegramBots } = useRealtimeEntityList('TelegramBot', { sort: '-updated_date', limit: 100 });
   const { data: telegramLogs } = useRealtimeEntityList('TelegramBotLog', { sort: '-created_date', limit: 200 });
   const { data: topupOrders } = useRealtimeEntityList('IntegrationTopupOrder', { sort: '-created_date', limit: 200 });
+  const { data: telegramKnowledgeGaps } = useRealtimeEntityList('TelegramKnowledgeGap', { sort: '-created_date', limit: 100 });
 
   // Pull-to-refresh: brief await so the spinner is visible, then dispatch a
   // global "refresh" event other widgets can listen to. The live websocket
@@ -113,6 +115,7 @@ export default function Dashboard() {
               </div>
             }
             telegramRevenue={<TelegramRevenuePanel bots={telegramBots || []} orders={topupOrders || []} logs={telegramLogs || []} />}
+            knowledgeGaps={<TelegramKnowledgeGapPanel gaps={telegramKnowledgeGaps || []} bots={telegramBots || []} />}
           />
           <WidgetLibrary prices={prices} sections={['market-pins', 'news-feed', 'ai-insights', 'dashboard-actions']} />
           <InstalledModulesRenderer />
