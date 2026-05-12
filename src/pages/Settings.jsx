@@ -10,7 +10,6 @@ import SoundSettings from '../components/SoundSettings';
 import TelegramSettings from '../components/TelegramSettings';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
 import { useAuth } from '@/lib/AuthContext';
-import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 
 /**
  * Settings
@@ -220,7 +219,7 @@ function GroupCard({ title, children }) {
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 export default function Settings() {
-  const { lang, setLang, t } = useLanguage();
+  const t = (_key, _vars, fallback) => fallback || '';
   const { currentUser } = useAuth();
   const [sheet, setSheet] = useState(null);
   const [biometricOpen, setBiometricOpen] = useState(false);
@@ -265,26 +264,10 @@ export default function Settings() {
 
         {/* Language */}
         <section className="space-y-2">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1">{t('settings.language', undefined, 'Language')}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(LANGUAGES).map(([code, name]) => (
-              <button
-                key={code}
-                onClick={() => setLang(code)}
-                className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
-                  lang === code
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card hover:border-primary/30'
-                }`}>
-                {name}
-              </button>
-            ))}
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1">Language</p>
+          <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            Browser translation is now used instead of an in-app language switcher, so people can translate the app with their browser or Telegram environment.
           </div>
-          <Link to="/language-diagnostics" className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors text-xs">
-            <Globe className="w-3.5 h-3.5 text-primary" />
-            <span className="flex-1 text-left">{t('settings.translationDiagnostics', undefined, 'Translation diagnostics')}</span>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-          </Link>
         </section>
 
         {/* Security & Privacy */}

@@ -4,12 +4,8 @@ import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lig
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
-import { useLanguage } from '@/context/LanguageContext';
 
-// Labels are derived from translations via t('nav.<key>') in the component.
-// `labelKey` lets us swap copy when the user changes language without touching
-// the rest of the nav state. `fallback` is the English copy used when a locale
-// is missing the key.
+// Labels use built-in English fallback copy only; browser translation handles localization.
 const ALL_PAGES = [
   { id: 'home',         labelKey: 'nav.home',         fallback: 'Home',         icon: Home,          to: '/' },
   { id: 'jackie',       labelKey: 'nav.jackie',       fallback: 'Jackie',       icon: Bot,           to: '/jackie' },
@@ -80,7 +76,6 @@ const FLOATING_WIDGETS = [
 export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { t } = useLanguage();
   const clickerPos = prefs?.botChat;
   const isAttachedToClicker =
     !!clickerPos && clickerPos.x !== null && clickerPos.x !== undefined &&
@@ -174,10 +169,9 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     } catch {}
   }, []);
 
-  // Resolve translated labels — falls back to English when a locale is missing.
   const pinnedPages = ALL_PAGES
     .filter(p => pinned.includes(p.id))
-    .map(p => ({ ...p, label: t(p.labelKey, undefined, p.fallback) }));
+    .map(p => ({ ...p, label: p.fallback }));
   const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.id]?.visible);
   const navItems = [...pinnedPages, ...attachedWidgets];
 
@@ -372,8 +366,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 navigate('/');
               }
             }}
-            aria-label={t('nav.back', undefined, 'Go back')}
-            title={t('nav.back', undefined, 'Back')}
+            aria-label="Go back"
+            title="Back"
             className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border bg-secondary/60 text-muted-foreground transition-all hover:scale-110 hover:text-primary hover:border-primary/40 hover:bg-primary/10 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             <ArrowLeft className="w-3 h-3" />
@@ -547,11 +541,11 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             <button
               onClick={() => { playSound('click'); VIBRATE.click(); onClick(); }}
               className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
-              title={t('nav.create', undefined, 'Quick Actions')}
-              aria-label={t('nav.create', undefined, 'Quick Actions')}
+              title="Quick Actions"
+              aria-label="Quick Actions"
             >
               <Plus style={{ width: 18, height: 18 }} className={`transition-transform ${open ? 'rotate-45 text-primary' : ''}`} />
-              {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.create', undefined, 'Create')}</span>}
+              {!collapsed && <span className="text-[8px] font-medium leading-none">Create</span>}
             </button>
           )}
         />}
@@ -567,11 +561,11 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             }
           }}
           className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
-          title={t('nav.search', undefined, 'Search')}
-          aria-label={t('nav.search', undefined, 'Search')}
+          title="Search"
+          aria-label="Search"
         >
           <Search style={{ width: 18, height: 18 }} />
-          {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.search', undefined, 'Search')}</span>}
+          {!collapsed && <span className="text-[8px] font-medium leading-none">Search</span>}
         </button>}
       </div>
       </div>
