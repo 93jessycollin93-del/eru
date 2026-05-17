@@ -106,8 +106,27 @@ export default function BazarCheckoutDialog({ product, walletGold = 0, onClose, 
           </button>
         </div>
 
-        {/* Product summary — scrollable so the sticky action bar below is always reachable */}
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        {/* Actions — pinned at the top under the header so Pay/Cancel are always reachable */}
+        <div className="flex flex-shrink-0 gap-2 border-b border-border bg-card px-4 py-3">
+          <button onClick={onClose} className="flex-1 rounded-xl border border-border bg-secondary py-3 text-sm font-medium">
+            {result?.ok ? 'Close' : 'Cancel'}
+          </button>
+          {!result?.ok && (
+            <button
+              onClick={submit}
+              disabled={submitting || (method === 'wallet' && !canAffordWallet)}
+              className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {submitting ? (
+                <span className="inline-flex items-center justify-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing…</span>
+              ) : method === 'wallet' ? `Pay ${goldCost.toLocaleString()} GOLD` : `Pay $${Number(product.price_usd || 0).toFixed(2)}`}
+            </button>
+          )}
+        </div>
+
+        {/* Product summary — scrollable */}
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+             style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="rounded-xl border border-border bg-secondary/30 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -189,26 +208,6 @@ export default function BazarCheckoutDialog({ product, walletGold = 0, onClose, 
           )}
         </div>
 
-        {/* Actions — sticky bottom bar, always reachable on mobile (respects iOS safe-area) */}
-        <div
-          className="flex flex-shrink-0 gap-2 border-t border-border bg-card px-4 py-3"
-          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
-        >
-          <button onClick={onClose} className="flex-1 rounded-xl border border-border bg-secondary py-3 text-sm font-medium">
-            {result?.ok ? 'Close' : 'Cancel'}
-          </button>
-          {!result?.ok && (
-            <button
-              onClick={submit}
-              disabled={submitting || (method === 'wallet' && !canAffordWallet)}
-              className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-            >
-              {submitting ? (
-                <span className="inline-flex items-center justify-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing…</span>
-              ) : method === 'wallet' ? `Pay ${goldCost.toLocaleString()} GOLD` : `Pay $${Number(product.price_usd || 0).toFixed(2)}`}
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

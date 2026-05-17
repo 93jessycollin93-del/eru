@@ -1,0 +1,135 @@
+{
+  "name": "IntegrationProvider",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name, e.g. WhatsApp Business (Meta Cloud API)"
+    },
+    "providerKey": {
+      "type": "string",
+      "description": "Stable identifier, e.g. whatsapp_meta, twilio_whatsapp"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "messaging",
+        "payments",
+        "ai",
+        "dev",
+        "storage",
+        "commerce",
+        "data",
+        "security",
+        "cards_pricing",
+        "social",
+        "productivity",
+        "other"
+      ],
+      "default": "other"
+    },
+    "providerType": {
+      "type": "string",
+      "description": "Provider slug, e.g. meta_cloud, twilio, stripe, openai"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "not_connected",
+        "setup_required",
+        "needs_credentials",
+        "needs_webhook",
+        "needs_verification",
+        "source_offline",
+        "permission_missing",
+        "unsupported",
+        "disabled"
+      ],
+      "default": "not_connected"
+    },
+    "authType": {
+      "type": "string",
+      "enum": [
+        "oauth",
+        "api_key",
+        "bearer_token",
+        "webhook_secret",
+        "wallet",
+        "none"
+      ],
+      "default": "none"
+    },
+    "requiresWebhook": {
+      "type": "boolean",
+      "default": false
+    },
+    "requiresSecrets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "List of required secret names that must exist server-side"
+    },
+    "enables": {
+      "type": "string",
+      "description": "What this integration enables in ERU when connected"
+    },
+    "setupUrl": {
+      "type": "string"
+    },
+    "docsUrl": {
+      "type": "string"
+    },
+    "webhookUrl": {
+      "type": "string",
+      "description": "Public webhook URL ERU exposes for this provider, if any"
+    },
+    "lastVerifiedAt": {
+      "type": "string"
+    },
+    "lastError": {
+      "type": "string"
+    },
+    "enabledByRole": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "admin"
+    },
+    "productionReady": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "name",
+    "providerKey",
+    "category"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

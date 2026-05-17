@@ -6,51 +6,21 @@ import TelegramBotDashboard from '../components/telegram/TelegramBotDashboard';
 import SecurityAnalysis from '../components/SecurityAnalysis';
 
 const ALL_APPS = [
-  { id: 'hamster-kombat', name: 'Hamster Kombat', icon: '🐹', category: 'Games', stars: 4.8, users: '5.4M', desc: 'Tap-to-earn idle game inside Telegram', color: '#ff9800', pinned: true },
-  { id: 'notcoin', name: 'Notcoin', icon: '🪙', category: 'Games', stars: 4.7, users: '3.2M', desc: 'Viral tap game with token rewards', color: '#ffeb3b', pinned: true },
-  { id: 'catizen', name: 'Catizen', icon: '🐱', category: 'Games', stars: 4.8, users: '2.8M', desc: 'Cat-merging economy sim with daily missions', color: '#ff6b81', pinned: false },
-  { id: 'yescoin', name: 'Yescoin', icon: '🫰', category: 'Games', stars: 4.6, users: '2.4M', desc: 'Swipe-to-earn arcade gameplay loop', color: '#fbc02d', pinned: false },
-  { id: 'pixelverse', name: 'PixelTap', icon: '🤖', category: 'Games', stars: 4.5, users: '1.9M', desc: 'Fast tap battler with PvP energy', color: '#7c4dff', pinned: false },
-  { id: 'memefi', name: 'MemeFi', icon: '🗡️', category: 'Games', stars: 4.6, users: '1.6M', desc: 'Boss-fight clicker with guild energy', color: '#ab47bc', pinned: false },
-  { id: 'tomarket', name: 'Tomarket', icon: '🍅', category: 'Games', stars: 4.5, users: '1.5M', desc: 'Reward game hub with missions and drops', color: '#ef5350', pinned: false },
-  { id: 'blum', name: 'Blum', icon: '🌸', category: 'Games', stars: 4.7, users: '2.1M', desc: 'Trading-style mini missions and farming', color: '#00c853', pinned: false },
-  { id: 'major', name: 'Major', icon: '🎖️', category: 'Games', stars: 4.4, users: '980K', desc: 'XP ladder and daily quests for Telegram users', color: '#42a5f5', pinned: false },
-  { id: 'pocketfi', name: 'PocketFi', icon: '💼', category: 'Games', stars: 4.3, users: '760K', desc: 'Wallet-based rewards and light gameplay', color: '#26c6da', pinned: false },
-  { id: 'farm-frens', name: 'Farm Frens', icon: '🚜', category: 'Games', stars: 4.4, users: '640K', desc: 'Casual farming loop built for short sessions', color: '#66bb6a', pinned: false },
-  { id: 'boinkers', name: 'Boinkers', icon: '🐷', category: 'Games', stars: 4.2, users: '520K', desc: 'Chaotic clicker humor game with upgrades', color: '#ec407a', pinned: false },
-  { id: 'banana', name: 'Banana', icon: '🍌', category: 'Games', stars: 4.1, users: '410K', desc: 'Simple collection game with daily rewards', color: '#fdd835', pinned: false },
-  { id: 'iceberg', name: 'Iceberg', icon: '🧊', category: 'Games', stars: 4.0, users: '390K', desc: 'Puzzle-style progression with streak bonuses', color: '#29b6f6', pinned: false },
-  { id: 'rocket-run', name: 'Rocket Run', icon: '🚀', category: 'Arcade', stars: 4.4, users: '340K', desc: 'One-thumb endless runner for Telegram', color: '#5c6bc0', pinned: false },
-  { id: 'neon-drift', name: 'Neon Drift', icon: '🛸', category: 'Arcade', stars: 4.3, users: '280K', desc: 'Arcade dodging and score chasing', color: '#26a69a', pinned: false },
-  { id: 'chess-club', name: 'Chess Club', icon: '♟️', category: 'Strategy', stars: 4.7, users: '860K', desc: 'Play quick chess matches in Telegram', color: '#8d6e63', pinned: false },
-  { id: 'battle-cards', name: 'Battle Cards', icon: '🃏', category: 'Strategy', stars: 4.4, users: '470K', desc: 'Deck battles and ranked mini duels', color: '#3949ab', pinned: false },
-  { id: 'word-blast', name: 'Word Blast', icon: '🔤', category: 'Puzzle', stars: 4.5, users: '610K', desc: 'Daily word puzzles and challenge ladders', color: '#8e24aa', pinned: false },
-  { id: 'sudoku-bot', name: 'Sudoku Bot', icon: '🔢', category: 'Puzzle', stars: 4.3, users: '430K', desc: 'Telegram-first sudoku challenge board', color: '#546e7a', pinned: false },
-  { id: 'merge-monsters', name: 'Merge Monsters', icon: '👾', category: 'Casual', stars: 4.2, users: '300K', desc: 'Merge, evolve, and collect playful creatures', color: '#7e57c2', pinned: false },
-  { id: 'tiny-tycoon', name: 'Tiny Tycoon', icon: '🏙️', category: 'Simulation', stars: 4.3, users: '250K', desc: 'Idle city builder for quick Telegram check-ins', color: '#26a69a', pinned: false },
-  { id: 'pool-duel', name: 'Pool Duel', icon: '🎱', category: 'Sports', stars: 4.2, users: '220K', desc: 'Fast 1v1 table play in mini sessions', color: '#2e7d32', pinned: false },
-  { id: 'penalty-hero', name: 'Penalty Hero', icon: '⚽', category: 'Sports', stars: 4.1, users: '210K', desc: 'Quick football penalty rounds and tournaments', color: '#43a047', pinned: false },
-  { id: 'quiz-arena', name: 'Quiz Arena', icon: '❓', category: 'Trivia', stars: 4.4, users: '355K', desc: 'Head-to-head trivia with daily leaderboards', color: '#fb8c00', pinned: false },
-  { id: 'geo-dash', name: 'Geo Dash', icon: '🗺️', category: 'Trivia', stars: 4.0, users: '180K', desc: 'Guess places and cities from visual clues', color: '#00897b', pinned: false },
-  { id: 'music-guess', name: 'Music Guess', icon: '🎵', category: 'Trivia', stars: 4.1, users: '190K', desc: 'Short music clips and social score battles', color: '#d81b60', pinned: false },
-  { id: 'stack-tower', name: 'Stack Tower', icon: '🏗️', category: 'Arcade', stars: 4.0, users: '160K', desc: 'Precision stacking challenge for short play', color: '#6d4c41', pinned: false },
-  { id: 'color-rush', name: 'Color Rush', icon: '🌈', category: 'Casual', stars: 4.1, users: '170K', desc: 'Reaction-based color taps and streaks', color: '#ff7043', pinned: false },
-  { id: '2048-clash', name: '2048 Clash', icon: '🔲', category: 'Puzzle', stars: 4.2, users: '205K', desc: 'Classic merge puzzle with versus rounds', color: '#ffa726', pinned: false },
-  { id: 'space-miner', name: 'Space Miner', icon: '⛏️', category: 'Simulation', stars: 4.0, users: '145K', desc: 'Idle resource collection and ship upgrades', color: '#90caf9', pinned: false },
-  { id: 'lucky-spin', name: 'Lucky Spin', icon: '🎡', category: 'Casual', stars: 4.0, users: '230K', desc: 'Spin, collect, and complete event boards', color: '#ffca28', pinned: false },
-  { id: 'wallet', name: 'TON Wallet', icon: '💎', category: 'Finance', stars: 4.9, users: '2.1M', desc: 'Send & receive TON instantly', color: '#0088cc', pinned: true },
-  { id: 'nft', name: 'NFT Marketplace', icon: '🖼️', category: 'Trading', stars: 4.7, users: '890K', desc: 'Buy, sell & discover NFTs', color: '#7c4dff', pinned: true },
-  { id: 'dedust', name: 'DeDust Swap', icon: '🔄', category: 'Finance', stars: 4.6, users: '430K', desc: 'Decentralized token swaps', color: '#00e676', pinned: false },
-  { id: 'staking', name: 'TON Staking', icon: '📈', category: 'Finance', stars: 4.5, users: '310K', desc: 'Stake TON & earn passive income', color: '#2196f3', pinned: false },
-  { id: 'fragment', name: 'Fragment', icon: '🔤', category: 'Social', stars: 4.4, users: '720K', desc: 'Buy & sell Telegram usernames', color: '#e91e63', pinned: false },
-  { id: 'news', name: 'CryptoPulse', icon: '📰', category: 'News', stars: 4.3, users: '180K', desc: 'Live crypto news & alerts', color: '#ff5252', pinned: false },
-  { id: 'botfather-pro', name: 'BotFather Pro', icon: '🤖', category: 'Tools', stars: 4.6, users: '950K', desc: 'Build & manage Telegram bots', color: '#607d8b', pinned: false },
-  { id: 'bridge', name: 'TON Bridge', icon: '🌉', category: 'Finance', stars: 4.4, users: '260K', desc: 'Cross-chain asset transfers', color: '#00bcd4', pinned: false },
-  { id: 'vote', name: 'CoinVote', icon: '🗳️', category: 'Tools', stars: 4.2, users: '95K', desc: 'Community polls & governance', color: '#9c27b0', pinned: false },
-  { id: 'getgems', name: 'Getgems', icon: '🎨', category: 'Trading', stars: 4.8, users: '1.1M', desc: 'Premium NFT gallery & trading', color: '#ff7043', pinned: false },
+  { id: 'wallet',    name: 'TON Wallet',       icon: '💎', category: 'Finance',   stars: 4.9, users: '2.1M', desc: 'Send & receive TON instantly',       color: '#0088cc', pinned: true  },
+  { id: 'nft',       name: 'NFT Marketplace',  icon: '🖼️', category: 'Trading',   stars: 4.7, users: '890K', desc: 'Buy, sell & discover NFTs',          color: '#7c4dff', pinned: true  },
+  { id: 'games',     name: 'Hamster Kombat',   icon: '🐹', category: 'Games',     stars: 4.8, users: '5.4M', desc: 'Tap to earn crypto rewards',         color: '#ff9800', pinned: true  },
+  { id: 'trade',     name: 'DeDust Swap',      icon: '🔄', category: 'Finance',   stars: 4.6, users: '430K', desc: 'Decentralized token swaps',          color: '#00e676', pinned: false },
+  { id: 'staking',   name: 'TON Staking',      icon: '📈', category: 'Finance',   stars: 4.5, users: '310K', desc: 'Stake TON & earn passive income',    color: '#2196f3', pinned: false },
+  { id: 'social',    name: 'Fragment',          icon: '🔤', category: 'Social',    stars: 4.4, users: '720K', desc: 'Buy & sell Telegram usernames',      color: '#e91e63', pinned: false },
+  { id: 'news',      name: 'CryptoPulse',      icon: '📰', category: 'News',      stars: 4.3, users: '180K', desc: 'Live crypto news & alerts',          color: '#ff5252', pinned: false },
+  { id: 'bots',      name: 'BotFather Pro',    icon: '🤖', category: 'Tools',     stars: 4.6, users: '950K', desc: 'Build & manage Telegram bots',       color: '#607d8b', pinned: false },
+  { id: 'earn',      name: 'Notcoin',          icon: '🪙', category: 'Games',     stars: 4.7, users: '3.2M', desc: 'Click & earn NOT tokens',            color: '#ffeb3b', pinned: false },
+  { id: 'bridge',    name: 'TON Bridge',       icon: '🌉', category: 'Finance',   stars: 4.4, users: '260K', desc: 'Cross-chain asset transfers',        color: '#00bcd4', pinned: false },
+  { id: 'vote',      name: 'CoinVote',         icon: '🗳️', category: 'Tools',     stars: 4.2, users: '95K',  desc: 'Community polls & governance',      color: '#9c27b0', pinned: false },
+  { id: 'art',       name: 'Getgems',          icon: '🎨', category: 'Trading',   stars: 4.8, users: '1.1M', desc: 'Premium NFT gallery & trading',     color: '#ff7043', pinned: false },
 ];
 
-const CATEGORIES = ['All', 'Games', 'Arcade', 'Puzzle', 'Strategy', 'Casual', 'Simulation', 'Sports', 'Trivia', 'Finance', 'Trading', 'Social', 'News', 'Tools'];
+const CATEGORIES = ['All', 'Finance', 'Games', 'Trading', 'Social', 'News', 'Tools'];
 
 export default function TelegramApps() {
   const [tab, setTab] = useState('integration');
@@ -112,7 +82,7 @@ export default function TelegramApps() {
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground">{openApp.desc}. Built for quick Telegram sessions, mobile-friendly launch flows, and mini app style interaction.</p>
+        <p className="text-sm text-muted-foreground">{openApp.desc}. Full Telegram Mini App integration with seamless in-chat experience and TON payments support.</p>
 
         <div className="flex gap-3">
           <button className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2">
@@ -144,7 +114,7 @@ export default function TelegramApps() {
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <span className="text-xl">✈️</span> Telegram Hub
         </h2>
-        <p className="text-xs text-muted-foreground">Integration, Telegram game apps, and a large mini-game catalog for mobile-first discovery</p>
+        <p className="text-xs text-muted-foreground">Integration, mini app store, and Telegram-first deployment hub</p>
       </div>
 
       {/* Tabs */}
@@ -235,17 +205,6 @@ export default function TelegramApps() {
       {/* DISCOVER / STORE */}
       {tab === 'store' && (
         <div className="px-4 py-4 space-y-3">
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Telegram Games Catalog</p>
-                <p className="mt-1 text-xs text-muted-foreground">Browse tap games, arcade titles, puzzles, trivia, sports, and strategy mini apps built for fast Telegram sessions.</p>
-              </div>
-              <div className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold text-primary">
-                {apps.filter(app => ['Games', 'Arcade', 'Puzzle', 'Strategy', 'Casual', 'Simulation', 'Sports', 'Trivia'].includes(app.category)).length}+ games
-              </div>
-            </div>
-          </div>
           <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2">
             <Search className="w-4 h-4 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search mini apps..."

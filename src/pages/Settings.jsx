@@ -9,7 +9,12 @@ import BiometricAuth from '../components/BiometricAuth';
 import SoundSettings from '../components/SoundSettings';
 import TelegramSettings from '../components/TelegramSettings';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
+import DeleteAccountButton from '@/components/settings/DeleteAccountButton';
+import ZeroFakeDataPolicyCard from '@/components/pricing/ZeroFakeDataPolicyCard';
+import ZeroFakeDataModeToggle from '@/components/pricing/ZeroFakeDataModeToggle';
+import { getZeroFakeDataMode } from '@/lib/zeroFakeData';
 import { useAuth } from '@/lib/AuthContext';
+import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 
 /**
  * Settings
@@ -219,7 +224,7 @@ function GroupCard({ title, children }) {
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 export default function Settings() {
-  const t = (_key, _vars, fallback) => fallback || '';
+  const { lang, setLang, t } = useLanguage();
   const { currentUser } = useAuth();
   const [sheet, setSheet] = useState(null);
   const [biometricOpen, setBiometricOpen] = useState(false);
@@ -243,6 +248,10 @@ export default function Settings() {
       </div>
 
       <div className="px-4 py-4 space-y-5 max-w-2xl mx-auto w-full">
+        {/* Pricing trust policy — visible to every user */}
+        <ZeroFakeDataPolicyCard mode={getZeroFakeDataMode()} expand />
+        <ZeroFakeDataModeToggle user={currentUser} />
+
         {/* Account */}
         <GroupCard title="Account">
           <Row icon={User2} label="User Settings" sublabel="Profile, alerts, and integrations" to="/user-settings" accent="text-primary" />
@@ -264,10 +273,26 @@ export default function Settings() {
 
         {/* Language */}
         <section className="space-y-2">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1">Language</p>
-          <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            Browser translation is now used instead of an in-app language switcher, so people can translate the app with their browser or Telegram environment.
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1">{t('settings.language', undefined, 'Language')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(LANGUAGES).map(([code, name]) => (
+              <button
+                key={code}
+                onClick={() => setLang(code)}
+                className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                  lang === code
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card hover:border-primary/30'
+                }`}>
+                {name}
+              </button>
+            ))}
           </div>
+          <Link to="/language-diagnostics" className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors text-xs">
+            <Globe className="w-3.5 h-3.5 text-primary" />
+            <span className="flex-1 text-left">{t('settings.translationDiagnostics', undefined, 'Translation diagnostics')}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+          </Link>
         </section>
 
         {/* Security & Privacy */}
@@ -340,6 +365,12 @@ export default function Settings() {
         <button className="w-full py-3 text-red-400 text-sm font-medium border border-red-400/20 rounded-xl hover:bg-red-400/5 transition-colors">
           {t('security.signOut', undefined, 'Sign Out')}
         </button>
+
+        {/* Danger zone — permanent account + data deletion */}
+        <div className="pt-2">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-semibold px-1 mb-2">Danger zone</p>
+          <DeleteAccountButton />
+        </div>
       </div>
 
       <BiometricAuth

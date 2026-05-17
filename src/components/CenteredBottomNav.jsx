@@ -1,11 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2, ScanLine, Plug } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
+import { useLanguage } from '@/context/LanguageContext';
 
-// Labels use built-in English fallback copy only; browser translation handles localization.
+// Labels are derived from translations via t('nav.<key>') in the component.
+// `labelKey` lets us swap copy when the user changes language without touching
+// the rest of the nav state. `fallback` is the English copy used when a locale
+// is missing the key.
 const ALL_PAGES = [
   { id: 'home',         labelKey: 'nav.home',         fallback: 'Home',         icon: Home,          to: '/' },
   { id: 'jackie',       labelKey: 'nav.jackie',       fallback: 'Jackie',       icon: Bot,           to: '/jackie' },
@@ -21,6 +25,9 @@ const ALL_PAGES = [
   { id: 'reputation',   labelKey: 'nav.reputation',   fallback: 'Reputation',   icon: Award,         to: '/reputation' },
   { id: 'tgapps',       labelKey: 'nav.tgapps',       fallback: 'TG Apps',      icon: Send,          to: '/tgapps' },
   { id: 'ailab',        labelKey: 'nav.ailab',        fallback: 'AI Lab',       icon: FlaskConical,  to: '/ailab' },
+  { id: 'devlab',       labelKey: 'nav.devlab',       fallback: 'Dev Lab',      icon: Code2,         to: '/dev-lab' },
+  { id: 'cardscan',     labelKey: 'nav.cardscan',     fallback: 'Card Scan',    icon: ScanLine,      to: '/card-scanner' },
+  { id: 'integrations', labelKey: 'nav.integrations', fallback: 'Connections',  icon: Plug,          to: '/integrations' },
   { id: 'botmarket',    labelKey: 'nav.botmarket',    fallback: 'Bot Market',   icon: Cpu,           to: '/bot-marketplace' },
   { id: 'botfarm',      labelKey: 'nav.botfarm',      fallback: 'Bot Farm',     icon: Factory,       to: '/bot-farm' },
   { id: 'apikeys',      labelKey: 'nav.apikeys',      fallback: 'API Keys',     icon: KeyRound,      to: '/apikeys' },
@@ -76,6 +83,7 @@ const FLOATING_WIDGETS = [
 export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const clickerPos = prefs?.botChat;
   const isAttachedToClicker =
     !!clickerPos && clickerPos.x !== null && clickerPos.x !== undefined &&
@@ -108,9 +116,69 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   });
   const collapsed = navMode === 'icons'; // preserve icon-only padding/label logic
   const isControlsOnly = navMode === 'controls';
+  // Free-float position: x AND y are user-draggable. Defaults to null →
+  // anchored just below the ticker on first paint. Once the user drags,
+  // we store viewport coords (in px) and switch to fixed positioning.
   const [pos, setPos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: 12 }; } catch { return { x: null, y: 12 }; }
+    try { return JSON.parse(localStorage.getItem(POS_KEY)) || { x: null, y: null }; } catch { return { x: null, y: null }; }
   });
+  // Measured ticker height — used as the default top offset so the nav
+  // never overlaps the ticker regardless of its current rendered height.
+  const [tickerOffset, setTickerOffset] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const el = document.getElementById(TICKER_BAR_ID);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setTickerOffset(Math.ceil(rect.bottom));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const id = window.setInterval(measure, 1000); // catch font/data-driven height changes
+    return () => { window.removeEventListener('resize', measure); window.clearInterval(id); };
+  }, []);
+
+  // Safety net: clamp saved x/y inside the viewport AND below the ticker
+  // so the nav can never collide with the ticker on mount/resize.
+  useEffect(() => {
+    const clamp = () => {
+      const navEl = navRef.current;
+      if (!navEl) return;
+      const w = navEl.offsetWidth;
+      const h = navEl.offsetHeight;
+      const tickerEl = document.getElementById(TICKER_BAR_ID);
+      const minY = (tickerEl ? Math.ceil(tickerEl.getBoundingClientRect().bottom) : 0) + 4;
+      const maxX = Math.max(0, window.innerWidth - w - 8);
+      const maxY = Math.max(minY, window.innerHeight - h - 8);
+      setPos((prev) => {
+        if (prev?.x == null && prev?.y == null) return prev;
+        const nx = prev.x == null ? null : Math.max(8, Math.min(prev.x, maxX));
+        const ny = prev.y == null ? null : Math.max(minY, Math.min(prev.y, maxY));
+        if (nx === prev.x && ny === prev.y) return prev;
+        const next = { x: nx, y: ny };
+        try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
+    clamp();
+    window.addEventListener('resize', clamp);
+    return () => window.removeEventListener('resize', clamp);
+  }, []);
+
+  // Reset to default snap (single horizontal row under the ticker).
+  // Restores position, orientation, and row count to the canonical layout
+  // shown in the design reference — one tap to recover from any drift.
+  const resetPosition = useCallback(() => {
+    const nextPos = { x: null, y: null };
+    setPos(nextPos);
+    setOrientation('horizontal');
+    setRows(1);
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify(nextPos));
+      localStorage.setItem(ORIENTATION_KEY, 'horizontal');
+      localStorage.setItem(ROWS_KEY, JSON.stringify(1));
+    } catch {}
+  }, []);
   const [floatingWidgets, setFloatingWidgets] = useState(() => {
     try {
       return {
@@ -169,9 +237,10 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     } catch {}
   }, []);
 
+  // Resolve translated labels — falls back to English when a locale is missing.
   const pinnedPages = ALL_PAGES
     .filter(p => pinned.includes(p.id))
-    .map(p => ({ ...p, label: p.fallback }));
+    .map(p => ({ ...p, label: t(p.labelKey, undefined, p.fallback) }));
   const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.id]?.visible);
   const navItems = [...pinnedPages, ...attachedWidgets];
 
@@ -280,10 +349,18 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
       VIBRATE.click();
     }
     didDrag.current = true;
-    // Nav is sticky below the ticker — Y is pinned. Only X is user-adjustable.
+    // Free-float: drag on both X and Y, clamped to viewport with an 8px gutter.
+    const navEl = navRef.current;
+    const w = navEl.offsetWidth;
+    const h = navEl.offsetHeight;
     const x = e.clientX - dragOffset.current.x;
-    const maxX = window.innerWidth - navRef.current.offsetWidth;
-    const newPos = { x: Math.max(0, Math.min(x, maxX)), y: 0 };
+    const y = e.clientY - dragOffset.current.y;
+    const maxX = Math.max(0, window.innerWidth - w - 8);
+    const maxY = Math.max(0, window.innerHeight - h - 8);
+    const newPos = {
+      x: Math.max(8, Math.min(x, maxX)),
+      y: Math.max(8, Math.min(y, maxY)),
+    };
     setPos(newPos);
     localStorage.setItem(POS_KEY, JSON.stringify(newPos));
   }, [clearHold]);
@@ -318,27 +395,41 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     }
   };
 
-  // Layout owns the sticky behavior of the ticker+nav shell. This wrapper
-  // is now a normal flow element so both pieces move together on scroll
-  // without competing sticky layers.
-  const outerStyle = {
-    width: '100%',
-    pointerEvents: 'none',
-  };
-  const innerStyle = {
-    marginLeft: pos.x !== null ? pos.x : 'auto',
-    marginRight: pos.x !== null ? 0 : 'auto',
-    width: 'fit-content',
-    pointerEvents: 'auto',
-    touchAction: 'none',
-    userSelect: 'none',
-  };
+  // Free-floating: nav is absolutely positioned inside the Layout's
+  // full-viewport overlay. Default (x/y null) anchors bottom-center; once
+  // the user drags, we pin it to the dragged coords. Pointer events are
+  // re-enabled only on the nav itself so the rest of the overlay stays
+  // click-through.
+  const isFloating = pos?.x != null && pos?.y != null;
+  const innerStyle = isFloating
+    ? {
+        position: 'absolute',
+        left: pos.x,
+        top: pos.y,
+        width: 'fit-content',
+        pointerEvents: 'auto',
+        touchAction: 'none',
+        userSelect: 'none',
+      }
+    : {
+        // Default snap: directly under the live ticker bar. Uses the
+        // measured ticker height so it never collides regardless of the
+        // ticker's current rendered size.
+        position: 'absolute',
+        left: '50%',
+        top: (tickerOffset || 48) + 6,
+        transform: 'translateX(-50%)',
+        width: 'fit-content',
+        pointerEvents: 'auto',
+        touchAction: 'none',
+        userSelect: 'none',
+      };
 
   return (
     <>
-      {/* Sticky outer wrapper: follows the user below the ticker on every
-          page. Inner nav keeps its existing styling + drag handlers. */}
-      <div style={outerStyle}>
+      {/* Free-floating nav: positioned absolutely inside the Layout's
+          full-viewport overlay so the user can drag it anywhere on screen
+          (both X and Y). Default state anchors bottom-center. */}
       <div
         ref={navRef}
         style={innerStyle}
@@ -348,15 +439,22 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         onPointerCancel={onPointerUp}
         onClickCapture={onClickCapture}
         title={lockedToTicker ? '' : 'Press and hold to move'}
-        className={`bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
+        className={`eru-skin-nav-floating bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         {/* Handle strip: always flex-row so the icon grid can start right
             beneath it instead of leaving an empty column beside a vertical
             stack of handle buttons. */}
-        <div className={`flex flex-row items-center gap-1 ${orientation === 'vertical' ? 'pb-1 justify-start' : 'pr-1'} text-muted-foreground/40`}>
+        {/* Compacted handle strip — micro-controls (icons ~10px, gap ~2px,
+            buttons 14px). Opt-out of the global 44×44 min touch target via
+            data-no-min-touch since this strip is intentionally dense.
+            Layout flips opposite to the nav: when nav is HORIZONTAL the
+            handle stacks VERTICALLY (saves width); when nav is VERTICAL
+            the handle stacks HORIZONTALLY (saves height). */}
+        <div className={`flex items-center gap-[2px] text-muted-foreground/40 ${orientation === 'vertical' ? 'flex-row pb-0.5 justify-start' : 'flex-col pr-0.5 justify-center'}`}>
           {/* Back — leftmost; uses router history, falls back to Home if there's nothing to pop */}
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('click');
               VIBRATE.click();
@@ -366,63 +464,82 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 navigate('/');
               }
             }}
-            aria-label="Go back"
-            title="Back"
-            className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border bg-secondary/60 text-muted-foreground transition-all hover:scale-110 hover:text-primary hover:border-primary/40 hover:bg-primary/10 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            aria-label={t('nav.back', undefined, 'Go back')}
+            title={t('nav.back', undefined, 'Back')}
+            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-border bg-secondary/60 text-muted-foreground transition-all hover:scale-110 hover:text-primary hover:border-primary/40 hover:bg-primary/10 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
-            <ArrowLeft className="w-3 h-3" />
+            <ArrowLeft style={{ width: 8, height: 8 }} />
           </button>
-          <GripHorizontal className={`w-3.5 h-3.5 ${lockedToTicker ? 'opacity-40' : ''}`} />
+          <GripHorizontal style={{ width: 10, height: 10 }} className={lockedToTicker ? 'opacity-40' : ''} />
+          {/* Reset to default snap position (under the ticker) */}
           <button
+            data-no-min-touch
+            onClick={(e) => {
+              e.stopPropagation();
+              playSound('toggle');
+              VIBRATE.toggle();
+              resetPosition();
+            }}
+            className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary text-[8px] font-bold"
+            title="Reset position (snap under ticker)"
+          >
+            ⟲
+          </button>
+          <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
               toggleOrientation();
             }}
-            className="transition-colors hover:text-primary"
+            className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary"
             title={orientation === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}
           >
             {orientation === 'horizontal' ? (
-              <ArrowUpRightFromSquare className="w-3.5 h-3.5" />
+              <ArrowUpRightFromSquare style={{ width: 10, height: 10 }} />
             ) : (
-              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <ArrowLeftRight style={{ width: 10, height: 10 }} />
             )}
           </button>
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
               cycleRows();
             }}
-            className="transition-colors hover:text-primary text-[10px] font-bold w-3.5 h-3.5 flex items-center justify-center"
+            className="transition-colors hover:text-primary text-[9px] font-bold w-3 h-3 flex items-center justify-center"
             title={`${rows} row${rows > 1 ? 's' : ''} (click to cycle)`}
           >
             {rows}
           </button>
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
               toggleTickerLock();
             }}
-            className={`transition-colors hover:text-primary ${lockedToTicker ? 'text-primary' : ''}`}
+            className={`inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary ${lockedToTicker ? 'text-primary' : ''}`}
             title={lockedToTicker ? 'Unlock from Ticker' : 'Lock to Ticker'}
           >
-            <ArrowUpRightFromSquare className="w-3.5 h-3.5" />
+            <ArrowUpRightFromSquare style={{ width: 10, height: 10 }} />
           </button>
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('click');
               VIBRATE.click();
               setEditMode(true);
             }}
-            className="transition-colors hover:text-primary"
+            className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary"
             title="Edit"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil style={{ width: 10, height: 10 }} />
           </button>
           {/* Cycle nav mode: expanded → icons → controls-only → expanded */}
           <button
+            data-no-min-touch
             onClick={() => {
               playSound('toggle');
               VIBRATE.toggle();
@@ -430,27 +547,26 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             }}
             aria-label={nextModeLabel}
             title={nextModeLabel}
-            className={`ml-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-[0_0_10px_hsl(160_100%_45%/0.25)] transition-all hover:scale-110 hover:bg-primary/20 hover:shadow-[0_0_14px_hsl(160_100%_45%/0.55)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
+            className={`ml-px inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-[0_0_8px_hsl(160_100%_45%/0.25)] transition-all hover:scale-110 hover:bg-primary/20 hover:shadow-[0_0_12px_hsl(160_100%_45%/0.55)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
           >
             {navMode === 'expanded' ? (
-              <Minimize2 className="w-3 h-3" />
+              <Minimize2 style={{ width: 8, height: 8 }} />
             ) : navMode === 'icons' ? (
-              // Icon hint that the next click hides the nav body (controls-only).
-              <Minimize2 className="w-3 h-3 opacity-70" />
+              <Minimize2 style={{ width: 8, height: 8 }} className="opacity-70" />
             ) : (
-              <Maximize2 className="w-3 h-3" />
+              <Maximize2 style={{ width: 8, height: 8 }} />
             )}
           </button>
           {/* Tiny mode pip — three dots indicating current stage. Purely cosmetic, mobile-safe. */}
           <span
             aria-hidden="true"
-            className="ml-0.5 hidden sm:inline-flex items-center gap-[2px]"
+            className="ml-px hidden sm:inline-flex items-center gap-[1px]"
             title={`Mode: ${navMode}`}
           >
             {NAV_MODE_CYCLE.map((m) => (
               <span
                 key={m}
-                className={`block w-1 h-1 rounded-full transition-colors ${m === navMode ? 'bg-primary shadow-[0_0_4px_hsl(160_100%_45%/0.8)]' : 'bg-muted-foreground/30'}`}
+                className={`block w-[3px] h-[3px] rounded-full transition-colors ${m === navMode ? 'bg-primary shadow-[0_0_3px_hsl(160_100%_45%/0.8)]' : 'bg-muted-foreground/30'}`}
               />
             ))}
           </span>
@@ -541,11 +657,11 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             <button
               onClick={() => { playSound('click'); VIBRATE.click(); onClick(); }}
               className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
-              title="Quick Actions"
-              aria-label="Quick Actions"
+              title={t('nav.create', undefined, 'Quick Actions')}
+              aria-label={t('nav.create', undefined, 'Quick Actions')}
             >
               <Plus style={{ width: 18, height: 18 }} className={`transition-transform ${open ? 'rotate-45 text-primary' : ''}`} />
-              {!collapsed && <span className="text-[8px] font-medium leading-none">Create</span>}
+              {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.create', undefined, 'Create')}</span>}
             </button>
           )}
         />}
@@ -561,13 +677,12 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             }
           }}
           className={`eru-nav-item flex flex-col items-center gap-0.5 ${collapsed ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary/60`}
-          title="Search"
-          aria-label="Search"
+          title={t('nav.search', undefined, 'Search')}
+          aria-label={t('nav.search', undefined, 'Search')}
         >
           <Search style={{ width: 18, height: 18 }} />
-          {!collapsed && <span className="text-[8px] font-medium leading-none">Search</span>}
+          {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.search', undefined, 'Search')}</span>}
         </button>}
-      </div>
       </div>
 
       <NavWalkthrough

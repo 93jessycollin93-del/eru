@@ -1,0 +1,137 @@
+{
+  "name": "DevProject",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived",
+        "paused"
+      ],
+      "default": "active"
+    },
+    "owner_email": {
+      "type": "string",
+      "description": "Email of the owner who created the project"
+    },
+    "owner_role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user"
+    },
+    "primary_stack": {
+      "type": "string",
+      "description": "e.g. React + Base44, Next.js, etc."
+    },
+    "repo_url": {
+      "type": "string"
+    },
+    "deployment_url": {
+      "type": "string"
+    },
+    "last_updated": {
+      "type": "string"
+    },
+    "provider_status": {
+      "type": "object",
+      "description": "Snapshot of which providers were configured at last update",
+      "properties": {
+        "openai": {
+          "type": "string",
+          "enum": [
+            "connected",
+            "not_connected"
+          ],
+          "default": "not_connected"
+        },
+        "anthropic": {
+          "type": "string",
+          "enum": [
+            "connected",
+            "not_connected"
+          ],
+          "default": "not_connected"
+        },
+        "gemini": {
+          "type": "string",
+          "enum": [
+            "connected",
+            "not_connected"
+          ],
+          "default": "not_connected"
+        },
+        "github": {
+          "type": "string",
+          "enum": [
+            "connected",
+            "not_connected"
+          ],
+          "default": "not_connected"
+        },
+        "deployment": {
+          "type": "string",
+          "enum": [
+            "connected",
+            "not_connected"
+          ],
+          "default": "not_connected"
+        }
+      }
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { useTheme, BG_ENVS, MOTION_PRESETS, TYPOGRAPHY_PACKS } from '../context/
 import AnimatedBackground from '../components/AnimatedBackground';
 import PageTemplateLibrary from '../components/theme/PageTemplateLibrary';
 import AdvancedThemeStudio from '../components/theme/AdvancedThemeStudio';
+import SkinPicker from '../components/theme/SkinPicker';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const THEME_CATS = {
@@ -76,13 +77,25 @@ function SectionHeader({ icon: Icon, label, sub }) {
 }
 
 // ─── TAB: THEMES (Color Wheel) ───────────────────────────────────────────────
+// Quick palettes — the first six are Eru's "Cyberpunk Neon" set, derived
+// from the reference images: holographic goddess / cyber geisha / neon
+// skyline / crimson dystopia / masked sovereigns. Pick one and the whole
+// app tints to match. The legacy palettes (Cyber Green … Arctic) remain
+// below for users who prefer them.
 const QUICK_PALETTES = [
-  { label: 'Cyber Green',  primaryHue: 160, bgHue: 230, cardHue: 230, borderHue: 230, primarySat: 100, primaryLight: 45 },
-  { label: 'Neon Blue',    primaryHue: 200, bgHue: 225, cardHue: 225, borderHue: 225, primarySat: 100, primaryLight: 55 },
-  { label: 'Solar Gold',   primaryHue: 45,  bgHue: 20,  cardHue: 20,  borderHue: 20,  primarySat: 100, primaryLight: 55 },
-  { label: 'Plasma',       primaryHue: 290, bgHue: 280, cardHue: 280, borderHue: 280, primarySat: 100, primaryLight: 70 },
-  { label: 'Ember Red',    primaryHue: 350, bgHue: 10,  cardHue: 10,  borderHue: 10,  primarySat: 100, primaryLight: 60 },
-  { label: 'Arctic',       primaryHue: 195, bgHue: 210, cardHue: 210, borderHue: 210, primarySat: 80,  primaryLight: 65 },
+  { label: 'Neon Oracle',     primaryHue: 305, bgHue: 268, cardHue: 268, borderHue: 280, primarySat: 100, primaryLight: 62, foundation: true },
+  { label: 'Cyber Geisha',    primaryHue: 320, bgHue: 252, cardHue: 252, borderHue: 268, primarySat: 100, primaryLight: 70 },
+  { label: 'Synth City',      primaryHue: 285, bgHue: 260, cardHue: 260, borderHue: 275, primarySat: 90,  primaryLight: 60 },
+  { label: 'Crimson Veil',    primaryHue: 340, bgHue: 350, cardHue: 355, borderHue: 350, primarySat: 95,  primaryLight: 58 },
+  { label: 'Eru Sovereign',   primaryHue: 295, bgHue: 262, cardHue: 264, borderHue: 278, primarySat: 100, primaryLight: 58 },
+  { label: 'Hologram Cyan',   primaryHue: 192, bgHue: 270, cardHue: 270, borderHue: 285, primarySat: 100, primaryLight: 64 },
+  // Legacy palettes (kept):
+  { label: 'Cyber Green',     primaryHue: 160, bgHue: 230, cardHue: 230, borderHue: 230, primarySat: 100, primaryLight: 45 },
+  { label: 'Neon Blue',       primaryHue: 200, bgHue: 225, cardHue: 225, borderHue: 225, primarySat: 100, primaryLight: 55 },
+  { label: 'Solar Gold',      primaryHue: 45,  bgHue: 20,  cardHue: 20,  borderHue: 20,  primarySat: 100, primaryLight: 55 },
+  { label: 'Plasma',          primaryHue: 290, bgHue: 280, cardHue: 280, borderHue: 280, primarySat: 100, primaryLight: 70 },
+  { label: 'Ember Red',       primaryHue: 350, bgHue: 10,  cardHue: 10,  borderHue: 10,  primarySat: 100, primaryLight: 60 },
+  { label: 'Arctic',          primaryHue: 195, bgHue: 210, cardHue: 210, borderHue: 210, primarySat: 80,  primaryLight: 65 },
 ];
 
 function HueRing({ hue, sat = 100, light = 50, size = 36 }) {
@@ -131,13 +144,13 @@ function ThemesTab() {
     <div className="space-y-4">
       <SectionHeader icon={Palette} label="Color Palette" sub="Hue-based color wheel for each app layer" />
 
-      {/* Quick palettes */}
+      {/* Quick palettes — foundation palettes get a dual-tone glow ring. */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {QUICK_PALETTES.map(p => (
           <button key={p.label} onClick={() => applyPalette(p)}
-            className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 bg-card border border-border rounded-xl hover:border-primary/40 transition-all">
-            <div className="w-6 h-6 rounded-full border border-border/50" style={{ background: `hsl(${p.primaryHue},${p.primarySat}%,${p.primaryLight}%)` }} />
-            <span className="text-[9px] text-muted-foreground whitespace-nowrap">{p.label}</span>
+            className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${p.foundation ? 'eru-neon-foundation-card bg-gradient-to-br from-fuchsia-500/15 via-violet-500/10 to-cyan-500/10 border border-fuchsia-400/40 hover:border-fuchsia-300/70' : 'bg-card border border-border hover:border-primary/40'}`}>
+            <div className="w-6 h-6 rounded-full border border-border/50" style={{ background: `hsl(${p.primaryHue},${p.primarySat}%,${p.primaryLight}%)`, boxShadow: p.foundation ? `0 0 10px hsl(${p.primaryHue} 100% 65% / 0.7), 0 0 20px hsl(192 100% 60% / 0.35)` : 'none' }} />
+            <span className={`text-[9px] whitespace-nowrap ${p.foundation ? 'text-fuchsia-300 font-semibold' : 'text-muted-foreground'}`}>{p.label}</span>
           </button>
         ))}
       </div>
@@ -445,9 +458,52 @@ function TemplatesTab() {
 }
 
 function LayersTab() {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerScope, setPickerScope] = useState({ type: 'global' });
+
+  const openWith = (scope) => { setPickerScope(scope); setPickerOpen(true); };
+
   return (
     <div className="space-y-4">
       <SectionHeader icon={Brush} label="Front Layer Skin Studio" sub="Use your own visuals as skins for app layers, pages, panels, buttons, inputs, and widgets." />
+
+      {/* Quick-pick skin shortcuts — most common scopes one click away. */}
+      <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <p className="text-sm font-semibold">Apply a skin</p>
+        </div>
+        <p className="text-xs text-muted-foreground">Pick a background and a target — the whole app, just this page, or one specific surface (nav bar, ticker, bot widget…).</p>
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => openWith({ type: 'global' })}
+            className="px-3 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold">
+            Skin everywhere
+          </button>
+          <button onClick={() => openWith({ type: 'page' })}
+            className="px-3 py-2.5 rounded-xl border border-border bg-card text-xs font-medium">
+            Skin this page
+          </button>
+          <button onClick={() => openWith({ type: 'component', key: 'nav.floating' })}
+            className="px-3 py-2.5 rounded-xl border border-border bg-card text-xs font-medium">
+            Skin nav bar
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => openWith({ type: 'component', key: 'ticker.bar' })}
+            className="px-3 py-2 rounded-lg border border-border bg-secondary text-[11px]">
+            Ticker
+          </button>
+          <button onClick={() => openWith({ type: 'component', key: 'widget.bot' })}
+            className="px-3 py-2 rounded-lg border border-border bg-secondary text-[11px]">
+            Bot widget
+          </button>
+          <button onClick={() => openWith({ type: 'component' })}
+            className="px-3 py-2 rounded-lg border border-border bg-secondary text-[11px]">
+            Other component…
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
         <div className="flex items-start gap-3">
           <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5">
@@ -460,6 +516,8 @@ function LayersTab() {
         </div>
       </div>
       <AdvancedThemeStudio />
+
+      <SkinPicker open={pickerOpen} onClose={() => setPickerOpen(false)} defaultScope={pickerScope} />
     </div>
   );
 }

@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Bell, ChevronRight, Globe, KeyRound, LogOut, Mail, Shield, SlidersHorizontal, User2, Users, Workflow, Fingerprint, MessageCircleWarning } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import SoundSettings from '@/components/SoundSettings';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
 import MaskedEmail from '@/components/privacy/MaskedEmail';
 import SecretArea from '@/components/privacy/SecretArea';
+import DeleteAccountButton from '@/components/settings/DeleteAccountButton';
 import { maskEmail } from '@/lib/privacy';
 
 const DEFAULT_PREFS = {
@@ -78,6 +80,7 @@ function InfoRow({ icon: Icon, title, description, value, action }) {
 
 export default function UserSettings() {
   const { currentUser, logout } = useAuth();
+  const { lang, setLang } = useLanguage();
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [savingProfile, setSavingProfile] = useState(false);
   const [apiKeys, setApiKeys] = useState([]);
@@ -277,9 +280,17 @@ export default function UserSettings() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Language" subtitle="This app now relies on your browser or Telegram translation tools.">
-          <div className="rounded-xl border border-border bg-secondary/20 px-3 py-3 text-sm text-muted-foreground">
-            Use your browser translator if you want the interface in another language.
+        <SectionCard title="Language" subtitle="Choose the language used throughout the app.">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {Object.entries(LANGUAGES).map(([code, name]) => (
+              <button
+                key={code}
+                onClick={() => setLang(code)}
+                className={`h-11 rounded-xl border text-sm font-medium transition-colors ${lang === code ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/30'}`}
+              >
+                {name}
+              </button>
+            ))}
           </div>
         </SectionCard>
 
@@ -359,6 +370,13 @@ export default function UserSettings() {
           <LogOut className="w-4 h-4" />
           Sign out
         </button>
+
+        {/* Delete account — destructive, gated by ConfirmDialog inside the
+            DeleteAccountButton component. Calls the existing deleteMyData
+            backend function and signs the user out on success. */}
+        <SectionCard title="Delete account" subtitle="Permanently remove your account and all associated data. This cannot be undone.">
+          <DeleteAccountButton />
+        </SectionCard>
       </div>
     </div>
   );

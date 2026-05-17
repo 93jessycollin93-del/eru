@@ -170,7 +170,7 @@ export default function BotWidget({ prefs, updateWidget }) {
           onMouseLeave={handleMouseUp}
           onClick={() => !dragging && setOpen(true)}
           style={botChatPrefs?.x !== null && botChatPrefs?.y !== null ? { left: `${botChatPrefs.x}px`, top: `${botChatPrefs.y}px`, right: 'auto', bottom: 'auto' } : undefined}
-          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-card border border-primary/30 shadow-lg rounded-2xl px-3 py-2.5 text-sm font-medium hover:border-primary transition-all cursor-move"
+          className="eru-skin-widget-bot fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-card border border-primary/30 shadow-lg rounded-2xl px-3 py-2.5 text-sm font-medium hover:border-primary transition-all cursor-move"
         >
           <span className="text-base">{ROLE_ICONS[bot.role] || '🤖'}</span>
           <span className="text-xs text-foreground">{bot.name}</span>

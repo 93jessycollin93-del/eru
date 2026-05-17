@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import AnimatedBackground from './AnimatedBackground';
 import PageThemeLayer from '@/components/theme/PageThemeLayer';
 import { useTheme } from '../context/ThemeContext';
 import CenteredBottomNav from './CenteredBottomNav';
+import MobileTabBar from './mobile/MobileTabBar';
 import TickerBar from './dashboard/TickerBar';
 import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
@@ -66,6 +68,7 @@ export default function Layout() {
   const globalThemeStyles = themeCtx?.globalThemeStyles || {};
   const [searchOpen, setSearchOpen] = useState(false);
   const { prefs, updateWidget } = useFloatingWidgetPrefs();
+  const location = useLocation();
 
   const handleSearchOpen = useCallback(() => setSearchOpen(true), []);
 
@@ -120,19 +123,28 @@ export default function Layout() {
       {/* App shell — transparent so background shows through */}
       <div className="w-full max-w-screen-xl mx-auto flex flex-col relative z-10" style={{ minHeight: '100dvh' }}>
 
-        {/* Unified sticky shell — ticker + nav move as ONE unit on scroll so
-            they remain visible together across long-scroll pages and small
-            mobile viewports. Respect safe-area insets for iOS / Telegram. */}
+        {/* Ticker stays sticky at the top inside the centered app shell. */}
         <div
           className="sticky z-50 eru-theme-header eru-enter"
           style={{ top: 'env(safe-area-inset-top, 0px)' }}
         >
           <TickerBar />
-          <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
         </div>
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 overflow-hidden">
           <PageThemeLayer>
-            <Outlet />
+            {/* Mobile-native route transition — slide-left on every route
+                change. Honors prefers-reduced-motion via framer-motion. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={location.pathname}
+                initial={{ x: 24, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -24, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </PageThemeLayer>
         </main>
         <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
@@ -140,6 +152,22 @@ export default function Layout() {
         <ScreenVisualizer prefs={prefs} updateWidget={updateWidget} />
         <NotesWidgetMount />
       </div>
+
+      {/* Free-floating nav — mounted OUTSIDE the centered app shell. The
+          CenteredBottomNav positions itself absolutely within this overlay
+          (fully draggable on both axes), so this wrapper is a transparent,
+          click-through layer covering the full viewport.
+          Hidden on mobile (< md): mobile uses the fixed MobileTabBar below
+          for native-feeling navigation. The floating nav stays on tablet/desktop. */}
+      <div
+        className="hidden md:block fixed inset-0 z-50 pointer-events-none eru-enter"
+        aria-hidden="false"
+      >
+        <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
+      </div>
+
+      {/* Fixed iOS-style mobile tab bar — only visible on phone-sized screens. */}
+      <MobileTabBar />
     </>
   );
 }

@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -67,6 +69,7 @@ import PhoenixInvestor from './pages/PhoenixInvestor';
 import AdminReviewCenter from './pages/AdminReviewCenter';
 import SecurityCommandCenter from './pages/SecurityCommandCenter';
 import SecurityTestRunner from './pages/SecurityTestRunner';
+import LanguageDiagnostics from './pages/LanguageDiagnostics';
 import AdminBazarProducts from './pages/AdminBazarProducts';
 import PlayerProgress from './pages/PlayerProgress';
 import LoreInsights from './pages/LoreInsights';
@@ -76,6 +79,9 @@ import DeckBuilder from './pages/DeckBuilder';
 import Guilds from './pages/Guilds';
 import About from './pages/About';
 import AppStore from './pages/AppStore';
+import JackieDevLab from './pages/JackieDevLab';
+import CardScanner from './pages/CardScanner';
+import IntegrationHub from './pages/IntegrationHub';
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -168,6 +174,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/review" element={<AdminReviewCenter />} />
         <Route path="/admin/security" element={<SecurityCommandCenter />} />
         <Route path="/admin/security-test" element={<SecurityTestRunner />} />
+        <Route path="/language-diagnostics" element={<LanguageDiagnostics />} />
         <Route path="/player-progress" element={<PlayerProgress />} />
         <Route path="/lore-insights" element={<LoreInsights />} />
         <Route path="/preferences" element={<Preferences />} />
@@ -176,6 +183,9 @@ const AuthenticatedApp = () => {
         <Route path="/guilds" element={<Guilds />} />
         <Route path="/about" element={<About />} />
         <Route path="/app-store" element={<AppStore />} />
+        <Route path="/dev-lab" element={<JackieDevLab />} />
+        <Route path="/card-scanner" element={<CardScanner />} />
+        <Route path="/integrations" element={<IntegrationHub />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
@@ -184,9 +194,29 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  // Mobile-native: sync the Tailwind `dark` class on <html> with the OS-level
+  // `prefers-color-scheme` media query. We only auto-apply when the user
+  // hasn't explicitly chosen a color mode (preserving ThemeContext choice).
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      let userPref = null;
+      try { userPref = JSON.parse(localStorage.getItem('vse_colorMode')); } catch { /* ignore */ }
+      const isDark = userPref ? userPref === 'dark' : mq.matches;
+      document.documentElement.classList.toggle('dark', isDark);
+    };
+    apply();
+    mq.addEventListener?.('change', apply);
+    window.addEventListener('storage', apply);
+    return () => {
+      mq.removeEventListener?.('change', apply);
+      window.removeEventListener('storage', apply);
+    };
+  }, []);
 
   return (
     <ThemeProvider>
+    <LanguageProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
@@ -195,6 +225,7 @@ function App() {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
+    </LanguageProvider>
     </ThemeProvider>
   )
 }

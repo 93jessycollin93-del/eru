@@ -10,6 +10,7 @@ import RebalancingPlanner from '../components/portfolio/RebalancingPlanner';
 import InvestmentJournalPanel from '../components/portfolio/InvestmentJournalPanel';
 import TargetAllocationPanel from '../components/portfolio/TargetAllocationPanel';
 import { buildCombinedPortfolioData } from '../lib/portfolioRebalance';
+import PullToRefresh from '../components/mobile/PullToRefresh';
 
 export default function Portfolio() {
   const [tab, setTab] = useState('inventory');
@@ -43,8 +44,23 @@ export default function Portfolio() {
   ];
   const combinedHoldings = buildCombinedPortfolioData({ walletHoldings, jadeAssets, cards, transactions });
 
+  // Pull-to-refresh handler — emits a global refresh event other widgets can
+  // listen to. Live entity hooks keep streaming on their own; the brief await
+  // gives the spinner time to render.
+  const handleRefresh = async () => {
+    window.dispatchEvent(new CustomEvent('app:refresh', { detail: { source: 'portfolio' } }));
+    await new Promise((r) => setTimeout(r, 400));
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
+    <PullToRefresh onRefresh={handleRefresh}>
+    <div
+      className="flex flex-col min-h-screen bg-background pb-20"
+      style={{
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
+    >
       {/* Header */}
       <div className="px-4 py-4 border-b border-border bg-card/50">
         <div className="flex items-center gap-3 mb-3">
@@ -279,5 +295,6 @@ export default function Portfolio() {
         )}
       </div>
     </div>
+    </PullToRefresh>
   );
 }
