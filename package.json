@@ -13,8 +13,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.29",
-    "@base44/vite-plugin": "^1.0.18",
+    "@base44/sdk": "^0.8.30",
+    "@base44/vite-plugin": "^1.0.20",
     "@codemirror/lang-javascript": "^6.2.5",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
