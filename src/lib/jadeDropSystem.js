@@ -2,10 +2,13 @@ import { base44 } from '@/api/base44Client';
 
 /**
  * BALANCED JADE ECONOMY DROP SYSTEM
- * 
- * Server-side only. No client-side calculations.
- * Every reward is server-generated and verified.
- * 
+ *
+ * The authoritative roll + grant runs in the `executeJadeDrop` backend
+ * function (see base44/functions/executeJadeDrop). `executeSafeJadeDrop` below
+ * is a thin client wrapper that invokes it. `generateJadeDrop` is kept only as
+ * a CLIENT-SIDE PREVIEW helper for UI — it must never be used to grant an
+ * asset, since the browser-side result is not trusted.
+ *
  * Distribution:
  * - Base (60%): 3.5kg–6kg, weighted ~4.5kg
  * - Mid (35%): 6kg–25kg, weighted curve
@@ -94,110 +97,30 @@ export function generateJadeDrop() {
 }
 
 /**
- * Execute Jade drop for user (with payment verification)
- * @param userId User email
+ * Execute Jade drop for user (with payment verification).
+ *
+ * Delegates to the `executeJadeDrop` backend function, which performs the roll
+ * and the JadeAsset.create() with the service role. This MUST go through the
+ * backend: running the roll/create in the browser (as this module used to)
+ * lets a user bypass the payment check and mint arbitrary jade directly.
+ *
+ * @param userId User email (ignored server-side; the authenticated caller is used)
  * @param orderId Payment order ID (for verification)
  * @param dropContext Optional context (activity type, etc)
  */
 export async function executeSafeJadeDrop(userId, orderId, dropContext = {}) {
-  // STEP 1: Verify payment/order exists
-  const orders = await base44.entities.Order.filter(
-    { id: orderId, buyer_email: userId, status: 'paid' },
-    '-created_date',
-    1
-  );
-
-  if (!orders || orders.length === 0) {
-    throw new Error('❌ JADE DROP: No verified payment found for this user');
+  const res = await base44.functions.invoke('executeJadeDrop', { orderId, dropContext });
+  const data = res?.data ?? res;
+  if (!data?.ok) {
+    throw new Error(`❌ JADE DROP FAILED: ${data?.error || 'unknown error'}`);
   }
-
-  const order = orders[0];
-
-  // STEP 2: Generate drop (server-side only)
-  const drop = generateJadeDrop();
-
-  // STEP 3: Create Jade asset with drop amount
-  try {
-    const jadeAsset = await base44.entities.JadeAsset.create({
-      batch: 'batch_1_drops',
-      origin_sector: 'drop_system',
-      origin_depth: 0,
-      extraction_date: new Date().toISOString(),
-      volume_kg: drop.amount_kg,
-      color_type: 'imperial_green', // Default drop color
-      purity: 50 + Math.random() * 30, // 50–80
-      vividness: 50 + Math.random() * 30,
-      size_grade: Math.round((drop.amount_kg / 10) * 100), // Scale to grade
-      texture: 50 + Math.random() * 30,
-      composite_score: 60,
-      lifecycle_state: 'raw',
-      crafted_form: 'raw_block',
-      ownership_timeline: [
-        {
-          owner: userId,
-          acquired_at: new Date().toISOString(),
-        },
-      ],
-      is_listed: false,
-      resonance_history: [
-        {
-          event_type: 'drop_earned',
-          description: `Jade drop: ${drop.tierLabel}`,
-          timestamp: new Date().toISOString(),
-          actor: 'system',
-          metadata: {
-            drop_tier: drop.tier,
-            amount_kg: drop.amount_kg,
-            order_id: orderId,
-            context: dropContext,
-          },
-        },
-      ],
-    });
-
-    // STEP 4: Link to order
-    await base44.entities.Order.update(orderId, {
-      asset_granted_at: new Date().toISOString(),
-      asset_grant_reference: jadeAsset.id,
-    });
-
-    // STEP 5: Log economy action
-    await base44.entities.EconomyAuditLog.create({
-      action: 'asset_granted',
-      order_id: orderId,
-      user_email: userId,
-      asset_type: 'jade',
-      asset_id: jadeAsset.id,
-      amount: drop.amount_kg,
-      status: 'success',
-      triggered_by: 'system',
-      metadata: {
-        drop_tier: drop.tier,
-        tier_label: drop.tierLabel,
-        context: dropContext,
-      },
-    });
-
-    return {
-      success: true,
-      jadeAssetId: jadeAsset.id,
-      tier: drop.tier,
-      tierLabel: drop.tierLabel,
-      amount_kg: drop.amount_kg,
-    };
-  } catch (err) {
-    await base44.entities.EconomyAuditLog.create({
-      action: 'asset_failed',
-      order_id: orderId,
-      user_email: userId,
-      asset_type: 'jade',
-      status: 'failed',
-      reason: `Failed to create Jade asset: ${err.message}`,
-      triggered_by: 'system',
-    });
-
-    throw new Error(`❌ JADE DROP FAILED: ${err.message}`);
-  }
+  return {
+    success: true,
+    jadeAssetId: data.jadeAssetId,
+    tier: data.tier,
+    tierLabel: data.tierLabel,
+    amount_kg: data.amount_kg,
+  };
 }
 
 /**
