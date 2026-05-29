@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Layers3, Save, CopyPlus, PencilLine, RefreshCcw } from 'lucide-react';
+import { Layers3, Save, RefreshCcw } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { applyRootVariables } from '@/lib/themeEngine';
 import LayerStyleForm from './LayerStyleForm';
-import ThemePresetLibrary, { THEME_PRESETS } from './ThemePresetLibrary';
+import ThemePresetLibrary from './ThemePresetLibrary';
 import ThemeScopePreview from './ThemeScopePreview';
 
 const LAYER_OPTIONS = [

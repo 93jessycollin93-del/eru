@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Bot, Copy, ExternalLink, KeyRound, Send, ShieldCheck } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 
 const DEFAULT_TEMPLATE = {
   name: 'My Telegram Bot',

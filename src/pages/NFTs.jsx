@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Grid, List, Wallet, AlertTriangle, Plus, X, Tag } from 'lucide-react';
+import { Search, Grid, List, AlertTriangle, Plus, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectBar from '../components/WalletConnectBar';

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Copy, ImagePlus, Send, Swords, Trophy, Wallet } from 'lucide-react';
+import { ImagePlus, Send, Swords, Trophy, Wallet } from 'lucide-react';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 
 function formatDeckSnapshot(deck = []) {

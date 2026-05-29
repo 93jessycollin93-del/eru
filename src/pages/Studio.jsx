@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Palette, Monitor, Layers, Save, Check, Sparkles, Grid, Columns, LayoutGrid } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 
 const THEMES = [
   { id: 'cyber', name: 'Cyber Green', primary: '160 100% 45%', background: '230 25% 6%', card: '230 22% 9%', preview: ['#00e676', '#0d1117', '#161b22'] },

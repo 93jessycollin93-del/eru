@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
-import { FlaskConical, Plus, Dna, Zap, Loader2, ChevronDown, Sparkles, Flame } from 'lucide-react';
+import { FlaskConical, Plus, Dna, Zap, Loader2, Sparkles, Flame } from 'lucide-react';
 
 const ELEMENTS = ['fire', 'water', 'earth', 'wind', 'shadow', 'light'];
 const RARITIES = ['common', 'rare', 'epic', 'legendary'];

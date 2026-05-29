@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
-import { Tv2, X, Music, Film, Globe, Star, History, ChevronDown, ChevronRight, RotateCw, ExternalLink, Search, Monitor, Minimize2, Maximize2, Camera, Circle, Square, GripVertical, PictureInPicture2 } from 'lucide-react';
+import { Tv2, X, Music, Film, Star, History, ChevronDown, ChevronRight, RotateCw, ExternalLink, Search, Monitor, Minimize2, Maximize2, Camera, Circle, Square, GripVertical, PictureInPicture2 } from 'lucide-react';
 
 const QUICK_LINKS = [
   { label: 'YouTube', url: 'https://www.youtube.com/embed/jfKfPfyJRdk', icon: '▶️', category: 'Video' },

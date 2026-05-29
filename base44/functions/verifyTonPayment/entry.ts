@@ -44,17 +44,22 @@ Deno.serve(async (req) => {
 
     const expectedNano = Math.round(Number(expectedTon) * 1e9);
     const txs = Array.isArray(tonData.result) ? tonData.result : [];
+    const wantedRef = String(paymentRef).trim();
 
-    // Find an inbound transfer whose comment contains our paymentRef and
-    // whose value is at least the expected amount (tolerates +/- 0.5%).
-    const minAcceptable = Math.floor(expectedNano * 0.995);
+    // Find an inbound transfer whose comment EXACTLY equals our paymentRef and
+    // whose value is at least the expected amount. The comment must match
+    // exactly (not merely contain the ref): a substring match let an attacker
+    // who controlled any wallet pay a tiny amount with a comment that happened
+    // to embed a short/guessable ref. Only a hair of float-rounding slack
+    // (0.1%) is allowed on the amount — no real underpayment is accepted.
+    const minAcceptable = Math.floor(expectedNano * 0.999);
     let matched = null;
     for (const t of txs) {
       const inMsg = t?.in_msg;
       if (!inMsg) continue;
       const value = Number(inMsg.value || 0);
-      const comment = inMsg.message || '';
-      if (value >= minAcceptable && comment.includes(paymentRef)) {
+      const comment = String(inMsg.message || '').trim();
+      if (value >= minAcceptable && comment === wantedRef) {
         matched = { hash: t.transaction_id?.hash, lt: t.transaction_id?.lt, value, comment };
         break;
       }

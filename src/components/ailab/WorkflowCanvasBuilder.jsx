@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Bot, Database, Mail, MessageCircle, Play, Plus, Save, Trash2, Workflow } from 'lucide-react';
+import { Bot, Database, Mail, MessageCircle, Play, Save, Trash2, Workflow } from 'lucide-react';
 
 const NODE_LIBRARY = [
   { type: 'bot', label: 'Bot step', icon: Bot, color: 'text-primary bg-primary/10 border-primary/20' },

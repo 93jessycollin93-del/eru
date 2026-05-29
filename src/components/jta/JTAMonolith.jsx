@@ -79,30 +79,20 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
   const handleConfirm = async () => {
     if (!preview || !paymentReady) return;
     setLoading(true);
-    const composite = Math.round((preview.purity + preview.vividness + preview.size_grade + preview.texture) / 4);
-    const jade = await base44.entities.JadeAsset.create({
-      ...preview,
-      composite_score: composite,
-      resonance_history: [{
-        event_type: 'extraction',
-        description: `Extracted from Monolith Sector ${preview.origin_sector} at depth ${preview.origin_depth}`,
-        timestamp: new Date().toISOString(),
-        actor: 'system',
-        metadata: { volume_kg: preview.volume_kg, color_type: preview.color_type }
-      }],
-    });
-    const me = await base44.auth.me();
-    const bonusCards = 1;
-    await base44.auth.updateMe({ bonus_cards: (me?.bonus_cards || 0) + bonusCards });
-    await base44.entities.JadeTransaction.create({
-      jade_asset_id: jade.id,
-      transaction_type: 'extraction',
-      price_usd: CHUNK_PRICE_USD, // server-validated price; client cannot override
-      notes: `Mystery Box extraction — ${preview.color_type} from Sector ${preview.origin_sector} (${currency})`,
-    });
-    setConfirmed(true);
-    setLoading(false);
-    onExtracted?.(jade);
+    try {
+      // The jade is rolled and minted authoritatively by the backend. The
+      // client `preview` is for display only — it is NOT trusted or sent as the
+      // final stats (that previously let users mint arbitrary jade for free).
+      const res = await base44.functions.invoke('mintMonolithJade', {});
+      const data = res?.data ?? res;
+      if (!data?.ok) throw new Error(data?.error || 'Extraction failed');
+      setConfirmed(true);
+      onExtracted?.(data.jade);
+    } catch (err) {
+      console.error('Monolith extraction failed:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

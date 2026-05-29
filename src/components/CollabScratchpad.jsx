@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Code, FileText, Send, Users, Dot, Copy, CheckCheck } from 'lucide-react';
+import { X, Code, FileText, Send, Users, Copy, CheckCheck } from 'lucide-react';
 
 const FAKE_COLLABORATORS = [
   { name: 'Philosopher_K', color: '#7c4dff', cursor: 45 },

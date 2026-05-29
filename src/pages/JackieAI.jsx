@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, FlaskConical, Key, ArrowRight, Send } from 'lucide-react';
+import { Bot, FlaskConical, Key, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import JackieHeader from '../components/jackie/JackieHeader';

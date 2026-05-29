@@ -65,7 +65,6 @@ const COLLAPSED_KEY = 'floating_nav_collapsed';
 const NAV_MODE_KEY = 'floating_nav_mode'; // 'expanded' | 'icons' | 'controls'
 const NAV_MODE_CYCLE = ['expanded', 'icons', 'controls'];
 const ROWS_KEY = 'floating_nav_rows';
-const FLOATING_WIDGETS_KEY = 'floating_widget_preferences';
 const NAV_WALKTHROUGH_SEEN_KEY = 'nav_walkthrough_seen';
 const NAV_LOCKED_TO_TICKER_KEY = 'floating_nav_locked_to_ticker';
 const TICKER_BAR_ID = 'app-ticker-bar';
@@ -179,28 +178,15 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
       localStorage.setItem(ROWS_KEY, JSON.stringify(1));
     } catch {}
   }, []);
-  const [floatingWidgets, setFloatingWidgets] = useState(() => {
-    try {
-      return {
-        jackie: { visible: true, x: 16, y: 100 },
-        botMarket: { visible: true, x: 16, y: 156 },
-        botChat: { visible: true, x: null, y: null },
-        promptLibrary: { visible: true, x: 16, y: 212 },
-        conversations: { visible: true, x: 16, y: 268 },
-        notes: { visible: true, x: null, y: null },
-        ...JSON.parse(localStorage.getItem(FLOATING_WIDGETS_KEY) || '{}')
-      };
-    } catch {
-      return {
-        jackie: { visible: true, x: 16, y: 100 },
-        botMarket: { visible: true, x: 16, y: 156 },
-        botChat: { visible: true, x: null, y: null },
-        promptLibrary: { visible: true, x: 16, y: 212 },
-        conversations: { visible: true, x: 16, y: 268 },
-        notes: { visible: true, x: null, y: null },
-      };
-    }
-  });
+  // Floating-widget visibility is owned by Layout via the `prefs`/`updateWidget`
+  // props (the same source the on-screen widgets like BotWidget read). The nav
+  // used to keep its OWN `floatingWidgets` state backed by the same
+  // localStorage key, so the editor toggle updated the nav's copy but never the
+  // real widget — and Layout's persist effect clobbered it. Reading/writing
+  // `prefs` directly keeps the editor, the nav attachment, and the widgets in
+  // sync. A widget counts as visible unless explicitly set to false (matching
+  // BotWidget's own `visible === false` check).
+  const widgetVisible = useCallback((id) => prefs?.[id]?.visible !== false, [prefs]);
 
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -241,7 +227,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const pinnedPages = ALL_PAGES
     .filter(p => pinned.includes(p.id))
     .map(p => ({ ...p, label: t(p.labelKey, undefined, p.fallback) }));
-  const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => floatingWidgets?.[item.id]?.visible);
+  const attachedWidgets = WIDGET_NAV_ITEMS.filter((item) => widgetVisible(item.id));
   const navItems = [...pinnedPages, ...attachedWidgets];
 
   const savePinned = (next) => {
@@ -258,12 +244,9 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const toggleFloatingWidget = (id) => {
     playSound('toggle');
     VIBRATE.toggle();
-    const next = {
-      ...floatingWidgets,
-      [id]: { ...(floatingWidgets[id] || {}), visible: !floatingWidgets?.[id]?.visible }
-    };
-    setFloatingWidgets(next);
-    localStorage.setItem(FLOATING_WIDGETS_KEY, JSON.stringify(next));
+    // Write through the shared prefs so the on-screen widget AND the nav
+    // attachment both update from one source of truth.
+    updateWidget?.(id, { visible: !widgetVisible(id) });
   };
 
   const toggleOrientation = () => {
@@ -716,7 +699,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Pages</p>
                 <div className="grid grid-cols-4 gap-3">
-                  {ALL_PAGES.map(({ id, label, icon: Icon }) => {
+                  {ALL_PAGES.map(({ id, labelKey, fallback, icon: Icon }) => {
+                    const label = t(labelKey, undefined, fallback);
                     const isPinned = pinned.includes(id);
                     return (
                       <button
@@ -757,7 +741,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {FLOATING_WIDGETS.map(({ id, label, icon: Icon }) => {
-                    const isVisible = floatingWidgets?.[id]?.visible;
+                    const isVisible = widgetVisible(id);
                     return (
                       <button
                         key={id}
@@ -808,7 +792,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
                   ))}
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">Pages: {pinned.length} · Widgets: {FLOATING_WIDGETS.filter(({ id }) => floatingWidgets?.[id]?.visible).length}</p>
+              <p className="text-[10px] text-muted-foreground text-center">Pages: {pinned.length} · Widgets: {FLOATING_WIDGETS.filter(({ id }) => widgetVisible(id)).length}</p>
             </div>
           </div>
         </div>

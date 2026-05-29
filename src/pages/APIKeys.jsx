@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
-  Key, Plus, X, Copy, Check, AlertTriangle, Clock, Trash2, Crown,
+  Key, Plus, X, Copy, Check, AlertTriangle, Trash2, Crown,
   Zap, Eye, BookOpen, Rocket, Star, Shield, Bot, Activity, Globe,
-  Brain, Code, Cpu, Search, Lock, Unlock, RefreshCw, ChevronDown,
-  ChevronUp, BarChart2, Sparkles, Network, FlaskConical, TrendingUp
+  Brain, Code, Lock, Unlock, ChevronDown,
+  ChevronUp, BarChart2, Sparkles, Network, TrendingUp
 } from 'lucide-react';
 
 // ─── CAPABILITY SCOPES ────────────────────────────────────────────────────────

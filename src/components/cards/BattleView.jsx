@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CardDisplay from './CardDisplay';
 import { getElementMultiplier, generateAIDeck } from './StarterCards';
 import { getRecommendedHp, normalizeDeckMode } from './deckModes';
-import { Sword, Shield, Heart, Zap, SkipForward } from 'lucide-react';
 
 function calcCardEffect(card, comboCount, opponentEl) {
   const comboMult = Math.min(2.0, 1 + 0.25 * comboCount);

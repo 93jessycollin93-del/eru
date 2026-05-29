@@ -5,7 +5,7 @@ import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/li
 import { createCardWithLore } from '@/lib/cardLore';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
-import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter, Repeat, Send, Handshake, Edit2, Check } from 'lucide-react';
+import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Repeat, Send, Handshake, Edit2, Check } from 'lucide-react';
 import MobileSelect from '@/components/mobile/MobileSelect';
 import PullToRefresh from '@/components/mobile/PullToRefresh';
 

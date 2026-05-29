@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { FolderOpen, Search, Pin, Trash2, Copy, PenLine, Tag, Code, Layout, Bot, Zap, FileText, Check, ArrowRight, Download } from 'lucide-react';
+import { FolderOpen, Search, Pin, Trash2, Copy, PenLine, Code, Layout, Bot, Zap, FileText, Check, ArrowRight, Download } from 'lucide-react';
 
 const TAG_ICONS = { code: Code, ui: Layout, system: Zap, bot: Bot, strategy: Zap, prompt: FileText, general: FileText };
 const TAG_COLORS = { code: 'text-green-400', ui: 'text-purple-400', system: 'text-blue-400', bot: 'text-cyan-400', strategy: 'text-orange-400', prompt: 'text-pink-400', general: 'text-muted-foreground' };

@@ -1,4 +1,4 @@
-import { FolderOpen, Loader2, Plus, Sparkles } from 'lucide-react';
+import { FolderOpen, Loader2, Plus } from 'lucide-react';
 
 export default function WebsiteGeneratorProjectList({ projects, loading, selectedProjectId, onSelect, onCreateNew }) {
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
