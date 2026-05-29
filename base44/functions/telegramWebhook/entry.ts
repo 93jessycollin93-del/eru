@@ -123,6 +123,30 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const botId = url.searchParams.get('botId') || url.searchParams.get('bot_id');
 
+    // --- Authenticate the webhook BEFORE any side effects ------------------
+    // Telegram echoes the secret token configured at setWebhook time in the
+    // X-Telegram-Bot-Api-Secret-Token header on EVERY update — including
+    // pre_checkout_query and successful_payment. Validating it up front is
+    // what prevents a forged request from marking an order paid (previously
+    // the payment branch ran before this check).
+    const providedSecret = req.headers.get('x-telegram-bot-api-secret-token') || '';
+    let bot = null;
+    if (botId) {
+      try { bot = await base44.asServiceRole.entities.TelegramBot.get(botId); } catch { bot = null; }
+    }
+    const expectedSecret = bot?.webhook_secret_token || Deno.env.get('TELEGRAM_WEBHOOK_SECRET') || '';
+    const isPaymentUpdate = !!(payload.message?.successful_payment || payload.pre_checkout_query);
+    if (expectedSecret) {
+      if (providedSecret !== expectedSecret) {
+        return Response.json({ success: false, error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    } else if (isPaymentUpdate) {
+      // Payment-bearing updates are the sensitive path: refuse them outright
+      // when no secret is configured rather than trusting an unauthenticated
+      // request. Plain message handling keeps the legacy bypass below.
+      return Response.json({ success: false, error: 'Webhook secret not configured; refusing payment update' }, { status: 401 });
+    }
+
     if (payload.pre_checkout_query) {
       const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
       if (!token) {
@@ -178,23 +202,10 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Missing botId' }, { status: 400 });
     }
 
-    const bot = await base44.asServiceRole.entities.TelegramBot.get(botId);
+    // `bot` was fetched and its secret token validated at the top of the
+    // handler before any side effects.
     if (!bot) {
       return Response.json({ success: false, error: 'No Telegram bot configured' }, { status: 404 });
-    }
-
-    // Verify the per-bot secret_token Telegram passes back on every webhook.
-    // Telegram sends it in the X-Telegram-Bot-Api-Secret-Token header; we
-    // compare against webhook_secret_token stored on the bot when activate
-    // ran. Bots that haven't been re-activated yet (no stored token) are
-    // accepted with a one-time bypass to avoid breaking existing deployments;
-    // the activate flow now always sets one going forward.
-    const expectedSecret = bot.webhook_secret_token;
-    if (expectedSecret) {
-      const provided = req.headers.get('x-telegram-bot-api-secret-token') || '';
-      if (provided !== expectedSecret) {
-        return Response.json({ success: false, error: 'Invalid webhook signature' }, { status: 401 });
-      }
     }
 
     const token = bot.bot_token || Deno.env.get('TELEGRAM_BOT_TOKEN');

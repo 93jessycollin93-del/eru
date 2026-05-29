@@ -1,37 +1,60 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-// In-memory rate limit tracking (use Redis in production)
-const rateLimitMap = new Map();
 const RATE_LIMITS = {
   login: { max: 5, window: 60000 }, // 5 attempts per minute
   signup: { max: 3, window: 3600000 }, // 3 signups per hour
   passwordReset: { max: 3, window: 3600000 }, // 3 resets per hour
 };
 
-function checkRateLimit(key, action) {
+// Persistent rate limiting backed by the RateLimitCounter entity.
+//
+// The previous implementation kept counters in an in-memory Map, which reset
+// on every function cold start and was not shared across horizontally-scaled
+// instances — so an attacker could sidestep the limit simply by spreading
+// requests over time or instances. Persisting to an entity makes the limit
+// durable and cluster-wide. (There is no atomic increment, so a burst of
+// truly-simultaneous requests can race by a small margin; this is acceptable
+// for auth throttling and is a large improvement over in-memory state.)
+async function checkRateLimit(base44, key, action) {
   const limit = RATE_LIMITS[action];
   if (!limit) return { allowed: true };
 
   const now = Date.now();
-  const entry = rateLimitMap.get(key) || { count: 0, resetTime: now + limit.window };
+  let entry = null;
+  try {
+    const rows = await base44.asServiceRole.entities.RateLimitCounter.filter({ key });
+    entry = rows?.[0] || null;
+  } catch {
+    entry = null;
+  }
 
-  if (now > entry.resetTime) {
-    // Window expired, reset
-    rateLimitMap.set(key, { count: 1, resetTime: now + limit.window });
+  // No record yet, or the window has expired → start a fresh window.
+  if (!entry || now > Number(entry.reset_time || 0)) {
+    const data = { key, action, count: 1, reset_time: now + limit.window };
+    try {
+      if (entry) await base44.asServiceRole.entities.RateLimitCounter.update(entry.id, data);
+      else await base44.asServiceRole.entities.RateLimitCounter.create(data);
+    } catch {
+      /* best effort — never let counter persistence block the auth flow */
+    }
     return { allowed: true, remaining: limit.max - 1 };
   }
 
-  if (entry.count >= limit.max) {
+  const count = Number(entry.count || 0);
+  if (count >= limit.max) {
     return {
       allowed: false,
       remaining: 0,
-      retryAfter: Math.ceil((entry.resetTime - now) / 1000),
+      retryAfter: Math.ceil((Number(entry.reset_time) - now) / 1000),
     };
   }
 
-  entry.count++;
-  rateLimitMap.set(key, entry);
-  return { allowed: true, remaining: limit.max - entry.count };
+  try {
+    await base44.asServiceRole.entities.RateLimitCounter.update(entry.id, { count: count + 1 });
+  } catch {
+    /* best effort */
+  }
+  return { allowed: true, remaining: limit.max - count - 1 };
 }
 
 export async function handleRateLimitedAuth(req) {
@@ -44,7 +67,7 @@ export async function handleRateLimitedAuth(req) {
   }
 
   const key = `${action}:${identifier}`;
-  const check = checkRateLimit(key, action);
+  const check = await checkRateLimit(base44, key, action);
 
   if (!check.allowed) {
     // Log failed attempt
@@ -65,7 +88,7 @@ export async function handleRateLimitedAuth(req) {
         error: `Too many ${action} attempts. Try again in ${check.retryAfter} seconds.`,
         retryAfter: check.retryAfter,
       },
-      { status: 429, headers: { 'Retry-After': check.retryAfter } }
+      { status: 429, headers: { 'Retry-After': String(check.retryAfter) } }
     );
   }
 

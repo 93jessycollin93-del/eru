@@ -85,9 +85,22 @@ async function handleSalesforce(source, accessToken, connectionConfig, action, p
   const objectName = source.resource_id;
   if (!instanceUrl || !objectName) throw new Error('Salesforce instance URL and object API name are required.');
 
+  // Salesforce object/field API names are restricted to letters, digits and
+  // underscores. Validating against that allowlist before interpolating into
+  // SOQL prevents query injection (e.g. a "fields" value that closes the
+  // SELECT and appends a destructive statement).
+  const SF_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
+  if (!SF_NAME.test(objectName)) throw new Error('Invalid Salesforce object name.');
+
   if (action === 'read') {
-    const fields = payload?.fields || 'Id,Name';
-    const limit = payload?.limit || 10;
+    const rawFields = typeof payload?.fields === 'string' ? payload.fields : 'Id,Name';
+    const fieldList = rawFields.split(',').map((f) => f.trim()).filter(Boolean);
+    if (fieldList.length === 0 || !fieldList.every((f) => SF_NAME.test(f))) {
+      throw new Error('Invalid Salesforce field list.');
+    }
+    const fields = fieldList.join(',');
+    // Clamp the limit to a sane positive integer (1–2000, SOQL's max).
+    const limit = Math.min(Math.max(parseInt(payload?.limit, 10) || 10, 1), 2000);
     const query = encodeURIComponent(`SELECT ${fields} FROM ${objectName} LIMIT ${limit}`);
     const response = await fetch(`${instanceUrl}/services/data/${apiVersion}/query?q=${query}`, {
       headers: { Authorization: `Bearer ${accessToken}` }
