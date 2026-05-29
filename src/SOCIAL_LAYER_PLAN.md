@@ -67,9 +67,10 @@ Marketplace/Storefront patterns (listings), profiles.
 
 **No major new infra/cost** — this stays within Base44 + existing integrations.
 
-> Open input needed before designing: **who is the primary user** — creators
-> seeking deals, brands seeking creators, or both sides equally? This shapes the
-> whole data model and first screen.
+> **Decided:** primary user is **brands/advertisers seeking creators**. First
+> screen = post a brief + search creators by niche / audience / platform. Creator
+> profiles are the indexed, searchable side; brands drive demand. (Creators can
+> still apply to briefs — we just optimize the brand's flow first.)
 
 ---
 
