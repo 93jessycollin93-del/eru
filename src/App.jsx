@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -8,80 +8,84 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Markets from './pages/Markets';
-import Trade from './pages/Trade';
-import NFTs from './pages/NFTs';
-import Portfolio from './pages/Portfolio';
-import Collectables from './pages/Collectables';
-import Messages from './pages/Messages';
-import Settings from './pages/Settings';
-import UserSettings from './pages/UserSettings';
-import ProfilePreferences from './pages/ProfilePreferences';
 
-import CreatorHub from './pages/CreatorHub';
-import ThinkersClub from './pages/ThinkersClub';
-import AppReview from './pages/AppReview';
-import Reputation from './pages/Reputation';
-import TelegramApps from './pages/TelegramApps';
-import TelegramBotManagement from './pages/TelegramBotManagement';
-import JackieAI from './pages/JackieAI';
-import AILab from './pages/AILab';
-import APIKeys from './pages/APIKeys';
-import SystemBuilder from './pages/SystemBuilder';
-import Pipeline from './pages/Pipeline';
-import AdminBlockchain from './pages/AdminBlockchain';
-import JadeAtelier from './pages/JadeAtelier';
-import VisualEngine from './pages/VisualEngine';
-import CardArena from './pages/CardArena';
-import StorefrontHub from './pages/StorefrontHub';
-import StorefrontAnalytics from './pages/StorefrontAnalytics';
-import SellerDashboard from './pages/SellerDashboard';
-import CreatureLab from './pages/CreatureLab';
-import AdminEconomyDashboard from './pages/AdminEconomyDashboard';
-import Economy from './pages/Economy';
-import PerformanceDashboard from './pages/PerformanceDashboard';
-import BotPerformanceHistory from './pages/BotPerformanceHistory';
-import ActivityAuditLog from './pages/ActivityAuditLog';
-import BotAutomations from './pages/BotAutomations';
-import ComplianceCenter from './pages/ComplianceCenter';
-import SecurityDashboard from './pages/SecurityDashboard';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import RoleManagement from './pages/RoleManagement';
-import BlockchainAnalytics from './pages/BlockchainAnalytics';
-import WalletManager from './pages/WalletManager';
-import TransactionHistory from './pages/TransactionHistory';
-import BotMarketplace from './pages/BotMarketplace';
-import BotMiniApp from './pages/BotMiniApp';
-import SquadPerformance from './pages/SquadPerformance';
-import SquadKnowledgeTrends from './pages/SquadKnowledgeTrends';
-import BotFarm from './pages/BotFarm';
-import AgentOperations from './pages/AgentOperations';
-import AnalyticsHub from './pages/AnalyticsHub';
-import BazarStand from './pages/BazarStand';
-import EscrowDashboard from './pages/EscrowDashboard';
-import ReferralDashboard from './pages/ReferralDashboard';
-import EruSwarmTest from './pages/EruSwarmTest';
-import EruRedteamTest from './pages/EruRedteamTest';
-import SheetsSync from './pages/SheetsSync';
-import PhoenixInvestor from './pages/PhoenixInvestor';
-import AdminReviewCenter from './pages/AdminReviewCenter';
-import SecurityCommandCenter from './pages/SecurityCommandCenter';
-import SecurityTestRunner from './pages/SecurityTestRunner';
-import LanguageDiagnostics from './pages/LanguageDiagnostics';
-import AdminBazarProducts from './pages/AdminBazarProducts';
-import PlayerProgress from './pages/PlayerProgress';
-import LoreInsights from './pages/LoreInsights';
-import Preferences from './pages/Preferences';
-import Library from './pages/Library';
-import DeckBuilder from './pages/DeckBuilder';
-import Guilds from './pages/Guilds';
-import About from './pages/About';
-import AppStore from './pages/AppStore';
-import JackieDevLab from './pages/JackieDevLab';
-import CardScanner from './pages/CardScanner';
-import IntegrationHub from './pages/IntegrationHub';
+// Pages are lazy-loaded so each route ships in its own chunk instead of one
+// ~5MB bundle. The <Suspense> boundary below shows a spinner while a page's
+// chunk is fetched.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Markets = lazy(() => import('./pages/Markets'));
+const Trade = lazy(() => import('./pages/Trade'));
+const NFTs = lazy(() => import('./pages/NFTs'));
+const Portfolio = lazy(() => import('./pages/Portfolio'));
+const Collectables = lazy(() => import('./pages/Collectables'));
+const Messages = lazy(() => import('./pages/Messages'));
+const Settings = lazy(() => import('./pages/Settings'));
+const UserSettings = lazy(() => import('./pages/UserSettings'));
+const ProfilePreferences = lazy(() => import('./pages/ProfilePreferences'));
+const CreatorHub = lazy(() => import('./pages/CreatorHub'));
+const ThinkersClub = lazy(() => import('./pages/ThinkersClub'));
+const AppReview = lazy(() => import('./pages/AppReview'));
+const Reputation = lazy(() => import('./pages/Reputation'));
+const TelegramApps = lazy(() => import('./pages/TelegramApps'));
+const TelegramBotManagement = lazy(() => import('./pages/TelegramBotManagement'));
+const JackieAI = lazy(() => import('./pages/JackieAI'));
+const AILab = lazy(() => import('./pages/AILab'));
+const APIKeys = lazy(() => import('./pages/APIKeys'));
+const SystemBuilder = lazy(() => import('./pages/SystemBuilder'));
+const Pipeline = lazy(() => import('./pages/Pipeline'));
+const AdminBlockchain = lazy(() => import('./pages/AdminBlockchain'));
+const JadeAtelier = lazy(() => import('./pages/JadeAtelier'));
+const VisualEngine = lazy(() => import('./pages/VisualEngine'));
+const CardArena = lazy(() => import('./pages/CardArena'));
+const StorefrontHub = lazy(() => import('./pages/StorefrontHub'));
+const StorefrontAnalytics = lazy(() => import('./pages/StorefrontAnalytics'));
+const SellerDashboard = lazy(() => import('./pages/SellerDashboard'));
+const CreatureLab = lazy(() => import('./pages/CreatureLab'));
+const AdminEconomyDashboard = lazy(() => import('./pages/AdminEconomyDashboard'));
+const Economy = lazy(() => import('./pages/Economy'));
+const PerformanceDashboard = lazy(() => import('./pages/PerformanceDashboard'));
+const BotPerformanceHistory = lazy(() => import('./pages/BotPerformanceHistory'));
+const ActivityAuditLog = lazy(() => import('./pages/ActivityAuditLog'));
+const BotAutomations = lazy(() => import('./pages/BotAutomations'));
+const ComplianceCenter = lazy(() => import('./pages/ComplianceCenter'));
+const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const RoleManagement = lazy(() => import('./pages/RoleManagement'));
+const BlockchainAnalytics = lazy(() => import('./pages/BlockchainAnalytics'));
+const WalletManager = lazy(() => import('./pages/WalletManager'));
+const TransactionHistory = lazy(() => import('./pages/TransactionHistory'));
+const BotMarketplace = lazy(() => import('./pages/BotMarketplace'));
+const BotMiniApp = lazy(() => import('./pages/BotMiniApp'));
+const SquadPerformance = lazy(() => import('./pages/SquadPerformance'));
+const SquadKnowledgeTrends = lazy(() => import('./pages/SquadKnowledgeTrends'));
+const BotFarm = lazy(() => import('./pages/BotFarm'));
+const AgentOperations = lazy(() => import('./pages/AgentOperations'));
+const AnalyticsHub = lazy(() => import('./pages/AnalyticsHub'));
+const BazarStand = lazy(() => import('./pages/BazarStand'));
+const EscrowDashboard = lazy(() => import('./pages/EscrowDashboard'));
+const ReferralDashboard = lazy(() => import('./pages/ReferralDashboard'));
+const EruSwarmTest = lazy(() => import('./pages/EruSwarmTest'));
+const EruRedteamTest = lazy(() => import('./pages/EruRedteamTest'));
+const SheetsSync = lazy(() => import('./pages/SheetsSync'));
+const PhoenixInvestor = lazy(() => import('./pages/PhoenixInvestor'));
+const AdminReviewCenter = lazy(() => import('./pages/AdminReviewCenter'));
+const SecurityCommandCenter = lazy(() => import('./pages/SecurityCommandCenter'));
+const SecurityTestRunner = lazy(() => import('./pages/SecurityTestRunner'));
+const LanguageDiagnostics = lazy(() => import('./pages/LanguageDiagnostics'));
+const AdminBazarProducts = lazy(() => import('./pages/AdminBazarProducts'));
+const PlayerProgress = lazy(() => import('./pages/PlayerProgress'));
+const LoreInsights = lazy(() => import('./pages/LoreInsights'));
+const Preferences = lazy(() => import('./pages/Preferences'));
+const Library = lazy(() => import('./pages/Library'));
+const DeckBuilder = lazy(() => import('./pages/DeckBuilder'));
+const Guilds = lazy(() => import('./pages/Guilds'));
+const About = lazy(() => import('./pages/About'));
+const AppStore = lazy(() => import('./pages/AppStore'));
+const JackieDevLab = lazy(() => import('./pages/JackieDevLab'));
+const CardScanner = lazy(() => import('./pages/CardScanner'));
+const IntegrationHub = lazy(() => import('./pages/IntegrationHub'));
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -111,6 +115,11 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <Suspense fallback={
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    }>
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Dashboard />} />
@@ -189,6 +198,7 @@ const AuthenticatedApp = () => {
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
+    </Suspense>
   );
 };
 
@@ -219,9 +229,11 @@ function App() {
     <LanguageProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
+        <ErrorBoundary>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+        </ErrorBoundary>
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
