@@ -86,6 +86,8 @@ const AppStore = lazy(() => import('./pages/AppStore'));
 const JackieDevLab = lazy(() => import('./pages/JackieDevLab'));
 const CardScanner = lazy(() => import('./pages/CardScanner'));
 const IntegrationHub = lazy(() => import('./pages/IntegrationHub'));
+const Community = lazy(() => import('./pages/Community'));
+const SimTradingLab = lazy(() => import('./pages/SimTradingLab'));
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -195,6 +197,8 @@ const AuthenticatedApp = () => {
         <Route path="/dev-lab" element={<JackieDevLab />} />
         <Route path="/card-scanner" element={<CardScanner />} />
         <Route path="/integrations" element={<IntegrationHub />} />
+        <Route path="/community" element={<Community />} />
+        <Route path="/bot-lab" element={<SimTradingLab />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
