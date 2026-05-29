@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, X, GripVertical, Star, ExternalLink, ChevronRight, Zap } from 'lucide-react';
+import { Search, Plus, X, GripVertical, Star, ExternalLink, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import TelegramSettings from '../components/TelegramSettings';
 import TelegramBotDashboard from '../components/telegram/TelegramBotDashboard';

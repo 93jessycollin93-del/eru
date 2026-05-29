@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { Shield, Users, LogOut, Loader2, Coins, AlertTriangle, ScrollText, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { fetchUserGold } from '@/lib/economyApi';

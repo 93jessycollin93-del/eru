@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp, RefreshCw, Lock, Smartphone, Send } from 'lucide-react';
+import { Shield, XCircle, ChevronDown, ChevronUp, RefreshCw, Smartphone, Send } from 'lucide-react';
 
 const SEVERITY = {
   critical: { label: 'Critical', color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-400/30', dot: 'bg-red-400' },

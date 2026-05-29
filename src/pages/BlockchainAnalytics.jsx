@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 import RoleGate from '@/components/RoleGate';
 import BlockchainMetrics from '@/components/BlockchainMetrics';
-import { BarChart3, Target, AlertCircle, ChevronRight, Plus } from 'lucide-react';
+import { BarChart3, Target, AlertCircle, Plus } from 'lucide-react';
 
 export default function BlockchainAnalytics() {
   const { currentUser } = useAuth();

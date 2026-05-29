@@ -3,7 +3,6 @@ import { PanelsTopLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WidgetRulesPanel from '../components/dashboard/WidgetRulesPanel';
 import { DashboardEventsProvider } from '../context/DashboardEventsContext';
-import DataVisualizer from '../components/dashboard/DataVisualizer';
 import WidgetLibrary from '../components/dashboard/WidgetLibrary';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';

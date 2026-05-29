@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Hammer, Zap, AlertTriangle, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
+import { Hammer, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const FORMS = [

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Hammer, Rocket, Star, Bot, Code2, Palette, ChevronRight, Globe, Lock, Zap, Plus, ArrowRight, CheckCircle2, Circle } from 'lucide-react';
+import { Hammer, Rocket, Star, Globe, Zap, ArrowRight, Circle } from 'lucide-react';
 
 const STAGES = [
   { id: 'build',    label: 'Build',    emoji: '🔨', icon: Hammer,  color: 'text-blue-400',   bg: 'bg-blue-400/10',   border: 'border-blue-400/30',  desc: 'Create bots, code & assets' },

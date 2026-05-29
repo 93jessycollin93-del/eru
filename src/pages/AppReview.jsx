@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Upload, CheckCircle, XCircle, Clock, AlertTriangle, Code, FileText, ArrowRight, RotateCcw } from 'lucide-react';
+import { Shield, Upload, CheckCircle, XCircle, Clock, AlertTriangle, Code, FileText, RotateCcw } from 'lucide-react';
 
 const REVIEW_STAGES = [
   { id: 1, label: 'Malware Scan', desc: 'Scanning for known malicious patterns' },

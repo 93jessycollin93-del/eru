@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
-import { Activity, Clock, AlertTriangle, Filter, Search } from 'lucide-react';
+import { Activity, Clock, AlertTriangle, Search } from 'lucide-react';
 
 export default function SecurityDashboard() {
   const { currentUser } = useAuth();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Coins, Copy, ExternalLink, Loader2, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { TON_RECEIVING_ADDRESS } from '@/lib/tonConfig';

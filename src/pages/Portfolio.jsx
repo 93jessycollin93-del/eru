@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Zap, Trophy, Flame, TrendingUp, Star, Heart, Share2, Lock, Calendar, Download } from 'lucide-react';
+import { Trophy, Flame, TrendingUp, Star, Heart, Download } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';

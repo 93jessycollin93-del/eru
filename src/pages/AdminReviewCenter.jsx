@@ -64,7 +64,7 @@ function ReviewCenterInner() {
   const builtInPortals = Object.values(EXTERNAL_PORTALS);
   const allPortals = useMemo(
     () => [...builtInPortals, ...customPortals].map((p) => ({ ...p, currentUrl: getPortalUrl(p.id) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [customPortals, refreshKey]
   );
   const unconfigured = allPortals.filter((p) => !p.currentUrl);

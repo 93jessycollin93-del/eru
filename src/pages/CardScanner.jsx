@@ -6,8 +6,6 @@ import {
   getZeroFakeDataMode,
   getPricingProviderStatus,
   TRUST_LABELS,
-  isHighConfidence,
-  labelForSource,
   logPricingAudit,
   summarizePricingResults,
 } from '@/lib/zeroFakeData';

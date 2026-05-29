@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import {
-  Store, Plus, RefreshCw, Settings, Plug, AlertCircle, CheckCircle2,
-  Clock, XCircle, Search, Filter, Gem, Image, Bot, Sword, Package,
-  Globe, Lock, ChevronRight, Wifi, WifiOff, Loader2, ExternalLink,
+  Store, Plus, Plug, AlertCircle, CheckCircle2,
+  Clock, XCircle, Search, Gem, Image, Bot, Sword, Package,
+  Globe, ChevronRight, WifiOff, Loader2,
   ToggleLeft, ToggleRight, Edit2, Trash2, Shield, Activity,
   Square, CheckSquare, Send, BarChart2, SlidersHorizontal, Zap,
   Pause, Play
@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ConditionBadge from '../components/storefront/ConditionBadge';
 import { Flame, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import { canManageMarketplaceConfig, canEditListing } from '@/lib/permissions';
+import { canManageMarketplaceConfig } from '@/lib/permissions';
 import { validateListingDraft, validateListingEdit } from '@/lib/marketplaceValidation';
 import { logAuditEvent } from '@/lib/auditEvents';
 import PermissionGate from '@/components/PermissionGate';

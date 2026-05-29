@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpDown, ImageIcon, BarChart2, ShoppingBag, Lightbulb, Brain, Shield, Award, Send, Cpu, Wallet, Home, Settings, GripVertical, Check, Pencil } from 'lucide-react';
+import { ArrowUpDown, ImageIcon, BarChart2, ShoppingBag, Lightbulb, Brain, Shield, Award, Send, Cpu, Wallet, Settings, GripVertical, Check, Pencil } from 'lucide-react';
 
 const ALL_ACTIONS = [
   { label: 'Trade',    icon: ArrowUpDown, to: '/trade',        color: 'text-green-400' },

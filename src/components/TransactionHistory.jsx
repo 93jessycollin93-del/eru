@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { fetchTransactionHistory } from '@/lib/economyApi';
 import { TrendingUp, TrendingDown, Clock, CheckCircle2, AlertCircle, X } from 'lucide-react';

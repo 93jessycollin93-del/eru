@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Network, Play, ChevronRight, TrendingUp, Loader2, Star, GitBranch, MessageSquareShare, Wrench, BrainCircuit } from 'lucide-react';
+import { Network, ChevronRight, Loader2, Star, GitBranch, MessageSquareShare, Wrench, BrainCircuit } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import CollaborationWorkspace from './CollaborationWorkspace';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, FileJson, FileText, Loader2 } from 'lucide-react';
+import { FileJson, FileText, Loader2 } from 'lucide-react';
 import { generateAppWidePDF } from '@/lib/pdfExporter';
 import { toast } from 'sonner';
 

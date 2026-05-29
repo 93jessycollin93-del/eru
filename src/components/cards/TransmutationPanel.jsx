@@ -5,7 +5,6 @@ import CardDisplay from './CardDisplay';
 import { RARITY_STYLES } from './StarterCards';
 import {
   TRANSMUTE_COUNT,
-  RARITY_LADDER,
   nextRarity,
   isTransmutable,
   transmutableRarities,

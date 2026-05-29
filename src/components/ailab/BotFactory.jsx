@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wand2, Copy, Save, ChevronRight, Loader2, Download } from 'lucide-react';
+import { Wand2, Copy, Save, Loader2, Download } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ModelProviderPanel from './ModelProviderPanel';
 import { invokeSelectedModel } from './modelRouting';

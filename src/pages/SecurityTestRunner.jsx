@@ -8,7 +8,7 @@ import PermissionGate from '@/components/PermissionGate';
 import TruthState from '@/components/TruthState';
 import { isOwner, isAdmin } from '@/lib/permissions';
 import {
-  CATEGORIES, SIM_ROLES, STATUS,
+  CATEGORIES, STATUS,
   runAllTests, summarize, summarizeByCategory, backendConfidence,
 } from '@/lib/securityTestRunner';
 import { useAuth } from '@/lib/AuthContext';

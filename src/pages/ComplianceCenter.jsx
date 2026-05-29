@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, AlertTriangle, Lock, Trash2, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';

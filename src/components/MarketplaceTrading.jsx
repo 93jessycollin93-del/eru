@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset, cancelEscrow } from '@/lib/economyApi';
-import { ShoppingCart, Tag, Zap, Lock, AlertCircle, CheckCircle2, Clock, X } from 'lucide-react';
+import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
+import { ShoppingCart, Tag, Lock, AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export default function MarketplaceTrading() {
   const { currentUser } = useAuth();

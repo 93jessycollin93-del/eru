@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 import { isAdmin } from '@/lib/rbac';
-import { ShieldCheck, Plus, Trash2, Edit, AlertTriangle, ChevronRight, Users } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, Edit, AlertTriangle } from 'lucide-react';
 
 export default function RoleManagement() {
   const { currentUser } = useAuth();

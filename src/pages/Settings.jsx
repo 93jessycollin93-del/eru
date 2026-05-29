@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Shield, FileText, Bell, ChevronRight, Lock, AlertTriangle, ExternalLink,
+import { FileText, Bell, ChevronRight, Lock, AlertTriangle, ExternalLink,
   Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send, Globe,
   Copy, CheckCircle2, Sparkles, SlidersHorizontal, User2,
 } from 'lucide-react';

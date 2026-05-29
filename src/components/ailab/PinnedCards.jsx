@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Pin, Plus, Trash2, Bot, X, Sparkles } from 'lucide-react';
+import { Pin, Plus, Bot, X, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 

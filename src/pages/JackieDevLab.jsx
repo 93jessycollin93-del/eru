@@ -144,7 +144,7 @@ export default function JackieDevLab() {
     };
     run();
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [userEmail]);
 
   const reloadProjectScope = async (projectId) => {
