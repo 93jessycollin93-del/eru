@@ -8,6 +8,7 @@ import {
 import HomeHero from '../components/home/HomeHero';
 import HomeSection from '../components/home/HomeSection';
 import AdvertisingTeaser from '../components/home/AdvertisingTeaser';
+import HomeAuthButton from '../components/home/HomeAuthButton';
 
 /**
  * Home — the app's main landing & tutorial page. A guided, elegant tour of
@@ -28,6 +29,11 @@ export default function Home() {
       }}
     >
       <div className="mx-auto w-full max-w-3xl px-4 pt-4 space-y-4">
+        {/* Top bar — sign in / sign out on the right, like most apps */}
+        <div className="flex items-center justify-end">
+          <HomeAuthButton />
+        </div>
+
         <HomeHero />
 
         {/* SECTION 1 — Social / Live / Influencing (the first impression) */}
