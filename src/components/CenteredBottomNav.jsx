@@ -670,19 +670,9 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         </button>}
       </div>
 
-      <NavWalkthrough
-        open={walkthroughOpen}
-        step={walkthroughStep}
-        setStep={setWalkthroughStep}
-        onClose={() => {
-          playSound('click');
-          VIBRATE.click();
-          setWalkthroughOpen(false);
-          setWalkthroughStep(0);
-        }}
-      />
-
-      {/* Edit modal */}
+      {/* Edit modal — rendered OUTSIDE the draggable nav container so the nav's
+          press-and-hold drag handlers (pointerdown/move/up + onClickCapture +
+          touchAction:none) can't swallow taps inside the editor. */}
       {editMode && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setEditMode(false)}>
           <div className="w-full max-w-md md:max-w-2xl bg-card text-foreground border-t border-border rounded-t-2xl max-h-[75dvh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -799,6 +789,18 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           </div>
         </div>
       )}
+
+      <NavWalkthrough
+        open={walkthroughOpen}
+        step={walkthroughStep}
+        setStep={setWalkthroughStep}
+        onClose={() => {
+          playSound('click');
+          VIBRATE.click();
+          setWalkthroughOpen(false);
+          setWalkthroughStep(0);
+        }}
+      />
     </>
   );
 }
