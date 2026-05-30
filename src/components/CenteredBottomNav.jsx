@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2, ScanLine, Plug, Users } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2, ScanLine, Plug, Users, PanelsTopLeft } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
@@ -12,6 +12,7 @@ import { useLanguage } from '@/context/LanguageContext';
 // is missing the key.
 const ALL_PAGES = [
   { id: 'home',         labelKey: 'nav.home',         fallback: 'Home',         icon: Home,          to: '/' },
+  { id: 'dashboard',    labelKey: 'nav.dashboard',    fallback: 'Dashboard',    icon: PanelsTopLeft, to: '/dashboard' },
   { id: 'jackie',       labelKey: 'nav.jackie',       fallback: 'Jackie',       icon: Bot,           to: '/jackie' },
   { id: 'markets',      labelKey: 'nav.markets',      fallback: 'Markets',      icon: BarChart2,     to: '/markets' },
   { id: 'trade',        labelKey: 'nav.trade',        fallback: 'Trade',        icon: ArrowUpDown,   to: '/trade' },

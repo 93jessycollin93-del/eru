@@ -14,6 +14,7 @@ import Layout from './components/Layout';
 // Pages are lazy-loaded so each route ships in its own chunk instead of one
 // ~5MB bundle. The <Suspense> boundary below shows a spinner while a page's
 // chunk is fetched.
+const Home = lazy(() => import('./pages/Home'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Markets = lazy(() => import('./pages/Markets'));
 const Trade = lazy(() => import('./pages/Trade'));
@@ -124,7 +125,8 @@ const AuthenticatedApp = () => {
     }>
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/markets" element={<Markets />} />
         <Route path="/trade" element={<Trade />} />
         <Route path="/nfts" element={<NFTs />} />
