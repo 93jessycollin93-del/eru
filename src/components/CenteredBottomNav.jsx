@@ -515,6 +515,13 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             onClick={() => {
               playSound('click');
               VIBRATE.click();
+              // Cancel any in-progress hold/drag and release pointer capture so
+              // the editor modal reliably receives taps (mobile fix).
+              clearHold();
+              dragging.current = false;
+              didDrag.current = false;
+              setIsHoldReady(false);
+              try { navRef.current?.releasePointerCapture?.(holdStart.current.pointerId); } catch {}
               setEditMode(true);
             }}
             className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary"
@@ -674,8 +681,18 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           press-and-hold drag handlers (pointerdown/move/up + onClickCapture +
           touchAction:none) can't swallow taps inside the editor. */}
       {editMode && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setEditMode(false)}>
-          <div className="w-full max-w-md md:max-w-2xl bg-card text-foreground border-t border-border rounded-t-2xl max-h-[75dvh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+          style={{ pointerEvents: 'auto', touchAction: 'auto' }}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={() => setEditMode(false)}
+        >
+          <div
+            className="w-full max-w-md md:max-w-2xl bg-card text-foreground border-t border-border rounded-t-2xl max-h-[75dvh] flex flex-col"
+            style={{ pointerEvents: 'auto', touchAction: 'auto' }}
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <p className="font-semibold text-sm">Customize Nav Bar</p>
               <button onClick={() => {
