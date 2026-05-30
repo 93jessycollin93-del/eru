@@ -456,20 +456,6 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
             <ArrowLeft style={{ width: 8, height: 8 }} />
           </button>
           <GripHorizontal style={{ width: 10, height: 10 }} className={lockedToTicker ? 'opacity-40' : ''} />
-          {/* Reset to default snap position (under the ticker) */}
-          <button
-            data-no-min-touch
-            onClick={(e) => {
-              e.stopPropagation();
-              playSound('toggle');
-              VIBRATE.toggle();
-              resetPosition();
-            }}
-            className="inline-flex items-center justify-center w-3.5 h-3.5 transition-colors hover:text-primary text-[8px] font-bold"
-            title="Reset position (snap under ticker)"
-          >
-            ⟲
-          </button>
           <button
             data-no-min-touch
             onClick={() => {
