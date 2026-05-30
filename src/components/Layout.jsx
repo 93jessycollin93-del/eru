@@ -157,16 +157,20 @@ export default function Layout() {
           CenteredBottomNav positions itself absolutely within this overlay
           (fully draggable on both axes), so this wrapper is a transparent,
           click-through layer covering the full viewport.
-          Hidden on mobile (< md): mobile uses the fixed MobileTabBar below
-          for native-feeling navigation. The floating nav stays on tablet/desktop. */}
+          Shown on ALL screen sizes: it's fully mobile-optimized (draggable,
+          compact, exposes every page + widget + search + the editor), so it's
+          the single source of navigation. The fixed MobileTabBar below gives
+          phones a stationary 4-tab quick bar that's always findable. */}
       <div
-        className="hidden md:block fixed inset-0 z-50 pointer-events-none eru-enter"
+        className="fixed inset-0 z-50 pointer-events-none eru-enter"
         aria-hidden="false"
       >
         <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
       </div>
 
-      {/* Fixed iOS-style mobile tab bar — only visible on phone-sized screens. */}
+      {/* Fixed iOS-style mobile tab bar — only visible on phone-sized screens.
+          Guarantees phones always have a visible, stationary nav entry point
+          even if the floating nav was dragged off-screen. */}
       <MobileTabBar />
     </>
   );
