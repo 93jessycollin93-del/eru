@@ -27,10 +27,6 @@
       "type": "string",
       "description": "Webhook endpoint URL"
     },
-    "webhook_secret_token": {
-      "type": "string",
-      "description": "Per-bot secret echoed back by Telegram in the X-Telegram-Bot-Api-Secret-Token header. Verified server-side to reject forged webhooks."
-    },
     "status": {
       "type": "string",
       "enum": [

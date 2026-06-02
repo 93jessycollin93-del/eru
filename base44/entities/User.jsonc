@@ -53,5 +53,9 @@
         }
       }
     }
-  }
+  },
+  "required": [
+    "integration_quota",
+    "telegram_preferences"
+  ]
 }

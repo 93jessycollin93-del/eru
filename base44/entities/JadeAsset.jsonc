@@ -196,7 +196,7 @@
   ],
   "rls": {
     "create": {
-      "created_by": "system@eru.internal"
+      "created_by": "{{user.email}}"
     },
     "read": {
       "$or": [
