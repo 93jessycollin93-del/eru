@@ -8,7 +8,7 @@ import {
 import HomeHero from '../components/home/HomeHero';
 import HomeSection from '../components/home/HomeSection';
 import AdvertisingTeaser from '../components/home/AdvertisingTeaser';
-import HomeAuthButton from '../components/home/HomeAuthButton.jsx';
+import HomeAuthButton from '../components/home/HomeAuthButton';
 import HomeTipsButton from '../components/home/HomeTipsButton';
 
 /**
