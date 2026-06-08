@@ -1,0 +1,20 @@
+{
+  "name": "Jackie Orbit — Telegram AI, Assets, and Launch Rewards",
+  "short_name": "Jackie Orbit",
+  "description": "Telegram-native AI operations, digital assets, Monolith jade extraction, and launch rewards in one polished app.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0d13",
+  "theme_color": "#0b0d13",
+  "categories": ["productivity", "finance", "social"],
+  "icons": [
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
