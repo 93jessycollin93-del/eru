@@ -205,6 +205,19 @@
   }
 }
 
+/* Jackie InputBar responsive bottom positioning.
+   On mobile the MobileTabBar (md:hidden) sits at bottom-0 and is ~52px tall
+   plus the device safe-area-inset-bottom. The InputBar must clear it.
+   On desktop (md+) the MobileTabBar is hidden so bottom-16 (4rem) is enough. */
+.jackie-input-bar {
+  bottom: 4rem; /* desktop: clear CenteredBottomNav */
+}
+@media (max-width: 767px) {
+  .jackie-input-bar {
+    bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Ticker animation */
 @keyframes ticker-scroll {
   0% { transform: translateX(0); }

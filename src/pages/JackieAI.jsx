@@ -305,6 +305,11 @@ export default function JackieAI() {
     writeCachedValue('jackie_common_prompt_templates', promptTemplatePayload);
   }, []);
 
+  // Auto-scroll to latest message whenever messages or loading state changes.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages, loading]);
+
   const BUILT_IN_PROGRAMMING_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, debugging, refactoring, language comparison, and systems design.";
 
   const buildFoundryPreview = (message) => {
@@ -408,7 +413,7 @@ export default function JackieAI() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-24">
+    <div className="flex flex-col min-h-screen bg-background pb-36 md:pb-24">
       {/* Cross-system shortcuts */}
       <div className="flex gap-2 px-4 py-2 border-b border-border/50 bg-card/50 overflow-x-auto">
         <button onClick={() => navigate('/ailab')}
