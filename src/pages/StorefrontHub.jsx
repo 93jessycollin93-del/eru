@@ -197,7 +197,7 @@ function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected,
         </div>
       )}
 
-      <div className="grid grid-cols-5 gap-2 pt-2 border-t border-border">
+      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border sm:grid-cols-5">
         <button onClick={(e) => { e.stopPropagation(); onRunSync(listing.id); }} className="rounded-lg bg-primary/10 px-2 py-2 text-[10px] font-medium text-primary flex items-center justify-center gap-1">
           <Zap className="w-3 h-3" /> Sync
         </button>

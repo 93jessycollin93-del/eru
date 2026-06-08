@@ -301,7 +301,7 @@ export default function APIKeys() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-0 border-b border-border">
+      <div className="grid grid-cols-2 gap-0 border-b border-border sm:grid-cols-4">
         {[
           { label: 'Total', val: keys.length, color: 'text-foreground' },
           { label: 'Active', val: activeKeys.length, color: 'text-green-400' },

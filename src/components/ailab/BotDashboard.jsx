@@ -51,7 +51,7 @@ export default function BotDashboard({ bots }) {
   return (
     <div className="px-4 py-4 space-y-4">
       {/* Summary */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           { label: 'Total XP', val: totalXP, icon: Star, color: 'text-yellow-400' },
           { label: 'Interactions', val: memories.length, icon: TrendingUp, color: 'text-primary' },
