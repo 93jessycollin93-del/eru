@@ -69,7 +69,8 @@ export default function HomeTour({ open, onClose }) {
     <AnimatePresence>
       <motion.div
         key="home-tour"
-        className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center bg-black/70 backdrop-blur-sm p-3"
+        className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center bg-black/70 backdrop-blur-sm px-3 pt-3"
+        style={{ paddingBottom: 'max(0.75rem, calc(0.75rem + env(safe-area-inset-bottom, 0px)))' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -77,16 +78,16 @@ export default function HomeTour({ open, onClose }) {
       >
         <motion.div
           className="eru-theme-modal relative w-full max-w-md rounded-2xl border border-border p-5 sm:p-6"
-          initial={{ y: 24, opacity: 0, scale: 0.98 }}
+          initial={{ y: 56, opacity: 0, scale: 0.98 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 24, opacity: 0, scale: 0.98 }}
+          exit={{ y: 56, opacity: 0, scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 320, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={handleClose}
             aria-label="Close tour"
-            className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors hover:text-foreground"
+            className="absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -133,7 +134,7 @@ export default function HomeTour({ open, onClose }) {
             <button
               onClick={() => setStep((s) => Math.max(0, s - 1))}
               disabled={step === 0}
-              className="inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+              className="inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" /> Back
             </button>
@@ -141,14 +142,14 @@ export default function HomeTour({ open, onClose }) {
             {isLast ? (
               <button
                 onClick={handleClose}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
               >
                 Got it
               </button>
             ) : (
               <button
                 onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
               >
                 Next <ChevronRight className="h-4 w-4" />
               </button>

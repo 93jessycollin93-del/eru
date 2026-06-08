@@ -33,7 +33,8 @@ export default function HomeHero() {
 
         <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-2 text-xs text-foreground">
           <Compass className="h-4 w-4 text-primary" />
-          Scroll down to explore each pathway
+          <span className="sm:hidden">Swipe down to explore each pathway</span>
+          <span className="hidden sm:inline">Scroll down to explore each pathway</span>
         </div>
       </div>
     </section>
