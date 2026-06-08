@@ -187,6 +187,12 @@
   /* GPU-friendly image rendering for scaled thumbnails/avatars. */
   img, svg, video { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 
+  /* Prevent iOS Safari from auto-zooming on input focus when font-size < 16px.
+     Applies only on narrow viewports to avoid affecting desktop rendering. */
+  @media (max-width: 767px) {
+    input, select, textarea { font-size: max(16px, 1em) !important; }
+  }
+
   /* Honor user's OS-level reduced-motion preference globally. */
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
