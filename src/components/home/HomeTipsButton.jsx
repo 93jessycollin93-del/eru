@@ -1,22 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Lightbulb } from 'lucide-react';
-import HomeTour, { hasSeenTour } from './HomeTour';
+import HomeTour from './HomeTour';
 
 /**
- * HomeTipsButton — the "Tips & Tricks" call-to-action shown at the top-center
- * of the Home page. Opens the interactive HomeTour overlay, and auto-opens it
- * once for first-time visitors.
+ * HomeTipsButton — the "Tips & Tricks" call-to-action shown at the top of the
+ * Home page. Opens the interactive HomeTour overlay on demand.
  */
 export default function HomeTipsButton() {
   const [open, setOpen] = useState(false);
-
-  // Auto-launch the tour for first-time visitors.
-  useEffect(() => {
-    if (!hasSeenTour()) {
-      const t = setTimeout(() => setOpen(true), 600);
-      return () => clearTimeout(t);
-    }
-  }, []);
 
   return (
     <>

@@ -456,6 +456,11 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           >
             <ArrowLeft style={{ width: 8, height: 8 }} />
           </button>
+          {!isControlsOnly && !collapsed && !lockedToTicker && (
+            <span className="text-[7px] font-medium leading-none text-muted-foreground/50 text-center whitespace-nowrap">
+              hold to snap
+            </span>
+          )}
           <GripHorizontal style={{ width: 10, height: 10 }} className={lockedToTicker ? 'opacity-40' : ''} />
           <button
             data-no-min-touch
