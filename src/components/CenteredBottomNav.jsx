@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2, ScanLine, Plug, Users, PanelsTopLeft } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2, ScanLine, Plug, Users, PanelsTopLeft, Music } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
@@ -19,6 +19,7 @@ const ALL_PAGES = [
   { id: 'nfts',         labelKey: 'nav.nfts',         fallback: 'NFTs',         icon: ImageIcon,     to: '/nfts' },
   { id: 'portfolio',    labelKey: 'nav.portfolio',    fallback: 'Portfolio',    icon: Wallet,        to: '/portfolio' },
   { id: 'collect',      labelKey: 'nav.collect',      fallback: 'Collectables', icon: ShoppingBag,   to: '/collectables' },
+  { id: 'music',        labelKey: 'nav.music',        fallback: 'Library',      icon: Music,         to: '/music' },
   { id: 'messages',     labelKey: 'nav.messages',     fallback: 'Messages',     icon: Mail,          to: '/messages' },
   { id: 'community',    labelKey: 'nav.community',    fallback: 'Community',    icon: Users,         to: '/community' },
   { id: 'botlab',       labelKey: 'nav.botlab',       fallback: 'Bot Lab',      icon: Bot,           to: '/bot-lab' },

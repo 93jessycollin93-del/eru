@@ -11,6 +11,7 @@ import GlobalSearch from './GlobalSearch';
 import BotWidget from './BotWidget';
 import ScreenVisualizer from './dashboard/ScreenVisualizer';
 import NotesWidgetMount from './notes/NotesWidgetMount';
+import PersistentPlayer from './media/PersistentPlayer';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
 // JackieFloat / FloatingQuickActions / BazarStandDock are intentionally NOT
@@ -167,6 +168,11 @@ export default function Layout() {
       >
         <CenteredBottomNav onSearchOpen={handleSearchOpen} prefs={prefs} updateWidget={updateWidget} />
       </div>
+
+      {/* Persistent media player — root-level singleton mounted OUTSIDE the
+          route-swapping <Outlet>, so playback continues and the bar stays
+          visible across navigation. Renders nothing until a track is loaded. */}
+      <PersistentPlayer />
 
       {/* Fixed iOS-style mobile tab bar — only visible on phone-sized screens.
           Guarantees phones always have a visible, stationary nav entry point

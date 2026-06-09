@@ -7,6 +7,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { MediaPlayerProvider } from '@/context/MediaPlayerContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from './components/Layout';
@@ -90,6 +91,7 @@ const IntegrationHub = lazy(() => import('./pages/IntegrationHub'));
 const Community = lazy(() => import('./pages/Community'));
 const SimTradingLab = lazy(() => import('./pages/SimTradingLab'));
 const MediaConverter = lazy(() => import('./pages/MediaConverter'));
+const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -203,6 +205,7 @@ const AuthenticatedApp = () => {
         <Route path="/community" element={<Community />} />
         <Route path="/bot-lab" element={<SimTradingLab />} />
         <Route path="/media-converter" element={<MediaConverter />} />
+        <Route path="/music" element={<MediaLibrary />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
@@ -237,12 +240,14 @@ function App() {
     <LanguageProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <ErrorBoundary>
-          <Router>
-            <AuthenticatedApp />
-          </Router>
-        </ErrorBoundary>
-        <Toaster />
+        <MediaPlayerProvider>
+          <ErrorBoundary>
+            <Router>
+              <AuthenticatedApp />
+            </Router>
+          </ErrorBoundary>
+          <Toaster />
+        </MediaPlayerProvider>
       </QueryClientProvider>
     </AuthProvider>
     </LanguageProvider>

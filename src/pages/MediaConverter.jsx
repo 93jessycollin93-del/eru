@@ -9,6 +9,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertTriangle,
+  LibraryBig,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,6 +26,7 @@ import {
   convertMedia,
   triggerDownload,
 } from '@/lib/mediaConverter';
+import { importConvertedTrack } from '@/lib/mediaLibrary';
 
 /**
  * MediaConverter — paste a YouTube/TikTok/etc. URL and download it as audio
@@ -42,6 +44,9 @@ export default function MediaConverter() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [lastResult, setLastResult] = useState(null); // { blob, filename } for "Save to library"
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const abortRef = useRef(null);
 
   const configured = isConverterConfigured();
@@ -55,6 +60,8 @@ export default function MediaConverter() {
 
     setBusy(true);
     setDone(false);
+    setLastResult(null);
+    setSaved(false);
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -66,6 +73,7 @@ export default function MediaConverter() {
         signal: controller.signal,
       });
       triggerDownload(blob, filename);
+      setLastResult({ blob, filename });
       setDone(true);
       toast.success('Conversion ready — your download should start.');
     } catch (err) {
@@ -82,6 +90,25 @@ export default function MediaConverter() {
 
   function handleCancel() {
     abortRef.current?.abort();
+  }
+
+  async function handleSaveToLibrary() {
+    if (!lastResult || saving) return;
+    setSaving(true);
+    try {
+      await importConvertedTrack({
+        blob: lastResult.blob,
+        filename: lastResult.filename,
+        sourceUrl: url.trim(),
+        format,
+      });
+      setSaved(true);
+      toast.success('Saved to your library.');
+    } catch (err) {
+      toast.error(err?.message || 'Could not save to library.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -243,6 +270,41 @@ export default function MediaConverter() {
               Downloading and transcoding on the server — this can take a moment
               for longer videos.
             </p>
+          )}
+
+          {/* After a successful conversion, offer to save it into the library
+              so it plays in the app's persistent player. */}
+          {lastResult && !busy && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSaveToLibrary}
+                disabled={saving || saved}
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                  </>
+                ) : saved ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" /> Saved
+                  </>
+                ) : (
+                  <>
+                    <LibraryBig className="h-4 w-4" /> Save to library
+                  </>
+                )}
+              </button>
+              {saved && (
+                <Link
+                  to="/music"
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                  Open
+                </Link>
+              )}
+            </div>
           )}
         </form>
 
