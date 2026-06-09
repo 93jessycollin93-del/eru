@@ -13,14 +13,18 @@ import {
   Tag as TagIcon,
   X,
   ListMusic,
+  ListChecks,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { listTracks, listTags, listAllTrackTags } from '@/lib/mediaLibrary';
 import { useMediaPlayer } from '@/context/MediaPlayerContext';
 import { useAuth } from '@/lib/AuthContext';
+import { useSelection } from '@/hooks/useSelection';
 import TrackTagEditor from '@/components/media/TrackTagEditor';
 import AddToPlaylistSheet from '@/components/media/AddToPlaylistSheet';
+import SelectionBar from '@/components/media/SelectionBar';
 
 /** Seconds -> m:ss */
 function fmt(s) {
@@ -50,10 +54,12 @@ export default function MediaLibrary() {
   const [activeTagId, setActiveTagId] = useState(null); // null = all
   const [sort, setSort] = useState('recent');
   const [editing, setEditing] = useState(null); // track being tagged
-  const [addingTo, setAddingTo] = useState(null); // track being added to a playlist
+  const [addingTo, setAddingTo] = useState(null); // single track being added to a playlist
+  const [movingSelected, setMovingSelected] = useState(false); // bulk add-to-playlist
 
-  const { current, isPlaying, playList, togglePlay, addToQueue } = useMediaPlayer();
+  const { current, isPlaying, playList, togglePlay, addToQueue, addManyToQueue } = useMediaPlayer();
   const { user } = useAuth();
+  const selection = useSelection();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -136,6 +142,14 @@ export default function MediaLibrary() {
   };
 
   const hasTracks = tracks.length > 0;
+  const selecting = selection.active;
+  const selectedTracks = filtered.filter((t) => selection.isSelected(t.id));
+
+  function bulkQueue() {
+    addManyToQueue(selectedTracks);
+    toast.success(`Added ${selectedTracks.length} to the queue.`);
+    selection.exit();
+  }
 
   return (
     <div
@@ -275,76 +289,119 @@ export default function MediaLibrary() {
             No tracks match your search or filter.
           </p>
         ) : (
-          <ul className="space-y-2">
-            {filtered.map((track, index) => {
-              const active = current?.id === track.id;
-              const trackTagRows = tagsByTrack.get(track.id) || [];
-              return (
-                <li
-                  key={track.id}
-                  className={`flex items-center gap-3 rounded-2xl border p-2.5 transition-colors ${
-                    active ? 'border-primary/40 bg-primary/5' : 'border-border bg-card'
-                  }`}
-                >
-                  <button
-                    onClick={() => onPlay(index)}
-                    aria-label={active && isPlaying ? 'Pause' : 'Play'}
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow hover:bg-primary/90"
+          <>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] text-muted-foreground">
+                {filtered.length} track{filtered.length === 1 ? '' : 's'}
+              </span>
+              <button
+                onClick={selecting ? selection.exit : selection.enter}
+                aria-pressed={selecting}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] font-medium transition-colors ${
+                  selecting
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border text-foreground hover:bg-accent'
+                }`}
+              >
+                <ListChecks className="h-3.5 w-3.5" /> Select
+              </button>
+            </div>
+            <ul className="space-y-2">
+              {filtered.map((track, index) => {
+                const active = current?.id === track.id;
+                const trackTagRows = tagsByTrack.get(track.id) || [];
+                const checked = selection.isSelected(track.id);
+                return (
+                  <li
+                    key={track.id}
+                    onClick={selecting ? () => selection.toggle(track.id) : undefined}
+                    className={`flex items-center gap-3 rounded-2xl border p-2.5 transition-colors ${
+                      checked
+                        ? 'border-primary bg-primary/10'
+                        : active
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-border bg-card'
+                    }`}
                   >
-                    {active && isPlaying ? (
-                      <Pause className="h-4 w-4" />
+                    {selecting ? (
+                      <span
+                        className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border ${
+                          checked
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border'
+                        }`}
+                      >
+                        {checked && <Check className="h-3.5 w-3.5" />}
+                      </span>
                     ) : (
-                      <Play className="h-4 w-4" />
+                      <button
+                        onClick={() => onPlay(index)}
+                        aria-label={active && isPlaying ? 'Pause' : 'Play'}
+                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow hover:bg-primary/90"
+                      >
+                        {active && isPlaying ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </button>
                     )}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {track.title}
-                    </p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {track.artist || 'Unknown artist'}
-                      {track.format ? ` · ${track.format.toUpperCase()}` : ''}
-                      {track.duration_sec ? ` · ${fmt(track.duration_sec)}` : ''}
-                    </p>
-                    {trackTagRows.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {trackTagRows.map((l) => (
-                          <button
-                            key={l.id}
-                            onClick={() => setActiveTagId(l.tag_id)}
-                            className="inline-flex items-center rounded-full bg-secondary/50 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
-                          >
-                            {l.tag_name}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {track.title}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {track.artist || 'Unknown artist'}
+                        {track.format ? ` · ${track.format.toUpperCase()}` : ''}
+                        {track.duration_sec ? ` · ${fmt(track.duration_sec)}` : ''}
+                      </p>
+                      {trackTagRows.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {trackTagRows.map((l) => (
+                            <button
+                              key={l.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTagId(l.tag_id);
+                              }}
+                              className="inline-flex items-center rounded-full bg-secondary/50 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+                            >
+                              {l.tag_name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {!selecting && (
+                      <>
+                        <button
+                          onClick={() => setAddingTo(track)}
+                          aria-label="Add to playlist"
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <ListMusic className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditing(track)}
+                          aria-label="Edit tags"
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <TagIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => onQueue(track)}
+                          aria-label="Add to queue"
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <ListPlus className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
-                  </div>
-                  <button
-                    onClick={() => setAddingTo(track)}
-                    aria-label="Add to playlist"
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <ListMusic className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setEditing(track)}
-                    aria-label="Edit tags"
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <TagIcon className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onQueue(track)}
-                    aria-label="Add to queue"
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <ListPlus className="h-4 w-4" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </div>
 
@@ -363,6 +420,42 @@ export default function MediaLibrary() {
           track={addingTo}
           userEmail={user?.email || ''}
           onClose={() => setAddingTo(null)}
+        />
+      )}
+
+      {selecting && (
+        <SelectionBar
+          count={selection.count}
+          total={filtered.length}
+          onSelectAll={() => selection.selectAll(filtered.map((t) => t.id))}
+          onClear={selection.clear}
+          onExit={selection.exit}
+        >
+          <button
+            onClick={bulkQueue}
+            disabled={selection.count === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[12px] text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            <ListPlus className="h-4 w-4" /> Queue
+          </button>
+          <button
+            onClick={() => selection.count && setMovingSelected(true)}
+            disabled={selection.count === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[12px] text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            <ListMusic className="h-4 w-4" /> Add to
+          </button>
+        </SelectionBar>
+      )}
+
+      {movingSelected && (
+        <AddToPlaylistSheet
+          tracks={selectedTracks}
+          userEmail={user?.email || ''}
+          onClose={() => {
+            setMovingSelected(false);
+            selection.exit();
+          }}
         />
       )}
     </div>

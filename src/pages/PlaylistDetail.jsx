@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
   ArrowLeft,
   Play,
@@ -14,6 +15,10 @@ import {
   Lock,
   Globe,
   Link2,
+  GripVertical,
+  ListChecks,
+  ListPlus,
+  ListMusic,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,10 +28,14 @@ import {
   updatePlaylist,
   deletePlaylist,
   removeTrackFromPlaylist,
+  reorderPlaylistTracks,
 } from '@/lib/mediaLibrary';
 import { useMediaPlayer } from '@/context/MediaPlayerContext';
 import { useAuth } from '@/lib/AuthContext';
+import { useSelection } from '@/hooks/useSelection';
 import AddTracksToPlaylistSheet from '@/components/media/AddTracksToPlaylistSheet';
+import AddToPlaylistSheet from '@/components/media/AddToPlaylistSheet';
+import SelectionBar from '@/components/media/SelectionBar';
 
 const VISIBILITY_BADGE = {
   private: { icon: Lock, label: 'Private' },
@@ -45,7 +54,8 @@ export default function PlaylistDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { current, isPlaying, playList, togglePlay } = useMediaPlayer();
+  const { current, isPlaying, playList, togglePlay, addManyToQueue } = useMediaPlayer();
+  const selection = useSelection();
 
   const [playlist, setPlaylist] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -55,6 +65,7 @@ export default function PlaylistDetail() {
   const [draftDesc, setDraftDesc] = useState('');
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [movingSelected, setMovingSelected] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -116,11 +127,52 @@ export default function PlaylistDetail() {
     }
   }
 
+  // Drag-reorder: reflect the new order locally, then persist link positions.
+  async function handleDragEnd(result) {
+    const { source, destination } = result;
+    if (!destination || destination.index === source.index) return;
+    const next = [...tracks];
+    const [moved] = next.splice(source.index, 1);
+    next.splice(destination.index, 0, moved);
+    setTracks(next);
+    try {
+      await reorderPlaylistTracks(next.map((t) => t._linkId));
+    } catch (err) {
+      toast.error(err?.message || 'Could not save the new order.');
+      refresh();
+    }
+  }
+
   const onPlay = (index) => {
     const track = tracks[index];
     if (current?.id === track.id) togglePlay();
     else playList(tracks, index);
   };
+
+  // ---- Bulk actions (selection mode) ----
+  const selectedTracks = tracks.filter((t) => selection.isSelected(t._linkId));
+
+  function bulkQueue() {
+    addManyToQueue(selectedTracks);
+    toast.success(`Added ${selectedTracks.length} to the queue.`);
+    selection.exit();
+  }
+
+  async function bulkRemove() {
+    const toRemove = selectedTracks;
+    if (toRemove.length === 0) return;
+    selection.exit();
+    try {
+      for (const t of toRemove) {
+        await removeTrackFromPlaylist(t._linkId, id);
+      }
+      setTracks((prev) => prev.filter((t) => !toRemove.some((r) => r._linkId === t._linkId)));
+      toast.success(`Removed ${toRemove.length} from the playlist.`);
+    } catch (err) {
+      toast.error(err?.message || 'Could not remove tracks.');
+      refresh();
+    }
+  }
 
   if (loading) {
     return (
@@ -143,6 +195,7 @@ export default function PlaylistDetail() {
 
   const badge = VISIBILITY_BADGE[playlist.visibility] || VISIBILITY_BADGE.private;
   const Badge = badge.icon;
+  const selecting = selection.active;
 
   return (
     <div
@@ -240,9 +293,27 @@ export default function PlaylistDetail() {
             onClick={() => setAdding(true)}
             className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
           >
-            <Plus className="h-4 w-4" /> Add tracks
+            <Plus className="h-4 w-4" /> Add
           </button>
+          {tracks.length > 0 && (
+            <button
+              onClick={selecting ? selection.exit : selection.enter}
+              aria-pressed={selecting}
+              className={`inline-flex h-10 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors ${
+                selecting
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-border text-foreground hover:bg-accent'
+              }`}
+            >
+              <ListChecks className="h-4 w-4" /> Select
+            </button>
+          )}
         </div>
+        {tracks.length > 1 && !selecting && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Drag the handle to reorder.
+          </p>
+        )}
       </header>
 
       <div className="mx-auto w-full max-w-3xl flex-1 space-y-2 px-4 py-4">
@@ -251,50 +322,138 @@ export default function PlaylistDetail() {
             <Music2 className="mx-auto h-8 w-8 text-muted-foreground/60" />
             <p className="mt-3 text-sm font-medium text-foreground">No tracks yet</p>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              Use “Add tracks” to pull songs from your library.
+              Use “Add” to pull songs from your library.
             </p>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {tracks.map((track, index) => {
-              const active = current?.id === track.id;
-              return (
-                <li
-                  key={track._linkId}
-                  className={`flex items-center gap-3 rounded-2xl border p-2.5 transition-colors ${
-                    active ? 'border-primary/40 bg-primary/5' : 'border-border bg-card'
-                  }`}
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="playlist-tracks" isDropDisabled={selecting}>
+              {(provided) => (
+                <ul
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="space-y-2"
                 >
-                  <span className="w-5 flex-shrink-0 text-center text-[12px] tabular-nums text-muted-foreground">
-                    {index + 1}
-                  </span>
-                  <button
-                    onClick={() => onPlay(index)}
-                    aria-label={active && isPlaying ? 'Pause' : 'Play'}
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow hover:bg-primary/90"
-                  >
-                    {active && isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{track.title}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {track.artist || 'Unknown artist'}
-                      {track.duration_sec ? ` · ${fmt(track.duration_sec)}` : ''}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => onRemoveTrack(track)}
-                    aria-label="Remove from playlist"
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                  {tracks.map((track, index) => {
+                    const active = current?.id === track.id;
+                    const checked = selection.isSelected(track._linkId);
+                    return (
+                      <Draggable
+                        key={track._linkId}
+                        draggableId={track._linkId}
+                        index={index}
+                        isDragDisabled={selecting}
+                      >
+                        {(prov, snapshot) => (
+                          <li
+                            ref={prov.innerRef}
+                            {...prov.draggableProps}
+                            onClick={selecting ? () => selection.toggle(track._linkId) : undefined}
+                            className={`flex items-center gap-2 rounded-2xl border p-2.5 transition-colors ${
+                              checked
+                                ? 'border-primary bg-primary/10'
+                                : active
+                                ? 'border-primary/40 bg-primary/5'
+                                : 'border-border bg-card'
+                            } ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                          >
+                            {selecting ? (
+                              <span
+                                className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border ${
+                                  checked
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : 'border-border'
+                                }`}
+                              >
+                                {checked && <Check className="h-3.5 w-3.5" />}
+                              </span>
+                            ) : (
+                              <span
+                                {...prov.dragHandleProps}
+                                aria-label="Drag to reorder"
+                                className="flex h-8 w-6 flex-shrink-0 cursor-grab items-center justify-center text-muted-foreground/60 active:cursor-grabbing"
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </span>
+                            )}
+
+                            {!selecting && (
+                              <button
+                                onClick={() => onPlay(index)}
+                                aria-label={active && isPlaying ? 'Pause' : 'Play'}
+                                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow hover:bg-primary/90"
+                              >
+                                {active && isPlaying ? (
+                                  <Pause className="h-4 w-4" />
+                                ) : (
+                                  <Play className="h-4 w-4" />
+                                )}
+                              </button>
+                            )}
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-foreground">
+                                {track.title}
+                              </p>
+                              <p className="truncate text-[11px] text-muted-foreground">
+                                {track.artist || 'Unknown artist'}
+                                {track.duration_sec ? ` · ${fmt(track.duration_sec)}` : ''}
+                              </p>
+                            </div>
+
+                            {!selecting && (
+                              <button
+                                onClick={() => onRemoveTrack(track)}
+                                aria-label="Remove from playlist"
+                                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </li>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </ul>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
       </div>
+
+      {selecting && (
+        <SelectionBar
+          count={selection.count}
+          total={tracks.length}
+          onSelectAll={() => selection.selectAll(tracks.map((t) => t._linkId))}
+          onClear={selection.clear}
+          onExit={selection.exit}
+        >
+          <button
+            onClick={bulkQueue}
+            disabled={selection.count === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[12px] text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            <ListPlus className="h-4 w-4" /> Queue
+          </button>
+          <button
+            onClick={() => selection.count && setMovingSelected(true)}
+            disabled={selection.count === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[12px] text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            <ListMusic className="h-4 w-4" /> Add to
+          </button>
+          <button
+            onClick={bulkRemove}
+            disabled={selection.count === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[12px] text-destructive hover:bg-destructive/10 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" /> Remove
+          </button>
+        </SelectionBar>
+      )}
 
       {adding && (
         <AddTracksToPlaylistSheet
@@ -303,6 +462,17 @@ export default function PlaylistDetail() {
           userEmail={user?.email || ''}
           onClose={() => setAdding(false)}
           onChanged={refresh}
+        />
+      )}
+
+      {movingSelected && (
+        <AddToPlaylistSheet
+          tracks={selectedTracks}
+          userEmail={user?.email || ''}
+          onClose={() => {
+            setMovingSelected(false);
+            selection.exit();
+          }}
         />
       )}
     </div>

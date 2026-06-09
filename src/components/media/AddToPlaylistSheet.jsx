@@ -2,14 +2,24 @@ import { useEffect, useState } from 'react';
 import { X, Plus, ListMusic, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { listPlaylists, createPlaylist, addTrackToPlaylist } from '@/lib/mediaLibrary';
+import {
+  listPlaylists,
+  createPlaylist,
+  addTrackToPlaylist,
+  moveTracksToPlaylist,
+} from '@/lib/mediaLibrary';
 
 /**
- * AddToPlaylistSheet — bottom sheet to add a single track to an existing
- * playlist, or to a brand-new one created inline. Membership is deduped by
- * mediaLibrary.addTrackToPlaylist (a no-op if the track is already present).
+ * AddToPlaylistSheet — bottom sheet to add one or more tracks to an existing
+ * playlist, or to a brand-new one created inline. Pass a single `track` or a
+ * `tracks` array (bulk). Membership is deduped by mediaLibrary.addTrackToPlaylist
+ * (a no-op for tracks already present).
  */
-export default function AddToPlaylistSheet({ track, userEmail = '', onClose }) {
+export default function AddToPlaylistSheet({ track, tracks, userEmail = '', onClose, onAdded }) {
+  const items = tracks?.length ? tracks : track ? [track] : [];
+  const trackIds = items.map((t) => t.id);
+  const label = items.length === 1 ? `“${items[0]?.title}”` : `${items.length} tracks`;
+
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
@@ -28,11 +38,15 @@ export default function AddToPlaylistSheet({ track, userEmail = '', onClose }) {
     if (busyId) return;
     setBusyId(playlist.id);
     try {
-      const link = await addTrackToPlaylist(playlist.id, track.id, userEmail);
+      if (trackIds.length === 1) {
+        const link = await addTrackToPlaylist(playlist.id, trackIds[0], userEmail);
+        toast.success(link ? `Added to “${playlist.name}”.` : `Already in “${playlist.name}”.`);
+      } else {
+        await moveTracksToPlaylist(trackIds, playlist.id, userEmail);
+        toast.success(`Added ${trackIds.length} tracks to “${playlist.name}”.`);
+      }
       setAddedIds((prev) => new Set(prev).add(playlist.id));
-      toast.success(
-        link ? `Added to “${playlist.name}”.` : `Already in “${playlist.name}”.`,
-      );
+      onAdded?.();
     } catch (err) {
       toast.error(err?.message || 'Could not add to playlist.');
     } finally {
@@ -47,8 +61,9 @@ export default function AddToPlaylistSheet({ track, userEmail = '', onClose }) {
     setCreating(true);
     try {
       const playlist = await createPlaylist({ name });
-      await addTrackToPlaylist(playlist.id, track.id, userEmail);
-      toast.success(`Created “${name}” and added the track.`);
+      await moveTracksToPlaylist(trackIds, playlist.id, userEmail);
+      toast.success(`Created “${name}” and added ${trackIds.length === 1 ? 'the track' : `${trackIds.length} tracks`}.`);
+      onAdded?.();
       onClose?.();
     } catch (err) {
       toast.error(err?.message || 'Could not create playlist.');
@@ -74,7 +89,7 @@ export default function AddToPlaylistSheet({ track, userEmail = '', onClose }) {
           <div className="flex min-w-0 items-center gap-2">
             <ListMusic className="h-4 w-4 flex-shrink-0 text-primary" />
             <h2 className="truncate text-sm font-semibold text-foreground">
-              Add to playlist
+              Add {label} to playlist
             </h2>
           </div>
           <button
