@@ -30,9 +30,8 @@ export default function Home() {
       }}
     >
       <div className="mx-auto w-full max-w-3xl px-4 pt-4 space-y-4">
-        {/* Top bar — Tips & Tricks on the left, sign in / sign out on the right */}
-        <div className="flex items-center justify-between gap-2">
-          <HomeTipsButton />
+        {/* Top bar */}
+        <div className="flex items-center justify-end gap-2">
           <HomeAuthButton />
         </div>
 
