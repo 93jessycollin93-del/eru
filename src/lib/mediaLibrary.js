@@ -358,6 +358,43 @@ export async function getMostPlayed(limit = 50) {
   return [...counts.values()].sort((a, b) => b.plays - a.plays).slice(0, limit);
 }
 
+/**
+ * Resolve listening history into playable tracks for the stats page in one
+ * pass: returns recently-played tracks (deduped, newest first, each with
+ * `played_at`) and most-played tracks (each with `plays`), joined against the
+ * current library so deleted tracks are dropped. Also returns aggregate totals.
+ */
+export async function getListeningStats({ recentLimit = 30, topLimit = 30 } = {}) {
+  const [tracks, history] = await Promise.all([
+    listTracks({ limit: 500 }),
+    E.PlayHistory.list('-played_at', 2000).catch(() => []),
+  ]);
+  const byId = new Map(tracks.map((t) => [t.id, t]));
+
+  const seen = new Set();
+  const recent = [];
+  for (const row of history) {
+    if (seen.has(row.track_id)) continue;
+    seen.add(row.track_id);
+    const track = byId.get(row.track_id);
+    if (track) recent.push({ ...track, played_at: row.played_at });
+    if (recent.length >= recentLimit) break;
+  }
+
+  const counts = new Map();
+  for (const row of history) {
+    counts.set(row.track_id, (counts.get(row.track_id) || 0) + 1);
+  }
+  const top = [...counts.entries()]
+    .map(([trackId, plays]) => ({ track: byId.get(trackId), plays }))
+    .filter((x) => x.track)
+    .sort((a, b) => b.plays - a.plays)
+    .slice(0, topLimit)
+    .map((x) => ({ ...x.track, plays: x.plays }));
+
+  return { recent, top, totalPlays: history.length, uniqueTracks: counts.size };
+}
+
 // ---------------------------------------------------------------------------
 // Collaborators (collaborative playlists)
 // ---------------------------------------------------------------------------

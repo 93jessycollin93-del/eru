@@ -15,6 +15,7 @@ import {
   ListMusic,
   ListChecks,
   Check,
+  BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -180,6 +181,13 @@ export default function MediaLibrary() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to="/listening"
+              aria-label="Listening stats"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border text-foreground hover:bg-accent"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Link>
             <Link
               to="/playlists"
               className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
