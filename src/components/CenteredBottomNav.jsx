@@ -220,15 +220,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
     return () => window.removeEventListener('bot-chat-unavailable', handleUnavailable);
   }, []);
 
-  useEffect(() => {
-    try {
-      const seen = localStorage.getItem(NAV_WALKTHROUGH_SEEN_KEY);
-      if (!seen) {
-        setWalkthroughOpen(true);
-        localStorage.setItem(NAV_WALKTHROUGH_SEEN_KEY, 'true');
-      }
-    } catch {}
-  }, []);
+  // Auto-open walkthrough disabled — was blocking mobile users who couldn't close it.
 
   // Resolve translated labels — falls back to English when a locale is missing.
   const pinnedPages = ALL_PAGES

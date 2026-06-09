@@ -9,7 +9,6 @@ import HomeHero from '../components/home/HomeHero';
 import HomeSection from '../components/home/HomeSection';
 import AdvertisingTeaser from '../components/home/AdvertisingTeaser';
 import HomeAuthButton from '../components/home/HomeAuthButton';
-import HomeTipsButton from '../components/home/HomeTipsButton';
 
 /**
  * Home — the app's main landing & tutorial page. A guided, elegant tour of
