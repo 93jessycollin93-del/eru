@@ -181,6 +181,24 @@ export async function deletePlaylist(id) {
   return E.Playlist.delete(id);
 }
 
+/** A shareable absolute URL for a playlist (only meaningful when shared). */
+export function shareUrlForPlaylist(id) {
+  if (typeof window === 'undefined') return '';
+  return `${window.location.origin}/p/${id}`;
+}
+
+/**
+ * Resolve a shared playlist (and its tracks) for any authenticated viewer,
+ * including non-owners. Backed by the getSharedPlaylist server function, which
+ * uses the service role to enforce that only public/unlisted playlists (or the
+ * owner's own) are returned — private playlists are never exposed here.
+ * @returns {Promise<{ playlist: object, tracks: object[] }>}
+ */
+export async function getSharedPlaylist(id) {
+  const res = await base44.functions.invoke('getSharedPlaylist', { id });
+  return res?.data;
+}
+
 // ---------------------------------------------------------------------------
 // Playlist <-> Track membership & ordering
 // ---------------------------------------------------------------------------

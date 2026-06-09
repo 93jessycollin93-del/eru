@@ -19,6 +19,7 @@ import {
   ListChecks,
   ListPlus,
   ListMusic,
+  Share2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,6 +37,7 @@ import { useSelection } from '@/hooks/useSelection';
 import AddTracksToPlaylistSheet from '@/components/media/AddTracksToPlaylistSheet';
 import AddToPlaylistSheet from '@/components/media/AddToPlaylistSheet';
 import SelectionBar from '@/components/media/SelectionBar';
+import ShareSheet from '@/components/media/ShareSheet';
 
 const VISIBILITY_BADGE = {
   private: { icon: Lock, label: 'Private' },
@@ -66,6 +68,7 @@ export default function PlaylistDetail() {
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [movingSelected, setMovingSelected] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -262,6 +265,13 @@ export default function PlaylistDetail() {
               </p>
             </div>
             <div className="flex flex-shrink-0 items-center gap-1">
+              <button
+                onClick={() => setSharing(true)}
+                aria-label="Share playlist"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
               <button
                 onClick={startEdit}
                 aria-label="Edit playlist"
@@ -473,6 +483,14 @@ export default function PlaylistDetail() {
             setMovingSelected(false);
             selection.exit();
           }}
+        />
+      )}
+
+      {sharing && (
+        <ShareSheet
+          playlist={playlist}
+          onClose={() => setSharing(false)}
+          onChanged={refresh}
         />
       )}
     </div>
