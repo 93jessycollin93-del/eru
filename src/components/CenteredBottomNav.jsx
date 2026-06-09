@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2, ScanLine, Plug, Users, PanelsTopLeft, Music } from 'lucide-react';
+import { Home, BarChart2, ArrowUpDown, ImageIcon, Wallet, ShoppingBag, Mail, Lightbulb, Brain, Shield, ShieldAlert, Award, Send, Bot, FlaskConical, KeyRound, Wand2, Layers, Gem, Sparkles, Sword, Dna, Store, Settings, Cpu, BarChart, GripHorizontal, Pencil, X, Check, Search, ArrowLeftRight, ArrowUpRightFromSquare, MessageSquare, BookText, Library, Eye, EyeOff, HelpCircle, Factory, Coins, FileSpreadsheet, UserCog, Maximize2, Minimize2, Plus, ArrowLeft, StickyNote, Code2, ScanLine, Plug, Users, PanelsTopLeft, Music, Compass } from 'lucide-react';
 import NavWalkthrough from './nav/NavWalkthrough';
 import QuickActionsPopover from './nav/QuickActionsPopover';
 import { playSound, VIBRATE } from '../lib/soundEngine';
@@ -21,6 +21,7 @@ const ALL_PAGES = [
   { id: 'collect',      labelKey: 'nav.collect',      fallback: 'Collectables', icon: ShoppingBag,   to: '/collectables' },
   { id: 'music',        labelKey: 'nav.music',        fallback: 'Library',      icon: Music,         to: '/music' },
   { id: 'playlists',    labelKey: 'nav.playlists',    fallback: 'Playlists',    icon: Library,       to: '/playlists' },
+  { id: 'discover',     labelKey: 'nav.discover',     fallback: 'Discover',     icon: Compass,       to: '/discover' },
   { id: 'messages',     labelKey: 'nav.messages',     fallback: 'Messages',     icon: Mail,          to: '/messages' },
   { id: 'community',    labelKey: 'nav.community',    fallback: 'Community',    icon: Users,         to: '/community' },
   { id: 'botlab',       labelKey: 'nav.botlab',       fallback: 'Bot Lab',      icon: Bot,           to: '/bot-lab' },

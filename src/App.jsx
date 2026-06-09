@@ -95,6 +95,7 @@ const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
 const Playlists = lazy(() => import('./pages/Playlists'));
 const PlaylistDetail = lazy(() => import('./pages/PlaylistDetail'));
 const SharedPlaylist = lazy(() => import('./pages/SharedPlaylist'));
+const Discover = lazy(() => import('./pages/Discover'));
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -212,6 +213,7 @@ const AuthenticatedApp = () => {
         <Route path="/playlists" element={<Playlists />} />
         <Route path="/playlists/:id" element={<PlaylistDetail />} />
         <Route path="/p/:id" element={<SharedPlaylist />} />
+        <Route path="/discover" element={<Discover />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

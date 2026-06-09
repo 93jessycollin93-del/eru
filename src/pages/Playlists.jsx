@@ -9,6 +9,7 @@ import {
   Lock,
   Globe,
   Link2,
+  Compass,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -78,16 +79,24 @@ export default function Playlists() {
         >
           <ArrowLeft className="h-3 w-3" /> Library
         </Link>
-        <div className="mt-1 flex items-center gap-2">
-          <ListMusic className="h-5 w-5 text-primary" />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Media
-            </p>
-            <h1 className="text-lg font-semibold leading-tight text-foreground">
-              Playlists
-            </h1>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ListMusic className="h-5 w-5 text-primary" />
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Media
+              </p>
+              <h1 className="text-lg font-semibold leading-tight text-foreground">
+                Playlists
+              </h1>
+            </div>
           </div>
+          <Link
+            to="/discover"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            <Compass className="h-4 w-4" /> Discover
+          </Link>
         </div>
       </header>
 

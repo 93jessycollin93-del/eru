@@ -199,6 +199,17 @@ export async function getSharedPlaylist(id) {
   return res?.data;
 }
 
+/**
+ * List public playlists across all users for community browse. Backed by the
+ * listPublicPlaylists server function (service role, public-only), returning
+ * lightweight metadata — open one via getSharedPlaylist to stream its tracks.
+ * @returns {Promise<object[]>}
+ */
+export async function listPublicPlaylists({ q = '', limit = 60 } = {}) {
+  const res = await base44.functions.invoke('listPublicPlaylists', { q, limit });
+  return res?.data?.playlists || [];
+}
+
 // ---------------------------------------------------------------------------
 // Playlist <-> Track membership & ordering
 // ---------------------------------------------------------------------------
