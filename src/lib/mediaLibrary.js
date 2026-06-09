@@ -272,6 +272,14 @@ export async function getTagsForTrack(trackId) {
   return (await E.TrackTag.filter({ track_id: trackId })) || [];
 }
 
+/**
+ * All of the current user's track<->tag links in one query. Callers build a
+ * `track_id -> tags[]` map client-side instead of fetching per track.
+ */
+export async function listAllTrackTags() {
+  return (await E.TrackTag.list('-created_date', 2000)) || [];
+}
+
 export async function getTracksByTag(tagId) {
   const links = (await E.TrackTag.filter({ tag_id: tagId })) || [];
   const tracks = await Promise.all(links.map((l) => getTrack(l.track_id)));
