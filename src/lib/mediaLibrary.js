@@ -259,6 +259,43 @@ export async function moveTracksToPlaylist(trackIds = [], targetPlaylistId, adde
   }
 }
 
+/**
+ * Create a playlist from parsed import data ({ name, description, tracks }).
+ * Tracks are matched to the existing library by file_url so re-importing doesn't
+ * duplicate them; unknown URLs become new Track rows (added_via: 'clone').
+ * @returns {Promise<{ playlist: object, added: number, total: number }>}
+ */
+export async function importPlaylist({ name, description = '', tracks = [] } = {}, { userEmail = '' } = {}) {
+  const existing = await listTracks({ limit: 500 });
+  const byUrl = new Map(existing.filter((t) => t.file_url).map((t) => [t.file_url, t]));
+
+  const playlist = await createPlaylist({ name: name || 'Imported playlist', description });
+
+  let added = 0;
+  for (const t of tracks) {
+    if (!t.file_url) continue;
+    let track = byUrl.get(t.file_url);
+    if (!track) {
+      track = await createTrack({
+        title: t.title || 'Untitled',
+        artist: t.artist || '',
+        album: t.album || '',
+        duration_sec: t.duration_sec || 0,
+        file_url: t.file_url,
+        format: t.format || '',
+        kind: t.kind || 'audio',
+        cover_url: t.cover_url || '',
+        added_via: 'clone',
+      });
+      byUrl.set(t.file_url, track);
+    }
+    const link = await addTrackToPlaylist(playlist.id, track.id, userEmail);
+    if (link) added += 1;
+  }
+
+  return { playlist, added, total: tracks.length };
+}
+
 async function refreshTrackCount(playlistId) {
   const links = (await E.PlaylistTrack.filter({ playlist_id: playlistId })) || [];
   await E.Playlist.update(playlistId, { track_count: links.length }).catch(() => {});

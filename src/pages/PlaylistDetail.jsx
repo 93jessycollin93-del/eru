@@ -20,6 +20,7 @@ import {
   ListPlus,
   ListMusic,
   Share2,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,6 +39,7 @@ import AddTracksToPlaylistSheet from '@/components/media/AddTracksToPlaylistShee
 import AddToPlaylistSheet from '@/components/media/AddToPlaylistSheet';
 import SelectionBar from '@/components/media/SelectionBar';
 import ShareSheet from '@/components/media/ShareSheet';
+import PlaylistExportSheet from '@/components/media/PlaylistExportSheet';
 
 const VISIBILITY_BADGE = {
   private: { icon: Lock, label: 'Private' },
@@ -69,6 +71,7 @@ export default function PlaylistDetail() {
   const [adding, setAdding] = useState(false);
   const [movingSelected, setMovingSelected] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -271,6 +274,13 @@ export default function PlaylistDetail() {
                 className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 <Share2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setExporting(true)}
+                aria-label="Export playlist"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <Download className="h-4 w-4" />
               </button>
               <button
                 onClick={startEdit}
@@ -491,6 +501,14 @@ export default function PlaylistDetail() {
           playlist={playlist}
           onClose={() => setSharing(false)}
           onChanged={refresh}
+        />
+      )}
+
+      {exporting && (
+        <PlaylistExportSheet
+          playlist={playlist}
+          tracks={tracks}
+          onClose={() => setExporting(false)}
         />
       )}
     </div>

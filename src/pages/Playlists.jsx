@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   ListMusic,
@@ -10,10 +10,13 @@ import {
   Globe,
   Link2,
   Compass,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { listPlaylists, createPlaylist } from '@/lib/mediaLibrary';
+import { listPlaylists, createPlaylist, importPlaylist } from '@/lib/mediaLibrary';
+import { parsePlaylistFile } from '@/lib/playlistIO';
+import { useAuth } from '@/lib/AuthContext';
 
 const VISIBILITY_BADGE = {
   private: { icon: Lock, label: 'Private' },
@@ -31,6 +34,10 @@ export default function Playlists() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -61,6 +68,30 @@ export default function Playlists() {
       toast.error(err?.message || 'Could not create playlist.');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function onImportFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-importing the same file
+    if (!file || importing) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const parsed = parsePlaylistFile(file.name, text);
+      if (!parsed.tracks.length) {
+        toast.error('No tracks found in that file.');
+        return;
+      }
+      const { playlist, added, total } = await importPlaylist(parsed, {
+        userEmail: user?.email || '',
+      });
+      toast.success(`Imported “${playlist.name}” — ${added} of ${total} tracks.`);
+      navigate(`/playlists/${playlist.id}`);
+    } catch (err) {
+      toast.error(err?.message || 'Could not import that file.');
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -117,6 +148,23 @@ export default function Playlists() {
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Create
           </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            aria-label="Import playlist"
+            title="Import M3U or JSON"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".m3u,.m3u8,.json,audio/x-mpegurl,application/json"
+            onChange={onImportFile}
+            className="hidden"
+          />
         </form>
 
         {loading ? (
