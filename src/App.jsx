@@ -92,6 +92,8 @@ const Community = lazy(() => import('./pages/Community'));
 const SimTradingLab = lazy(() => import('./pages/SimTradingLab'));
 const MediaConverter = lazy(() => import('./pages/MediaConverter'));
 const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
+const Playlists = lazy(() => import('./pages/Playlists'));
+const PlaylistDetail = lazy(() => import('./pages/PlaylistDetail'));
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -206,6 +208,8 @@ const AuthenticatedApp = () => {
         <Route path="/bot-lab" element={<SimTradingLab />} />
         <Route path="/media-converter" element={<MediaConverter />} />
         <Route path="/music" element={<MediaLibrary />} />
+        <Route path="/playlists" element={<Playlists />} />
+        <Route path="/playlists/:id" element={<PlaylistDetail />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

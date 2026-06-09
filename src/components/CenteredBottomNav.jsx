@@ -20,6 +20,7 @@ const ALL_PAGES = [
   { id: 'portfolio',    labelKey: 'nav.portfolio',    fallback: 'Portfolio',    icon: Wallet,        to: '/portfolio' },
   { id: 'collect',      labelKey: 'nav.collect',      fallback: 'Collectables', icon: ShoppingBag,   to: '/collectables' },
   { id: 'music',        labelKey: 'nav.music',        fallback: 'Library',      icon: Music,         to: '/music' },
+  { id: 'playlists',    labelKey: 'nav.playlists',    fallback: 'Playlists',    icon: Library,       to: '/playlists' },
   { id: 'messages',     labelKey: 'nav.messages',     fallback: 'Messages',     icon: Mail,          to: '/messages' },
   { id: 'community',    labelKey: 'nav.community',    fallback: 'Community',    icon: Users,         to: '/community' },
   { id: 'botlab',       labelKey: 'nav.botlab',       fallback: 'Bot Lab',      icon: Bot,           to: '/bot-lab' },

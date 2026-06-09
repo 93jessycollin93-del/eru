@@ -12,12 +12,15 @@ import {
   Search,
   Tag as TagIcon,
   X,
+  ListMusic,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { listTracks, listTags, listAllTrackTags } from '@/lib/mediaLibrary';
 import { useMediaPlayer } from '@/context/MediaPlayerContext';
+import { useAuth } from '@/lib/AuthContext';
 import TrackTagEditor from '@/components/media/TrackTagEditor';
+import AddToPlaylistSheet from '@/components/media/AddToPlaylistSheet';
 
 /** Seconds -> m:ss */
 function fmt(s) {
@@ -47,8 +50,10 @@ export default function MediaLibrary() {
   const [activeTagId, setActiveTagId] = useState(null); // null = all
   const [sort, setSort] = useState('recent');
   const [editing, setEditing] = useState(null); // track being tagged
+  const [addingTo, setAddingTo] = useState(null); // track being added to a playlist
 
   const { current, isPlaying, playList, togglePlay, addToQueue } = useMediaPlayer();
+  const { user } = useAuth();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -160,12 +165,20 @@ export default function MediaLibrary() {
               </h1>
             </div>
           </div>
-          <Link
-            to="/media-converter"
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" /> Add
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/playlists"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              <ListMusic className="h-4 w-4" /> Playlists
+            </Link>
+            <Link
+              to="/media-converter"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" /> Add
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -308,6 +321,13 @@ export default function MediaLibrary() {
                     )}
                   </div>
                   <button
+                    onClick={() => setAddingTo(track)}
+                    aria-label="Add to playlist"
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <ListMusic className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => setEditing(track)}
                     aria-label="Edit tags"
                     className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -335,6 +355,14 @@ export default function MediaLibrary() {
           allTags={allTags}
           onClose={() => setEditing(null)}
           onChanged={refreshTags}
+        />
+      )}
+
+      {addingTo && (
+        <AddToPlaylistSheet
+          track={addingTo}
+          userEmail={user?.email || ''}
+          onClose={() => setAddingTo(null)}
         />
       )}
     </div>
