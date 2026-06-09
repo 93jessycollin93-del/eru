@@ -89,6 +89,7 @@ const CardScanner = lazy(() => import('./pages/CardScanner'));
 const IntegrationHub = lazy(() => import('./pages/IntegrationHub'));
 const Community = lazy(() => import('./pages/Community'));
 const SimTradingLab = lazy(() => import('./pages/SimTradingLab'));
+const MediaConverter = lazy(() => import('./pages/MediaConverter'));
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -201,6 +202,7 @@ const AuthenticatedApp = () => {
         <Route path="/integrations" element={<IntegrationHub />} />
         <Route path="/community" element={<Community />} />
         <Route path="/bot-lab" element={<SimTradingLab />} />
+        <Route path="/media-converter" element={<MediaConverter />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
