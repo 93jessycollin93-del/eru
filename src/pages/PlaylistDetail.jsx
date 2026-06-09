@@ -21,6 +21,7 @@ import {
   ListMusic,
   Share2,
   Download,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,6 +32,7 @@ import {
   deletePlaylist,
   removeTrackFromPlaylist,
   reorderPlaylistTracks,
+  listCollaborators,
 } from '@/lib/mediaLibrary';
 import { useMediaPlayer } from '@/context/MediaPlayerContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -40,6 +42,7 @@ import AddToPlaylistSheet from '@/components/media/AddToPlaylistSheet';
 import SelectionBar from '@/components/media/SelectionBar';
 import ShareSheet from '@/components/media/ShareSheet';
 import PlaylistExportSheet from '@/components/media/PlaylistExportSheet';
+import CollaboratorsSheet from '@/components/media/CollaboratorsSheet';
 
 const VISIBILITY_BADGE = {
   private: { icon: Lock, label: 'Private' },
@@ -72,13 +75,20 @@ export default function PlaylistDetail() {
   const [movingSelected, setMovingSelected] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [collaboratorCount, setCollaboratorCount] = useState(0);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [p, t] = await Promise.all([getPlaylist(id), getPlaylistTracks(id)]);
+      const [p, t, collabs] = await Promise.all([
+        getPlaylist(id),
+        getPlaylistTracks(id),
+        listCollaborators(id).catch(() => []),
+      ]);
       setPlaylist(p);
       setTracks(t);
+      setCollaboratorCount(collabs.length);
     } catch {
       setPlaylist(null);
       setTracks([]);
@@ -276,6 +286,13 @@ export default function PlaylistDetail() {
                 <Share2 className="h-4 w-4" />
               </button>
               <button
+                onClick={() => setManaging(true)}
+                aria-label="Manage collaborators"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <Users className="h-4 w-4" />
+              </button>
+              <button
                 onClick={() => setExporting(true)}
                 aria-label="Export playlist"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -337,6 +354,18 @@ export default function PlaylistDetail() {
       </header>
 
       <div className="mx-auto w-full max-w-3xl flex-1 space-y-2 px-4 py-4">
+        {collaboratorCount > 0 && (
+          <Link
+            to={`/collab/${id}`}
+            className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-[12px] text-foreground hover:bg-primary/15"
+          >
+            <Users className="h-4 w-4 flex-shrink-0 text-primary" />
+            <span className="flex-1">
+              Shared with {collaboratorCount} collaborator{collaboratorCount === 1 ? '' : 's'}. Open
+              the collaborative editor to see everyone’s tracks.
+            </span>
+          </Link>
+        )}
         {tracks.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
             <Music2 className="mx-auto h-8 w-8 text-muted-foreground/60" />
@@ -509,6 +538,14 @@ export default function PlaylistDetail() {
           playlist={playlist}
           tracks={tracks}
           onClose={() => setExporting(false)}
+        />
+      )}
+
+      {managing && (
+        <CollaboratorsSheet
+          playlist={{ ...playlist, owner: playlist.created_by }}
+          onClose={() => setManaging(false)}
+          onChanged={refresh}
         />
       )}
     </div>

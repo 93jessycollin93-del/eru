@@ -94,6 +94,7 @@ const MediaConverter = lazy(() => import('./pages/MediaConverter'));
 const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
 const Playlists = lazy(() => import('./pages/Playlists'));
 const PlaylistDetail = lazy(() => import('./pages/PlaylistDetail'));
+const CollabPlaylistDetail = lazy(() => import('./pages/CollabPlaylistDetail'));
 const SharedPlaylist = lazy(() => import('./pages/SharedPlaylist'));
 const Discover = lazy(() => import('./pages/Discover'));
 const Listening = lazy(() => import('./pages/Listening'));
@@ -213,6 +214,7 @@ const AuthenticatedApp = () => {
         <Route path="/music" element={<MediaLibrary />} />
         <Route path="/playlists" element={<Playlists />} />
         <Route path="/playlists/:id" element={<PlaylistDetail />} />
+        <Route path="/collab/:id" element={<CollabPlaylistDetail />} />
         <Route path="/p/:id" element={<SharedPlaylist />} />
         <Route path="/discover" element={<Discover />} />
         <Route path="/listening" element={<Listening />} />

@@ -8,11 +8,15 @@ import { listTracks, addTrackToPlaylist } from '@/lib/mediaLibrary';
  * AddTracksToPlaylistSheet — pick tracks from the library to add into a
  * playlist. Tracks already present are shown as added; the rest get a one-tap
  * add. Calls onChanged() after each add so the detail page refreshes.
+ *
+ * By default adds via mediaLibrary.addTrackToPlaylist; pass `addFn(trackId)` to
+ * route adds elsewhere (e.g. the collaborative service-role function).
  */
 export default function AddTracksToPlaylistSheet({
   playlistId,
   existingTrackIds,
   userEmail = '',
+  addFn,
   onClose,
   onChanged,
 }) {
@@ -41,7 +45,8 @@ export default function AddTracksToPlaylistSheet({
     if (busyId || added.has(track.id)) return;
     setBusyId(track.id);
     try {
-      await addTrackToPlaylist(playlistId, track.id, userEmail);
+      if (addFn) await addFn(track.id);
+      else await addTrackToPlaylist(playlistId, track.id, userEmail);
       setAdded((prev) => new Set(prev).add(track.id));
       onChanged?.();
     } catch (err) {

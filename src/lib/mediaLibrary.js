@@ -451,3 +451,35 @@ export async function addCollaborator(playlistId, userEmail, role = 'editor') {
 export async function removeCollaborator(collaboratorId) {
   return E.PlaylistCollaborator.delete(collaboratorId);
 }
+
+// ---------------------------------------------------------------------------
+// Collaborative playlists (service-role, owner OR collaborator)
+// ---------------------------------------------------------------------------
+
+/** Playlists shared WITH the current user (they collaborate but don't own). */
+export async function listCollaborativePlaylists() {
+  const res = await base44.functions.invoke('listCollaborativePlaylists', {});
+  return res?.data?.playlists || [];
+}
+
+/** Read a collaborative playlist (+ tracks, collaborators, caller role). */
+export async function getCollabPlaylist(id) {
+  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'get', id });
+  return res?.data;
+}
+
+/** Add one of the caller's own tracks to a collaborative playlist. */
+export async function collabAddTrack(id, trackId) {
+  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'addTrack', id, trackId });
+  return res?.data;
+}
+
+export async function collabRemoveTrack(id, linkId) {
+  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'removeTrack', id, linkId });
+  return res?.data;
+}
+
+export async function collabReorder(id, orderedLinkIds = []) {
+  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'reorder', id, orderedLinkIds });
+  return res?.data;
+}

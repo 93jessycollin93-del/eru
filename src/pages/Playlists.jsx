@@ -11,10 +11,16 @@ import {
   Link2,
   Compass,
   Upload,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { listPlaylists, createPlaylist, importPlaylist } from '@/lib/mediaLibrary';
+import {
+  listPlaylists,
+  createPlaylist,
+  importPlaylist,
+  listCollaborativePlaylists,
+} from '@/lib/mediaLibrary';
 import { parsePlaylistFile } from '@/lib/playlistIO';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -31,6 +37,7 @@ const VISIBILITY_BADGE = {
  */
 export default function Playlists() {
   const [playlists, setPlaylists] = useState([]);
+  const [shared, setShared] = useState([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -42,7 +49,12 @@ export default function Playlists() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setPlaylists(await listPlaylists());
+      const [mine, sharedWithMe] = await Promise.all([
+        listPlaylists(),
+        listCollaborativePlaylists().catch(() => []),
+      ]);
+      setPlaylists(mine);
+      setShared(sharedWithMe);
     } catch {
       setPlaylists([]);
     } finally {
@@ -206,6 +218,37 @@ export default function Playlists() {
               );
             })}
           </ul>
+        )}
+
+        {/* Shared with me (collaborative playlists owned by others) */}
+        {shared.length > 0 && (
+          <div className="space-y-2 pt-2">
+            <p className="flex items-center gap-1.5 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <Users className="h-3.5 w-3.5" /> Shared with me
+            </p>
+            <ul className="space-y-2">
+              {shared.map((p) => (
+                <li key={p.id}>
+                  <Link
+                    to={`/collab/${p.id}`}
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-accent"
+                  >
+                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-secondary/40">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        by {p.owner} · {p.track_count || 0} track
+                        {(p.track_count || 0) === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>
