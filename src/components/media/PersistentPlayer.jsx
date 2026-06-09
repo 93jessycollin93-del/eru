@@ -6,9 +6,11 @@ import {
   SkipForward,
   ListMusic,
   Music2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useMediaPlayer } from '@/context/MediaPlayerContext';
 import QueuePanel from './QueuePanel';
+import PlaybackSettingsSheet from './PlaybackSettingsSheet';
 
 /** Seconds -> m:ss */
 function fmt(s) {
@@ -39,6 +41,7 @@ export default function PersistentPlayer() {
     seek,
   } = useMediaPlayer();
   const [queueOpen, setQueueOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (!current) return null;
 
@@ -137,12 +140,20 @@ export default function PersistentPlayer() {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Playback settings"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-accent"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {queueOpen && <QueuePanel onClose={() => setQueueOpen(false)} />}
+      {settingsOpen && <PlaybackSettingsSheet onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }
