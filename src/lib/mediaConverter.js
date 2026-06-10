@@ -109,6 +109,98 @@ export async function convertMedia({ url, format, acknowledged, signal }) {
   return { blob, filename };
 }
 
+/** True when a URL looks like a YouTube/youtu.be link. */
+export function isYouTubeUrl(value) {
+  if (typeof value !== 'string') return false;
+  return /(youtube\.com|youtu\.be|yesplaylist)/i.test(value);
+}
+
+/**
+ * Fetch lightweight metadata for a YouTube URL WITHOUT downloading the file.
+ * Calls GET /metadata on the converter service with an 8-second timeout.
+ * Returns sensible defaults on any failure so the UI always has something.
+ *
+ * @param {string} url  A YouTube URL
+ * @returns {Promise<{ title: string, artist: string, duration_sec: number, cover_url: string, format: string, url: string }>}
+ */
+export async function ytMetadataPreview(url) {
+  const defaults = {
+    title: 'YouTube Video',
+    artist: 'YouTube',
+    duration_sec: 0,
+    cover_url: '',
+    format: 'mp3',
+    url,
+  };
+
+  if (!isConverterConfigured()) return defaults;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  const attempt = async () => {
+    const res = await fetch(
+      `${CONVERTER_BASE_URL}/metadata?url=${encodeURIComponent(url)}`,
+      { signal: controller.signal },
+    );
+    if (!res.ok) {
+      let msg = 'Metadata fetch failed.';
+      try { const d = await res.json(); if (d?.error) msg = d.error; } catch {}
+      throw new Error(msg);
+    }
+    return res.json();
+  };
+
+  try {
+    let data = null;
+    // Up to 2 retries with 3s delay for transient failures.
+    for (let attempt_n = 0; attempt_n <= 2; attempt_n++) {
+      try {
+        data = await attempt();
+        break;
+      } catch (err) {
+        if (err?.name === 'AbortError') break; // timeout — don't retry
+        if (attempt_n === 2) break;
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+    if (!data) return defaults;
+    return {
+      title: data.title || defaults.title,
+      artist: data.uploader || data.channel || defaults.artist,
+      duration_sec: Math.round(data.duration || 0),
+      cover_url: data.thumbnail || '',
+      format: 'mp3',
+      url,
+    };
+  } catch {
+    return defaults;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Make a raw yt-dlp / converter error message human-friendly.
+ * @param {string|Error} err
+ * @returns {string}
+ */
+export function friendlyConverterError(err) {
+  const msg = (typeof err === 'string' ? err : err?.message) || '';
+  if (/private|unavailable|removed/i.test(msg))
+    return "That video is private or unavailable. Try a different URL.";
+  if (/age.restrict/i.test(msg))
+    return "That video is age-restricted and can't be fetched.";
+  if (/network|ECONNREFUSED|fetch/i.test(msg))
+    return "Couldn't reach the converter service. Check your connection and try again.";
+  if (/format|no formats/i.test(msg))
+    return "No downloadable format found for that URL.";
+  if (/copyright|blocked/i.test(msg))
+    return "That video is blocked due to copyright restrictions.";
+  if (!msg || msg.length > 200) return "Conversion failed. Is the URL public?";
+  return msg;
+}
+
 /** Trigger a browser download for a Blob. */
 export function triggerDownload(blob, filename) {
   const objectUrl = URL.createObjectURL(blob);

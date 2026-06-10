@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   LibraryBig,
+  Youtube,
 } from 'lucide-react';
+import YouTubeImportSheet from '@/components/media/YouTubeImportSheet';
 import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,7 @@ import {
   isValidFormat,
   convertMedia,
   triggerDownload,
+  friendlyConverterError,
 } from '@/lib/mediaConverter';
 import { importConvertedTrack } from '@/lib/mediaLibrary';
 
@@ -39,6 +42,7 @@ import { importConvertedTrack } from '@/lib/mediaLibrary';
  * your deployed service.
  */
 export default function MediaConverter() {
+  const [ytSheetOpen, setYtSheetOpen] = useState(false);
   const [url, setUrl] = useState('');
   const [format, setFormat] = useState('mp3');
   const [acknowledged, setAcknowledged] = useState(false);
@@ -80,7 +84,7 @@ export default function MediaConverter() {
       if (err?.name === 'AbortError') {
         toast('Conversion cancelled.');
       } else {
-        toast.error(err?.message || 'Conversion failed.');
+        toast.error(friendlyConverterError(err));
       }
     } finally {
       setBusy(false);
@@ -155,6 +159,29 @@ export default function MediaConverter() {
             </p>
           </div>
         )}
+
+        {/* YouTube quick-import shortcut */}
+        <button
+          type="button"
+          onClick={() => setYtSheetOpen(true)}
+          className="flex w-full items-center gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-left transition-colors hover:bg-red-500/15"
+        >
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-500/20">
+            <Youtube className="h-5 w-5 text-red-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Import from YouTube</p>
+            <p className="text-[11px] text-muted-foreground">
+              Paste a YouTube URL → preview metadata → save straight to your library
+            </p>
+          </div>
+        </button>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">or convert &amp; download</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
 
         <form onSubmit={handleConvert} className="space-y-4">
           {/* URL input */}
@@ -316,6 +343,8 @@ export default function MediaConverter() {
           </p>
         )}
       </div>
+
+      <YouTubeImportSheet open={ytSheetOpen} onClose={() => setYtSheetOpen(false)} />
     </div>
   );
 }

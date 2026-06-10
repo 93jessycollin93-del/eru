@@ -115,21 +115,48 @@ export async function deleteTrack(id) {
  * converter, uploads it, and stores metadata. Centralized here so the converter
  * UI never talks to storage or entities directly.
  */
-export async function importConvertedTrack({ blob, filename, sourceUrl, format }) {
+/**
+ * Persist a freshly-converted file as a Track.
+ * Accepts an optional `metadata` object to pre-fill title, artist, cover_url,
+ * duration_sec from a ytMetadataPreview() call so we don't lose that info.
+ */
+export async function importConvertedTrack({ blob, filename, sourceUrl, format, metadata }) {
   const file = blob instanceof File ? blob : new File([blob], filename || 'track', {
     type: blob?.type || 'application/octet-stream',
   });
   const file_url = await uploadAudioFile(file);
   const isVideo = /mp4|webm|mov/i.test(format || file.type || '');
-  const title = (filename || 'Untitled').replace(/\.[a-z0-9]+$/i, '');
+  const titleFromFile = (filename || 'Untitled').replace(/\.[a-z0-9]+$/i, '');
   return createTrack({
-    title,
+    title: metadata?.title || titleFromFile,
+    artist: metadata?.artist || '',
+    cover_url: metadata?.cover_url || '',
+    duration_sec: metadata?.duration_sec || 0,
     file_url,
     source_url: sourceUrl || '',
     format: format || '',
     kind: isVideo ? 'video' : 'audio',
     size_bytes: file.size || 0,
     added_via: 'converter',
+  });
+}
+
+/**
+ * Save a YouTube URL directly to the library as a streaming track (no download blob).
+ * Used by YouTubeImportSheet when the user wants to save the URL reference.
+ */
+export async function importYouTubeTrack({ url, metadata }) {
+  return createTrack({
+    title: metadata?.title || 'YouTube Video',
+    artist: metadata?.artist || 'YouTube',
+    cover_url: metadata?.cover_url || '',
+    duration_sec: metadata?.duration_sec || 0,
+    file_url: url,
+    source_url: url,
+    format: 'youtube',
+    kind: 'audio',
+    size_bytes: 0,
+    added_via: 'youtube_import',
   });
 }
 
