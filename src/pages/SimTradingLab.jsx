@@ -9,6 +9,10 @@ const randSeed = () => Math.floor(Math.random() * 1_000_000_000);
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 const pct = (n) => `${Number(n || 0) >= 0 ? '+' : ''}${Number(n || 0).toFixed(1)}%`;
 
+// The SimBot entity is created in the Base44 Builder; guard until it exists so
+// the page shows a friendly "setting up" state instead of throwing.
+const botLabReady = () => typeof base44?.entities?.SimBot?.list === 'function';
+
 // Tiny inline equity sparkline (no chart dependency in the bundle).
 function Sparkline({ data = [], up }) {
   if (!data || data.length < 2) return <div className="h-8 w-24" />;
@@ -29,6 +33,7 @@ export default function SimTradingLab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [setupPending, setSetupPending] = useState(false);
 
   const [name, setName] = useState('');
   const [strategy, setStrategy] = useState('dca');
@@ -39,6 +44,12 @@ export default function SimTradingLab() {
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    if (!botLabReady()) {
+      setSetupPending(true);
+      setLoading(false);
+      return;
+    }
+    setSetupPending(false);
     try {
       const meRes = await base44.auth.me();
       const rows = await base44.entities.SimBot.list('-created_date', 200);
@@ -157,6 +168,20 @@ export default function SimTradingLab() {
       totalStart, totalFinal,
     };
   }, [bots]);
+
+  if (setupPending) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-6 text-foreground">
+        <header className="mb-4 flex items-center gap-2">
+          <Bot className="w-5 h-5 text-primary" />
+          <h1 className="text-lg font-semibold">Bot Lab</h1>
+        </header>
+        <div className="rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+          Bot Lab is being set up — check back soon.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 space-y-4 text-foreground">

@@ -20,6 +20,13 @@ const JADE_COLOR_LABEL = {
 const jadeLabel = (j) =>
   `${JADE_COLOR_LABEL[j.color_type] || 'Jade'} · ${j.volume_kg ?? '?'}kg · ${j.composite_score ?? 0}%`;
 
+// The Community entities are created in the Base44 Builder; until they exist,
+// `base44.entities.X` is undefined. Guard so the page shows a friendly
+// "setting up" state instead of throwing.
+const COMMUNITY_ENTITIES = ['CommunityPost', 'CommunityPostReaction', 'CommunityPostComment'];
+const communityReady = () =>
+  COMMUNITY_ENTITIES.every((n) => typeof base44?.entities?.[n]?.list === 'function');
+
 export default function Community() {
   const [me, setMe] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -27,6 +34,7 @@ export default function Community() {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [setupPending, setSetupPending] = useState(false);
 
   const [body, setBody] = useState('');
   const [posting, setPosting] = useState(false);
@@ -43,6 +51,12 @@ export default function Community() {
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    if (!communityReady()) {
+      setSetupPending(true);
+      setLoading(false);
+      return;
+    }
+    setSetupPending(false);
     try {
       const meRes = await base44.auth.me();
       // Reads are gated by RLS to public rows (+ the caller's own).
@@ -189,6 +203,20 @@ export default function Community() {
       setBusyPost(null);
     }
   };
+
+  if (setupPending) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-6 text-foreground">
+        <header className="mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-primary" />
+          <h1 className="text-lg font-semibold">Community</h1>
+        </header>
+        <div className="rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+          Community is being set up — check back soon.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 space-y-4 text-foreground">
