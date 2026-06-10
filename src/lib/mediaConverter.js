@@ -170,6 +170,7 @@ export async function ytMetadataPreview(url) {
       artist: data.uploader || data.channel || defaults.artist,
       duration_sec: Math.round(data.duration || 0),
       cover_url: data.thumbnail || '',
+      is_live: !!(data.is_live || data.live_status === 'is_live'),
       format: 'mp3',
       url,
     };
@@ -187,6 +188,10 @@ export async function ytMetadataPreview(url) {
  */
 export function friendlyConverterError(err) {
   const msg = (typeof err === 'string' ? err : err?.message) || '';
+  if (/403|geo.restrict/i.test(msg))
+    return "This video isn't available (geo-restricted or private).";
+  if (/404|not found/i.test(msg))
+    return "Video not found. Is the URL correct?";
   if (/private|unavailable|removed/i.test(msg))
     return "That video is private or unavailable. Try a different URL.";
   if (/age.restrict/i.test(msg))

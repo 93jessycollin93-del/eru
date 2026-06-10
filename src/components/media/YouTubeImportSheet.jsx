@@ -1,51 +1,103 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Youtube, Loader2, CheckCircle2, AlertTriangle, Music, Clock, Image } from 'lucide-react';
+import {
+  X, Youtube, Loader2, CheckCircle2, AlertTriangle,
+  Music, Clock, AlertCircle, Radio,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { ytMetadataPreview, isYouTubeUrl, friendlyConverterError } from '@/lib/mediaConverter';
 import { importYouTubeTrack } from '@/lib/mediaLibrary';
 
-/**
- * YouTubeImportSheet — bottom sheet for pasting a YouTube URL, previewing
- * metadata, editing it, and saving the track directly to the library.
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Deterministic gradient from a string (for cover art fallback). */
+function titleGradient(title = '') {
+  let h = 0;
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) >>> 0;
+  const hue1 = h % 360;
+  const hue2 = (hue1 + 45) % 360;
+  return `linear-gradient(135deg, hsl(${hue1},60%,30%), hsl(${hue2},70%,20%))`;
+}
+
+/** Format seconds → M:SS  (or "?:??" when 0 / falsy). */
+function fmtDuration(sec) {
+  if (!sec || sec <= 0) return '?:??';
+  const m = Math.floor(sec / 60);
+  const s = String(sec % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+/** Detect playlist URLs and reject them early. */
+function isPlaylistUrl(url) {
+  return /[?&]list=/.test(url) && !/[?&]v=/.test(url);
+}
+
+/** Heuristic: is the metadata for a livestream / premiere? */
+function looksLiveMeta(meta) {
+  if (!meta) return false;
+  const t = (meta.title || '').toLowerCase();
+  return meta.is_live || t.includes('live stream') || t.includes('premiere');
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function YouTubeImportSheet({ open, onClose }) {
   const navigate = useNavigate();
   const [url, setUrl] = useState('');
   const [previewing, setPreviewing] = useState(false);
-  const [meta, setMeta] = useState(null); // { title, artist, duration_sec, cover_url }
+  const [meta, setMeta] = useState(null);
+  const [warning, setWarning] = useState(''); // non-blocking warning
   const [metaError, setMetaError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedTrack, setSavedTrack] = useState(null);
   const previewTimeout = useRef(null);
 
-  // Reset everything when sheet opens/closes
+  // Reset on close
   useEffect(() => {
     if (!open) {
-      setUrl('');
-      setMeta(null);
-      setMetaError('');
-      setConfirmed(false);
-      setSavedTrack(null);
-      setSaving(false);
+      setUrl(''); setMeta(null); setMetaError('');
+      setWarning(''); setConfirmed(false);
+      setSavedTrack(null); setSaving(false);
     }
   }, [open]);
 
-  // Debounce metadata fetch when URL changes
+  // Debounced metadata fetch
   useEffect(() => {
     clearTimeout(previewTimeout.current);
-    setMeta(null);
-    setMetaError('');
-    setConfirmed(false);
-    setSavedTrack(null);
+    setMeta(null); setMetaError(''); setWarning('');
+    setConfirmed(false); setSavedTrack(null);
 
-    if (!url.trim() || !isYouTubeUrl(url)) return;
+    const trimmed = url.trim();
+    if (!trimmed || !isYouTubeUrl(trimmed)) return;
+
+    // Reject playlist-only URLs immediately
+    if (isPlaylistUrl(trimmed)) {
+      setMetaError('That looks like a playlist. Paste one video URL at a time.');
+      return;
+    }
 
     previewTimeout.current = setTimeout(async () => {
       setPreviewing(true);
       try {
-        const data = await ytMetadataPreview(url.trim());
+        const data = await ytMetadataPreview(trimmed);
+
+        // Normalise missing title
+        if (!data.title || data.title === 'YouTube Video') {
+          data.title = `Unknown Title — ${trimmed}`;
+        }
+
+        // Edge-case warnings (non-blocking)
+        if (looksLiveMeta(data)) {
+          setWarning("This looks like a livestream or premiere. Try a finished video instead.");
+        } else if (data.duration_sec > 3600) {
+          setWarning("This is a long video; conversion may take 2–3 min.");
+        }
+
         setMeta(data);
       } catch (err) {
         setMetaError(friendlyConverterError(err));
@@ -61,27 +113,32 @@ export default function YouTubeImportSheet({ open, onClose }) {
     if (!meta || saving) return;
     setSaving(true);
     try {
+      // Store the YouTube URL directly as file_url — no blob upload needed.
+      // The player/converter service streams from the URL at playback time.
       const track = await importYouTubeTrack({ url: url.trim(), metadata: meta });
       setSavedTrack(track);
       toast.success('Added to your library.');
     } catch (err) {
-      toast.error(friendlyConverterError(err));
+      const msg = friendlyConverterError(err);
+      // Map HTTP codes to friendlier messages
+      const mapped =
+        /403|geo.restrict/i.test(msg) ? "This video isn't available (geo-restricted or private)." :
+        /404|not found/i.test(msg)    ? "Video not found. Is the URL correct?" :
+        msg;
+      toast.error(mapped);
     } finally {
       setSaving(false);
     }
   }
 
   function handleAddAnother() {
-    setUrl('');
-    setMeta(null);
-    setMetaError('');
-    setConfirmed(false);
-    setSavedTrack(null);
+    setUrl(''); setMeta(null); setMetaError('');
+    setWarning(''); setConfirmed(false); setSavedTrack(null);
   }
 
   if (!open) return null;
 
-  const urlIsYt = isYouTubeUrl(url);
+  const urlIsYt = isYouTubeUrl(url.trim());
   const urlInvalid = url.length > 5 && !urlIsYt;
   const canSave = meta && confirmed && !saving && !savedTrack;
 
@@ -91,11 +148,11 @@ export default function YouTubeImportSheet({ open, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl border-t border-border bg-card pb-safe-bottom shadow-2xl"
+        className="w-full max-w-md rounded-t-3xl border-t border-border bg-card shadow-2xl"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle + header */}
+        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/15">
@@ -103,7 +160,7 @@ export default function YouTubeImportSheet({ open, onClose }) {
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Import from YouTube</p>
-              <p className="text-[10px] text-muted-foreground">Paste a video URL to add it to your library</p>
+              <p className="text-[10px] text-muted-foreground">Paste a URL — preview, edit, then save</p>
             </div>
           </div>
           <button
@@ -134,7 +191,7 @@ export default function YouTubeImportSheet({ open, onClose }) {
             )}
           </div>
 
-          {/* Metadata preview */}
+          {/* Loading */}
           {previewing && (
             <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2.5">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -142,6 +199,7 @@ export default function YouTubeImportSheet({ open, onClose }) {
             </div>
           )}
 
+          {/* Hard error */}
           {metaError && !previewing && (
             <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-destructive" />
@@ -149,6 +207,19 @@ export default function YouTubeImportSheet({ open, onClose }) {
             </div>
           )}
 
+          {/* Non-blocking warning */}
+          {warning && meta && !previewing && (
+            <div className="flex items-start gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5">
+              {warning.includes('livestream') ? (
+                <Radio className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-400" />
+              ) : (
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-400" />
+              )}
+              <p className="text-[12px] text-yellow-300">{warning}</p>
+            </div>
+          )}
+
+          {/* Metadata preview card */}
           {meta && !previewing && !savedTrack && (
             <MetaPreviewCard meta={meta} onChange={setMeta} />
           )}
@@ -168,7 +239,7 @@ export default function YouTubeImportSheet({ open, onClose }) {
             </label>
           )}
 
-          {/* Success state */}
+          {/* Success */}
           {savedTrack && (
             <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5">
               <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -213,31 +284,39 @@ export default function YouTubeImportSheet({ open, onClose }) {
   );
 }
 
-/** Editable metadata preview card. */
+// ---------------------------------------------------------------------------
+// MetaPreviewCard
+// ---------------------------------------------------------------------------
+
 function MetaPreviewCard({ meta, onChange }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
   function update(field, value) {
     onChange((prev) => ({ ...prev, [field]: value }));
   }
 
-  const durationLabel = meta.duration_sec
-    ? `${Math.floor(meta.duration_sec / 60)}:${String(meta.duration_sec % 60).padStart(2, '0')}`
-    : null;
+  const hasCover = meta.cover_url && !imgFailed;
+  const gradient = titleGradient(meta.title);
+  const duration = fmtDuration(meta.duration_sec);
 
   return (
     <div className="rounded-xl border border-border bg-secondary/30 overflow-hidden">
       <div className="flex gap-3 p-3">
-        {/* Thumbnail */}
+        {/* Thumbnail / gradient fallback */}
         <div className="flex-shrink-0">
-          {meta.cover_url ? (
+          {hasCover ? (
             <img
               src={meta.cover_url}
               alt=""
               className="h-16 w-16 rounded-lg object-cover"
-              onError={(e) => { e.target.style.display = 'none'; }}
+              onError={() => setImgFailed(true)}
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-secondary">
-              <Image className="h-5 w-5 text-muted-foreground" />
+            <div
+              className="h-16 w-16 rounded-lg flex items-center justify-center"
+              style={{ background: gradient }}
+            >
+              <Music className="h-5 w-5 text-white/60" />
             </div>
           )}
         </div>
@@ -258,11 +337,10 @@ function MetaPreviewCard({ meta, onChange }) {
             placeholder="Artist / Channel"
             className="w-full rounded-lg border border-border bg-secondary/60 px-2 py-1 text-[11px] text-muted-foreground placeholder:text-muted-foreground focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/30"
           />
-          {durationLabel && (
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-3 w-3" /> {durationLabel}
-            </div>
-          )}
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>{duration}</span>
+          </div>
         </div>
       </div>
     </div>
