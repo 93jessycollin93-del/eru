@@ -110,9 +110,24 @@ export async function convertMedia({ url, format, acknowledged, signal }) {
 }
 
 /** True when a URL looks like a YouTube/youtu.be link. */
+export function isPlaylistUrl(value) {
+  if (typeof value !== 'string') return false;
+  return /[?&]list=/i.test(value) && !/[?&]v=/i.test(value);
+}
+
 export function isYouTubeUrl(value) {
   if (typeof value !== 'string') return false;
   return /(youtube\.com|youtu\.be|yesplaylist)/i.test(value);
+}
+
+/** True when a URL is likely a YouTube livestream or premiere. */
+function looksLikeLivestream(data) {
+  return (
+    data?.is_live === true ||
+    data?.live_status === 'is_live' ||
+    data?.live_status === 'is_upcoming' ||
+    (data?.duration === 0 && data?.is_live !== false)
+  );
 }
 
 /**
@@ -121,11 +136,12 @@ export function isYouTubeUrl(value) {
  * Returns sensible defaults on any failure so the UI always has something.
  *
  * @param {string} url  A YouTube URL
- * @returns {Promise<{ title: string, artist: string, duration_sec: number, cover_url: string, format: string, url: string }>}
+ * @returns {Promise<{ title: string, artist: string, duration_sec: number, cover_url: string, format: string, url: string, _warn?: string }>}
  */
 export async function ytMetadataPreview(url) {
+  const shortUrl = url.length > 60 ? url.slice(0, 57) + '…' : url;
   const defaults = {
-    title: 'YouTube Video',
+    title: `Unknown Title — ${shortUrl}`,
     artist: 'YouTube',
     duration_sec: 0,
     cover_url: '',
@@ -138,11 +154,14 @@ export async function ytMetadataPreview(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
 
-  const attempt = async () => {
+  const doFetch = async () => {
     const res = await fetch(
       `${CONVERTER_BASE_URL}/metadata?url=${encodeURIComponent(url)}`,
       { signal: controller.signal },
     );
+    if (res.status === 403 || res.status === 404) {
+      throw new Error('This video isn\'t available (private or geo-restricted).');
+    }
     if (!res.ok) {
       let msg = 'Metadata fetch failed.';
       try { const d = await res.json(); if (d?.error) msg = d.error; } catch {}
@@ -153,29 +172,46 @@ export async function ytMetadataPreview(url) {
 
   try {
     let data = null;
-    // Up to 2 retries with 3s delay for transient failures.
-    for (let attempt_n = 0; attempt_n <= 2; attempt_n++) {
+    for (let n = 0; n <= 2; n++) {
       try {
-        data = await attempt();
+        data = await doFetch();
         break;
       } catch (err) {
-        if (err?.name === 'AbortError') break; // timeout — don't retry
-        if (attempt_n === 2) break;
+        if (err?.name === 'AbortError') break;
+        if (err?.message?.includes('isn\'t available')) throw err;
+        if (n === 2) break;
         await new Promise((r) => setTimeout(r, 3000));
       }
     }
     if (!data) return defaults;
-    return {
-      title: data.title || defaults.title,
-      artist: data.uploader || data.channel || defaults.artist,
-      duration_sec: Math.round(data.duration || 0),
+
+    // Livestream / premiere guard
+    if (looksLikeLivestream(data)) {
+      throw new Error('LIVESTREAM');
+    }
+
+    const duration_sec = Math.round(data.duration || 0);
+    const result = {
+      title: (data.title || '').trim() || defaults.title,
+      artist: (data.uploader || data.channel || '').trim() || 'YouTube',
+      duration_sec,
       cover_url: data.thumbnail || '',
-      is_live: !!(data.is_live || data.live_status === 'is_live'),
       format: 'mp3',
       url,
     };
-  } catch {
-    return defaults;
+
+    // Warn for very long videos (>1 hour)
+    if (duration_sec > 3600) {
+      result._warn = 'This is a long video — conversion may take 2–3 minutes.';
+    }
+
+    return result;
+  } catch (err) {
+    if (err?.message === 'LIVESTREAM') {
+      const e = new Error('LIVESTREAM');
+      throw e;
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }
@@ -188,21 +224,21 @@ export async function ytMetadataPreview(url) {
  */
 export function friendlyConverterError(err) {
   const msg = (typeof err === 'string' ? err : err?.message) || '';
-  if (/403|geo.restrict/i.test(msg))
-    return "This video isn't available (geo-restricted or private).";
-  if (/404|not found/i.test(msg))
-    return "Video not found. Is the URL correct?";
-  if (/private|unavailable|removed/i.test(msg))
-    return "That video is private or unavailable. Try a different URL.";
+  if (msg === 'LIVESTREAM')
+    return "This looks like a livestream or premiere. Try a finished video instead.";
+  if (/isn't available|private|unavailable|removed/i.test(msg))
+    return "This video isn't available — it may be private or geo-restricted.";
   if (/age.restrict/i.test(msg))
     return "That video is age-restricted and can't be fetched.";
-  if (/network|ECONNREFUSED|fetch/i.test(msg))
+  if (/network|ECONNREFUSED|fetch failed|failed to fetch/i.test(msg))
     return "Couldn't reach the converter service. Check your connection and try again.";
   if (/format|no formats/i.test(msg))
     return "No downloadable format found for that URL.";
   if (/copyright|blocked/i.test(msg))
     return "That video is blocked due to copyright restrictions.";
-  if (!msg || msg.length > 200) return "Conversion failed. Is the URL public?";
+  if (/playlist/i.test(msg))
+    return "Paste a single video URL, not a playlist.";
+  if (!msg || msg.length > 200) return "Couldn't fetch that video. Is the URL public?";
   return msg;
 }
 
