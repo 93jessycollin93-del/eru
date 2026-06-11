@@ -234,7 +234,7 @@ export default function YouTubeImportSheet({ open, onClose }) {
           </button>
         </div>
 
-        <div className="space-y-3 px-5 pt-3 pb-3">
+        <div className="space-y-3 px-5 pt-3 pb-3 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 60px)' }}>
           {/* Converter not configured */}
           {!configured && (
             <div className="flex items-start gap-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-3 py-2.5">
