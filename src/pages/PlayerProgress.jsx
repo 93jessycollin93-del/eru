@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import CardWinsChart from '@/components/progress/CardWinsChart';
 import StabilityTrendChart from '@/components/progress/StabilityTrendChart';
 import MarketActivityChart from '@/components/progress/MarketActivityChart';
+import StudyRecommendations from '@/components/progress/StudyRecommendations';
 
 /**
  * PlayerProgress
@@ -67,6 +68,7 @@ export default function PlayerProgress() {
           <StabilityTrendChart cards={cards} loading={loading} />
         </div>
         <MarketActivityChart listings={listings} transactions={transactions} loading={loading} />
+        <StudyRecommendations />
       </div>
     </div>
   );
