@@ -16,6 +16,7 @@ import {
   ListChecks,
   Check,
   BarChart3,
+  Youtube,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ import { useSelection } from '@/hooks/useSelection';
 import TrackTagEditor from '@/components/media/TrackTagEditor';
 import AddToPlaylistSheet from '@/components/media/AddToPlaylistSheet';
 import SelectionBar from '@/components/media/SelectionBar';
+import YouTubeImportSheet from '@/components/media/YouTubeImportSheet';
 
 /** Seconds -> m:ss */
 function fmt(s) {
@@ -57,6 +59,7 @@ export default function MediaLibrary() {
   const [editing, setEditing] = useState(null); // track being tagged
   const [addingTo, setAddingTo] = useState(null); // single track being added to a playlist
   const [movingSelected, setMovingSelected] = useState(false); // bulk add-to-playlist
+  const [ytSheetOpen, setYtSheetOpen] = useState(false);
 
   const { current, isPlaying, playList, togglePlay, addToQueue, addManyToQueue } = useMediaPlayer();
   const { user } = useAuth();
@@ -194,6 +197,13 @@ export default function MediaLibrary() {
             >
               <ListMusic className="h-4 w-4" /> Playlists
             </Link>
+            <button
+              onClick={() => setYtSheetOpen(true)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+              aria-label="Import from YouTube"
+            >
+              <Youtube className="h-4 w-4" />
+            </button>
             <Link
               to="/media-converter"
               className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90"
@@ -466,6 +476,14 @@ export default function MediaLibrary() {
           }}
         />
       )}
+
+      <YouTubeImportSheet
+        open={ytSheetOpen}
+        onClose={() => {
+          setYtSheetOpen(false);
+          refresh(); // reload list so newly imported track appears
+        }}
+      />
     </div>
   );
 }

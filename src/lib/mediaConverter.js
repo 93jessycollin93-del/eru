@@ -69,9 +69,40 @@ function filenameFromDisposition(disposition, fallback) {
 }
 
 /**
+ * Fetch lightweight metadata for a URL from the converter's /metadata endpoint.
+ * Returns null on any failure — never blocks conversion.
+ * @param {string} url
+ * @param {{ signal?: AbortSignal }} [opts]
+ * @returns {Promise<{ title, artist, duration_sec, cover_url, source } | null>}
+ */
+export async function fetchMediaMetadata(url, { signal } = {}) {
+  if (!isConverterConfigured()) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  // Chain the caller's signal
+  if (signal) signal.addEventListener('abort', () => controller.abort());
+  try {
+    const res = await fetch(
+      `${CONVERTER_BASE_URL}/metadata?url=${encodeURIComponent(url)}`,
+      { signal: controller.signal },
+    );
+    if (!res.ok) {
+      let msg = `Metadata fetch failed (${res.status}).`;
+      try { const d = await res.json(); if (d?.error) msg = d.error; } catch {}
+      throw new Error(msg);
+    }
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
  * Call POST /convert, returning the converted file as a Blob plus its filename.
- * Throws an Error with a human-readable `.message` on failure (the converter
- * returns JSON error bodies).
+ * Retries up to 2 times on network errors or 5xx — never on 4xx.
+ * Throws an Error with a human-readable `.message` on failure.
  *
  * @returns {Promise<{ blob: Blob, filename: string }>}
  */
@@ -82,31 +113,55 @@ export async function convertMedia({ url, format, acknowledged, signal }) {
     );
   }
 
-  const res = await fetch(`${CONVERTER_BASE_URL}/convert`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, format, acknowledged }),
-    signal,
-  });
+  const MAX_RETRIES = 2;
+  let lastErr;
 
-  if (!res.ok) {
-    // The service sends JSON error bodies like { error, detail }.
-    let message = `Conversion failed (${res.status}).`;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Don't retry if caller already aborted
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
     try {
-      const data = await res.json();
-      if (data?.error) message = data.error;
-    } catch {
-      /* non-JSON error body — keep the default message */
+      const res = await fetch(`${CONVERTER_BASE_URL}/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, format, acknowledged }),
+        signal,
+      });
+
+      if (!res.ok) {
+        let message = friendlyConverterError({ status: res.status });
+        try {
+          const data = await res.json();
+          if (data?.error) message = friendlyConverterError({ status: res.status, message: data.error });
+        } catch {}
+        const err = new Error(message);
+        err.status = res.status;
+        // 4xx = definitive answer, don't retry
+        if (res.status >= 400 && res.status < 500) throw err;
+        lastErr = err;
+        if (attempt < MAX_RETRIES) await _delay(3000);
+        continue;
+      }
+
+      const blob = await res.blob();
+      const filename = filenameFromDisposition(
+        res.headers.get('Content-Disposition'),
+        `download.${format.includes('p') ? 'mp4' : format}`,
+      );
+      return { blob, filename };
+    } catch (err) {
+      if (err?.name === 'AbortError') throw err;
+      if (err?.status >= 400 && err?.status < 500) throw err; // 4xx — propagate immediately
+      lastErr = err;
+      if (attempt < MAX_RETRIES) await _delay(3000);
     }
-    throw new Error(message);
   }
 
-  const blob = await res.blob();
-  const filename = filenameFromDisposition(
-    res.headers.get('Content-Disposition'),
-    `download.${format.includes('p') ? 'mp4' : format}`,
-  );
-  return { blob, filename };
+  throw lastErr || new Error('Conversion failed after retries.');
+}
+
+function _delay(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 /** True when a URL looks like a YouTube/youtu.be link. */
@@ -219,19 +274,26 @@ export async function ytMetadataPreview(url) {
 
 /**
  * Make a raw yt-dlp / converter error message human-friendly.
- * @param {string|Error} err
+ * Accepts an Error, a string, or an object with { status, message }.
+ * @param {string|Error|{ status?: number, message?: string }} err
  * @returns {string}
  */
 export function friendlyConverterError(err) {
+  const status = err?.status;
   const msg = (typeof err === 'string' ? err : err?.message) || '';
+
+  if (status === 404) return "That video isn't available. It may be private or region-locked.";
+  if (status === 422) return msg || "That URL isn't supported or is a playlist URL.";
+  if (status === 504) return "That took too long. Long videos can take a few minutes — try again.";
+
   if (msg === 'LIVESTREAM')
     return "This looks like a livestream or premiere. Try a finished video instead.";
   if (/isn't available|private|unavailable|removed/i.test(msg))
-    return "This video isn't available — it may be private or geo-restricted.";
+    return "That video isn't available. It may be private or region-locked.";
   if (/age.restrict/i.test(msg))
     return "That video is age-restricted and can't be fetched.";
   if (/network|ECONNREFUSED|fetch failed|failed to fetch/i.test(msg))
-    return "Couldn't reach the converter service. Check your connection and try again.";
+    return "Couldn't reach the converter. Check your connection and retry.";
   if (/format|no formats/i.test(msg))
     return "No downloadable format found for that URL.";
   if (/copyright|blocked/i.test(msg))
