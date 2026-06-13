@@ -18,7 +18,7 @@ export default function HomeHero() {
 
       <div className="relative max-w-2xl">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-fuchsia-300">
-          <Sparkles className="h-3 w-3" /> Welcome to ERU
+          <Sparkles className="h-3 w-3" /> Welcome to Cybernetic67
         </div>
 
         <h1 className="eru-neon-glow-text mt-3 text-2xl font-bold leading-tight sm:text-3xl md:text-4xl">
@@ -28,7 +28,7 @@ export default function HomeHero() {
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
           From building your audience, to trading and collecting assets, to deploying
           automated bots — this is your guided tour. Follow the pathways below and
-          discover everything ERU can do for you.
+          discover everything Cybernetic67 can do for you.
         </p>
 
         <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-2 text-xs text-foreground">
