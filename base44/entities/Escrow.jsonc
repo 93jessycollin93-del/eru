@@ -145,14 +145,16 @@
     "currency"
   ],
   "rls": {
-    "create": {},
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
     "read": {
       "$or": [
         {
-          "seller_email": "{{user.email}}"
+          "data.seller_email": "{{user.email}}"
         },
         {
-          "buyer_email": "{{user.email}}"
+          "data.buyer_email": "{{user.email}}"
         },
         {
           "user_condition": {
@@ -164,10 +166,10 @@
     "update": {
       "$or": [
         {
-          "seller_email": "{{user.email}}"
+          "data.seller_email": "{{user.email}}"
         },
         {
-          "buyer_email": "{{user.email}}"
+          "data.buyer_email": "{{user.email}}"
         },
         {
           "user_condition": {
