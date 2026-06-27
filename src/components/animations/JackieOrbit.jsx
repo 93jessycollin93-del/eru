@@ -1,4 +1,5 @@
 import { useEffect, useRef, forwardRef } from 'react';
+import { drawAnimatedBackground } from '@/lib/animatedBackgrounds';
 
 /**
  * JackieOrbit — Smooth rotating triangle with orbiting elements.
@@ -11,6 +12,7 @@ const JackieOrbit = forwardRef(function JackieOrbit({
   rotationSpeed = 1,
   triangleColor = '#00ff88',
   backgroundColor = '#0a0e27',
+  backgroundPattern = null,
   showOrbits = true,
   size = 300,
 }) {
@@ -92,9 +94,13 @@ const JackieOrbit = forwardRef(function JackieOrbit({
     };
 
     const animate = () => {
-      // Clear with fade effect for motion blur
-      ctx.fillStyle = `rgba(10, 14, 39, ${0.1 * brightness})`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Clear or draw animated background
+      if (backgroundPattern) {
+        drawAnimatedBackground(ctx, backgroundPattern, canvas.width, canvas.height, Date.now() % 60000);
+      } else {
+        ctx.fillStyle = `rgba(10, 14, 39, ${0.1 * brightness})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
 
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;

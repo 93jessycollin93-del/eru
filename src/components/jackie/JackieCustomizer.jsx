@@ -3,6 +3,7 @@ import { X, RotateCcw, Pipette } from 'lucide-react';
 import JackieOrbit from '@/components/animations/JackieOrbit';
 import PaintBucketTool from '@/components/jackie/PaintBucketTool';
 import { JACKIE_THEMES, saveTheme, loadTheme, saveCustomTheme, loadCustomTheme } from '@/lib/themes';
+import { getBackgroundNames, ANIMATED_BACKGROUNDS } from '@/lib/animatedBackgrounds';
 
 /**
  * JackieCustomizer — Modal to edit brightness, colors, glow, and theme.
@@ -14,6 +15,7 @@ export default function JackieCustomizer({ open, onClose }) {
   const [custom, setCustom] = useState(() => loadCustomTheme() || {});
   const [paintMode, setPaintMode] = useState(false);
   const [elementColors, setElementColors] = useState(custom.elementColors || {});
+  const [bgPattern, setBgPattern] = useState(custom.backgroundPattern || null);
   const [localBrightness, setLocalBrightness] = useState(custom.brightness ?? 1);
   const [localGlow, setLocalGlow] = useState(custom.glowIntensity ?? 1);
   const [localSpeed, setLocalSpeed] = useState(custom.rotationSpeed ?? 1);
@@ -33,7 +35,7 @@ export default function JackieCustomizer({ open, onClose }) {
 
   // Persist custom changes
   const updateCustom = (updates) => {
-    const newCustom = { ...custom, ...updates, elementColors };
+    const newCustom = { ...custom, ...updates, elementColors, backgroundPattern: bgPattern };
     setCustom(newCustom);
     saveCustomTheme(newCustom);
   };
@@ -146,6 +148,7 @@ export default function JackieCustomizer({ open, onClose }) {
                 rotationSpeed={localSpeed}
                 triangleColor={triangleColor}
                 backgroundColor={backgroundColor}
+                backgroundPattern={bgPattern}
               />
               <PaintBucketTool
                 canvasRef={canvasRef}
@@ -173,6 +176,39 @@ export default function JackieCustomizer({ open, onClose }) {
                   {themeData.name}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Background Pattern Selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Background</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setBgPattern(null); updateCustom({}); }}
+                className={`p-2 rounded-lg border text-sm font-medium transition-all ${
+                  !bgPattern
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-card text-foreground hover:border-primary/40'
+                }`}
+              >
+                Solid
+              </button>
+              {getBackgroundNames().map((bgName) => {
+                const bgData = ANIMATED_BACKGROUNDS[bgName];
+                return (
+                  <button
+                    key={bgName}
+                    onClick={() => { setBgPattern(bgName); updateCustom({}); }}
+                    className={`p-2 rounded-lg border text-sm font-medium transition-all ${
+                      bgPattern === bgName
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-card text-foreground hover:border-primary/40'
+                    }`}
+                  >
+                    {bgData.name}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
