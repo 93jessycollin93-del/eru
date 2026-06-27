@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { X, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, RotateCcw, Pipette } from 'lucide-react';
 import JackieOrbit from '@/components/animations/JackieOrbit';
+import PaintBucketTool from '@/components/jackie/PaintBucketTool';
 import { JACKIE_THEMES, saveTheme, loadTheme, saveCustomTheme, loadCustomTheme } from '@/lib/themes';
 
 /**
@@ -8,13 +9,16 @@ import { JACKIE_THEMES, saveTheme, loadTheme, saveCustomTheme, loadCustomTheme }
  * Live preview updates the animation in real-time.
  */
 export default function JackieCustomizer({ open, onClose }) {
+  const canvasRef = useRef(null);
   const [theme, setTheme] = useState(() => loadTheme());
   const [custom, setCustom] = useState(() => loadCustomTheme() || {});
+  const [paintMode, setPaintMode] = useState(false);
+  const [elementColors, setElementColors] = useState(custom.elementColors || {});
   const [localBrightness, setLocalBrightness] = useState(custom.brightness ?? 1);
   const [localGlow, setLocalGlow] = useState(custom.glowIntensity ?? 1);
   const [localSpeed, setLocalSpeed] = useState(custom.rotationSpeed ?? 1);
-  const [triangleColor, setTriangleColor] = useState(custom.triangleColor || JACKIE_THEMES[theme].triangleColor);
-  const [backgroundColor, setBackgroundColor] = useState(custom.backgroundColor || JACKIE_THEMES[theme].backgroundColor);
+  const [triangleColor, setTriangleColor] = useState(elementColors.triangle || custom.triangleColor || JACKIE_THEMES[theme].triangleColor);
+  const [backgroundColor, setBackgroundColor] = useState(elementColors.background || custom.backgroundColor || JACKIE_THEMES[theme].backgroundColor);
 
   // Sync theme changes
   useEffect(() => {
@@ -29,7 +33,34 @@ export default function JackieCustomizer({ open, onClose }) {
 
   // Persist custom changes
   const updateCustom = (updates) => {
-    const newCustom = { ...custom, ...updates };
+    const newCustom = { ...custom, ...updates, elementColors };
+    setCustom(newCustom);
+    saveCustomTheme(newCustom);
+  };
+
+  // Handle paint bucket coloring
+  const handleColorElement = (element, color) => {
+    const newColors = { ...elementColors, [element]: color };
+    setElementColors(newColors);
+
+    // Update preview colors
+    if (element === 'triangle') setTriangleColor(color);
+    if (element === 'background') setBackgroundColor(color);
+
+    // Persist
+    const newCustom = { ...custom, elementColors: newColors };
+    setCustom(newCustom);
+    saveCustomTheme(newCustom);
+  };
+
+  // Reset element colors to theme
+  const resetElementColors = () => {
+    setElementColors({});
+    const baseTheme = JACKIE_THEMES[theme] || JACKIE_THEMES.dark;
+    setTriangleColor(baseTheme.triangleColor);
+    setBackgroundColor(baseTheme.backgroundColor);
+
+    const newCustom = { ...custom, elementColors: {} };
     setCustom(newCustom);
     saveCustomTheme(newCustom);
   };
@@ -94,14 +125,33 @@ export default function JackieCustomizer({ open, onClose }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {/* Live Preview */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Preview</p>
-            <div className="flex justify-center">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">Preview</p>
+              <button
+                onClick={() => setPaintMode(!paintMode)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${
+                  paintMode
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Pipette className="w-3.5 h-3.5" /> Paint
+              </button>
+            </div>
+            <div className="flex justify-center relative">
               <JackieOrbit
+                ref={canvasRef}
                 brightness={localBrightness}
                 glowIntensity={localGlow}
                 rotationSpeed={localSpeed}
                 triangleColor={triangleColor}
                 backgroundColor={backgroundColor}
+              />
+              <PaintBucketTool
+                canvasRef={canvasRef}
+                isActive={paintMode}
+                onColorElement={handleColorElement}
+                onReset={resetElementColors}
               />
             </div>
           </div>

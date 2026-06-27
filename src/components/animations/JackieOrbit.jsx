@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef } from 'react';
 
 /**
  * JackieOrbit — Smooth rotating triangle with orbiting elements.
  * Mimics the JACKY v3 sci-fi interface: dark background, cyan-to-green
  * triangle, floating colored icons in orbital paths.
  */
-export default function JackieOrbit({
+const JackieOrbit = forwardRef(function JackieOrbit({
   brightness = 1,
   glowIntensity = 1,
   rotationSpeed = 1,
@@ -136,4 +136,6 @@ export default function JackieOrbit({
       }}
     />
   );
-}
+});
+
+export default JackieOrbit;
