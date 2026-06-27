@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, FlaskConical, Key, Send } from 'lucide-react';
+import { Bot, FlaskConical, Key, Send, Palette } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import JackieHeader from '../components/jackie/JackieHeader';
+import JackieOrbit from '@/components/animations/JackieOrbit';
+import JackieCustomizer from '@/components/jackie/JackieCustomizer';
+import { loadTheme, JACKIE_THEMES } from '@/lib/themes';
 import ConversationSidebar from '../components/jackie/ConversationSidebar.jsx';
 import MessageBubble from '../components/jackie/MessageBubble';
 import WelcomeScreen from '../components/jackie/WelcomeScreen';
@@ -98,6 +101,9 @@ export default function JackieAI() {
   const [voice, setVoice] = useState('default');
   const [pendingFiles, setPendingFiles] = useState([]);
   const [jackieProgress, setJackieProgress] = useState(null);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [themeName, setThemeName] = useState(() => loadTheme());
+  const currentTheme = JACKIE_THEMES[themeName] || JACKIE_THEMES.dark;
   const [foundryPreview, setFoundryPreview] = useState(null);
   const [applyingFoundry, setApplyingFoundry] = useState(false);
   const [workspaceCode, setWorkspaceCode] = useState('');
@@ -416,6 +422,10 @@ export default function JackieAI() {
     <div className="flex flex-col min-h-screen bg-background pb-36 md:pb-24">
       {/* Cross-system shortcuts */}
       <div className="flex gap-2 px-4 py-2 border-b border-border/50 bg-card/50 overflow-x-auto">
+        <button onClick={() => setCustomizeOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[10px] font-semibold flex-shrink-0 hover:bg-primary/20">
+          <Palette className="w-3 h-3" /> Customize
+        </button>
         <button onClick={() => navigate('/ailab')}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[10px] font-semibold flex-shrink-0 hover:bg-primary/20">
           <FlaskConical className="w-3 h-3" /> AI Lab ({userBots.length} bots)
@@ -456,7 +466,16 @@ export default function JackieAI() {
 
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
               {messages.length === 0 ? (
-                <WelcomeScreen mode={mode} onSend={(s) => setInput(s)} />
+                <div className="flex flex-col items-center justify-center h-full gap-6">
+                  <JackieOrbit
+                    brightness={currentTheme.brightness}
+                    glowIntensity={currentTheme.glowIntensity}
+                    rotationSpeed={currentTheme.rotationSpeed}
+                    triangleColor={currentTheme.triangleColor}
+                    backgroundColor={currentTheme.backgroundColor}
+                  />
+                  <WelcomeScreen mode={mode} onSend={(s) => setInput(s)} />
+                </div>
               ) : (
                 messages.map((m, i) => (
                   <MessageBubble
@@ -531,6 +550,8 @@ export default function JackieAI() {
           </div>
         </div>
       )}
+
+      <JackieCustomizer open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
     </div>
   );
 }
