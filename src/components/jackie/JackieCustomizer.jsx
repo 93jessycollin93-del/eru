@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, RotateCcw, Pipette } from 'lucide-react';
+import { X, RotateCcw, Pipette, Download, Upload } from 'lucide-react';
 import JackieOrbit from '@/components/animations/JackieOrbit';
 import PaintBucketTool from '@/components/jackie/PaintBucketTool';
-import { JACKIE_THEMES, saveTheme, loadTheme, saveCustomTheme, loadCustomTheme } from '@/lib/themes';
+import { JACKIE_THEMES, saveTheme, loadTheme, saveCustomTheme, loadCustomTheme, exportTheme, importTheme } from '@/lib/themes';
 import { getBackgroundNames, ANIMATED_BACKGROUNDS } from '@/lib/animatedBackgrounds';
 
 /**
@@ -11,6 +11,7 @@ import { getBackgroundNames, ANIMATED_BACKGROUNDS } from '@/lib/animatedBackgrou
  */
 export default function JackieCustomizer({ open, onClose }) {
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [theme, setTheme] = useState(() => loadTheme());
   const [custom, setCustom] = useState(() => loadCustomTheme() || {});
   const [paintMode, setPaintMode] = useState(false);
@@ -21,6 +22,7 @@ export default function JackieCustomizer({ open, onClose }) {
   const [localSpeed, setLocalSpeed] = useState(custom.rotationSpeed ?? 1);
   const [triangleColor, setTriangleColor] = useState(elementColors.triangle || custom.triangleColor || JACKIE_THEMES[theme].triangleColor);
   const [backgroundColor, setBackgroundColor] = useState(elementColors.background || custom.backgroundColor || JACKIE_THEMES[theme].backgroundColor);
+  const [error, setError] = useState(null);
 
   // Sync theme changes
   useEffect(() => {
@@ -104,6 +106,70 @@ export default function JackieCustomizer({ open, onClose }) {
     setBackgroundColor(baseTheme.backgroundColor);
     setCustom({});
     saveCustomTheme({});
+    setError(null);
+  };
+
+  const handleExport = () => {
+    try {
+      const json = exportTheme(theme, custom);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jackie-theme-${theme}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setError(null);
+    } catch (err) {
+      setError(`Export failed: ${err.message}`);
+    }
+  };
+
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const jsonString = event.target?.result;
+        if (typeof jsonString !== 'string') throw new Error('Invalid file content');
+
+        const result = importTheme(jsonString);
+        if (!result.success) {
+          setError(result.error || 'Import failed');
+          return;
+        }
+
+        setCustom(result.data);
+        setLocalBrightness(result.data.brightness ?? 1);
+        setLocalGlow(result.data.glowIntensity ?? 1);
+        setLocalSpeed(result.data.rotationSpeed ?? 1);
+        setElementColors(result.data.elementColors || {});
+        setBgPattern(result.data.backgroundPattern || null);
+        if (result.data.elementColors?.triangle) setTriangleColor(result.data.elementColors.triangle);
+        if (result.data.elementColors?.background) setBackgroundColor(result.data.elementColors.background);
+
+        saveCustomTheme(result.data);
+        setError(null);
+      } catch (err) {
+        setError(`Import failed: ${err.message}`);
+      }
+    };
+    reader.onerror = () => {
+      setError('Failed to read file');
+    };
+    reader.readAsText(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   if (!open) return null;
@@ -125,6 +191,13 @@ export default function JackieCustomizer({ open, onClose }) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
           {/* Live Preview */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -311,6 +384,26 @@ export default function JackieCustomizer({ open, onClose }) {
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset
           </button>
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary/60 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+          <button
+            onClick={handleImport}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary/60 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" /> Import
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileSelect}
+            className="hidden"
+            aria-label="Import theme file"
+          />
           <div className="flex-1" />
           <button
             onClick={onClose}
