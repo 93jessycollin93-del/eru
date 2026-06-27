@@ -421,7 +421,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         onPointerCancel={onPointerUp}
         onClickCapture={onClickCapture}
         title={lockedToTicker ? '' : 'Press and hold to move'}
-        className={`eru-skin-nav-floating bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
+        className={`eru-skin-nav-floating relative bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         {/* Handle strip: always flex-row so the icon grid can start right
@@ -452,11 +452,6 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           >
             <ArrowLeft style={{ width: 8, height: 8 }} />
           </button>
-          {!isControlsOnly && !collapsed && !lockedToTicker && (
-            <span className="text-[7px] font-medium leading-none text-muted-foreground/50 text-center whitespace-nowrap">
-              hold to snap
-            </span>
-          )}
           <GripHorizontal style={{ width: 10, height: 10 }} className={lockedToTicker ? 'opacity-40' : ''} />
           <button
             data-no-min-touch
@@ -663,6 +658,18 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
           <Search style={{ width: 18, height: 18 }} />
           {!collapsed && <span className="text-[8px] font-medium leading-none">{t('nav.search', undefined, 'Search')}</span>}
         </button>}
+
+        {/* Centered "hold to snap" reminder — pinned to the bottom-center of the
+            bar so the hint sits in the middle (not tucked in the left control
+            strip). pointer-events-none keeps the icons underneath tappable. */}
+        {!isControlsOnly && !collapsed && !lockedToTicker && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-[1px] left-1/2 -translate-x-1/2 rounded-full bg-card/85 px-1.5 text-[7px] font-medium leading-none text-muted-foreground/60 whitespace-nowrap"
+          >
+            hold to snap
+          </span>
+        )}
       </div>
 
       {/* Edit modal — rendered OUTSIDE the draggable nav container so the nav's
