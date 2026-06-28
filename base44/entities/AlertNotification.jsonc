@@ -1,0 +1,112 @@
+{
+  "name": "AlertNotification",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Recipient email"
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "portfolio_threshold",
+        "transaction_alert",
+        "suspicious_activity",
+        "manual"
+      ],
+      "description": "Type of alert"
+    },
+    "threshold_id": {
+      "type": "string",
+      "description": "Related PortfolioThreshold ID if applicable"
+    },
+    "title": {
+      "type": "string",
+      "description": "Alert title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Alert message"
+    },
+    "data": {
+      "type": "object",
+      "description": "Alert context data (portfolio value, percentage change, etc)"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    },
+    "sent_via": {
+      "type": "string",
+      "enum": [
+        "email",
+        "push",
+        "in_app"
+      ],
+      "description": "How the alert was delivered"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "default": "info"
+    }
+  },
+  "required": [
+    "user_email",
+    "alert_type",
+    "title",
+    "message"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

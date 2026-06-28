@@ -8,12 +8,13 @@
     "build": "vite build",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
+    "lint:i18n": "node scripts/lint-i18n.mjs",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.26",
-    "@base44/vite-plugin": "^1.0.10",
+    "@base44/sdk": "^0.8.34",
+    "@base44/vite-plugin": "^1.0.23",
     "@codemirror/lang-javascript": "^6.2.5",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
@@ -57,6 +58,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
     "framer-motion": "^11.16.4",
+    "howler": "^2.2.4",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "jspdf": "^4.0.0",

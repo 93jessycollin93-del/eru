@@ -6,6 +6,10 @@ import { useAuth } from '@/lib/AuthContext';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import SoundSettings from '@/components/SoundSettings';
 import EscrowProfilePanel from '@/components/escrow/EscrowProfilePanel';
+import MaskedEmail from '@/components/privacy/MaskedEmail';
+import SecretArea from '@/components/privacy/SecretArea';
+import DeleteAccountButton from '@/components/settings/DeleteAccountButton';
+import { maskEmail } from '@/lib/privacy';
 
 const DEFAULT_PREFS = {
   productUpdates: true,
@@ -135,7 +139,15 @@ export default function UserSettings() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">{currentUser?.full_name || 'User'}</p>
-              <p className="text-xs text-muted-foreground truncate">{userEmail || 'No email available'}</p>
+              {userEmail ? (
+                <MaskedEmail
+                  email={userEmail}
+                  className="text-xs text-muted-foreground truncate"
+                  tooltip="Your email — click the eye to reveal"
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground truncate">No email available</p>
+              )}
             </div>
           </div>
 
@@ -157,11 +169,12 @@ export default function UserSettings() {
             <div className="relative">
               <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
               <input
-                value={userEmail}
+                value={userEmail ? maskEmail(userEmail) : ''}
                 disabled
                 className="w-full h-11 rounded-xl border border-border bg-secondary/40 pl-10 pr-3 text-sm text-muted-foreground"
               />
             </div>
+            <span className="block text-[10px] text-muted-foreground">Hidden for privacy. Reveal it in the Secret Area below.</span>
           </label>
 
           <button
@@ -247,7 +260,10 @@ export default function UserSettings() {
                 <div key={assignment.id} className="rounded-xl border border-border bg-secondary/20 px-3 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{assignment.user_email}</p>
+                      <MaskedEmail
+                        email={assignment.user_email}
+                        className="text-sm font-medium text-foreground truncate"
+                      />
                       <p className="text-xs text-muted-foreground">{assignment.role_name} • {assignment.permissionCount} permissions • {assignment.scope} scope</p>
                     </div>
                     <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
@@ -276,6 +292,32 @@ export default function UserSettings() {
               </button>
             ))}
           </div>
+        </SectionCard>
+
+        <SectionCard title="Secret Area" subtitle="Sensitive account details, hidden behind a PIN. Set or unlock it to reveal.">
+          <SecretArea
+            title="Sensitive account info"
+            description="Your full email and account identifiers are hidden by default. Unlock with your PIN to view."
+          >
+            <div className="space-y-2">
+              <div className="rounded-xl border border-border bg-secondary/20 px-3 py-3">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Account email</p>
+                <p className="mt-1 text-sm font-medium text-foreground break-all">{userEmail || 'Unavailable'}</p>
+              </div>
+              {currentUser?.full_name && (
+                <div className="rounded-xl border border-border bg-secondary/20 px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Full name</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{currentUser.full_name}</p>
+                </div>
+              )}
+              {currentUser?.id && (
+                <div className="rounded-xl border border-border bg-secondary/20 px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Account ID</p>
+                  <p className="mt-1 font-mono text-xs text-foreground break-all">{currentUser.id}</p>
+                </div>
+              )}
+            </div>
+          </SecretArea>
         </SectionCard>
 
         <EscrowProfilePanel userEmail={userEmail} />
@@ -328,6 +370,13 @@ export default function UserSettings() {
           <LogOut className="w-4 h-4" />
           Sign out
         </button>
+
+        {/* Delete account — destructive, gated by ConfirmDialog inside the
+            DeleteAccountButton component. Calls the existing deleteMyData
+            backend function and signs the user out on success. */}
+        <SectionCard title="Delete account" subtitle="Permanently remove your account and all associated data. This cannot be undone.">
+          <DeleteAccountButton />
+        </SectionCard>
       </div>
     </div>
   );

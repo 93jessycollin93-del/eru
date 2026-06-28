@@ -229,6 +229,153 @@ const ENGINES = {
     return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
   },
 
+  neutron_star: (canvas, density = 1) => {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
+
+    const stars = Array.from({ length: Math.floor(90 * density) }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.1 + 0.15,
+      a: 0.08 + Math.random() * 0.28,
+      twinkle: Math.random() * Math.PI * 2,
+    }));
+
+    let raf;
+    let cancelled = false;
+    let t = 0;
+
+    const draw = () => {
+      if (cancelled) return;
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w * 0.5;
+      const cy = h * 0.36;
+      const pulse = (Math.sin(t * 1.2) + 1) * 0.5;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const vignette = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.85);
+      vignette.addColorStop(0, 'rgba(50,90,210,0.08)');
+      vignette.addColorStop(0.28, 'rgba(18,28,72,0.1)');
+      vignette.addColorStop(0.68, 'rgba(6,10,24,0.06)');
+      vignette.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, w, h);
+
+      stars.forEach((star) => {
+        star.twinkle += 0.006;
+        const alpha = star.a + Math.sin(star.twinkle) * 0.04;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(220,232,255,${Math.max(0.04, alpha)})`;
+        ctx.fill();
+      });
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(t * 0.1);
+
+      const beam = ctx.createLinearGradient(-w * 0.34, 0, w * 0.34, 0);
+      beam.addColorStop(0, 'rgba(0,0,0,0)');
+      beam.addColorStop(0.22, `rgba(92,146,255,${0.03 + pulse * 0.02})`);
+      beam.addColorStop(0.5, `rgba(214,236,255,${0.14 + pulse * 0.08})`);
+      beam.addColorStop(0.78, `rgba(92,146,255,${0.03 + pulse * 0.02})`);
+      beam.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w * 0.42, 5 + pulse * 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.rotate(Math.PI / 2);
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w * 0.22, 2.5 + pulse * 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, 92 + pulse * 10);
+      halo.addColorStop(0, `rgba(240,248,255,${0.34 + pulse * 0.08})`);
+      halo.addColorStop(0.18, `rgba(166,210,255,${0.18 + pulse * 0.05})`);
+      halo.addColorStop(0.5, 'rgba(84,126,255,0.08)');
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, 92 + pulse * 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 18 + pulse * 2.5);
+      core.addColorStop(0, 'rgba(255,255,255,0.98)');
+      core.addColorStop(0.42, 'rgba(222,238,255,0.95)');
+      core.addColorStop(0.78, 'rgba(110,164,255,0.7)');
+      core.addColorStop(1, 'rgba(26,44,112,0.08)');
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(0, 0, 18 + pulse * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+      t += 0.008;
+      raf = requestAnimationFrame(draw);
+    };
+
+    raf = requestAnimationFrame(draw);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+  },
+
+  matrix_rain: (canvas, density = 1) => {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || window.innerWidth;
+    canvas.height = canvas.offsetHeight || window.innerHeight;
+    const fontSize = 14;
+    const cols = Math.floor(canvas.width / fontSize);
+    // density tunes how many columns rain at once + speed cadence
+    const drops = Array.from({ length: cols }, () => ({
+      y: Math.random() * -canvas.height / fontSize,
+      speed: 0.4 + Math.random() * 0.9 * density,
+      active: Math.random() < 0.6 + 0.3 * density,
+    }));
+    const glyphs = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ0123456789ABCDEF<>=*+-:.';
+    let frame = 0, raf, cancelled = false;
+    const draw = () => {
+      if (cancelled) return;
+      frame++;
+      if (frame % 2 === 0) {
+        // Trail effect: translucent black wash instead of full clear.
+        ctx.fillStyle = 'rgba(5,8,14,0.18)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+        ctx.textBaseline = 'top';
+        for (let i = 0; i < drops.length; i++) {
+          const d = drops[i];
+          if (!d.active) continue;
+          const ch = glyphs[Math.floor(Math.random() * glyphs.length)];
+          const x = i * fontSize;
+          const y = d.y * fontSize;
+          // Lead glyph bright, trail green.
+          ctx.fillStyle = 'rgba(190,255,210,0.95)';
+          ctx.fillText(ch, x, y);
+          ctx.fillStyle = 'rgba(0,230,118,0.75)';
+          ctx.fillText(ch, x, y - fontSize);
+          d.y += d.speed;
+          if (d.y * fontSize > canvas.height && Math.random() > 0.975) {
+            d.y = Math.random() * -20;
+            d.speed = 0.4 + Math.random() * 0.9 * density;
+          }
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => { cancelled = true; cancelAnimationFrame(raf); ctx.clearRect(0, 0, canvas.width, canvas.height); };
+  },
+
   none: () => null,
 };
 

@@ -1,0 +1,103 @@
+{
+  "name": "TelegramKnowledgeGap",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string"
+    },
+    "log_id": {
+      "type": "string"
+    },
+    "gap_type": {
+      "type": "string",
+      "enum": [
+        "low_confidence",
+        "missing_context",
+        "weak_grounding"
+      ],
+      "default": "low_confidence"
+    },
+    "title": {
+      "type": "string"
+    },
+    "user_question": {
+      "type": "string"
+    },
+    "bot_reply": {
+      "type": "string"
+    },
+    "suggested_topic": {
+      "type": "string"
+    },
+    "suggested_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "resolved",
+        "dismissed"
+      ],
+      "default": "open"
+    },
+    "confidence_score": {
+      "type": "number"
+    },
+    "detected_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "bot_id",
+    "title",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

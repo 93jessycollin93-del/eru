@@ -2,6 +2,11 @@
   "name": "CardUsageHistory",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "card_id": {
       "type": "string"
     },

@@ -3,6 +3,10 @@ import { Store, Coins, Gem, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import BazarBalanceCard from '@/components/bazar/BazarBalanceCard';
 import BazarProductCard from '@/components/bazar/BazarProductCard';
+import BazarCheckoutDialog, { priceInGold } from '@/components/bazar/BazarCheckoutDialog';
+import { createPendingTransaction, markPendingVerification, verifyTransaction, failTransaction } from '@/lib/paymentGuards';
+import { generateTonPaymentRef } from '@/lib/tonPayment';
+import { FALLBACK_TON_USD } from '@/lib/tonConfig';
 
 const DEFAULT_PRODUCTS = [
   {
@@ -104,6 +108,8 @@ export default function BazarStand() {
   const [loading, setLoading] = useState(true);
   const [buyingId, setBuyingId] = useState(null);
   const [userState, setUserState] = useState({ gold: 0, jadeite: 0, bonus_cards: 0 });
+  // Currently selected product for the checkout dialog (null when closed).
+  const [checkoutProduct, setCheckoutProduct] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -122,13 +128,110 @@ export default function BazarStand() {
 
   const sortedProducts = [...products].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-  const handleBuy = async (product) => {
-    setBuyingId(product.title);
+  // Open the secure checkout dialog. Actual purchase happens in handleConfirm.
+  const handleBuy = (product) => setCheckoutProduct(product);
+
+  /**
+   * Order flow (driven by BazarCheckoutDialog):
+   *   1. Create a Transaction in `pending_payment` (no rewards yet).
+   *   2. Settle the payment per method:
+   *        wallet → debit GOLD locally → mark verified instantly
+   *        card / crypto → mark `pending_verification` (admin/webhook flips to verified)
+   *   3. Only after status === "verified" do we credit rewards via grantBazarRewards().
+   * This routes BazarStand through the existing paymentGuards / state machine
+   * instead of insta-granting like before.
+   */
+  const handleConfirm = async ({ method }) => {
+    if (!checkoutProduct) return { ok: false, message: 'No product selected.' };
+    setBuyingId(checkoutProduct.title);
+
+    const me = await base44.auth.me();
+    const product = checkoutProduct;
+    const orderId = `bazar_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const priceUsd = Number(product.price_usd || 0);
+
+    let transactionId = null;
+    try {
+      // Step 1 — create pending transaction (currency-type purchase)
+      transactionId = await createPendingTransaction({
+        orderId,
+        assetType: 'currency',
+        assetId: product.tier_label || product.title,
+        buyerEmail: me?.email,
+        expectedPrice: priceUsd,
+        currency: 'USD',
+        paymentMethod: method === 'wallet' ? 'wallet_balance' : method,
+      });
+
+      if (method === 'wallet') {
+        // Wallet payment — debit GOLD, then verify and grant
+        const walletCost = priceInGold(priceUsd);
+        if ((me?.gold || 0) < walletCost) throw new Error('Insufficient wallet balance.');
+
+        const goldAfterDebit = (me.gold || 0) - walletCost;
+        await base44.auth.updateMe({ gold: goldAfterDebit });
+
+        await markPendingVerification(transactionId, priceUsd);
+        await verifyTransaction(transactionId, { settlement: 'wallet', gold_charged: walletCost });
+
+        const granted = await grantBazarRewards({ product, transactionId, orderId, walletGoldOverride: goldAfterDebit });
+        return { ok: true, message: `Rewards delivered. New balance: ${granted.gold.toLocaleString()} GOLD.` };
+      }
+
+      // External methods (card / crypto) — mark pending verification, await admin/webhook
+      await markPendingVerification(transactionId, priceUsd);
+
+      // For TON crypto, generate a unique payment reference + indicative TON amount
+      // and attach it to the transaction so the verifier can match the on-chain transfer.
+      let tonPayment = null;
+      if (method === 'crypto') {
+        const paymentRef = generateTonPaymentRef();
+        const amountTon = Number((priceUsd / FALLBACK_TON_USD).toFixed(4));
+        await base44.entities.Transaction.update(transactionId, {
+          metadata: { chain: 'ton', network: 'mainnet', payment_ref: paymentRef, amount_ton: amountTon },
+        }).catch(() => null);
+        tonPayment = { transactionId, paymentRef, amountTon };
+      }
+
+      await base44.entities.EconomyAuditLog.create({
+        action: 'bazar_purchase_pending',
+        user_email: me?.email,
+        amount: priceUsd,
+        reason: `Pending ${method} verification — ${product.title}`,
+        metadata: { order_id: orderId, transaction_id: transactionId, method, ...(tonPayment || {}) },
+        status: 'pending',
+      }).catch(() => null);
+
+      return {
+        ok: true,
+        message: method === 'crypto'
+          ? `Send the exact TON amount with the payment comment below, then tap "verify".`
+          : `Order received. Your ${product.title} will be delivered after payment is verified.`,
+        tonPayment,
+      };
+    } catch (err) {
+      if (transactionId) await failTransaction(transactionId, err?.message || 'Checkout error').catch(() => null);
+      throw err;
+    } finally {
+      setBuyingId(null);
+    }
+  };
+
+  /**
+   * Credits the user with the pack rewards. Only called after a Transaction
+   * has been verified — the payment gate inside grantCurrency would also
+   * block invalid grants, but for the bundle/in-app currency case we apply
+   * gold/jadeite/bonus_cards directly under the verified-transaction guard
+   * we already enforced above.
+   */
+  const grantBazarRewards = async ({ product, transactionId, orderId, walletGoldOverride }) => {
     const me = await base44.auth.me();
     const rewardGold = Number(product.rewards?.gold || product.gold_amount || 0);
     const rewardJadeite = Number(product.rewards?.jadeite || product.jadeite_amount || 0);
     const bonusCards = 1;
-    const nextGold = (me?.gold || 0) + rewardGold;
+
+    const baseGold = walletGoldOverride !== undefined ? walletGoldOverride : (me?.gold || 0);
+    const nextGold = baseGold + rewardGold;
     const nextJadeite = (me?.jadeite || 0) + rewardJadeite;
     const nextBonusCards = (me?.bonus_cards || 0) + bonusCards;
 
@@ -144,12 +247,14 @@ export default function BazarStand() {
         price_usd: product.price_usd,
         rewards: product.rewards || null,
         bonus_cards_awarded: bonusCards,
+        order_id: orderId,
+        transaction_id: transactionId,
       },
       status: 'success',
     }).catch(() => null);
 
     setUserState({ gold: nextGold, jadeite: nextJadeite, bonus_cards: nextBonusCards });
-    setBuyingId(null);
+    return { gold: nextGold, jadeite: nextJadeite, bonus_cards: nextBonusCards };
   };
 
   return (
@@ -197,6 +302,15 @@ export default function BazarStand() {
             </div>
           </section>
         </div>
+      )}
+
+      {checkoutProduct && (
+        <BazarCheckoutDialog
+          product={checkoutProduct}
+          walletGold={userState.gold}
+          onClose={() => setCheckoutProduct(null)}
+          onConfirm={handleConfirm}
+        />
       )}
     </div>
   );

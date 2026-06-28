@@ -174,7 +174,7 @@ export default function JadeAtelier() {
 
             <button onClick={() => setTab('monolith')}
               className="w-full flex items-center gap-2 py-3 px-4 mb-4 bg-emerald-900/20 border border-emerald-700/30 rounded-xl text-sm text-emerald-400 hover:bg-emerald-900/40 transition-colors">
-              <Plus className="w-4 h-4" /> Open Mystery Box — $1.00 USD
+              <Plus className="w-4 h-4" /> Open Mystery Box — $20.00 USD
               <ChevronRight className="w-4 h-4 ml-auto" />
             </button>
 

@@ -1,0 +1,61 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user"
+    },
+    "integration_quota": {
+      "type": "object",
+      "properties": {
+        "daily_limit": {
+          "type": "number",
+          "default": 50
+        },
+        "used_today": {
+          "type": "number",
+          "default": 0
+        },
+        "remaining_today": {
+          "type": "number",
+          "default": 50
+        },
+        "extra_uses_balance": {
+          "type": "number",
+          "default": 0
+        },
+        "last_reset_date": {
+          "type": "string"
+        },
+        "warned_at_80": {
+          "type": "string"
+        },
+        "warned_at_100": {
+          "type": "string"
+        }
+      }
+    },
+    "telegram_preferences": {
+      "type": "object",
+      "properties": {
+        "link_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "miniapp_preferred": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  "required": [
+    "integration_quota",
+    "telegram_preferences"
+  ]
+}

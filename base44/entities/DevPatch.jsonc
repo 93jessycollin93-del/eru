@@ -1,0 +1,104 @@
+{
+  "name": "DevPatch",
+  "type": "object",
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "plan_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "affected_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "diff_text": {
+      "type": "string",
+      "description": "Human-readable diff or implementation block \u2014 never claimed as auto-applied"
+    },
+    "instructions": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "ready",
+        "approved",
+        "rejected",
+        "manually_applied"
+      ],
+      "default": "draft"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "safe",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "safe"
+    },
+    "rollback_notes": {
+      "type": "string"
+    },
+    "owner_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "project_id",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Users } from 'lucide-react';
+import { maskEmail } from '@/lib/privacy';
 
 const DASHBOARD_KEY = 'main-dashboard';
 
@@ -128,7 +129,11 @@ export default function SharedDashboardPresence() {
               {initials(item.user_name || item.user_email)}
             </div>
             <div className="min-w-0">
-              <p className="max-w-[120px] truncate text-xs font-medium">{item.user_name || item.user_email}</p>
+              <p className="max-w-[120px] truncate text-xs font-medium">
+                {item.user_email === user?.email
+                  ? (item.user_name || 'You')
+                  : (item.user_name || maskEmail(item.user_email))}
+              </p>
               <p className="text-[10px] text-muted-foreground">{item.user_email === user?.email ? 'You' : 'Active now'}</p>
             </div>
           </div>

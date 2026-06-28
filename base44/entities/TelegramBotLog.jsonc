@@ -2,6 +2,11 @@
   "name": "TelegramBotLog",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "bot_id": {
       "type": "string"
     },
@@ -38,11 +43,15 @@
     "message"
   ],
   "rls": {
-    "create": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": {
       "$or": [
         {
-          "created_by": "{{user.email}}"
+          "created_by_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -51,15 +60,15 @@
         }
       ]
     },
-    "update": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }

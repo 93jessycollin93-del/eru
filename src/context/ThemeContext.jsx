@@ -7,6 +7,7 @@ export const BG_ENVS = {
   none:            { label: 'None',           cat: 'off'      },
   // Digital (animated)
   neural_mesh:     { label: 'Neural Mesh',    cat: 'digital'  },
+  matrix_rain:     { label: 'Matrix Rain',    cat: 'digital'  },
   // Space (animated)
   stars:           { label: 'Star Field',     cat: 'space'    },
   nebula:          { label: 'Nebula',         cat: 'space'    },
@@ -33,6 +34,7 @@ export const BG_ENVS = {
   still_telescope:  { label: 'Observatory Night', cat: 'still', url: 'https://images.unsplash.com/photo-1537420327992-d6e192287183?w=1920&q=95&fit=crop' },
   still_darksky:    { label: 'Dark Sky Desert',   cat: 'still', url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=95&fit=crop' },
   still_plasma:     { label: 'Plasma Storm',      cat: 'still', url: 'https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=1920&q=95&fit=crop' },
+  still_matrix:     { label: 'Matrix Code',       cat: 'still', url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1920&q=95&fit=crop' },
   // ── Wildlife & Nature Backdrops ──────────────────────────────────────────────
   wild_lion:        { label: 'Lion Portrait',       cat: 'wildlife', url: 'https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=1920&q=95&fit=crop' },
   wild_tiger:       { label: 'Bengal Tiger',        cat: 'wildlife', url: 'https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=1920&q=95&fit=crop' },
@@ -97,30 +99,41 @@ export const TYPOGRAPHY_PACKS = {
   minimal: { label:'Minimal',  font:'"DM Sans", sans-serif',      mono:'"DM Mono", monospace' },
 };
 
-// ─── DEFAULTS ────────────────────────────────────────────────────────────────
+// ─── DEFAULTS — "NEON ORACLE" FOUNDATION ─────────────────────────────────────
+// Eru's foundational aesthetic, derived from the cyberpunk reference palette:
+// deep cosmic violet base, holographic magenta primary, electric cyan-leaning
+// borders, dramatic glow + saturation. Applies on first load / after Reset.
+// Existing users keep whatever they have set in localStorage.
+//
+// References mapped to tokens:
+//   - Hot magenta hair / glowing skin → primary 305° / sat 100 / light 62
+//   - Deep violet city sky           → bg / card 268° at very low lightness
+//   - Cyan tech filigree             → border 280° (slight cool drift)
+//   - Wet neon street reflections    → bgOpacity 0.78 + saturation 1.55
+//   - Holographic bloom              → glowIntensity 1.4
 const DEFAULTS = {
   colorMode: 'dark',
   bg: 'none',
-  bgOpacity: 0.4,
-  motionIntensity: 1,
-  glowIntensity: 1,
+  bgOpacity: 0.78,
+  motionIntensity: 1.1,
+  glowIntensity: 1.4,
   blurLevel: 1,
-  particleDensity: 1,
+  particleDensity: 1.1,
   animSpeed: 1,
-  brightness: 1,
-  contrast: 1,
-  saturation: 1,
+  brightness: 1.18,
+  contrast: 1.12,
+  saturation: 1.55,
   typography: 'modern',
   lowPowerMode: false,
   lockedSettings: [],
   uiScale: 1,
-  // Color wheel hues (0-360) + lightness overrides
-  primaryHue: 160,
-  bgHue: 230,
-  cardHue: 230,
-  borderHue: 230,
+  // Color wheel: hot magenta over deep cosmic violet.
+  primaryHue: 305,
+  bgHue: 268,
+  cardHue: 268,
+  borderHue: 280,
   primarySat: 100,
-  primaryLight: 45,
+  primaryLight: 62,
 };
 
 function load(key) {
@@ -230,19 +243,80 @@ export function ThemeProvider({ children }) {
     document.body.style.zoom = uiScale;
   }, [uiScale]);
 
-  // Apply filter effects
+  // Apply background-only filter effects (brightness/contrast/saturation/blur).
+  // CRITICAL: these are NOT applied to <body> anymore — that would blur every
+  // foreground UI element (text, icons, cards, nav). Instead we publish them
+  // as CSS vars consumed by the .eru-background-layer surfaces in Layout.
   useEffect(() => {
-    const filter = lowPowerMode
-      ? 'none'
-      : `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
-    document.documentElement.style.setProperty('--vse-filter', filter);
-    document.body.style.filter = filter === 'none' ? '' : filter;
-  }, [brightness, contrast, saturation, lowPowerMode]);
+    const root = document.documentElement;
+    const lp = lowPowerMode;
+    const b = lp ? 1 : Math.min(1.4, Math.max(0.65, Number(brightness) || 1));
+    const c = lp ? 1 : Math.min(1.35, Math.max(0.75, Number(contrast)   || 1));
+    const s = lp ? 1 : Math.min(1.8,  Math.max(0.5,  Number(saturation) || 1));
+    // Background blur permanently disabled — kept the var for compatibility
+    // but it no longer participates in the filter pipeline.
+    root.style.setProperty('--eru-bg-brightness', String(b));
+    root.style.setProperty('--eru-bg-contrast',   String(c));
+    root.style.setProperty('--eru-bg-saturation', String(s));
+    root.style.setProperty('--eru-bg-blur',       '0px');
+    root.style.setProperty('--eru-bg-filter', `brightness(${b}) contrast(${c}) saturate(${s})`);
+    // Cleanup: if a previous version applied body.style.filter, undo it.
+    if (document.body.style.filter) document.body.style.filter = '';
+  }, [brightness, contrast, saturation, blurLevel, lowPowerMode]);
 
-  // Apply glow CSS var
+  // Apply glow + motion + particle CSS vars (clamped to safe ranges).
   useEffect(() => {
-    document.documentElement.style.setProperty('--glow-intensity', glowIntensity);
-  }, [glowIntensity]);
+    const root = document.documentElement;
+    const g = Math.min(2, Math.max(0, Number(glowIntensity) || 0));
+    const m = Math.min(2, Math.max(0, Number(motionIntensity) || 0));
+    const p = Math.min(2, Math.max(0, Number(particleDensity) || 0));
+    const a = Math.min(2.5, Math.max(0, Number(animSpeed) || 0));
+    root.style.setProperty('--glow-intensity', String(g));
+    root.style.setProperty('--eru-glow-intensity', String(g));
+    root.style.setProperty('--eru-glow-strength', String(0.35 * g));
+    root.style.setProperty('--eru-motion-intensity', String(m));
+    root.style.setProperty('--eru-particle-density', String(p));
+    root.style.setProperty('--eru-anim-speed', String(a));
+  }, [glowIntensity, motionIntensity, particleDensity, animSpeed]);
+
+  // bgOpacity drives a real dimmer overlay (--eru-bg-dim) AND the surface
+  // density bucket. Higher opacity = brighter background = lower dim.
+  useEffect(() => {
+    const root = document.documentElement;
+    const op = Math.min(1, Math.max(0.15, Number(bgOpacity) || 0.4));
+    root.style.setProperty('--eru-bg-opacity', String(op));
+    // Dimmer overlay: 0 (no dim) at op=1, up to 0.85 at op=0.15.
+    const dim = Math.min(0.85, Math.max(0, (1 - op) * 0.85));
+    root.style.setProperty('--eru-bg-dim', String(dim));
+    const bucket = op <= 0.3 ? 'subtle' : op >= 0.6 ? 'intense' : 'medium';
+    document.body.setAttribute('data-bg-density', bucket);
+  }, [bgOpacity]);
+
+  // Publish per-component skin styles as CSS custom properties on :root so
+  // any component can opt in with a single utility class without importing
+  // hooks. The SkinPicker writes componentBackgrounds entries on the active
+  // CustomThemeSetting; we mirror them as `--eru-skin-<scope>-bg-image` /
+  // `--eru-skin-<scope>-bg-color`. Index.css defines the consumer classes
+  // (eru-skin-nav-floating, eru-skin-ticker-bar, etc.) that read these vars.
+  useEffect(() => {
+    const root = document.documentElement;
+    const componentSkins = themeLayers.componentBackgrounds || {};
+    // Clear any previously published skin vars before re-applying — avoids
+    // stale skins lingering after the user removes a component override.
+    const stalePrefix = '--eru-skin-';
+    for (const sty of Array.from(root.style)) {
+      if (sty.startsWith(stalePrefix)) root.style.removeProperty(sty);
+    }
+    for (const [scopeKey, styles] of Object.entries(componentSkins)) {
+      if (!styles || typeof styles !== 'object') continue;
+      const cssKey = scopeKey.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      if (styles.backgroundImage) root.style.setProperty(`--eru-skin-${cssKey}-bg-image`, styles.backgroundImage);
+      if (styles.background) root.style.setProperty(`--eru-skin-${cssKey}-bg`, styles.background);
+      if (styles.backgroundColor) root.style.setProperty(`--eru-skin-${cssKey}-bg-color`, styles.backgroundColor);
+      if (styles.backgroundSize) root.style.setProperty(`--eru-skin-${cssKey}-bg-size`, styles.backgroundSize);
+      if (styles.backgroundPosition) root.style.setProperty(`--eru-skin-${cssKey}-bg-position`, styles.backgroundPosition);
+    }
+  }, [themeLayers.componentBackgrounds]);
 
   const setUiScale = (val) => { setUiScaleRaw(val); save('uiScale', val); };
   const setColorMode = (mode) => { setColorModeRaw(mode); save('colorMode', mode); };

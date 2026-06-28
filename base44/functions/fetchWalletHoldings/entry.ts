@@ -19,6 +19,21 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verify caller owns the wallet before writing any holdings or updating totals.
+    if (walletId) {
+      const wallet = await base44.asServiceRole.entities.ConnectedWallet.filter(
+        { id: walletId },
+        null,
+        1,
+      );
+      if (!wallet || wallet.length === 0) {
+        return Response.json({ error: 'Wallet not found' }, { status: 404 });
+      }
+      if (wallet[0].user_email !== user.email && user.role !== 'admin') {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
     // Simulate fetching holdings (replace with actual API call)
     // In production: use Moralis, Alchemy, or similar
     const mockHoldings = [

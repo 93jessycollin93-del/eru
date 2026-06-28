@@ -2,6 +2,11 @@
   "name": "JadeAsset",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "batch": {
       "type": "string",
       "default": "batch_1",

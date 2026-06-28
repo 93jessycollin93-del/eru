@@ -17,26 +17,49 @@ export default function BotGlobalPolicyPanel() {
   const [policyId, setPolicyId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [savedAt, setSavedAt] = useState(null);
 
   useEffect(() => {
-    base44.entities.BotGlobalPolicy.list('-created_date', 1).then((rows) => {
-      if (rows?.[0]) {
-        setPolicy({ ...DEFAULT_POLICY, ...rows[0] });
-        setPolicyId(rows[0].id);
-      }
-      setLoading(false);
-    });
+    base44.entities.BotGlobalPolicy.list('-created_date', 1)
+      .then((rows) => {
+        if (rows?.[0]) {
+          setPolicy({ ...DEFAULT_POLICY, ...rows[0] });
+          setPolicyId(rows[0].id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
+  // Strip server-managed/extra fields before write — only persist editable shape.
+  const buildPayload = () => ({
+    name: (policy.name || '').trim() || 'Default Global Policy',
+    shared_instructions: policy.shared_instructions || '',
+    safety_guardrails: policy.safety_guardrails || '',
+    max_response_length: Number(policy.max_response_length) || 1200,
+    require_caution_for_security: !!policy.require_caution_for_security,
+    require_human_review: !!policy.require_human_review,
+    is_active: policy.is_active !== false,
+  });
 
   const savePolicy = async () => {
     setSaving(true);
-    if (policyId) {
-      await base44.entities.BotGlobalPolicy.update(policyId, policy);
-    } else {
-      const created = await base44.entities.BotGlobalPolicy.create(policy);
-      setPolicyId(created.id);
+    setError('');
+    try {
+      const payload = buildPayload();
+      if (policyId) {
+        await base44.entities.BotGlobalPolicy.update(policyId, payload);
+      } else {
+        const created = await base44.entities.BotGlobalPolicy.create(payload);
+        setPolicyId(created.id);
+      }
+      setSavedAt(new Date());
+    } catch (err) {
+      setError(err?.message || 'Could not save the policy. Please try again.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   if (loading) {
@@ -121,6 +144,17 @@ export default function BotGlobalPolicyPanel() {
           </div>
         </label>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error}
+        </div>
+      )}
+      {savedAt && !error && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+          Saved at {savedAt.toLocaleTimeString()}.
+        </div>
+      )}
 
       <button
         onClick={savePolicy}

@@ -1,0 +1,56 @@
+{
+  "name": "GuildBankTransaction",
+  "type": "object",
+  "properties": {
+    "guild_id": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "donation",
+        "withdrawal",
+        "system_grant"
+      ],
+      "default": "donation"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "balance_after": {
+      "type": "number"
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "guild_id",
+    "user_email",
+    "type",
+    "amount"
+  ],
+  "rls": {
+    "create": {
+      "user_email": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

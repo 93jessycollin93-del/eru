@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, Star, Tag, TrendingUp, Lightbulb, Package, Megaphone, Lock, CheckCircle, Gavel } from 'lucide-react';
 import BiddingHistory from '../components/BiddingHistory';
+import DemoDataBanner from '../components/marketplace/DemoDataBanner';
 
 const LISTINGS = [
   { id: 1, type: 'idea', title: 'Decentralized Voting Protocol', author: 'CryptoMind', price: 120, stars: 48, tags: ['blockchain', 'governance'], status: 'authorized', preview: 'A trustless on-chain voting system using ZK proofs for privacy...', img: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=200&h=120&fit=crop' },
@@ -185,6 +186,7 @@ export default function Marketplace() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
+      <DemoDataBanner message="Listings shown here are sample placeholders. Prices, authors, and star counts are illustrative only." />
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Marketplace</h2>

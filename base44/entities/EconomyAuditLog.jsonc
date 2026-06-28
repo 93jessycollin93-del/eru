@@ -2,6 +2,11 @@
   "name": "EconomyAuditLog",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "action": {
       "type": "string",
       "enum": [
@@ -99,13 +104,25 @@
     "status"
   ],
   "rls": {
-    "create": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": {
       "user_condition": {
         "role": "admin"
       }
     },
-    "update": {},
-    "delete": {}
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
   }
 }

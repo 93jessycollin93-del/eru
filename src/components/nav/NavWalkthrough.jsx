@@ -36,13 +36,17 @@ export default function NavWalkthrough({ open, step, setStep, onClose }) {
   const isLast = step === STEPS.length - 1;
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-end justify-center sm:items-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-end justify-center sm:items-center px-4 pt-4"
+      style={{ paddingBottom: 'max(1rem, calc(1rem + env(safe-area-inset-bottom, 0px)))' }}
+      onClick={onClose}
+    >
       <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
             <Icon className="w-5 h-5" />
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -66,7 +70,7 @@ export default function NavWalkthrough({ open, step, setStep, onClose }) {
           <button
             onClick={() => setStep((prev) => Math.max(0, prev - 1))}
             disabled={step === 0}
-            className="rounded-xl border border-border px-4 py-2 text-sm text-muted-foreground disabled:opacity-40"
+            className="inline-flex min-h-[44px] items-center rounded-xl border border-border px-4 py-2 text-sm text-muted-foreground disabled:opacity-40"
           >
             Back
           </button>
@@ -75,7 +79,7 @@ export default function NavWalkthrough({ open, step, setStep, onClose }) {
               if (isLast) onClose();
               else setStep((prev) => prev + 1);
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
             {isLast ? 'Finish' : 'Next'}
             {!isLast && <ArrowRight className="w-4 h-4" />}

@@ -16,6 +16,57 @@ function toVector(tokens) {
   });
 }
 
+// SSRF guard: refuse fetches that target private / link-local / loopback
+// addresses, or non-https schemes. Resolves the host first so an attacker
+// can't bypass the literal IPv4 check via a hostname pointing at metadata.
+async function assertSafeUrl(rawUrl) {
+  let parsed;
+  try { parsed = new URL(rawUrl); }
+  catch { throw new Error('Invalid URL'); }
+
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Only https:// URLs are allowed');
+  }
+  const host = parsed.hostname;
+  if (!host) throw new Error('URL has no hostname');
+
+  // Reject hostnames that look like raw IPs in private/loopback ranges. We
+  // also pin to the resolved IP via Deno.resolveDns where available so a
+  // hostname → metadata IP can't slip past.
+  const isPrivateIp = (ip) => {
+    if (!ip) return false;
+    if (ip === '::1' || ip === '0.0.0.0' || ip.startsWith('127.')) return true;
+    if (ip.startsWith('169.254.') || ip.startsWith('10.')) return true;
+    if (ip.startsWith('192.168.')) return true;
+    if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(ip)) return true;
+    if (ip.startsWith('fc') || ip.startsWith('fd')) return true; // fc00::/7
+    if (ip.startsWith('fe80:')) return true; // link-local v6
+    return false;
+  };
+  if (isPrivateIp(host)) {
+    throw new Error('Private / link-local addresses are not allowed');
+  }
+
+  // Best-effort DNS pinning. Deno.resolveDns may not be permitted in all
+  // Base44 runtimes; if it throws, we still reject the literal-IP cases above.
+  try {
+    const records = await Promise.all([
+      Deno.resolveDns(host, 'A').catch(() => []),
+      Deno.resolveDns(host, 'AAAA').catch(() => []),
+    ]);
+    const all = records.flat();
+    if (all.length > 0 && all.every((ip) => isPrivateIp(ip))) {
+      throw new Error('Hostname resolves only to private addresses');
+    }
+    if (all.some((ip) => isPrivateIp(ip))) {
+      throw new Error('Hostname resolves to a private address');
+    }
+  } catch (err) {
+    if (err && err.message && err.message.includes('private')) throw err;
+    // Resolver disabled or threw — proceed with the literal-IP guard above.
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -48,7 +99,17 @@ Deno.serve(async (req) => {
       if (!url) {
         return Response.json({ error: 'Missing URL' }, { status: 400 });
       }
-      const response = await fetch(url);
+      try {
+        await assertSafeUrl(url);
+      } catch (err) {
+        return Response.json({ error: `URL rejected: ${err.message || 'unsafe URL'}` }, { status: 400 });
+      }
+      const response = await fetch(url, { redirect: 'manual' });
+      // If the upstream tries to redirect us into a private network we
+      // rejected, fail closed rather than follow blindly.
+      if (response.status >= 300 && response.status < 400) {
+        return Response.json({ error: 'URL redirects are not followed' }, { status: 400 });
+      }
       const html = await response.text();
       rawText = html.replace(/<script[\s\S]*?<\/script>/gi, ' ')
         .replace(/<style[\s\S]*?<\/style>/gi, ' ')

@@ -183,8 +183,21 @@ export const confirmAndTransferAsset = async (escrowId, escrow) => {
     // Transfer asset to buyer (entity-specific logic)
     if (escrow.asset_type === 'card') {
       const card = await base44.entities.Card.read(escrow.asset_id);
+      // Append an ownership entry to the card's lore historical_log so the
+      // narrative survives the transfer. Non-fatal if the helper fails.
+      let nextLog = Array.isArray(card?.historical_log) ? card.historical_log : [];
+      try {
+        const { appendLogEntry } = await import('@/lib/cardLore');
+        nextLog = appendLogEntry(card, {
+          event_type: 'ownership',
+          summary: `Transferred to ${escrow.buyer_email} via marketplace.`,
+          actor: escrow.seller_email,
+          metadata: { escrow_id: escrowId, price: escrow.price },
+        });
+      } catch { /* non-fatal */ }
       await base44.entities.Card.update(escrow.asset_id, {
-        created_by: escrow.buyer_email
+        created_by: escrow.buyer_email,
+        historical_log: nextLog,
       });
     } else if (escrow.asset_type === 'jade') {
       const jade = await base44.entities.JadeAsset.read(escrow.asset_id);

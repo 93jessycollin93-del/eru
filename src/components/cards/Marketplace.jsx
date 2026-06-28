@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
+import { createCardWithLore } from '@/lib/cardLore';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES, ELEMENT_COLORS } from './StarterCards';
-import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Filter, Repeat, Send, Handshake } from 'lucide-react';
+import { Tag, ShoppingCart, Plus, X, Loader2, Coins, AlertTriangle, CheckCircle2, Repeat, Send, Handshake, Edit2, Check } from 'lucide-react';
+import MobileSelect from '@/components/mobile/MobileSelect';
+import PullToRefresh from '@/components/mobile/PullToRefresh';
 
 const LISTING_FEE_PCT = 0.05; // 5% listing fee
 
@@ -27,6 +30,8 @@ export default function Marketplace({ gold, onGoldChange }) {
   const [listPrice, setListPrice] = useState('');
   const [posting, setPosting] = useState(false);
   const [buying, setBuying] = useState(null);
+  const [editingListingId, setEditingListingId] = useState(null);
+  const [editingListingPrice, setEditingListingPrice] = useState('');
   const [proposalActionId, setProposalActionId] = useState(null);
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
@@ -105,6 +110,27 @@ export default function Marketplace({ gold, onGoldChange }) {
     await loadAll();
   };
 
+  // Edit a card listing's price. Soft-edit only — keeps status and audit
+  // trail intact. Ownership is enforced by Base44 entity rules; the UI
+  // gate below only shows Edit on the seller's own listings (myListings).
+  const startEditListing = (listing) => {
+    setEditingListingId(listing.id);
+    setEditingListingPrice(String(listing.price_gold ?? ''));
+  };
+  const cancelEditListing = () => {
+    setEditingListingId(null);
+    setEditingListingPrice('');
+  };
+  const saveEditListing = async (listing) => {
+    const next = parseInt(editingListingPrice);
+    if (!next || next < 1) { showToast('Enter a valid price', 'error'); return; }
+    if (next === listing.price_gold) { cancelEditListing(); return; }
+    await base44.entities.CardListing.update(listing.id, { price_gold: next });
+    showToast(`Price updated to ${next}g`);
+    cancelEditListing();
+    await loadAll();
+  };
+
   const submitTradeProposal = async () => {
     if (!selectedCard || !tradeRecipient) return;
     if (tradeType === 'swap' && !tradeTargetCard) {
@@ -160,8 +186,18 @@ export default function Marketplace({ gold, onGoldChange }) {
         setProposalActionId(null);
         return;
       }
-      await base44.entities.Card.create({ ...proposal.offered_card_snapshot, id: undefined, quantity: 1 });
-      await base44.entities.Card.create({ ...myRequestedCard, id: undefined, quantity: 1 });
+      await createCardWithLore(proposal.offered_card_snapshot, {
+        source: 'ownership',
+        summary: `Acquired via swap from ${proposal.proposer_email}.`,
+        actor: proposal.proposer_email,
+        metadata: { proposal_id: proposal.id, kind: 'swap_in' },
+      });
+      await createCardWithLore(myRequestedCard, {
+        source: 'ownership',
+        summary: `Sent via swap to ${proposal.proposer_email}.`,
+        actor: user?.email,
+        metadata: { proposal_id: proposal.id, kind: 'swap_out' },
+      });
       await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed' });
       showToast('Swap completed');
     }
@@ -186,7 +222,13 @@ export default function Marketplace({ gold, onGoldChange }) {
 
   const fee = listPrice ? Math.ceil(parseInt(listPrice || 0) * LISTING_FEE_PCT) : 0;
 
+  // Pull-to-refresh: re-runs the existing data loader.
+  const handleRefresh = async () => {
+    await loadAll();
+  };
+
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-4">
       {/* Toast */}
       <AnimatePresence>
@@ -224,17 +266,25 @@ export default function Marketplace({ gold, onGoldChange }) {
           {tab === 'browse' && (
             <div className="space-y-3">
               {/* Filters */}
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                <select value={filterRarity} onChange={e => setFilterRarity(e.target.value)}
-                  className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs outline-none flex-shrink-0">
-                  <option value="all">All Rarities</option>
-                  {['common','rare','epic','legendary','mythic'].map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <select value={filterElement} onChange={e => setFilterElement(e.target.value)}
-                  className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs outline-none flex-shrink-0">
-                  <option value="all">All Elements</option>
-                  {['fire','water','earth','wind','shadow','light'].map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-2">
+                <MobileSelect
+                  value={filterRarity}
+                  onChange={setFilterRarity}
+                  title="Filter by rarity"
+                  options={[
+                    { value: 'all', label: 'All Rarities' },
+                    ...['common','rare','epic','legendary','mythic'].map(r => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) })),
+                  ]}
+                />
+                <MobileSelect
+                  value={filterElement}
+                  onChange={setFilterElement}
+                  title="Filter by element"
+                  options={[
+                    { value: 'all', label: 'All Elements' },
+                    ...['fire','water','earth','wind','shadow','light'].map(e => ({ value: e, label: e.charAt(0).toUpperCase() + e.slice(1) })),
+                  ]}
+                />
               </div>
 
               {filtered.length === 0 ? (
@@ -244,25 +294,30 @@ export default function Marketplace({ gold, onGoldChange }) {
                   <p className="text-[10px] mt-1 opacity-60">Be the first to list a card!</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {filtered.map(l => {
                     const card = l.card_data;
                     const el = ELEMENT_COLORS[card?.element] || ELEMENT_COLORS.fire;
                     const rar = RARITY_STYLES[card?.rarity] || RARITY_STYLES.common;
                     const canAfford = gold >= l.price_gold;
                     return (
-                      <motion.div key={l.id} layout
-                        className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-                        <div className="flex-shrink-0">
+                      <motion.div
+                        key={l.id}
+                        layout
+                        whileHover={{ y: -2 }}
+                        transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                        className="group relative bg-card border border-border rounded-xl px-3 py-3.5 flex items-center gap-4 hover:border-primary/40 hover:shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.35)] transition-colors duration-200"
+                      >
+                        <div className="flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-[1.04]">
                           {card && <CardDisplay card={card} size="sm" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">{l.card_name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors duration-200">{l.card_name}</p>
+                          <div className="flex items-center gap-2 mt-1">
                             <span className={`text-[10px] ${rar.color}`}>{rar.label}</span>
                             <span className={`text-[10px] ${el.text}`}>{el.icon} {card?.element}</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">by @{l.seller_display}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">by @{l.seller_display}</p>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
@@ -271,8 +326,8 @@ export default function Marketplace({ gold, onGoldChange }) {
                           <button
                             onClick={() => buyCard(l)}
                             disabled={!canAfford || buying === l.id}
-                            className={`mt-1 px-3 py-1 rounded-lg text-xs font-semibold transition-colors
-                              ${canAfford ? 'bg-primary text-primary-foreground hover:opacity-90' : 'bg-secondary text-muted-foreground cursor-not-allowed'}`}>
+                            className={`mt-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200
+                              ${canAfford ? 'bg-primary text-primary-foreground hover:opacity-90 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)] active:scale-95' : 'bg-secondary text-muted-foreground cursor-not-allowed'}`}>
                             {buying === l.id ? <Loader2 className="w-3 h-3 animate-spin" /> : canAfford ? 'Buy' : 'No gold'}
                           </button>
                         </div>
@@ -367,12 +422,13 @@ export default function Marketplace({ gold, onGoldChange }) {
                     <p className="text-sm font-semibold">Create proposal</p>
                   </div>
 
-                  <select value={tradeRecipient} onChange={(e) => setTradeRecipient(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm outline-none">
-                    <option value="">Choose player</option>
-                    {users.map((row) => (
-                      <option key={row.id} value={row.email}>{row.full_name || row.email}</option>
-                    ))}
-                  </select>
+                  <MobileSelect
+                    value={tradeRecipient}
+                    onChange={setTradeRecipient}
+                    placeholder="Choose player"
+                    title="Choose recipient"
+                    options={users.map((row) => ({ value: row.email, label: row.full_name || row.email }))}
+                  />
 
                   <div className="flex gap-2">
                     <button onClick={() => setTradeType('swap')} className={`flex-1 rounded-xl px-3 py-2 text-xs font-semibold ${tradeType === 'swap' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
@@ -454,7 +510,7 @@ export default function Marketplace({ gold, onGoldChange }) {
 
           {/* MY LISTINGS */}
           {tab === 'my_listings' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {myListings.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
                   <Tag className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -466,23 +522,60 @@ export default function Marketplace({ gold, onGoldChange }) {
                   const card = l.card_data;
                   const rar = RARITY_STYLES[card?.rarity] || RARITY_STYLES.common;
                   return (
-                    <div key={l.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-                      {card && <CardDisplay card={card} size="sm" />}
+                    <motion.div
+                      key={l.id}
+                      layout
+                      whileHover={{ y: -2 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                      className="group bg-card border border-border rounded-xl px-3 py-3.5 flex items-center gap-4 hover:border-primary/40 hover:shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.35)] transition-colors duration-200"
+                    >
+                      <div className="flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-[1.04]">
+                        {card && <CardDisplay card={card} size="sm" />}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{l.card_name}</p>
-                        <p className={`text-[10px] ${rar.color}`}>{rar.label}</p>
-                        <p className="text-[10px] text-green-400 mt-0.5">● Active</p>
+                        <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors duration-200">{l.card_name}</p>
+                        <p className={`text-[10px] mt-1 ${rar.color}`}>{rar.label}</p>
+                        <p className="text-[10px] text-green-400 mt-1">● Active</p>
                       </div>
                       <div className="text-right flex-shrink-0 space-y-1">
-                        <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
-                          <Coins className="w-3 h-3" />{l.price_gold}g
-                        </p>
-                        <button onClick={() => cancelListing(l)}
-                          className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors">
-                          <X className="w-3 h-3" /> Cancel
-                        </button>
+                        {editingListingId === l.id ? (
+                          <div className="flex items-center gap-1 justify-end">
+                            <input
+                              type="number"
+                              value={editingListingPrice}
+                              onChange={(e) => setEditingListingPrice(e.target.value)}
+                              className="w-16 bg-secondary border border-border rounded-md px-1 py-0.5 text-xs text-right outline-none"
+                              placeholder="g"
+                              autoFocus
+                            />
+                            <button onClick={() => saveEditListing(l)} className="p-1 rounded text-green-400 hover:bg-green-500/10" title="Save price">
+                              <Check className="w-3 h-3" />
+                            </button>
+                            <button onClick={cancelEditListing} className="p-1 rounded text-muted-foreground hover:bg-secondary" title="Cancel edit">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-bold text-yellow-400 flex items-center gap-1 justify-end">
+                            <Coins className="w-3 h-3" />{l.price_gold}g
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 justify-end">
+                          {editingListingId !== l.id && (
+                            <button onClick={() => startEditListing(l)}
+                              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                              title="Edit price">
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                          )}
+                          <button onClick={() => cancelListing(l)}
+                            className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors"
+                            title="Cancel listing (soft delete)">
+                            <X className="w-3 h-3" /> Cancel
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })
               )}
@@ -491,5 +584,6 @@ export default function Marketplace({ gold, onGoldChange }) {
         </>
       )}
     </div>
+    </PullToRefresh>
   );
 }

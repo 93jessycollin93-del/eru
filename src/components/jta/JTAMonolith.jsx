@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import { Gem, Package, Loader2, AlertTriangle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Gem, Package, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useLivePriceMap } from '@/hooks/useLiveSync';
+import JTAPriceConverter from './JTAPriceConverter';
+import JTARefreshControls from './JTARefreshControls';
 
 const MONOLITH_TOTAL_KG = 3_000_000; // 3,000 tonnes
 const SECTORS = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Theta', 'Omega'];
@@ -13,6 +16,11 @@ const COLOR_STYLES = {
   russet: 'from-orange-700/40 to-amber-900/60 border-orange-500/40',
   black: 'from-slate-700/60 to-slate-900/80 border-slate-500/40',
 };
+
+// Server-validated price for a Monolith jade chunk. NEVER trust the client-
+// side string for the actual transaction record — the value is fixed here
+// and written verbatim into the JadeTransaction ledger.
+const CHUNK_PRICE_USD = 20.00;
 
 function snap5(val) { return Math.round(val / 5) * 5; }
 
@@ -49,6 +57,16 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [currency, setCurrency] = useState('USD');
+
+  // Live TON price drives whether non-USD payment options are connected.
+  const { map, status: priceStatus } = useLivePriceMap();
+  const tonReady = priceStatus === 'live' && (map?.TON?.price || 0) > 0;
+  // Stars are available only inside the Telegram Mini App webview.
+  const starsReady = useMemo(() => {
+    try { return Boolean(window?.Telegram?.WebApp?.initData); } catch { return false; }
+  }, []);
+  const paymentReady = currency === 'USD' || (currency === 'TON' && tonReady) || (currency === 'STARS' && starsReady);
 
   const monolithRemaining = Math.max(0, MONOLITH_TOTAL_KG - totalExtracted);
   const pctUsed = ((totalExtracted / MONOLITH_TOTAL_KG) * 100).toFixed(3);
@@ -59,32 +77,22 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
   };
 
   const handleConfirm = async () => {
-    if (!preview) return;
+    if (!preview || !paymentReady) return;
     setLoading(true);
-    const composite = Math.round((preview.purity + preview.vividness + preview.size_grade + preview.texture) / 4);
-    const jade = await base44.entities.JadeAsset.create({
-      ...preview,
-      composite_score: composite,
-      resonance_history: [{
-        event_type: 'extraction',
-        description: `Extracted from Monolith Sector ${preview.origin_sector} at depth ${preview.origin_depth}`,
-        timestamp: new Date().toISOString(),
-        actor: 'system',
-        metadata: { volume_kg: preview.volume_kg, color_type: preview.color_type }
-      }],
-    });
-    const me = await base44.auth.me();
-    const bonusCards = 1;
-    await base44.auth.updateMe({ bonus_cards: (me?.bonus_cards || 0) + bonusCards });
-    await base44.entities.JadeTransaction.create({
-      jade_asset_id: jade.id,
-      transaction_type: 'extraction',
-      price_usd: 1.00,
-      notes: `Mystery Box extraction — ${preview.color_type} from Sector ${preview.origin_sector}`,
-    });
-    setConfirmed(true);
-    setLoading(false);
-    onExtracted?.(jade);
+    try {
+      // The jade is rolled and minted authoritatively by the backend. The
+      // client `preview` is for display only — it is NOT trusted or sent as the
+      // final stats (that previously let users mint arbitrary jade for free).
+      const res = await base44.functions.invoke('mintMonolithJade', {});
+      const data = res?.data ?? res;
+      if (!data?.ok) throw new Error(data?.error || 'Extraction failed');
+      setConfirmed(true);
+      onExtracted?.(data.jade);
+    } catch (err) {
+      console.error('Monolith extraction failed:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -102,13 +110,22 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
         <p className="text-[10px] text-muted-foreground mt-1">{pctUsed}% extracted — non-recreatable reserve</p>
       </div>
 
+      {/* Refresh controls — daily free + paid reroll. Always visible so the
+          user can see the countdown even when no preview is open. */}
+      <JTARefreshControls
+        scope="monolith"
+        paymentReady={tonReady || starsReady || true /* USD always available */}
+        paymentLabel={currency}
+        onRefresh={async () => { handleRoll(); }}
+      />
+
       {/* Mystery box */}
       {!preview && (
         <button onClick={handleRoll}
           className="w-full py-5 rounded-2xl border-2 border-dashed border-emerald-700/40 bg-emerald-950/20 flex flex-col items-center gap-2 hover:border-emerald-500/60 hover:bg-emerald-950/40 transition-all group">
           <Package className="w-8 h-8 text-emerald-500 group-hover:scale-110 transition-transform" />
           <span className="font-semibold text-sm">Open Mystery Box</span>
-          <span className="text-xs text-muted-foreground">$1.00 USD — Slices a unique volume from the Monolith</span>
+          <span className="text-xs text-muted-foreground">${CHUNK_PRICE_USD.toFixed(2)} USD — Slices a unique volume from the Monolith</span>
         </button>
       )}
 
@@ -132,14 +149,25 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
               </div>
             ))}
           </div>
+
+          {/* Currency selector — USD / TON / Stars (with Not Connected fallback) */}
+          <div className="rounded-xl bg-black/20 p-2.5">
+            <JTAPriceConverter
+              priceUsd={CHUNK_PRICE_USD}
+              value={currency}
+              onChange={setCurrency}
+            />
+          </div>
+
           <div className="flex gap-2">
-            <button onClick={handleConfirm} disabled={loading}
+            <button onClick={handleConfirm} disabled={loading || !paymentReady}
               className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gem className="w-4 h-4" />}
-              Confirm Extract — $1.00 + 1 bonus card
+              {paymentReady ? `Confirm — $${CHUNK_PRICE_USD.toFixed(2)} + 1 bonus card` : 'Payment Not Connected'}
             </button>
-            <button onClick={handleRoll} className="px-3 py-2.5 bg-secondary border border-border rounded-xl text-xs text-muted-foreground">Reroll</button>
+            <button onClick={() => setPreview(null)} className="px-3 py-2.5 bg-secondary border border-border rounded-xl text-xs text-muted-foreground">Close</button>
           </div>
+          <p className="text-[10px] text-muted-foreground text-center">Need a different roll? Use the refresh controls above (1 free per 24h, paid rerolls $1).</p>
         </div>
       )}
 

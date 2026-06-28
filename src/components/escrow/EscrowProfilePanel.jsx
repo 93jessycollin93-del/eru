@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Clock3, HandCoins, PlusCircle, ShieldAlert, Wallet } from 'lucide-react';
 import EscrowStatusTimeline from '@/components/escrow/EscrowStatusTimeline';
 import { getEscrowStatusMeta, getNextEscrowPatch } from '@/lib/escrowStateMachine';
+import MaskedEmail from '@/components/privacy/MaskedEmail';
 
 const DEFAULT_FORM = {
   listing_id: '',
@@ -144,7 +145,13 @@ export default function EscrowProfilePanel({ userEmail = '', compact = false }) 
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{escrow.asset_label || escrow.asset_id}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{isBuyer ? `Seller: ${escrow.seller_email}` : `Buyer: ${escrow.buyer_email}`}</p>
+                  <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1">
+                    {isBuyer ? 'Seller:' : 'Buyer:'}
+                    <MaskedEmail
+                      email={isBuyer ? escrow.seller_email : escrow.buyer_email}
+                      className="text-xs text-muted-foreground"
+                    />
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Pill tone={statusTone}>{statusMeta.label}</Pill>

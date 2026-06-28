@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, Users, Plus, MessageCircle, Flame, Star, ChevronRight, Hash, Send, ArrowLeft, BookOpen } from 'lucide-react';
+import { Brain, Users, MessageCircle, Flame, Star, ChevronRight, Hash, Send, ArrowLeft, BookOpen } from 'lucide-react';
 import CollabScratchpad from '../components/CollabScratchpad';
 
 const SERVERS = [

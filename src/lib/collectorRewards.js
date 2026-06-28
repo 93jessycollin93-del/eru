@@ -173,9 +173,18 @@ export async function syncCollectorRewardProfile(userEmail) {
   };
 
   if (existing) {
-    await rewardEntity.update(existing.id, payload);
+    try {
+      await rewardEntity.update(existing.id, payload);
+    } catch {
+      // Permission or transient errors should not crash the dashboard.
+    }
     return { ...existing, ...payload };
   }
 
-  return rewardEntity.create(payload);
+  try {
+    return await rewardEntity.create(payload);
+  } catch {
+    // If create is denied (e.g. RLS), return the computed payload so the UI still renders.
+    return payload;
+  }
 }

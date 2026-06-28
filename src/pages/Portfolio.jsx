@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Zap, Trophy, Flame, TrendingUp, Star, Heart, Share2, Lock, Calendar, Download } from 'lucide-react';
+import { Trophy, Flame, TrendingUp, Star, Heart, Download } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import ScenarioAnalysisPanel from '../components/portfolio/ScenarioAnalysisPanel';
 import DiversificationToolsPanel from '../components/portfolio/DiversificationToolsPanel';
@@ -9,10 +10,12 @@ import RebalancingPlanner from '../components/portfolio/RebalancingPlanner';
 import InvestmentJournalPanel from '../components/portfolio/InvestmentJournalPanel';
 import TargetAllocationPanel from '../components/portfolio/TargetAllocationPanel';
 import { buildCombinedPortfolioData } from '../lib/portfolioRebalance';
+import PullToRefresh from '../components/mobile/PullToRefresh';
 
 export default function Portfolio() {
   const [tab, setTab] = useState('inventory');
   const { user } = useAuth();
+  const { t } = useLanguage();
   const jadeQuery = useMemo(() => user?.email ? { created_by: user.email } : {}, [user?.email]);
   const buyerQuery = useMemo(() => user?.email ? { buyer_email: user.email } : {}, [user?.email]);
   const { data: jadeAssets, loading: jadeLoading } = useRealtimeEntityList('JadeAsset', { query: jadeQuery, sort: '-updated_date', limit: 100, enabled: !!user?.email });
@@ -34,15 +37,30 @@ export default function Portfolio() {
 
   const totalValue = jadeAssets.reduce((sum, j) => sum + (j.valuation || 0), 0) + cards.length * 100;
   const stats = [
-    { label: 'Jade Assets', value: jadeAssets.length, icon: Flame, color: 'text-orange-400' },
-    { label: 'Cards', value: cards.length, icon: Star, color: 'text-yellow-400' },
-    { label: 'Listed', value: listings.length, icon: TrendingUp, color: 'text-green-400' },
-    { label: 'Level', value: reputation?.level || 1, icon: Trophy, color: 'text-primary' },
+    { label: t('portfolio.jadeAssets', undefined, 'Jade Assets'), value: jadeAssets.length, icon: Flame, color: 'text-orange-400' },
+    { label: t('portfolio.cards', undefined, 'Cards'), value: cards.length, icon: Star, color: 'text-yellow-400' },
+    { label: t('portfolio.listed', undefined, 'Listed'), value: listings.length, icon: TrendingUp, color: 'text-green-400' },
+    { label: t('portfolio.level', undefined, 'Level'), value: reputation?.level || 1, icon: Trophy, color: 'text-primary' },
   ];
   const combinedHoldings = buildCombinedPortfolioData({ walletHoldings, jadeAssets, cards, transactions });
 
+  // Pull-to-refresh handler — emits a global refresh event other widgets can
+  // listen to. Live entity hooks keep streaming on their own; the brief await
+  // gives the spinner time to render.
+  const handleRefresh = async () => {
+    window.dispatchEvent(new CustomEvent('app:refresh', { detail: { source: 'portfolio' } }));
+    await new Promise((r) => setTimeout(r, 400));
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
+    <PullToRefresh onRefresh={handleRefresh}>
+    <div
+      className="flex flex-col min-h-screen bg-background pb-20"
+      style={{
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
+    >
       {/* Header */}
       <div className="px-4 py-4 border-b border-border bg-card/50">
         <div className="flex items-center gap-3 mb-3">
@@ -50,8 +68,8 @@ export default function Portfolio() {
             {user?.full_name?.[0]?.toUpperCase() || 'U'}
           </div>
           <div>
-            <p className="font-semibold">{user?.full_name || 'User'}</p>
-            <p className="text-xs text-muted-foreground">{user?.role === 'admin' ? '⭐ Admin' : 'Collector'}</p>
+            <p className="font-semibold">{user?.full_name || t('portfolio.user', undefined, 'User')}</p>
+            <p className="text-xs text-muted-foreground">{user?.role === 'admin' ? `⭐ ${t('portfolio.admin', undefined, 'Admin')}` : t('portfolio.collector', undefined, 'Collector')}</p>
           </div>
         </div>
       </div>
@@ -72,22 +90,22 @@ export default function Portfolio() {
       {/* Tabs */}
       <div className="flex border-b border-border px-4 gap-1">
         {[
-          { id: 'inventory', label: 'Inventory' },
-          { id: 'analysis', label: 'Analysis' },
-          { id: 'journal', label: 'Journal' },
-          { id: 'showcase', label: 'Showcase' },
-          { id: 'history', label: 'History' },
-          { id: 'profile', label: 'Profile' }
-        ].map(t => (
+          { id: 'inventory', label: t('portfolio.inventory', undefined, 'Inventory') },
+          { id: 'analysis', label: t('portfolio.analysis', undefined, 'Analysis') },
+          { id: 'journal', label: t('portfolio.journal', undefined, 'Journal') },
+          { id: 'showcase', label: t('portfolio.showcase', undefined, 'Showcase') },
+          { id: 'history', label: t('portfolio.history', undefined, 'History') },
+          { id: 'profile', label: t('portfolio.profile', undefined, 'Profile') }
+        ].map(tabItem => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tabItem.id}
+            onClick={() => setTab(tabItem.id)}
             className={`py-3 px-3 text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
-              tab === t.id
+              tab === tabItem.id
                 ? 'text-primary border-b-primary'
                 : 'text-muted-foreground border-b-transparent'
             }`}>
-            {t.label}
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -99,7 +117,7 @@ export default function Portfolio() {
         {tab === 'inventory' && (
           <>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">Jade Assets ({jadeAssets.length})</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">{t('portfolio.jadeAssets', undefined, 'Jade Assets')} ({jadeAssets.length})</p>
               {jadeAssets.length > 0 ? (
                 <div className="space-y-2">
                   {jadeAssets.map(jade => (
@@ -110,7 +128,7 @@ export default function Portfolio() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium capitalize truncate">{jade.crafted_form} • {jade.color_type.replace('_', ' ')}</p>
-                        <p className="text-[10px] text-muted-foreground">Score: {jade.composite_score.toFixed(0)}</p>
+                        <p className="text-[10px] text-muted-foreground">{t('portfolio.score', undefined, 'Score')}: {jade.composite_score.toFixed(0)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-semibold">{jade.volume_kg}kg</p>
@@ -120,12 +138,12 @@ export default function Portfolio() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">No jade assets yet</p>
+                <p className="text-xs text-muted-foreground text-center py-4">{t('portfolio.noJade', undefined, 'No jade assets yet')}</p>
               )}
             </div>
 
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">Cards ({cards.length})</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">{t('portfolio.cards', undefined, 'Cards')} ({cards.length})</p>
               {cards.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2">
                   {cards.map(card => (
@@ -139,7 +157,7 @@ export default function Portfolio() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">No cards yet</p>
+                <p className="text-xs text-muted-foreground text-center py-4">{t('portfolio.noCards', undefined, 'No cards yet')}</p>
               )}
             </div>
           </>
@@ -165,7 +183,7 @@ export default function Portfolio() {
         {/* SHOWCASE */}
         {tab === 'showcase' && (
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">Featured Items</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">{t('portfolio.featuredItems', undefined, 'Featured Items')}</p>
             {listings.length > 0 ? (
               <div className="space-y-2">
                 {listings.slice(0, 5).map(list => (
@@ -187,8 +205,8 @@ export default function Portfolio() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Heart className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                <p className="text-xs text-muted-foreground">No items listed yet</p>
-                <p className="text-[10px] text-muted-foreground/60">List your best assets to showcase</p>
+                <p className="text-xs text-muted-foreground">{t('portfolio.noListings', undefined, 'No items listed yet')}</p>
+                <p className="text-[10px] text-muted-foreground/60">{t('portfolio.noListingsHint', undefined, 'List your best assets to showcase')}</p>
               </div>
             )}
           </div>
@@ -197,7 +215,7 @@ export default function Portfolio() {
         {/* HISTORY */}
         {tab === 'history' && (
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">Recent Transactions ({transactions.length})</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">{t('portfolio.recentTransactions', undefined, 'Recent Transactions')} ({transactions.length})</p>
             {transactions.length > 0 ? (
               <div className="space-y-2">
                 {transactions.slice(0, 10).map(trans => (
@@ -221,7 +239,7 @@ export default function Portfolio() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground text-center py-4">No transactions yet</p>
+              <p className="text-xs text-muted-foreground text-center py-4">{t('portfolio.noTransactions', undefined, 'No transactions yet')}</p>
             )}
           </div>
         )}
@@ -231,15 +249,15 @@ export default function Portfolio() {
           <div className="space-y-3">
             <div className="bg-card border border-border rounded-lg p-4 space-y-3">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">Email</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">{t('portfolio.email', undefined, 'Email')}</p>
                 <p className="text-sm font-mono text-foreground">{user?.email}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">Member Since</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">{t('portfolio.memberSince', undefined, 'Member Since')}</p>
                 <p className="text-sm">{new Date(user?.created_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">Role</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">{t('portfolio.role', undefined, 'Role')}</p>
                 <p className="text-sm capitalize">{user?.role}</p>
               </div>
             </div>
@@ -247,19 +265,19 @@ export default function Portfolio() {
             {reputation && (
               <div className="bg-card border border-border rounded-lg p-4 space-y-3">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-primary" /> Reputation
+                  <Trophy className="w-4 h-4 text-primary" /> {t('portfolio.reputation', undefined, 'Reputation')}
                 </h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-xs text-muted-foreground">Level</span>
+                    <span className="text-xs text-muted-foreground">{t('portfolio.level', undefined, 'Level')}</span>
                     <span className="text-sm font-semibold">{reputation.level}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-xs text-muted-foreground">XP</span>
+                    <span className="text-xs text-muted-foreground">{t('portfolio.xp', undefined, 'XP')}</span>
                     <span className="text-sm font-semibold">{reputation.xp}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-xs text-muted-foreground">Marketplace Sales</span>
+                    <span className="text-xs text-muted-foreground">{t('portfolio.marketplaceSales', undefined, 'Marketplace Sales')}</span>
                     <span className="text-sm font-semibold">{reputation.marketplace_sales}</span>
                   </div>
                 </div>
@@ -269,13 +287,14 @@ export default function Portfolio() {
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center gap-3">
               <Download className="w-4 h-4 text-primary flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-primary">Export Portfolio</p>
-                <p className="text-[10px] text-primary/70">Download your inventory & transaction history</p>
+                <p className="text-xs font-medium text-primary">{t('portfolio.exportPortfolio', undefined, 'Export Portfolio')}</p>
+                <p className="text-[10px] text-primary/70">{t('portfolio.exportDesc', undefined, 'Download your inventory & transaction history')}</p>
               </div>
             </div>
           </div>
         )}
       </div>
     </div>
+    </PullToRefresh>
   );
 }

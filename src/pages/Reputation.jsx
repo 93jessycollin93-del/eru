@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Award, Zap, TrendingUp, MessageCircle, ShoppingBag, Shield, Lightbulb } from 'lucide-react';
+import { Award, Zap, MessageCircle, ShoppingBag, Shield, Lightbulb } from 'lucide-react';
 import ReputationBadge, { BADGES, LEVELS, getLevelInfo } from '../components/ReputationBadge';
 import CollectorReputationPill from '@/components/reputation/CollectorReputationPill';
 import CollectorBadgeStrip from '@/components/reputation/CollectorBadgeStrip';

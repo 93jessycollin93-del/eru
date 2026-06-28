@@ -51,11 +51,16 @@
           "created_by": "{{user.email}}"
         },
         {
-          "owner_email": "{{user.email}}"
+          "data.owner_email": "{{user.email}}"
         },
         {
-          "member_emails": {
+          "data.member_emails": {
             "contains": "{{user.email}}"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
           }
         }
       ]
@@ -66,12 +71,29 @@
           "created_by": "{{user.email}}"
         },
         {
-          "owner_email": "{{user.email}}"
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
         }
       ]
     },
     "delete": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     }
   }
 }

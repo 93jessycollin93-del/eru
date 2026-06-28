@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, Database, Layers3, Search, Download, Gauge, Sparkles } from 'lucide-react';
+import { Layers3, Search, Download, Gauge, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 export default function TieredMemoryPanel({ bots }) {

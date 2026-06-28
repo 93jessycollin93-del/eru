@@ -2,6 +2,11 @@
   "name": "CardTradeProposal",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "proposer_email": {
       "type": "string"
     },
@@ -12,9 +17,11 @@
       "type": "string",
       "enum": [
         "swap",
-        "sale"
+        "sale",
+        "counter"
       ],
-      "default": "swap"
+      "default": "swap",
+      "description": "swap = card-for-card, sale = card-for-gold, counter = counter-offer to a previous proposal"
     },
     "status": {
       "type": "string",
@@ -23,7 +30,8 @@
         "accepted",
         "declined",
         "cancelled",
-        "completed"
+        "completed",
+        "countered"
       ],
       "default": "pending"
     },
@@ -42,8 +50,20 @@
     "sale_price_gold": {
       "type": "number"
     },
+    "gold_offered": {
+      "type": "number",
+      "description": "Gold the proposer is putting on top of the offered card (or instead of it)"
+    },
     "message": {
       "type": "string"
+    },
+    "parent_proposal_id": {
+      "type": "string",
+      "description": "If this is a counter-offer, the id of the proposal it counters"
+    },
+    "thread_root_id": {
+      "type": "string",
+      "description": "Root proposal id for the counter-offer thread (stable across rounds)"
     },
     "escrow_id": {
       "type": "string"

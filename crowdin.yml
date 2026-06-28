@@ -1,0 +1,47 @@
+# Crowdin config — see https://crowdin.github.io/crowdin-cli/configuration
+#
+# Wires src/lib/translations.json into Crowdin so professional translators can
+# edit each locale via Crowdin's web UI, and the CLI/GitHub Action syncs the
+# results back to this repo.
+#
+# Setup steps (one-time, in Crowdin):
+#   1. Create a Crowdin project at https://crowdin.com/projects → "New project".
+#      Source language: English. Target languages: Ukrainian (uk),
+#      Chinese Simplified (zh-CN), Russian (ru). Add others later as needed.
+#   2. Generate a personal access token at https://crowdin.com/settings#api-key
+#      with project read/write scope. Store it as CROWDIN_PERSONAL_TOKEN env
+#      var (or in Base44's secret manager — never commit it).
+#   3. Note the project_id from the URL of your project.
+#   4. (Optional) Install the Crowdin GitHub integration so PRs auto-open
+#      when translators finish a string set.
+#
+# Local CLI setup:
+#   npm i -g @crowdin/cli
+#   export CROWDIN_PERSONAL_TOKEN=<your token>
+#   crowdin upload sources       # push English keys to Crowdin
+#   crowdin download             # pull translated locales back into this repo
+
+project_id_env: CROWDIN_PROJECT_ID
+api_token_env: CROWDIN_PERSONAL_TOKEN
+preserve_hierarchy: true
+
+files:
+  - source: /src/lib/translations.json
+    translation: /src/lib/translations.%locale%.json
+    # The repo currently keeps every locale inside a single translations.json
+    # file (en/uk/zh/ru as top-level keys). Crowdin's standard JSON parser
+    # expects ONE locale per file, so we use the multilingual_spreadsheet
+    # adapter (closest fit) and rely on the post-process sync script in
+    # scripts/sync-translations.mjs to merge Crowdin's per-locale files back
+    # into the single translations.json. This avoids restructuring the
+    # in-app i18n loader.
+    type: chrome
+    update_option: update_as_unapproved
+    skip_untranslated_strings: false
+
+# Locale code mapping: Crowdin uses xx-XX; the app uses short codes.
+languages_mapping:
+  two_letters_code:
+    uk: uk
+    zh-CN: zh
+    ru: ru

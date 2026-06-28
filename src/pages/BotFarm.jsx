@@ -630,7 +630,13 @@ export default function BotFarm() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-4 md:px-6 md:py-6 pb-24">
+    <div
+      className="min-h-screen bg-background px-4 py-4 md:px-6 md:py-6 pb-24"
+      style={{
+        paddingLeft: 'max(env(safe-area-inset-left, 0px), 1rem)',
+        paddingRight: 'max(env(safe-area-inset-right, 0px), 1rem)',
+      }}
+    >
       <div className="mx-auto max-w-7xl space-y-4">
         <BotFarmHeader metrics={metrics} />
         {loading ? (

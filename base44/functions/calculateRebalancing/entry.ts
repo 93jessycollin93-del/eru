@@ -7,11 +7,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await req.json();
     const { userEmail } = body;
 
     if (!userEmail) {
       return Response.json({ error: 'Missing userEmail' }, { status: 400 });
+    }
+    if (userEmail !== user.email && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Fetch user's weightings

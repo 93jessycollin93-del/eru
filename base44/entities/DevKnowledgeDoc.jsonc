@@ -1,0 +1,106 @@
+{
+  "name": "DevKnowledgeDoc",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "golden_rule",
+        "design_system",
+        "api_spec",
+        "security",
+        "business_logic",
+        "stack_note",
+        "other"
+      ],
+      "default": "other"
+    },
+    "body": {
+      "type": "string"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "imported",
+        "seeded"
+      ],
+      "default": "manual"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "importance": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "pinned"
+      ],
+      "default": "normal"
+    },
+    "last_reviewed_at": {
+      "type": "string"
+    },
+    "owner_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "project_id",
+    "title",
+    "body"
+  ],
+  "rls": {
+    "create": {
+      "owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "IntegrationHealthCheck",
+  "type": "object",
+  "properties": {
+    "providerId": {
+      "type": "string"
+    },
+    "providerKey": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "degraded",
+        "failed",
+        "not_connected",
+        "skipped"
+      ],
+      "default": "not_connected"
+    },
+    "latencyMs": {
+      "type": "number"
+    },
+    "checkedAt": {
+      "type": "string"
+    },
+    "responseSummary": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "errorMessage": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "providerKey",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

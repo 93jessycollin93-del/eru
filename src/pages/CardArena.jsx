@@ -2,14 +2,25 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { fetchUserGold, awardGold } from '@/lib/economyApi';
-import { STARTER_CARDS, ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
+import { STARTER_CARDS, ELEMENT_COLORS } from '../components/cards/StarterCards';
 import { DECK_MODE_OPTIONS, DEFAULT_DECK_MODE, buildDeckModeSummary, calculateDeckStrength, getFairMatchScore, getMinimumDeckForMode, normalizeDeckMode } from '../components/cards/deckModes';
 import CardDisplay from '../components/cards/CardDisplay';
 import BattleView from '../components/cards/BattleView';
 import ChallengePanel from '../components/cards/ChallengePanel';
-import { Sword, Trophy, Package, Layers, ChevronRight, Star, Coins, Zap, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Users, Copy } from 'lucide-react';
+import { Sword, Trophy, Package, Layers, Coins, X, ShoppingCart, History, Radar, Bot, GraduationCap, Dumbbell, Shield, Copy, Wand2, ArrowLeftRight, BookOpen, Target } from 'lucide-react';
+import { reportQuestEvent } from '@/lib/dailyQuests';
+import DailyQuestPanel from '../components/quests/DailyQuestPanel';
+import { recordGuildBattleResult } from '@/lib/guildSystem';
 import Marketplace from '../components/cards/Marketplace';
 import BattleHistoryPanel from '../components/cards/BattleHistoryPanel';
+import CardLorePanel from '../components/cards/CardLorePanel';
+import RealityPressureMeter from '../components/cards/RealityPressureMeter';
+import ExcavationPackPanel from '../components/cards/ExcavationPackPanel';
+import TransmutationPanel from '../components/cards/TransmutationPanel';
+import ForgeRecipesPanel from '../components/cards/ForgeRecipesPanel';
+import TradingPanel from '../components/cards/TradingPanel';
+import LevelUpDialog from '../components/cards/LevelUpDialog';
+import { ensureLoreProfile, appendLogEntry, bumpPressure, isHighPowerCard, createCardWithLore } from '@/lib/cardLore';
 
 const TOURNAMENT_ROUNDS = [
   { id: 1, name: 'Novice Challenger', difficulty: 1, faction: 'Ember Clan',    prize: { gold: 50,  discover: true } },
@@ -23,6 +34,9 @@ const TABS = [
   { id: 'lobby',      label: 'Lobby',      icon: Radar },
   { id: 'tournament', label: 'Tournament', icon: Trophy },
   { id: 'history',    label: 'History',    icon: History },
+  { id: 'forge',      label: 'Forge',      icon: Wand2 },
+  { id: 'trading',    label: 'Trading',    icon: ArrowLeftRight },
+  { id: 'quests',     label: 'Quests',     icon: Target },
   { id: 'market',     label: 'Market',     icon: ShoppingCart },
 ];
 
@@ -68,6 +82,9 @@ export default function CardArena() {
   const [arenaUsers, setArenaUsers] = useState([]);
   const [openChallenges, setOpenChallenges] = useState([]);
   const [copyingDeck, setCopyingDeck] = useState(false);
+  const [loreCard, setLoreCard] = useState(null);
+  const [levelUpCard, setLevelUpCard] = useState(null);
+  const [forgeView, setForgeView] = useState('transmute'); // 'transmute' | 'recipes'
 
   useEffect(() => {
     loadCards();
@@ -456,6 +473,55 @@ export default function CardArena() {
     setRoundResults(newResults);
     await saveBattleHistory(won, round, battleData);
 
+    // Daily quest event hooks — non-blocking, errors are swallowed by the engine.
+    try {
+      const playedDeck = battleData?.playerDeck || deck;
+      // Element plays — one increment per played card, grouped by element.
+      const elementCounts = playedDeck.reduce((acc, c) => {
+        if (!c?.element) return acc;
+        acc[c.element] = (acc[c.element] || 0) + 1;
+        return acc;
+      }, {});
+      Object.entries(elementCounts).forEach(([element, count]) => {
+        reportQuestEvent('element_play', { element }, count);
+      });
+      if (won) {
+        reportQuestEvent('match_win', { mode: battleMode });
+        if (['pvp_ladder', 'pvp_duo', 'direct_challenge'].includes(battleMode)) {
+          reportQuestEvent('pvp_win', { mode: battleMode });
+        }
+      }
+      // Pool result into the player's guild (if any) — fire-and-forget.
+      recordGuildBattleResult(won);
+    } catch (_) { /* non-fatal */ }
+
+    // Lore side-effects — never blocks battle flow, errors are swallowed.
+    try {
+      const playedDeck = battleData?.playerDeck || deck;
+      const opponent = activeOpponentName || currentRound?.name || round?.name || 'Unknown';
+      const highPowerPlays = playedDeck.filter(isHighPowerCard);
+      // 1) append a battle entry to each owned card's historical log
+      await Promise.all(playedDeck
+        .filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))
+        .map((c) => base44.entities.Card.update(c.id, {
+          historical_log: appendLogEntry(c, {
+            event_type: 'battle',
+            summary: `${won ? 'Victory' : 'Defeat'} vs ${opponent}`,
+            actor: opponent,
+            result: won ? 'win' : 'loss',
+            metadata: { mode: battleMode, round: tournamentRound },
+          }),
+        }).catch(() => null)));
+      // 2) bump global Reality Pressure based on high-power activations
+      if (highPowerPlays.length > 0) {
+        const updated = await bumpPressure({
+          amount: Math.min(10, highPowerPlays.length * 2),
+          summary: `${highPowerPlays.length} high-power card${highPowerPlays.length === 1 ? '' : 's'} engaged vs ${opponent}`,
+        });
+        if (updated) window.dispatchEvent(new CustomEvent('reality-pressure-changed', { detail: updated }));
+      }
+    } catch (_) { /* non-fatal */ }
+
     if (battleMode === 'pvp_ladder' || battleMode === 'pvp_duo' || battleMode === 'direct_challenge' || battleMode === 'training' || battleMode === 'tutorial' || battleMode === 'jackie_ai' || battleMode === 'ai_campaign') {
       setBattling(false);
       return;
@@ -486,13 +552,16 @@ export default function CardArena() {
         const rewardPool = factionPool.length > 0 ? factionPool : fallbackPool;
         const discovered = rewardPool[Math.floor(Math.random() * rewardPool.length)];
         if (discovered) {
-          const saved = await base44.entities.Card.create({
-            ...discovered,
-            id: undefined,
-            quantity: 1,
+          const saved = await createCardWithLore(discovered, {
+            source: 'origin',
+            summary: `Discovered after defeating ${battleData?.opponentFaction || round.faction}.`,
+            actor: 'tournament',
+            metadata: { round: tournamentRound, faction: targetFaction },
           });
-          setDiscoveredCard({ ...saved, rewardFaction: targetFaction });
-          setCards(prev => [...prev, saved]);
+          if (saved) {
+            setDiscoveredCard({ ...saved, rewardFaction: targetFaction });
+            setCards(prev => [...prev, saved]);
+          }
         }
       }
 
@@ -534,9 +603,12 @@ export default function CardArena() {
           </h2>
           <p className="text-[10px] text-muted-foreground">Deck · Battle · Tournament</p>
         </div>
-        <div className="flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-3 py-1.5">
-          <Coins className="w-3.5 h-3.5 text-yellow-400" />
-          <span className="text-sm font-bold text-yellow-400">{gold.toLocaleString()}</span>
+        <div className="flex items-center gap-2">
+          <RealityPressureMeter />
+          <div className="flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-3 py-1.5">
+            <Coins className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="text-sm font-bold text-yellow-400">{gold.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
@@ -558,11 +630,36 @@ export default function CardArena() {
               <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
             ) : (
               <div className="flex flex-wrap gap-2 justify-center">
-                {cards.map(card => (
-                  <CardDisplay key={card.id} card={card} size="md"
-                    selected={deck.some(c => c.id === card.id)}
-                    onClick={toggleDeckCard} />
-                ))}
+                {cards.map(card => {
+                  const isOwned = card?.id && !String(card.id).startsWith('s') && !String(card.id).startsWith('ai_');
+                  return (
+                    <div key={card.id} className="relative">
+                      <CardDisplay card={card} size="md"
+                        selected={deck.some(c => c.id === card.id)}
+                        onClick={toggleDeckCard} />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setLoreCard(card); }}
+                        className="absolute bottom-1 right-1 z-20 inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/40 bg-black/70 text-[9px] font-bold text-cyan-200 backdrop-blur-sm hover:bg-cyan-500/20"
+                        title="View lore"
+                        aria-label="View lore"
+                      >
+                        ℒ
+                      </button>
+                      {isOwned && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setLevelUpCard(card); }}
+                          className="absolute bottom-1 left-1 z-20 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400/50 bg-black/70 text-[9px] font-bold text-amber-200 backdrop-blur-sm hover:bg-amber-500/20"
+                          title="Level up"
+                          aria-label="Level up"
+                        >
+                          ↑
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -880,10 +977,129 @@ export default function CardArena() {
           />
         )}
 
+        {tab === 'forge' && (
+          <div className="space-y-4">
+            <div className="flex gap-1 bg-secondary rounded-xl p-1">
+              {[
+                { id: 'transmute', label: 'Transmute', icon: Wand2 },
+                { id: 'recipes',   label: 'Recipes',   icon: BookOpen },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setForgeView(opt.id)}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors
+                    ${forgeView === opt.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <opt.icon className="w-3.5 h-3.5" /> {opt.label}
+                </button>
+              ))}
+            </div>
+            {forgeView === 'transmute' ? (
+              <TransmutationPanel
+                cards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
+                onCardForged={(result) => {
+                  if (!result?.card) return;
+                  const burned = new Set(result.card.transmuted_from_card_ids || []);
+                  setCards((prev) => [result.card, ...prev.filter((c) => !burned.has(c.id))]);
+                }}
+              />
+            ) : (
+              <ForgeRecipesPanel
+                cards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
+                onCardForged={(result) => {
+                  if (!result?.card) return;
+                  const consumed = new Set(result.card.transmuted_from_card_ids || []);
+                  setCards((prev) => [result.card, ...prev.filter((c) => !consumed.has(c.id))]);
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {tab === 'trading' && (
+          <TradingPanel gold={gold} onGoldChange={saveGold} />
+        )}
+
+        {tab === 'quests' && (
+          <DailyQuestPanel onGoldChange={(newBalance) => setGold(newBalance)} />
+        )}
+
         {tab === 'market' && (
-          <Marketplace gold={gold} onGoldChange={saveGold} />
+          <div className="space-y-6">
+            <ExcavationPackPanel
+              gold={gold}
+              onGoldChange={saveGold}
+              ownedCards={cards}
+              onCardsAdded={(added) => setCards((prev) => [...prev, ...added])}
+            />
+            <Marketplace gold={gold} onGoldChange={saveGold} />
+          </div>
         )}
       </div>
+
+      {/* Level Up dialog — opened from the ↑ badge on owned collection cards. */}
+      <AnimatePresence>
+        {levelUpCard && (
+          <LevelUpDialog
+            card={levelUpCard}
+            ownedCards={cards.filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))}
+            gold={gold}
+            onClose={() => setLevelUpCard(null)}
+            onLeveled={(result) => {
+              if (!result?.card) return;
+              const consumed = new Set(result.consumedIds || []);
+              setCards((prev) => prev
+                .filter((c) => !consumed.has(c.id))
+                .map((c) => (c.id === result.card.id ? result.card : c)));
+              if (result.goldSpent) setGold((prev) => Math.max(0, prev - result.goldSpent));
+              setLevelUpCard(result.card);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Card Lore detail dialog — opened from the ℒ badge on collection cards. */}
+      <AnimatePresence>
+        {loreCard && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setLoreCard(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 12 }}
+              transition={{ duration: 0.22 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#06070d]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="pointer-events-none absolute inset-0 lore-distort-faint" aria-hidden="true" />
+              <div className="relative max-h-[85vh] overflow-y-auto p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300">Card Lore</p>
+                    <h4 className="text-base font-semibold text-white truncate">{loreCard.name}</h4>
+                    <p className="mt-0.5 text-[11px] text-white/55">{loreCard.faction} · {loreCard.rarity}</p>
+                  </div>
+                  <button onClick={() => setLoreCard(null)} className="rounded-full p-1.5 text-white/60 hover:bg-white/5 hover:text-white" aria-label="Close">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex justify-center mb-3">
+                  <CardDisplay card={loreCard} size="lg" />
+                </div>
+                {loreCard.flavor_text && (
+                  <p className="mb-2 text-center text-[11px] italic text-white/60">"{loreCard.flavor_text}"</p>
+                )}
+                <CardLorePanel card={ensureLoreProfile(loreCard)} defaultOpen />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

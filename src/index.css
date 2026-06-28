@@ -8,10 +8,52 @@
   :root {
     --background: 230 25% 6%;
     --foreground: 220 20% 92%;
+    /* Card/popover are intentionally consumed via hsl(var(--card) / <alpha>) in
+       atmospheric surfaces — the raw value stays opaque for legacy callers. */
     --card: 230 22% 9%;
     --card-foreground: 220 20% 92%;
     --popover: 230 22% 9%;
     --popover-foreground: 220 20% 92%;
+
+    /* === ERU Atmosphere / Glass tokens =====================================
+       Single source of truth for translucent surfaces so the active animated
+       background continues through every panel/card/modal. Tune here once →
+       updates the entire app. */
+    --eru-surface-bg:        230 22% 9% / 0.55;
+    --eru-surface-bg-strong: 230 22% 9% / 0.78;
+    --eru-surface-bg-soft:   230 22% 9% / 0.32;
+    --eru-surface-border:    220 30% 60% / 0.14;
+    --eru-surface-border-strong: 220 30% 60% / 0.22;
+    --eru-surface-glow:      160 100% 45% / 0.08;
+    --eru-surface-highlight: 220 100% 100% / 0.04;
+    --eru-card-opacity:      0.55;
+    --eru-panel-opacity:     0.5;
+    --eru-button-opacity:    0.4;
+    --eru-nav-opacity:       0.6;
+    --eru-modal-opacity:     0.78;
+    /* Backdrop blur disabled by default for clearer background visibility.
+       Translucent surfaces stay translucent — only the blur is removed. */
+    --eru-backdrop-blur:     0px;
+    --eru-backdrop-blur-strong: 0px;
+    --eru-backdrop-saturate: 125%;
+    --eru-glow-strength:     0.35;
+    --eru-vignette-strength: 0.18;
+    --eru-particle-strength: 1;
+    --eru-motion-strength:   1;
+    /* User-controllable background filter pipeline (set by ThemeContext).
+       Defaults render the background crisp and unmodified — sliders push
+       these values without ever touching foreground UI. */
+    --eru-bg-brightness: 1;
+    --eru-bg-contrast:   1;
+    --eru-bg-saturation: 1;
+    --eru-bg-blur:       0px;
+    --eru-bg-opacity:    0.78;
+    --eru-bg-dim:        0;
+    --eru-bg-filter:     brightness(1) contrast(1) saturate(1);
+    --eru-glow-intensity:    1;
+    --eru-motion-intensity:  1;
+    --eru-particle-density:  1;
+    --eru-anim-speed:        1;
     --primary: 160 100% 45%;
     --primary-foreground: 0 0% 5%;
     --secondary: 230 18% 14%;
@@ -56,14 +98,124 @@
     padding: 0;
     background-color: hsl(var(--background));
   }
+  /* Defensive clarity rule — guarantees the app shell and major content
+     wrappers can never inherit a stray filter:blur() from a parent. Local
+     glass on cards/modals/popovers (via .eru-theme-* classes) still works
+     because they use backdrop-filter, which is unaffected by this rule. */
+  html, body, #root, main { filter: none !important; }
   body {
     @apply text-foreground;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     overflow-x: hidden;
     overflow-y: auto;
+    /* Mobile-native: prevent rubber-band overscroll on Android/iOS so pull-
+       to-refresh and bottom sheets feel anchored, not bouncy. */
+    overscroll-behavior-y: none;
+    /* Reserve vertical space at the bottom of every page so the fixed bottom
+       nav (mobile tab bar) never obscures page content. Pages that already
+       set their own bottom padding stack on top of this safely. */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
+  /* Mobile-native: kill text selection on tappable controls so long-press
+     never highlights button/nav labels. Inputs, textareas, and content with
+     a `data-selectable` attribute are intentionally exempt. */
+  button, a, [role="button"], nav, nav * {
+    -webkit-user-select: none;
+            user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  input, textarea, [contenteditable="true"], [data-selectable] {
+    -webkit-user-select: text;
+            user-select: text;
+  }
+  /* Mobile-native: enforce a 44×44 minimum touch target on icon-only buttons
+     and nav controls. Components that already size larger are unaffected;
+     this only floors the size on tiny icon hit areas. */
+  button:not([data-no-min-touch]),
+  a[role="button"]:not([data-no-min-touch]),
+  [role="button"]:not([data-no-min-touch]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* But don't break inline-link buttons inside paragraphs / chips / pills
+     that explicitly opt out via .inline-control. */
+  .inline-control { min-height: 0 !important; min-width: 0 !important; }
   .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* === Global smoothing layer ==============================================
+     Subtle, app-wide polish — never alters layout or business logic.
+     - Smooth anchor/scroll behavior across the whole document
+     - Momentum scrolling on iOS/Safari for any scroll container
+     - Gentle default transition on common interactive primitives so hover/
+       focus/active states feel continuous instead of instantaneous
+     - Smoother focus ring (avoids the harsh 0ms outline snap)
+     - Image/SVG transforms get GPU smoothing
+     - Honors prefers-reduced-motion further down (existing rule)
+     ========================================================================= */
+  html { scroll-behavior: smooth; }
+  /* Momentum scroll on every scrollable surface (lists, drawers, modals). */
+  *, *::before, *::after { -webkit-overflow-scrolling: touch; }
+
+  /* Default soft transition on the most-used interactive elements. Targets
+     opacity/color/bg/border/shadow/transform only — never width/height/top/
+     left, so layout never animates. Components that opt out can override. */
+  a, button, [role="button"], summary,
+  input, select, textarea,
+  [data-state], [data-radix-collection-item] {
+    transition:
+      background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* Soft press feedback for tappable controls — tiny, mobile-friendly. */
+  button:active, [role="button"]:active, a:active { transform: translateY(0.5px); }
+
+  /* Smoother, less jarring focus rings (keeps a11y, removes the snap). */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.55);
+    transition: box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* GPU-friendly image rendering for scaled thumbnails/avatars. */
+  img, svg, video { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+
+  /* Prevent iOS Safari from auto-zooming on input focus when font-size < 16px.
+     Applies only on narrow viewports to avoid affecting desktop rendering. */
+  @media (max-width: 767px) {
+    input, select, textarea { font-size: max(16px, 1em) !important; }
+  }
+
+  /* Honor user's OS-level reduced-motion preference globally. */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    a, button, [role="button"], summary,
+    input, select, textarea,
+    [data-state], [data-radix-collection-item] {
+      transition: none !important;
+    }
+    button:active, [role="button"]:active, a:active { transform: none !important; }
+  }
+}
+
+/* Jackie InputBar responsive bottom positioning.
+   On mobile the MobileTabBar (md:hidden) sits at bottom-0 and is ~52px tall
+   plus the device safe-area-inset-bottom. The InputBar must clear it.
+   On desktop (md+) the MobileTabBar is hidden so bottom-16 (4rem) is enough. */
+.jackie-input-bar {
+  bottom: 4rem; /* desktop: clear CenteredBottomNav */
+}
+@media (max-width: 767px) {
+  .jackie-input-bar {
+    bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* Ticker animation */
@@ -92,8 +244,544 @@
 .flash-green { animation: flash-green 0.4s ease; }
 .flash-red { animation: flash-red 0.4s ease; }
 
+/* ============================================================================
+   ERU Atmospheric Glass System
+   Reusable layer classes consumed by shared primitives (Card / Dialog / Sheet /
+   Drawer / Popover / DropdownMenu) and any page-level container that wants to
+   feel like frosted glass over the animated background.
+   - Translucent fill via CSS vars (tunable centrally)
+   - backdrop-filter blur+saturate where supported (Safari/iOS prefixed)
+   - Subtle inner highlight + outer glow
+   - Never blocks pointer events, never alters layout
+   ============================================================================ */
+@layer components {
+  /* Root atmosphere: ensures the background fills the full scrollable height
+     and stays behind everything. Layout already mounts the animated bg; this
+     class is opt-in for any page that wants to host one. */
+  .eru-atmosphere-root {
+    position: relative;
+    isolation: isolate;
+    min-height: 100dvh;
+  }
+  .eru-background-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Base translucent surface — apply on any container that previously used a
+     flat `bg-card` / `bg-background`. Falls back gracefully when
+     backdrop-filter is unsupported (still translucent, just less blurry). */
+  .eru-theme-surface,
+  .eru-theme-panel,
+  .eru-theme-card,
+  .eru-theme-nav,
+  .eru-theme-widget,
+  .eru-theme-modal,
+  .eru-theme-drawer,
+  .eru-theme-header,
+  .eru-theme-storefront {
+    background-color: hsl(var(--eru-surface-bg));
+    -webkit-backdrop-filter: blur(var(--eru-backdrop-blur)) saturate(var(--eru-backdrop-saturate));
+    backdrop-filter: blur(var(--eru-backdrop-blur)) saturate(var(--eru-backdrop-saturate));
+    border-color: hsl(var(--eru-surface-border));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--eru-surface-highlight)),
+      0 8px 24px -12px hsl(0 0% 0% / 0.5),
+      0 0 0 1px hsl(var(--eru-surface-border));
+  }
+
+  /* Stronger panel for dense content where text legibility matters most
+     (wallet panels, modals, forms). */
+  .eru-theme-panel,
+  .eru-theme-modal {
+    background-color: hsl(var(--eru-surface-bg-strong));
+    -webkit-backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+    backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+  }
+
+  /* Cards — slightly softer; gives the card a frosted quality but keeps a
+     readable contrast layer behind text. */
+  .eru-theme-card {
+    background-image: linear-gradient(
+      180deg,
+      hsl(var(--eru-surface-highlight)) 0%,
+      transparent 40%,
+      hsl(0 0% 0% / 0.12) 100%
+    );
+  }
+
+  /* Nav surface — picks up just enough atmosphere without losing legibility
+     for tightly packed icon labels. Blur intentionally OFF here so ticker
+     numbers and small nav icons stay razor-sharp. */
+  .eru-theme-nav {
+    background-color: hsl(230 22% 9% / 0.88);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* Header strip (sticky ticker+nav shell) — never blur the app shell.
+     Subtle translucent fill only, so foreground tickers/text stay crisp. */
+  .eru-theme-header {
+    background-color: hsl(230 22% 9% / 0.55);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: hsl(var(--eru-surface-border));
+    box-shadow: inset 0 -1px 0 hsl(var(--eru-surface-border));
+  }
+
+  /* Drawer/Sheet — bottom or side sheets need a stronger base since they
+     partially cover content. */
+  .eru-theme-drawer {
+    background-color: hsl(var(--eru-surface-bg-strong));
+    -webkit-backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+    backdrop-filter: blur(var(--eru-backdrop-blur-strong)) saturate(var(--eru-backdrop-saturate));
+  }
+
+  /* Translucent button — secondary/ghost glass affordance. Primary buttons
+     keep their solid color (intentionally untouched). No blur here — buttons
+     contain icons/labels which must stay crisp. */
+  .eru-theme-button {
+    background-color: hsl(var(--eru-surface-bg-soft));
+    border: 1px solid hsl(var(--eru-surface-border));
+    transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .eru-theme-button:hover {
+    background-color: hsl(var(--eru-surface-bg));
+    border-color: hsl(var(--eru-surface-border-strong));
+    box-shadow: 0 0 0 1px hsl(var(--eru-surface-border-strong)), 0 0 18px hsl(var(--eru-surface-glow));
+  }
+  .eru-theme-button:active { transform: translateY(0.5px); }
+
+  /* === Density variants =====================================================
+     Apply via className on any surface to tune translucency without touching
+     the central tokens. Also reachable via [data-bg-density] on <body> set
+     by ThemeContext (driven by user's bgOpacity). */
+  .eru-density-subtle  { --eru-card-opacity: 0.32; --eru-panel-opacity: 0.30; --eru-nav-opacity: 0.40; }
+  .eru-density-medium  { --eru-card-opacity: 0.55; --eru-panel-opacity: 0.50; --eru-nav-opacity: 0.60; }
+  .eru-density-intense { --eru-card-opacity: 0.80; --eru-panel-opacity: 0.78; --eru-nav-opacity: 0.86; }
+
+  body[data-bg-density="subtle"]  .eru-theme-card  { background-color: hsl(230 22% 9% / 0.32); }
+  body[data-bg-density="subtle"]  .eru-theme-panel,
+  body[data-bg-density="subtle"]  .eru-theme-modal { background-color: hsl(230 22% 9% / 0.62); }
+  body[data-bg-density="intense"] .eru-theme-card  { background-color: hsl(230 22% 9% / 0.80); }
+  body[data-bg-density="intense"] .eru-theme-panel,
+  body[data-bg-density="intense"] .eru-theme-modal { background-color: hsl(230 22% 9% / 0.92); }
+
+  /* === CTA accent =========================================================
+     Optional shimmer/glow for primary action surfaces — purely additive,
+     never blocks pointer events, never alters layout. Apply alongside an
+     existing button to give it ERU-flavored emphasis. */
+  .eru-cta-accent {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .eru-cta-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(120% 80% at 0% 0%, hsl(var(--eru-surface-glow)), transparent 60%);
+    opacity: calc(var(--eru-glow-strength) * 1);
+    transition: opacity 200ms ease;
+    z-index: -1;
+  }
+  .eru-cta-accent:hover::before { opacity: calc(var(--eru-glow-strength) * 1.6); }
+
+  /* === Soft motion layer ===================================================
+     Consistent, low-cost transitions that make the app feel modern without
+     adding clutter or layout shift. Purely opt-in via classes — does not
+     affect components that don't use these classes. All animations honor
+     prefers-reduced-motion further down. */
+  .eru-theme-card,
+  .eru-theme-surface,
+  .eru-theme-widget,
+  .eru-theme-storefront {
+    transition:
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 220ms ease,
+      background-color 220ms ease;
+    will-change: transform;
+  }
+  /* Soft hover lift — only when the card is interactive (link/button or
+     marked .eru-interactive). Pure cards stay still. */
+  a.eru-theme-card:hover,
+  button.eru-theme-card:hover,
+  .eru-theme-card.eru-interactive:hover,
+  a.eru-theme-surface:hover,
+  button.eru-theme-surface:hover,
+  .eru-theme-surface.eru-interactive:hover {
+    transform: translateY(-2px);
+    border-color: hsl(var(--eru-surface-border-strong));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--eru-surface-highlight)),
+      0 14px 32px -16px hsl(0 0% 0% / 0.6),
+      0 0 0 1px hsl(var(--eru-surface-border-strong)),
+      0 0 22px hsl(var(--eru-surface-glow));
+  }
+  a.eru-theme-card:active,
+  button.eru-theme-card:active,
+  .eru-theme-card.eru-interactive:active { transform: translateY(0); }
+
+  /* Gentle, generic entry fade for any element opting in. Never required. */
+  @keyframes eru-fade-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0);   }
+  }
+  .eru-enter { animation: eru-fade-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .eru-enter-delay-1 { animation-delay: 60ms; }
+  .eru-enter-delay-2 { animation-delay: 120ms; }
+  .eru-enter-delay-3 { animation-delay: 180ms; }
+
+  /* Universal nav-item rhythm — apply on any nav button/link to get the
+     consistent soft press + hover feel without touching component code. */
+  .eru-nav-item {
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .eru-nav-item:hover { transform: translateY(-1px); }
+  .eru-nav-item:active { transform: translateY(0.5px); }
+
+  /* Reduced motion → drop blur cost, tone down glow, kill all transforms. */
+  @media (prefers-reduced-motion: reduce) {
+    .eru-theme-surface,
+    .eru-theme-panel,
+    .eru-theme-card,
+    .eru-theme-nav,
+    .eru-theme-widget,
+    .eru-theme-modal,
+    .eru-theme-drawer,
+    .eru-theme-header,
+    .eru-theme-storefront,
+    .eru-theme-button {
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+    .eru-theme-card,
+    .eru-theme-surface,
+    .eru-theme-widget,
+    .eru-theme-storefront,
+    .eru-nav-item,
+    .eru-enter {
+      transition: none !important;
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
+  /* Safari < 14 / older WebKit fallback (no backdrop-filter): bump opacity so
+     surfaces remain readable without the blur effect. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .eru-theme-surface,
+    .eru-theme-card,
+    .eru-theme-widget,
+    .eru-theme-storefront,
+    .eru-theme-header { background-color: hsl(230 22% 9% / 0.85); }
+    .eru-theme-panel,
+    .eru-theme-modal,
+    .eru-theme-nav,
+    .eru-theme-drawer { background-color: hsl(230 22% 9% / 0.92); }
+  }
+}
+
+/* ============================================================================
+   Lore system — signal distortion overlay
+   Used by CardLorePanel / ExcavationPackPanel. Pure cosmetic SVG-noise +
+   slow drift; pointer-events:none so it never blocks UI. Stronger variants
+   are reserved for low-stability cards / fracturing packs.
+   ============================================================================ */
+@keyframes lore-drift-slow {
+  0%   { transform: translate3d(0, 0, 0) scale(1.02); opacity: 0.55; }
+  50%  { transform: translate3d(-1.5%, 0.8%, 0) scale(1.04); opacity: 0.85; }
+  100% { transform: translate3d(0, 0, 0) scale(1.02); opacity: 0.55; }
+}
+@keyframes lore-flicker {
+  0%, 100% { opacity: 1; }
+  47%      { opacity: 0.92; }
+  49%      { opacity: 1; }
+  51%      { opacity: 0.85; }
+  53%      { opacity: 1; }
+}
+.lore-distort-none { display: none; }
+.lore-distort-faint,
+.lore-distort-soft,
+.lore-distort-strong,
+.lore-distort-fracture {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(120, 80, 255, 0.10) 0%, transparent 45%),
+    radial-gradient(circle at 82% 78%, rgba(0, 200, 180, 0.08) 0%, transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  mix-blend-mode: screen;
+  animation: lore-drift-slow 12s ease-in-out infinite;
+}
+.lore-distort-soft     { opacity: 0.75; animation-duration: 9s; }
+.lore-distort-strong   { opacity: 0.9;  animation-duration: 6s; }
+.lore-distort-fracture { opacity: 1;    animation: lore-drift-slow 4s ease-in-out infinite, lore-flicker 1.8s steps(2, end) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lore-distort-faint, .lore-distort-soft, .lore-distort-strong, .lore-distort-fracture {
+    animation: none !important;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: hsl(230 25% 6%); }
 ::-webkit-scrollbar-thumb { background: hsl(230 18% 20%); border-radius: 2px; }
+
+/* ─── Per-component skin classes ──────────────────────────────────────────────
+ * SkinPicker writes the chosen background into ThemeContext, which publishes
+ * CSS vars `--eru-skin-<scope>-bg-image` (and friends) on :root. Any component
+ * that wants to be skinnable just adds the matching `eru-skin-<scope>` class
+ * to its outer element. When the user clears the skin, the var is removed
+ * and the rule falls back to no-op.
+ *
+ * To make a NEW surface skinnable: pick a stable scope_key (e.g. `card.foo`),
+ * register it in COMPONENT_TARGETS in src/components/theme/SkinPicker.jsx,
+ * add a class rule below mirroring this pattern, and add the class to the
+ * surface's outermost element.
+ */
+.eru-skin-nav-floating {
+  background-image: var(--eru-skin-nav-floating-bg-image, none);
+  background-color: var(--eru-skin-nav-floating-bg-color, transparent);
+  background-size: var(--eru-skin-nav-floating-bg-size, cover);
+  background-position: var(--eru-skin-nav-floating-bg-position, center);
+}
+.eru-skin-ticker-bar {
+  background-image: var(--eru-skin-ticker-bar-bg-image, none);
+  background-color: var(--eru-skin-ticker-bar-bg-color, transparent);
+  background-size: var(--eru-skin-ticker-bar-bg-size, cover);
+  background-position: var(--eru-skin-ticker-bar-bg-position, center);
+}
+.eru-skin-widget-bot {
+  background-image: var(--eru-skin-widget-bot-bg-image, none);
+  background-color: var(--eru-skin-widget-bot-bg-color, transparent);
+  background-size: var(--eru-skin-widget-bot-bg-size, cover);
+  background-position: var(--eru-skin-widget-bot-bg-position, center);
+}
+.eru-skin-page-header {
+  background-image: var(--eru-skin-page-header-bg-image, none);
+  background-color: var(--eru-skin-page-header-bg-color, transparent);
+  background-size: var(--eru-skin-page-header-bg-size, cover);
+  background-position: var(--eru-skin-page-header-bg-position, center);
+}
+.eru-skin-card-surface {
+  background-image: var(--eru-skin-card-surface-bg-image, none);
+  background-color: var(--eru-skin-card-surface-bg-color, transparent);
+  background-size: var(--eru-skin-card-surface-bg-size, cover);
+  background-position: var(--eru-skin-card-surface-bg-position, center);
+}
+.eru-skin-button-cta {
+  background-image: var(--eru-skin-button-cta-bg-image, none);
+  background-color: var(--eru-skin-button-cta-bg-color, transparent);
+  background-size: var(--eru-skin-button-cta-bg-size, cover);
+  background-position: var(--eru-skin-button-cta-bg-position, center);
+}
 ::-webkit-scrollbar-thumb:hover { background: hsl(160 100% 45% / 0.5); }
+
+/* ============================================================================
+ * ERU "NEON ORACLE" FOUNDATION
+ * ============================================================================
+ * Cyberpunk-neon ambience inspired by the holographic-goddess / cyber-geisha
+ * / neon-skyline reference set. Defines:
+ *   - Foundation tokens (--eru-neon-magenta / cyan / violet / glow-strength)
+ *   - Animated dual-tone bloom + subtle scanline keyframes
+ *   - Utility classes any surface can opt into:
+ *       .eru-neon-card        – panel/card with violet-glass + dual ring
+ *       .eru-neon-cta         – primary button with magenta→cyan gradient bloom
+ *       .eru-neon-glow-text   – hot-magenta text glow (use on headings)
+ *       .eru-neon-cyan-text   – electric-cyan accent (hover / metadata)
+ *       .eru-neon-foundation  – hero surface with animated gradient sweep
+ *       .eru-neon-grid-bg     – wet-street perspective grid (decorative)
+ *
+ * Foreground UI is never blurred. Animations honor prefers-reduced-motion.
+ * ============================================================================ */
+
+:root {
+  --eru-neon-magenta:  305 100% 62%;   /* hot magenta — primary glow         */
+  --eru-neon-pink:     330 100% 70%;   /* hair / petal pink                  */
+  --eru-neon-cyan:     192 100% 60%;   /* tech filigree / hologram trim      */
+  --eru-neon-violet:   268 80%  18%;   /* deep cosmic violet base            */
+  --eru-neon-violet-2: 280 70%  10%;   /* under-shadow                       */
+  --eru-neon-crimson:  340 95%  55%;   /* dystopia accent (image 4)          */
+  --eru-neon-glow:     0 0 22px hsl(305 100% 62% / 0.55), 0 0 40px hsl(192 100% 60% / 0.28);
+  --eru-neon-glow-soft: 0 0 12px hsl(305 100% 62% / 0.32), 0 0 26px hsl(192 100% 60% / 0.18);
+  --eru-neon-bloom:    radial-gradient(1200px 600px at 50% 0%, hsl(305 100% 62% / 0.18), transparent 65%),
+                       radial-gradient(900px 500px at 100% 100%, hsl(192 100% 60% / 0.14), transparent 60%),
+                       radial-gradient(800px 600px at 0% 100%, hsl(330 100% 70% / 0.12), transparent 60%);
+}
+
+/* Hot magenta text glow (use sparingly: page titles, hero headings). */
+.eru-neon-glow-text {
+  color: hsl(var(--eru-neon-pink));
+  text-shadow:
+    0 0 8px hsl(var(--eru-neon-magenta) / 0.65),
+    0 0 18px hsl(var(--eru-neon-magenta) / 0.35),
+    0 0 32px hsl(var(--eru-neon-cyan) / 0.18);
+}
+.eru-neon-cyan-text {
+  color: hsl(var(--eru-neon-cyan));
+  text-shadow: 0 0 6px hsl(var(--eru-neon-cyan) / 0.55);
+}
+
+/* Card / panel surface with violet-glass base + dual ring + soft inner glow.
+ * Drop on any container that wants to feel "hologram-projected." */
+.eru-neon-card {
+  position: relative;
+  background:
+    linear-gradient(180deg, hsl(var(--eru-neon-violet) / 0.55), hsl(var(--eru-neon-violet-2) / 0.7));
+  border: 1px solid hsl(var(--eru-neon-magenta) / 0.35);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--eru-neon-pink) / 0.15),
+    0 0 0 1px hsl(var(--eru-neon-cyan) / 0.08),
+    0 8px 24px hsl(var(--eru-neon-violet-2) / 0.6),
+    var(--eru-neon-glow-soft);
+  border-radius: 1rem;
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+}
+.eru-neon-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--eru-neon-bloom);
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+/* Primary CTA — magenta→cyan diagonal with animated sheen on hover. */
+.eru-neon-cta {
+  position: relative;
+  isolation: isolate;
+  color: white;
+  background:
+    linear-gradient(135deg, hsl(var(--eru-neon-magenta)), hsl(var(--eru-neon-cyan)));
+  border: 1px solid hsl(var(--eru-neon-pink) / 0.55);
+  box-shadow: var(--eru-neon-glow), inset 0 0 0 1px hsl(0 0% 100% / 0.18);
+  transition: transform 180ms ease, box-shadow 220ms ease;
+}
+.eru-neon-cta:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 28px hsl(var(--eru-neon-magenta) / 0.7),
+    0 0 56px hsl(var(--eru-neon-cyan) / 0.45),
+    inset 0 0 0 1px hsl(0 0% 100% / 0.25);
+}
+.eru-neon-cta::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 35%, hsl(0 0% 100% / 0.22) 50%, transparent 65%);
+  background-size: 220% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+.eru-neon-cta:hover::after {
+  opacity: 1;
+  animation: eru-neon-sheen 1.4s ease forwards;
+}
+
+@keyframes eru-neon-sheen {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -50% 0; }
+}
+
+/* Hero surface — animated bloom that slowly pans, like the city neon
+ * pulse. Pair with a child element to keep readable text on top. */
+.eru-neon-foundation {
+  position: relative;
+  background:
+    linear-gradient(180deg, hsl(var(--eru-neon-violet) / 0.6), hsl(var(--eru-neon-violet-2) / 0.85));
+  overflow: hidden;
+  isolation: isolate;
+}
+.eru-neon-foundation::before {
+  content: '';
+  position: absolute; inset: -10%;
+  background: var(--eru-neon-bloom);
+  filter: blur(24px) saturate(125%);
+  opacity: 0.85;
+  z-index: -1;
+  animation: eru-neon-pan 28s ease-in-out infinite alternate;
+}
+.eru-neon-foundation::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 0%, hsl(var(--eru-neon-violet-2) / 0.45) 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+@keyframes eru-neon-pan {
+  0%   { transform: translate3d(-1.5%, -1%, 0) scale(1.02); }
+  50%  { transform: translate3d(2%, 1.5%, 0)   scale(1.05); }
+  100% { transform: translate3d(-1%, 2%, 0)    scale(1.02); }
+}
+
+/* Wet-street perspective grid — decorative backdrop element you can drop
+ * behind a hero. Honors --eru-bg-opacity so it dims with user prefs. */
+.eru-neon-grid-bg {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, hsl(var(--eru-neon-cyan) / calc(0.25 * var(--eru-bg-opacity, 0.78))) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--eru-neon-magenta) / calc(0.18 * var(--eru-bg-opacity, 0.78))) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px;
+  mask-image: linear-gradient(to top, hsl(0 0% 0%) 0%, transparent 60%);
+  -webkit-mask-image: linear-gradient(to top, hsl(0 0% 0%) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Subtle scanline overlay (optional) — call it on a container, get a
+ * faint horizontal raster. Used in cyberpunk hero sections. */
+.eru-neon-scanlines {
+  position: relative;
+}
+.eru-neon-scanlines::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    hsl(var(--eru-neon-cyan) / 0.04) 0px,
+    hsl(var(--eru-neon-cyan) / 0.04) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Quick-palette card glow used in the Visual Engine picker. */
+.eru-neon-foundation-card {
+  position: relative;
+  box-shadow:
+    0 0 12px hsl(var(--eru-neon-magenta) / 0.35),
+    0 0 28px hsl(var(--eru-neon-cyan) / 0.18),
+    inset 0 0 0 1px hsl(var(--eru-neon-pink) / 0.25);
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+.eru-neon-foundation-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 18px hsl(var(--eru-neon-magenta) / 0.55),
+    0 0 36px hsl(var(--eru-neon-cyan) / 0.28),
+    inset 0 0 0 1px hsl(var(--eru-neon-pink) / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eru-neon-foundation::before { animation: none; }
+  .eru-neon-cta::after { animation: none; }
+}

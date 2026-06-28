@@ -8,6 +8,19 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
+    // Scheduler-only endpoint: accept either an admin-authenticated caller,
+    // or a request bearing the SCHEDULER_TOKEN secret. Public access is a
+    // data-exfil hole because this iterates every user's portfolio.
+    const schedulerToken = Deno.env.get('SCHEDULER_TOKEN');
+    const providedToken = req.headers.get('x-scheduler-token');
+    const tokenOk = !!schedulerToken && providedToken === schedulerToken;
+    if (!tokenOk) {
+      const user = await base44.auth.me().catch(() => null);
+      if (!user || user.role !== 'admin') {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     // Fetch all unique users with active weightings
     const weightings = await base44.asServiceRole.entities.PortfolioWeighting.filter(
       { is_active: true },

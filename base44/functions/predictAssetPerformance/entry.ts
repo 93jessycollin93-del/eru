@@ -15,6 +15,20 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (walletId) {
+      const wallet = await base44.asServiceRole.entities.ConnectedWallet.filter(
+        { id: walletId },
+        null,
+        1,
+      );
+      if (!wallet || wallet.length === 0) {
+        return Response.json({ error: 'Wallet not found' }, { status: 404 });
+      }
+      if (wallet[0].user_email !== user.email && user.role !== 'admin') {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
     // Get holdings for context
     const holdings = await base44.asServiceRole.entities.WalletHolding.filter(
       { wallet_id: walletId },

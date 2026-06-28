@@ -1,0 +1,180 @@
+{
+  "name": "StorefrontCustomization",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
+    "store_slug": {
+      "type": "string",
+      "description": "Unique short id for this storefront (per owner)"
+    },
+    "owner_email": {
+      "type": "string",
+      "description": "Email of the seller/owner of this storefront"
+    },
+    "store_name": {
+      "type": "string",
+      "description": "Display name of the storefront"
+    },
+    "store_tagline": {
+      "type": "string"
+    },
+    "store_description": {
+      "type": "string"
+    },
+    "banner_image_url": {
+      "type": "string",
+      "description": "Optional banner image (https only)"
+    },
+    "banner_gradient": {
+      "type": "string",
+      "description": "Fallback gradient name when no banner image is set"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Optional logo / avatar (https only)"
+    },
+    "theme_preset": {
+      "type": "string",
+      "enum": [
+        "midnight",
+        "phoenix",
+        "jade",
+        "neutron",
+        "minimal"
+      ],
+      "default": "midnight"
+    },
+    "card_density": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "comfortable",
+        "spacious"
+      ],
+      "default": "comfortable"
+    },
+    "visible_image_count": {
+      "type": "number",
+      "default": 3,
+      "description": "How many gallery images per listing card"
+    },
+    "gallery_layout": {
+      "type": "string",
+      "enum": [
+        "grid",
+        "carousel",
+        "stacked"
+      ],
+      "default": "grid"
+    },
+    "featured_section_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "featured_collection_id": {
+      "type": "string"
+    },
+    "section_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "featured",
+        "new",
+        "collections",
+        "all"
+      ]
+    },
+    "primary_cta_label": {
+      "type": "string",
+      "default": "Browse Items"
+    },
+    "primary_cta_style": {
+      "type": "string",
+      "enum": [
+        "solid",
+        "outline",
+        "ghost"
+      ],
+      "default": "solid"
+    },
+    "announcement_text": {
+      "type": "string"
+    },
+    "policy_text": {
+      "type": "string"
+    },
+    "trust_badges_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "private",
+        "draft"
+      ],
+      "default": "draft"
+    },
+    "needs_owner_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin flag for storefronts requiring moderator review"
+    }
+  },
+  "required": [
+    "store_slug",
+    "owner_email",
+    "store_name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "visibility": "public"
+        },
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

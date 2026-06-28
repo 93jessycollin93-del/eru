@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { Send, Zap, Mic, MicOff, ImagePlus, Video, FileCode, X, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import VoiceSelector from './VoiceSelector.jsx';
@@ -81,7 +81,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
 
   return (
     <div
-      className={`fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t border-border z-[90] transition-all ${dragOver ? 'border-primary/50 bg-primary/5' : ''}`}
+      className={`jackie-input-bar fixed left-0 right-0 bg-background/95 backdrop-blur border-t border-border z-[90] transition-all ${dragOver ? 'border-primary/50 bg-primary/5' : ''}`}
       onDrop={handleDrop}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
@@ -170,7 +170,8 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                 placeholder={dragOver ? 'Drop files here...' : placeholders[mode]}
                 rows={2}
-                className="min-w-0 flex-1 bg-secondary border border-border rounded-2xl px-4 py-2.5 text-sm outline-none text-foreground placeholder:text-muted-foreground resize-none max-h-28"
+                style={{ fontSize: '16px' }}
+                className="min-w-0 flex-1 bg-secondary border border-border rounded-2xl px-4 py-2.5 outline-none text-foreground placeholder:text-muted-foreground resize-none max-h-28"
               />
 
               <div className="flex flex-col gap-1 flex-shrink-0">

@@ -1,0 +1,69 @@
+{
+  "name": "IntegrationAuditLog",
+  "type": "object",
+  "properties": {
+    "actor": {
+      "type": "string",
+      "description": "Email or 'system'"
+    },
+    "providerId": {
+      "type": "string"
+    },
+    "providerKey": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string",
+      "description": "e.g. provider.created, status.changed, secret.rotated, test.run, webhook.received, integration.disabled"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "failed",
+        "blocked",
+        "info"
+      ],
+      "default": "info"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "default": "info"
+    },
+    "details": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "actor",
+    "action"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

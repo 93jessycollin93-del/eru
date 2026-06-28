@@ -2,15 +2,21 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import {
-  Store, Plus, RefreshCw, Settings, Plug, AlertCircle, CheckCircle2,
-  Clock, XCircle, Search, Filter, Gem, Image, Bot, Sword, Package,
-  Globe, Lock, ChevronRight, Wifi, WifiOff, Loader2, ExternalLink,
+  Store, Plus, Plug, AlertCircle, CheckCircle2,
+  Clock, XCircle, Search, Gem, Image, Bot, Sword, Package,
+  Globe, ChevronRight, WifiOff, Loader2,
   ToggleLeft, ToggleRight, Edit2, Trash2, Shield, Activity,
-  Square, CheckSquare, Send, BarChart2, SlidersHorizontal, Zap
+  Square, CheckSquare, Send, BarChart2, SlidersHorizontal, Zap,
+  Pause, Play
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ConditionBadge from '../components/storefront/ConditionBadge';
+import { Flame, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { canManageMarketplaceConfig } from '@/lib/permissions';
+import { validateListingDraft, validateListingEdit } from '@/lib/marketplaceValidation';
+import { logAuditEvent } from '@/lib/auditEvents';
+import PermissionGate from '@/components/PermissionGate';
 
 // ─── CONNECTOR PRESETS (templates for adding new connectors) ──────────────────
 const CONNECTOR_TEMPLATES = [
@@ -112,7 +118,7 @@ function ConnectorCard({ connector, onToggle, onEdit, onDelete, isAdmin }) {
   );
 }
 
-function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected, onSelect, onRunSync }) {
+function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected, onSelect, onRunSync, onTogglePause, onDelete }) {
   const AssetIcon = ASSET_ICONS[listing.asset_type] || Package;
   const syncs = listing.external_syndications || [];
   const syncedCount = syncs.filter(s => s.sync_status === 'synced').length;
@@ -191,15 +197,31 @@ function ListingCard({ listing, connectors, onEdit, onSyndicationEdit, selected,
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
+      <div className="grid grid-cols-5 gap-2 pt-2 border-t border-border">
         <button onClick={(e) => { e.stopPropagation(); onRunSync(listing.id); }} className="rounded-lg bg-primary/10 px-2 py-2 text-[10px] font-medium text-primary flex items-center justify-center gap-1">
           <Zap className="w-3 h-3" /> Sync
         </button>
         <button onClick={(e) => { e.stopPropagation(); onSyndicationEdit(listing); }} className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
-          <SlidersHorizontal className="w-3 h-3" /> Syndication
+          <SlidersHorizontal className="w-3 h-3" /> Syndicate
         </button>
         <button onClick={(e) => { e.stopPropagation(); onEdit(listing); }} className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
           <Edit2 className="w-3 h-3" /> Edit
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onTogglePause && onTogglePause(listing); }}
+          className="rounded-lg bg-secondary px-2 py-2 text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1"
+          title={listing.status === 'active' ? 'Pause (unpublish)' : 'Activate (publish)'}
+        >
+          {listing.status === 'active'
+            ? <><Pause className="w-3 h-3" /> Pause</>
+            : <><Play className="w-3 h-3" /> Publish</>}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete && onDelete(listing); }}
+          className="rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-2 text-[10px] font-medium flex items-center justify-center gap-1"
+          title="Delete listing"
+        >
+          <Trash2 className="w-3 h-3" /> Delete
         </button>
       </div>
     </div>
@@ -500,7 +522,16 @@ export default function StorefrontHub() {
   });
 
   const handleSaveConnector = async (data) => {
-    await base44.entities.MarketConnector.create({
+    if (!canManageMarketplaceConfig(currentUser)) {
+      logAuditEvent(currentUser, {
+        action: 'connector.create',
+        target_type: 'MarketConnector',
+        status: 'denied',
+        reason: 'missing_admin_permission',
+      });
+      return;
+    }
+    const created = await base44.entities.MarketConnector.create({
       ...data,
       price_adjustment_type: 'none',
       price_adjustment_value: 0,
@@ -508,32 +539,91 @@ export default function StorefrontHub() {
       simulation_mode: true,
       external_market_slug: data.name?.toLowerCase().includes('opensea') ? 'opensea' : '',
     });
+    logAuditEvent(currentUser, {
+      action: 'connector.create',
+      target_type: 'MarketConnector',
+      target_id: created?.id,
+      after: { name: data.name, connector_type: data.connector_type },
+    });
     setShowAddConnector(false);
     load();
   };
 
   const handleToggleConnector = async (c) => {
+    if (!canManageMarketplaceConfig(currentUser)) {
+      logAuditEvent(currentUser, { action: 'connector.toggle', target_type: 'MarketConnector', target_id: c.id, status: 'denied', reason: 'missing_admin_permission' });
+      return;
+    }
     await base44.entities.MarketConnector.update(c.id, { is_enabled: !c.is_enabled, status: !c.is_enabled ? 'pending_auth' : 'inactive' });
+    logAuditEvent(currentUser, { action: 'connector.toggle', target_type: 'MarketConnector', target_id: c.id, before: { is_enabled: c.is_enabled }, after: { is_enabled: !c.is_enabled } });
     load();
   };
 
   const handleDeleteConnector = async (c) => {
+    if (!canManageMarketplaceConfig(currentUser)) {
+      logAuditEvent(currentUser, { action: 'connector.delete', target_type: 'MarketConnector', target_id: c.id, status: 'denied', reason: 'missing_admin_permission' });
+      return;
+    }
     await base44.entities.MarketConnector.delete(c.id);
+    logAuditEvent(currentUser, { action: 'connector.delete', target_type: 'MarketConnector', target_id: c.id });
     load();
   };
 
   const handleCreateListing = async (data) => {
-    await base44.entities.StorefrontListing.create(data);
+    const draftCheck = validateListingDraft(data);
+    if (!draftCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.create', target_type: 'StorefrontListing', status: 'failure', reason: draftCheck.reason });
+      return;
+    }
+    const created = await base44.entities.StorefrontListing.create(data);
+    logAuditEvent(currentUser, { action: 'listing.create', target_type: 'StorefrontListing', target_id: created?.id, after: { title: data.title, base_price: data.base_price, currency: data.currency } });
     setShowCreateListing(false);
     load();
   };
 
   const handleUpdateListing = async (data) => {
+    const editCheck = validateListingEdit({ user: currentUser, listing: editingListing });
+    if (!editCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.update', target_type: 'StorefrontListing', target_id: editingListing?.id, status: 'denied', reason: editCheck.reason });
+      return;
+    }
+    const draftCheck = validateListingDraft(data);
+    if (!draftCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.update', target_type: 'StorefrontListing', target_id: editingListing?.id, status: 'failure', reason: draftCheck.reason });
+      return;
+    }
     await base44.entities.StorefrontListing.update(editingListing.id, {
       ...data,
       currency: data.crypto_currency,
     });
+    logAuditEvent(currentUser, { action: 'listing.update', target_type: 'StorefrontListing', target_id: editingListing.id, before: { base_price: editingListing.base_price, currency: editingListing.currency }, after: { base_price: data.base_price, currency: data.crypto_currency } });
     setEditingListing(null);
+    load();
+  };
+
+  // Pause / publish toggle: edit gate guards ownership + admin role.
+  const handleTogglePause = async (listing) => {
+    const editCheck = validateListingEdit({ user: currentUser, listing });
+    if (!editCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.toggle_pause', target_type: 'StorefrontListing', target_id: listing.id, status: 'denied', reason: editCheck.reason });
+      return;
+    }
+    const nextStatus = listing.status === 'active' ? 'paused' : 'active';
+    await base44.entities.StorefrontListing.update(listing.id, { status: nextStatus });
+    logAuditEvent(currentUser, { action: 'listing.toggle_pause', target_type: 'StorefrontListing', target_id: listing.id, before: { status: listing.status }, after: { status: nextStatus } });
+    load();
+  };
+
+  // Delete: same edit gate, plus a confirm() guard since this is destructive.
+  const handleDeleteListing = async (listing) => {
+    const editCheck = validateListingEdit({ user: currentUser, listing });
+    if (!editCheck.ok) {
+      logAuditEvent(currentUser, { action: 'listing.delete', target_type: 'StorefrontListing', target_id: listing.id, status: 'denied', reason: editCheck.reason });
+      return;
+    }
+    if (!confirm(`Delete "${listing.title}"? This cannot be undone.`)) return;
+    await base44.entities.StorefrontListing.delete(listing.id);
+    logAuditEvent(currentUser, { action: 'listing.delete', target_type: 'StorefrontListing', target_id: listing.id, before: { title: listing.title, status: listing.status } });
     load();
   };
 
@@ -667,6 +757,23 @@ export default function StorefrontHub() {
             {/* STOREFRONT TAB */}
             {tab === 'storefront' && (
               <div className="space-y-4">
+                {/* External portal cards — Lovable-powered modules */}
+                <Link
+                  to="/storefront/phoenix-investor"
+                  className="block rounded-2xl border border-primary/30 bg-gradient-to-br from-orange-500/10 via-primary/5 to-transparent hover:border-primary/60 transition-colors p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500/30 to-primary/30 border border-primary/40 flex items-center justify-center flex-shrink-0">
+                      <Flame className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">Phoenix Investor</p>
+                      <p className="text-[11px] text-muted-foreground truncate">External Lovable storefront/app portal</p>
+                    </div>
+                    <ChevronRightIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  </div>
+                </Link>
+
                 {/* Search + filters */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -744,7 +851,9 @@ export default function StorefrontHub() {
                           onSelect={toggleSelect}
                           onEdit={setEditingListing}
                           onSyndicationEdit={setSyndicationListing}
-                          onRunSync={handleRunSync} />
+                          onRunSync={handleRunSync}
+                          onTogglePause={handleTogglePause}
+                          onDelete={handleDeleteListing} />
                         {syncingListingId === l.id && <p className="text-[10px] text-primary">Running sync...</p>}
                       </div>
                     ))}
@@ -803,12 +912,11 @@ export default function StorefrontHub() {
             {/* ADMIN TAB */}
             {tab === 'admin' && (
               <div className="space-y-4">
-                {!isAdmin ? (
-                  <div className="flex flex-col items-center py-12 gap-3">
-                    <Lock className="w-8 h-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Admin access required</p>
-                  </div>
-                ) : (
+                <PermissionGate
+                  allow={canManageMarketplaceConfig}
+                  deniedTitle="Admin access required"
+                  deniedMessage="Only admins can view the Storefront admin panel."
+                >
                   <>
                     <div className="p-4 bg-card rounded-xl border border-border space-y-3">
                       <div className="flex items-center gap-2 mb-1">
@@ -873,7 +981,7 @@ export default function StorefrontHub() {
                       ))}
                     </div>
                   </>
-                )}
+                </PermissionGate>
               </div>
             )}
           </>

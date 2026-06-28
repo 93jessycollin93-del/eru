@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // Search Google Drive
 async function searchGoogleDrive(accessToken, query) {
@@ -167,37 +167,34 @@ Deno.serve(async (req) => {
     const { query } = await req.json();
     if (!query || query.trim().length < 2) return Response.json({ results: [] });
 
-    const searches = [];
-
     // Try each connector - skip gracefully if not connected
-    const tryConnector = async (id, fn) => {
+    const connected = [];
+    const tryConnector = async (label, id, fn) => {
       try {
-        const token = await base44.asServiceRole.connectors.getCurrentAppUserAccessToken(id);
-        return await fn(token);
-      } catch { return []; }
-    };
-
-    const tryConnectorWithConfig = async (id, fn) => {
-      try {
-        const token = await base44.asServiceRole.connectors.getCurrentAppUserAccessToken(id);
-        return await fn(token, {});
-      } catch { return []; }
+        const { accessToken, connectionConfig } = await base44.asServiceRole.connectors.getCurrentAppUserConnection(id);
+        if (!accessToken) return [];
+        connected.push(label);
+        return await fn(accessToken, connectionConfig || {});
+      } catch (e) {
+        return [];
+      }
     };
 
     const [drive, dropbox, onedrive, clickup, linear, wrike, salesforce, linkedin] = await Promise.all([
-      tryConnector(CONNECTOR_IDS.googledrive, t => searchGoogleDrive(t, query)),
-      tryConnector(CONNECTOR_IDS.dropbox, t => searchDropbox(t, query)),
-      tryConnector(CONNECTOR_IDS.one_drive, t => searchOneDrive(t, query)),
-      tryConnector(CONNECTOR_IDS.clickup, t => searchClickUp(t, query)),
-      tryConnector(CONNECTOR_IDS.linear, t => searchLinear(t, query)),
-      tryConnector(CONNECTOR_IDS.wrike, t => searchWrike(t, query)),
-      tryConnectorWithConfig(CONNECTOR_IDS.salesforce, t => searchSalesforce(t, {}, query)),
-      tryConnector(CONNECTOR_IDS.linkedin, t => searchLinkedIn(t, query)),
+      tryConnector('googledrive', CONNECTOR_IDS.googledrive, (t) => searchGoogleDrive(t, query)),
+      tryConnector('dropbox',     CONNECTOR_IDS.dropbox,     (t) => searchDropbox(t, query)),
+      tryConnector('one_drive',   CONNECTOR_IDS.one_drive,   (t) => searchOneDrive(t, query)),
+      tryConnector('clickup',     CONNECTOR_IDS.clickup,     (t) => searchClickUp(t, query)),
+      tryConnector('linear',      CONNECTOR_IDS.linear,      (t) => searchLinear(t, query)),
+      tryConnector('wrike',       CONNECTOR_IDS.wrike,       (t) => searchWrike(t, query)),
+      tryConnector('salesforce',  CONNECTOR_IDS.salesforce,  (t, cfg) => searchSalesforce(t, cfg, query)),
+      tryConnector('linkedin',    CONNECTOR_IDS.linkedin,    (t) => searchLinkedIn(t, query)),
     ]);
 
     const results = [...drive, ...dropbox, ...onedrive, ...clickup, ...linear, ...wrike, ...salesforce, ...linkedin];
+    console.log(`globalSearch: query="${query}" connected=[${connected.join(',')}] results=${results.length}`);
 
-    return Response.json({ results });
+    return Response.json({ results, connected });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -392,6 +392,8 @@ export default function SquadBoard({ bots }) {
     };
   };
 
+  const [saveError, setSaveError] = useState('');
+
   const saveSquad = async (payloadOverride) => {
     const source = payloadOverride || form;
     const safeName = (source?.name || '').trim();
@@ -410,14 +412,18 @@ export default function SquadBoard({ bots }) {
       memory_pool: source?.memory_pool || [],
     };
 
-    if (editingId) {
-      await base44.entities.BotSquad.update(editingId, payload);
-    } else {
-      await base44.entities.BotSquad.create(payload);
+    setSaveError('');
+    try {
+      if (editingId) {
+        await base44.entities.BotSquad.update(editingId, payload);
+      } else {
+        await base44.entities.BotSquad.create(payload);
+      }
+      await loadSquads();
+      resetForm();
+    } catch (err) {
+      setSaveError(err?.message || 'Could not save this squad. Please try again.');
     }
-
-    await loadSquads();
-    resetForm();
   };
 
   const applyAutomaticSetup = () => {
@@ -1006,6 +1012,12 @@ Prefer practical business/search terms and avoid vague words.`,
         )}
 
         <SquadCostPanel estimate={draftCostEstimate} />
+
+        {saveError && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {saveError}
+          </div>
+        )}
 
         {creationMode === 'wizard' ? (
           <div className="flex gap-2">

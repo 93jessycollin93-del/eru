@@ -54,7 +54,15 @@
     "read": {
       "created_by": "{{user.email}}"
     },
-    "update": {},
-    "delete": {}
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
   }
 }

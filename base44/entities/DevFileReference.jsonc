@@ -1,0 +1,95 @@
+{
+  "name": "DevFileReference",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string",
+      "description": "Logical file path, e.g. pages/Dashboard.jsx"
+    },
+    "file_type": {
+      "type": "string",
+      "enum": [
+        "page",
+        "component",
+        "entity",
+        "function",
+        "lib",
+        "style",
+        "config",
+        "other"
+      ],
+      "default": "other"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "content_snapshot": {
+      "type": "string",
+      "description": "Optional pasted snippet for context \u2014 never assume filesystem access"
+    },
+    "last_seen_at": {
+      "type": "string"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "safe",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "safe"
+    },
+    "owner_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "project_id",
+    "path"
+  ],
+  "rls": {
+    "create": {
+      "owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -63,7 +63,7 @@ export function useLiveMarketPrices() {
         setStatus('live');
         clearInterval(fallbackRef.current);
         fallbackRef.current = null;
-        await fetchFallback();
+        try { await fetchFallback(); } catch { /* network blip — websocket will keep streaming */ }
       };
 
       socket.onmessage = (event) => {
@@ -91,9 +91,9 @@ export function useLiveMarketPrices() {
 
       socket.onerror = async () => {
         setStatus('error');
-        await fetchFallback();
+        try { await fetchFallback(); } catch { /* fallback API also unreachable — interval will retry */ }
         if (!fallbackRef.current) {
-          fallbackRef.current = setInterval(fetchFallback, 60000);
+          fallbackRef.current = setInterval(() => { fetchFallback().catch(() => {}); }, 60000);
         }
       };
 
@@ -176,7 +176,7 @@ export function useRealtimeEntityList(entityName, options = {}) {
 
     const scheduleLoad = () => {
       clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => load(), 1500);
+      timeoutRef.current = setTimeout(() => { load().catch(() => {}); }, 1500);
     };
 
     const sdk = base44.entities[entityName];
@@ -230,9 +230,10 @@ export function useRealtimeAgentStatus(bots = []) {
       return;
     }
 
-    buildStatus();
-    const unsubscribeAutomation = base44.entities.BotAutomation.subscribe(() => buildStatus());
-    const unsubscribeImprovement = base44.entities.BotImprovement.subscribe(() => buildStatus());
+    const safeBuild = () => buildStatus().catch(() => {});
+    safeBuild();
+    const unsubscribeAutomation = base44.entities.BotAutomation.subscribe(safeBuild);
+    const unsubscribeImprovement = base44.entities.BotImprovement.subscribe(safeBuild);
 
     return () => {
       unsubscribeAutomation?.();

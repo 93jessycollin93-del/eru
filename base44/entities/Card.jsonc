@@ -2,6 +2,11 @@
   "name": "Card",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "name": {
       "type": "string"
     },
@@ -11,11 +16,55 @@
     },
     "power": {
       "type": "number",
-      "description": "Board power contribution"
+      "description": "Board power contribution (current, includes level bonuses)"
     },
     "guard": {
       "type": "number",
-      "description": "Damage absorption"
+      "description": "Damage absorption (current, includes level bonuses)"
+    },
+    "base_power": {
+      "type": "number",
+      "description": "Original power before any level-up bonuses (locked at creation)"
+    },
+    "base_guard": {
+      "type": "number",
+      "description": "Original guard before any level-up bonuses (locked at creation)"
+    },
+    "level": {
+      "type": "number",
+      "default": 1,
+      "description": "Current card level (1-10)"
+    },
+    "level_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "number"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "gold",
+              "duplicate"
+            ]
+          },
+          "cost": {
+            "type": "number"
+          },
+          "consumed_card_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
     },
     "element": {
       "type": "string",
@@ -108,6 +157,57 @@
         }
       },
       "default": []
+    },
+    "lore_origin": {
+      "type": "string",
+      "description": "Signal source / where this card was first detected (e.g. 'Echo Drift 7-\u03a3', 'Monolith Sector 12')"
+    },
+    "lore_tag": {
+      "type": "string",
+      "description": "Narrative tag from the excavation event that surfaced it"
+    },
+    "stability_visible": {
+      "type": "number",
+      "description": "Public stability rating 0-100, shown to the player"
+    },
+    "stability_hidden": {
+      "type": "number",
+      "description": "True stability rating 0-100, used for narrative drift only \u2014 never affects battle math"
+    },
+    "historical_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "origin",
+              "battle",
+              "ownership",
+              "pack",
+              "drift"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "default": [],
+      "description": "Immutable lore log of battles, ownership transfers, and excavation events"
     }
   },
   "required": [

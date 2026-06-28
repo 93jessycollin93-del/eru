@@ -1,49 +1,35 @@
-import crypto from 'crypto';
-import { Buffer } from 'buffer';
-
 /**
- * WEBHOOK AUTHENTICATION LAYER
- * 
- * All payment webhooks must:
- * - Have valid signature from trusted provider
- * - Have timestamp within acceptable window (prevent replay)
- * - Have correct provider origin
- * - Not be a duplicate (idempotency key)
+ * WEBHOOK AUTHENTICATION LAYER (client-side stub)
+ *
+ * Webhook signatures MUST be verified server-side using secrets that are
+ * never shipped to the browser. The previous implementation here read
+ * VITE_*_WEBHOOK_SECRET env vars, which Vite inlines into the JS bundle —
+ * meaning every visitor could lift the secret and forge "verified"
+ * webhooks that gated asset/jade grants downstream.
+ *
+ * This module now intentionally has NO secrets and NO HMAC validation in
+ * the browser. The real implementation lives in:
+ *   base44/functions/validatePaymentWebhook/entry.ts
+ *
+ * The remaining helpers (timestamp window, replay cache) are kept because
+ * they're harmless and may still be useful as a pre-filter on inbound
+ * payloads. They do NOT establish trust on their own.
  */
-
-const WEBHOOK_SECRETS = {
-  stripe: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_STRIPE_WEBHOOK_SECRET) || 'whsec_test_stripe',
-  crypto: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CRYPTO_WEBHOOK_SECRET) || 'whsec_test_crypto',
-  wallet: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WALLET_WEBHOOK_SECRET) || 'whsec_test_wallet',
-};
 
 const TIMESTAMP_TOLERANCE_SECONDS = 300; // 5 minutes
 const PROCESSED_WEBHOOKS = new Set(); // In-memory replay cache (use Redis in production)
 
 /**
- * Validate webhook signature
- * @param {string} provider - 'stripe' | 'crypto' | 'wallet'
- * @param {string} signature - Signature from webhook header
- * @param {string} rawBody - Raw webhook payload (string)
- * @returns {boolean} true if signature is valid
+ * Always throws — signature verification is not allowed client-side.
+ * Call the validatePaymentWebhook Deno function instead and trust the
+ * payment_webhook_verified flag it sets on the Order entity.
  */
-export function validateWebhookSignature(provider, signature, rawBody) {
-  const secret = WEBHOOK_SECRETS[provider];
-  if (!secret) {
-    throw new Error(`❌ WEBHOOK VALIDATION: Unknown provider "${provider}"`);
-  }
-
-  const expected = crypto
-    .createHmac('sha256', secret)
-    .update(rawBody)
-    .digest('hex');
-
-  // Constant-time comparison to prevent timing attacks
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-    return false;
-  }
-
-  return true;
+export function validateWebhookSignature() {
+  throw new Error(
+    'webhookValidator.validateWebhookSignature is server-only. ' +
+    'Call base44.functions.invoke("validatePaymentWebhook", ...) instead — ' +
+    'the browser must never see the HMAC secret.',
+  );
 }
 
 /**
@@ -80,67 +66,17 @@ export function checkReplayAttempt(idempotencyKey) {
 }
 
 /**
- * Full webhook validation
- * @returns {{valid: boolean, errors: string[]}}
+ * Full webhook validation — DEPRECATED in the browser.
+ * Use the validatePaymentWebhook Deno function for the real check; this
+ * client-side helper is now a no-op that returns invalid so any leftover
+ * caller fails closed instead of granting "verified" status with no proof.
  */
-export function validateWebhook(webhookData) {
-  const errors = [];
-
-  // Check signature
-  if (!webhookData.signature) {
-    errors.push('Missing webhook signature');
-  } else if (!validateWebhookSignature(webhookData.provider, webhookData.signature, webhookData.rawBody)) {
-    errors.push('Invalid webhook signature — rejected');
-  }
-
-  // Check timestamp
-  if (!webhookData.timestamp) {
-    errors.push('Missing webhook timestamp');
-  } else if (!validateWebhookTimestamp(webhookData.timestamp)) {
-    errors.push('Webhook timestamp outside acceptable window (replay attack?)');
-  }
-
-  // Check idempotency
-  if (!webhookData.idempotencyKey) {
-    errors.push('Missing idempotency key');
-  } else {
-    const replay = checkReplayAttempt(webhookData.idempotencyKey);
-    if (!replay.allowed) {
-      errors.push(replay.reason);
-    }
-  }
-
-  // Check provider
-  if (!['stripe', 'crypto', 'wallet'].includes(webhookData.provider)) {
-    errors.push(`Unknown provider: ${webhookData.provider}`);
-  }
-
+export function validateWebhook() {
   return {
-    valid: errors.length === 0,
-    errors,
+    valid: false,
+    errors: [
+      'Client-side webhook validation removed for security. ' +
+      'Invoke base44.functions.invoke("validatePaymentWebhook", { provider, signature, rawBody, timestamp, idempotencyKey }) on the server instead.',
+    ],
   };
-}
-
-/**
- * Example: Stripe webhook validation
- */
-export function validateStripeWebhook(signature, rawBody) {
-  try {
-    return validateWebhookSignature('stripe', signature, rawBody);
-  } catch (err) {
-    console.error('Stripe webhook validation error:', err.message);
-    return false;
-  }
-}
-
-/**
- * Example: Crypto provider webhook validation
- */
-export function validateCryptoWebhook(signature, rawBody) {
-  try {
-    return validateWebhookSignature('crypto', signature, rawBody);
-  } catch (err) {
-    console.error('Crypto webhook validation error:', err.message);
-    return false;
-  }
 }

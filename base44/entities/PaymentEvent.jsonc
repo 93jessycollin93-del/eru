@@ -2,6 +2,11 @@
   "name": "PaymentEvent",
   "type": "object",
   "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional free-form description (max 1000 chars)"
+    },
     "order_id": {
       "type": "string",
       "description": "Reference to Order"
@@ -82,7 +87,11 @@
     "provider"
   ],
   "rls": {
-    "create": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": {
       "user_condition": {
         "role": "admin"

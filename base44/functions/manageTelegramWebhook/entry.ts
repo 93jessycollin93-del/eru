@@ -60,11 +60,23 @@ Deno.serve(async (req) => {
 
     if (action === 'activate') {
       const me = await telegramCall(token, 'getMe');
-      await telegramCall(token, 'setWebhook', { url: webhookUrl, allowed_updates: ['message'] });
+      // Generate a per-bot secret_token Telegram echoes back in the
+      // X-Telegram-Bot-Api-Secret-Token header. The webhook handler refuses
+      // calls whose header doesn't match. Telegram's spec: 1-256 chars,
+      // letters/digits/_/-. We use a 64-char hex random.
+      const secretBytes = new Uint8Array(32);
+      crypto.getRandomValues(secretBytes);
+      const webhookSecret = Array.from(secretBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+      await telegramCall(token, 'setWebhook', {
+        url: webhookUrl,
+        allowed_updates: ['message'],
+        secret_token: webhookSecret,
+      });
       await base44.asServiceRole.entities.TelegramBot.update(botId, {
         bot_token: token,
         bot_username: me.username || bot.bot_username,
         webhook_url: webhookUrl,
+        webhook_secret_token: webhookSecret,
         status: 'active',
         token_label: botToken ? 'custom' : 'TELEGRAM_BOT_TOKEN',
         last_error: ''

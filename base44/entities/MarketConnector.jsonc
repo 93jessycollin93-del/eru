@@ -139,9 +139,7 @@
         "role": "admin"
       }
     },
-    "read": {
-      "created_by": "{{user.email}}"
-    },
+    "read": {},
     "update": {
       "user_condition": {
         "role": "admin"

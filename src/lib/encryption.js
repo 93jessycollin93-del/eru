@@ -1,73 +1,29 @@
-import crypto from 'crypto';
-import { Buffer } from 'buffer';
-
-const ENCRYPTION_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ENCRYPTION_KEY) || crypto.randomBytes(32).toString('hex');
-const ALGORITHM = 'aes-256-gcm';
-
 /**
- * Encrypt sensitive data (PII) before database storage
- * @param {string} plaintext - Data to encrypt
- * @returns {string} Encrypted data (format: iv:encrypted:authTag)
+ * PII ENCRYPTION (client-side stub)
+ *
+ * The previous implementation read VITE_ENCRYPTION_KEY (which Vite inlines
+ * into the JS bundle, exposing the key to every visitor) or fell back to a
+ * per-process crypto.randomBytes(32) (which makes ciphertext unrecoverable
+ * on the next page load). Either way, browser-side encryption was broken.
+ *
+ * The real implementation lives in:
+ *   base44/functions/encryptUserPII/entry.ts
+ *
+ * Use the SDK to invoke it from the client. Example:
+ *   const { data } = await base44.functions.invoke('encryptUserPII', {
+ *     mode: 'encrypt', user: { phone, ssn },
+ *   });
  */
-export function encryptData(plaintext) {
-  if (!plaintext) return plaintext;
-  
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
-  
-  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  
-  const authTag = cipher.getAuthTag();
-  
-  // Format: iv:encrypted:authTag
-  return `${iv.toString('hex')}:${encrypted}:${authTag.toString('hex')}`;
+
+function notImplemented() {
+  throw new Error(
+    'Browser-side PII encryption removed for security. ' +
+    'Invoke base44.functions.invoke("encryptUserPII", { mode, user }) instead — ' +
+    'the master key must never ship to the bundle.',
+  );
 }
 
-/**
- * Decrypt sensitive data for display
- * @param {string} ciphertext - Encrypted data (format: iv:encrypted:authTag)
- * @returns {string} Decrypted plaintext
- */
-export function decryptData(ciphertext) {
-  if (!ciphertext || !ciphertext.includes(':')) return ciphertext;
-  
-  try {
-    const [ivHex, encryptedHex, authTagHex] = ciphertext.split(':');
-    const iv = Buffer.from(ivHex, 'hex');
-    const authTag = Buffer.from(authTagHex, 'hex');
-    
-    const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
-    decipher.setAuthTag(authTag);
-    
-    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return decrypted;
-  } catch (err) {
-    console.error('Decryption failed:', err.message);
-    return null;
-  }
-}
-
-/**
- * Encrypt PII fields in user object
- */
-export function encryptUserPII(user) {
-  return {
-    ...user,
-    phone: user.phone ? encryptData(user.phone) : null,
-    ssn: user.ssn ? encryptData(user.ssn) : null,
-  };
-}
-
-/**
- * Decrypt PII fields in user object
- */
-export function decryptUserPII(user) {
-  return {
-    ...user,
-    phone: user.phone ? decryptData(user.phone) : null,
-    ssn: user.ssn ? decryptData(user.ssn) : null,
-  };
-}
+export const encryptData = notImplemented;
+export const decryptData = notImplemented;
+export const encryptUserPII = notImplemented;
+export const decryptUserPII = notImplemented;
