@@ -1,1 +1,67 @@
-export { useLiveMarketPrices as useRealPrices, useLivePriceMap as useRealPriceMap } from '@/hooks/useLiveSync';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { logger } from '@/lib/logger';
+
+// CoinGecko free API - no key required
+const COINGECKO_URL =
+  'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,toncoin,solana,dogecoin,litecoin,ripple,binancecoin,matic-network,usd-coin,tether&vs_currencies=usd&include_24hr_change=true';
+
+const ID_MAP = {
+  bitcoin: 'BTC',
+  ethereum: 'ETH',
+  toncoin: 'TON',
+  solana: 'SOL',
+  dogecoin: 'DOGE',
+  litecoin: 'LTC',
+  ripple: 'XRP',
+  binancecoin: 'BNB',
+  'matic-network': 'MATIC',
+  'usd-coin': 'USDC',
+  tether: 'USDT',
+};
+
+export function useRealPrices() {
+  const [prices, setPrices] = useState([]);
+  const [status, setStatus] = useState('loading'); // 'loading' | 'live' | 'error'
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const timerRef = useRef(null);
+
+  const fetchPrices = useCallback(async () => {
+    try {
+      const res = await fetch(COINGECKO_URL);
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+      const mapped = Object.entries(data).map(([id, v]) => ({
+        symbol: ID_MAP[id] || id.toUpperCase(),
+        price: v.usd,
+        change: v.usd_24h_change ?? 0,
+      }));
+      setPrices(mapped);
+      setStatus('live');
+      setLastUpdated(new Date());
+    } catch (err) {
+      logger.warn('useRealPrices: price fetch failed', err);
+      setStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrices();
+    timerRef.current = setInterval(fetchPrices, 60_000); // refresh every 60s
+    return () => clearInterval(timerRef.current);
+  }, [fetchPrices]);
+
+  return { prices, status, lastUpdated };
+}
+
+export function useRealPriceMap() {
+  const { prices, status, lastUpdated } = useRealPrices();
+  // Memoize the derived map so consumers receive a stable reference when the
+  // underlying prices array hasn't changed. Without this, every render produced
+  // a fresh object and forced child components to re-render unnecessarily.
+  const map = useMemo(() => {
+    const m = {};
+    prices.forEach(p => { m[p.symbol] = p; });
+    return m;
+  }, [prices]);
+  return { map, status, lastUpdated };
+}
