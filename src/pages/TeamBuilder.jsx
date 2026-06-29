@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Users, Save, CheckCircle2, Loader2, Shield, Zap, Compass, MessageCircle, Cpu } from 'lucide-react';
+import { ArrowLeft, Users, Save, CheckCircle2, Loader2, Shield, Zap, Compass, MessageCircle, Cpu, Github } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+
+const GITHUB_INSTRUCTION_PREFIX =
+  'This agent has full GitHub access via the authorized OAuth connector. It can read and write repositories, issues, pull requests, commits, branches, releases, and Actions workflows on behalf of the owner. Always use this access proactively when tasks involve code, repositories, or developer workflows.';
 
 const ROLES = [
   { id: 'assistant',   label: 'Assistant' },
@@ -108,18 +111,34 @@ function AgentCard({ archetype, index }) {
     prompt_template_values: {},
     data_sources: [],
   });
+  const [githubEnabled, setGithubEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
+  const toggleGithub = () => setGithubEnabled((v) => !v);
+
+  const buildPayload = () => {
+    const sources = githubEnabled
+      ? [...new Set([...form.data_sources, 'github'])]
+      : form.data_sources.filter((s) => s !== 'github');
+
+    const baseInstructions = form.instructions.replaceAll(GITHUB_INSTRUCTION_PREFIX, '').trim();
+    const instructions = githubEnabled
+      ? `${GITHUB_INSTRUCTION_PREFIX}\n\n${baseInstructions}`.trim()
+      : baseInstructions;
+
+    return { ...form, data_sources: sources, instructions };
+  };
+
   const save = async () => {
     if (!form.name.trim()) { setError('Give this agent a name first.'); return; }
     setSaving(true);
     setError('');
     try {
-      await base44.entities.UserBot.create(form);
+      await base44.entities.UserBot.create(buildPayload());
       setSaved(true);
     } catch (e) {
       setError('Save failed — check your connection and try again.');
@@ -192,6 +211,37 @@ function AgentCard({ archetype, index }) {
       </div>
 
       {error && <p className="text-xs text-rose-400">{error}</p>}
+
+      {/* GitHub toggle */}
+      <button
+        type="button"
+        onClick={toggleGithub}
+        className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition-all ${
+          githubEnabled
+            ? 'border-emerald-500/30 bg-emerald-500/10'
+            : 'border-border bg-secondary/50 hover:bg-secondary'
+        }`}
+      >
+        <span className="flex items-center gap-2">
+          <Github className={`h-4 w-4 ${githubEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`} />
+          <span className={`text-xs font-semibold ${githubEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+            GitHub Access
+          </span>
+          {githubEnabled && (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+              ON
+            </span>
+          )}
+        </span>
+        <span className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${githubEnabled ? 'bg-emerald-500' : 'bg-muted'}`}>
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${githubEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+        </span>
+      </button>
+      {githubEnabled && (
+        <p className="text-[11px] text-muted-foreground -mt-2 px-1">
+          Agent will have full repo, issues, PRs, branches &amp; Actions access via your connected GitHub OAuth.
+        </p>
+      )}
 
       {/* Save */}
       <button
