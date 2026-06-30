@@ -1,4 +1,4 @@
-import { Award, Flame, Star, Trophy } from 'lucide-react';
+import { Award, Flame, Star, Trophy, ArrowRight } from 'lucide-react';
 
 const LEVELS = [
   { level: 1, label: 'Starter', xp: 0 },
@@ -27,10 +27,16 @@ function getLevelInfo(xp) {
   return { current, next };
 }
 
-export default function JackieGamificationPanel({ progress }) {
+export default function JackieGamificationPanel({ progress, onAction }) {
   const data = progress || { xp: 0, level: 1, streak_days: 0, badges: [], messages_sent: 0, resources_opened: 0, feedback_sent: 0 };
   const { current, next } = getLevelInfo(data.xp || 0);
   const pct = next ? Math.min(100, Math.round(((data.xp - current.xp) / (next.xp - current.xp)) * 100)) : 100;
+
+  const nextSteps = [
+    !(data.badges || []).includes('first_question') ? { id: 'ask', label: 'Ask Jackie your first real task', action: 'conversation' } : null,
+    !(data.badges || []).includes('curious_investor') ? { id: 'resources', label: 'Open a guided next step', action: 'education' } : null,
+    !(data.badges || []).includes('feedback_helper') ? { id: 'feedback', label: 'Send one improvement note', action: 'feedback' } : null,
+  ].filter(Boolean).slice(0, 2);
 
   return (
     <div className="space-y-3">
@@ -65,6 +71,16 @@ export default function JackieGamificationPanel({ progress }) {
         <div className="h-2 bg-secondary rounded-full overflow-hidden">
           <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
+        {nextSteps.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {nextSteps.map((step) => (
+              <button key={step.id} onClick={() => onAction?.(step.action)} className="w-full flex items-center justify-between rounded-lg border border-border bg-secondary/20 px-3 py-2 text-[11px] text-left text-muted-foreground hover:text-foreground hover:border-primary/30">
+                <span>{step.label}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">

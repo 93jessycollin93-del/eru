@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { BookText, Plus, Search, Star, Trash2, ArrowRight, Save } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { toast } from '@/components/ui/use-toast';
 
 const BLANK = {
   title: '',
@@ -11,23 +13,29 @@ const BLANK = {
   pinned: false,
 };
 
-export default function PromptLibraryPanel({ onInject, onAppend }) {
+export default function PromptLibraryPanel({ onInject, onAppend, userEmail }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(BLANK);
+  const [busy, setBusy] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   const loadItems = async () => {
     setLoading(true);
-    const rows = await base44.entities.JackieSaved.filter({ tag: 'prompt' }, '-updated_date', 100);
-    setItems(rows);
-    setLoading(false);
+    try {
+      const filters = userEmail ? { tag: 'prompt', created_by: userEmail } : { tag: 'prompt' };
+      const rows = await base44.entities.JackieSaved.filter(filters, '-updated_date', 100).catch(() => []);
+      setItems(rows || []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadItems();
-  }, []);
+  }, [userEmail]);
 
   const filteredItems = useMemo(() => {
     return [...items]
@@ -39,24 +47,47 @@ export default function PromptLibraryPanel({ onInject, onAppend }) {
   }, [items, search]);
 
   const savePrompt = async () => {
-    if (!form.content.trim()) return;
-    await base44.entities.JackieSaved.create({
-      ...form,
-      title: form.title.trim() || form.content.trim().slice(0, 48),
-    });
-    setForm(BLANK);
-    setShowForm(false);
-    loadItems();
+    if (!form.content.trim() || busy) return;
+    setBusy(true);
+    try {
+      await base44.entities.JackieSaved.create({
+        ...form,
+        title: form.title.trim() || form.content.trim().slice(0, 48),
+        created_by: userEmail || undefined,
+      });
+      setForm(BLANK);
+      setShowForm(false);
+      await loadItems();
+      toast({ title: 'Prompt saved', description: 'It is now available to inject into Jackie.' });
+    } catch (error) {
+      toast({ title: 'Save failed', description: error?.message || 'Could not save this prompt.', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const togglePin = async (item) => {
-    await base44.entities.JackieSaved.update(item.id, { pinned: !item.pinned });
-    loadItems();
+    try {
+      await base44.entities.JackieSaved.update(item.id, { pinned: !item.pinned });
+      await loadItems();
+    } catch (error) {
+      toast({ title: 'Update failed', description: error?.message || 'Could not update this prompt.', variant: 'destructive' });
+    }
   };
 
-  const removePrompt = async (id) => {
-    await base44.entities.JackieSaved.delete(id);
-    loadItems();
+  const removePrompt = async () => {
+    if (!pendingDelete) return;
+    setBusy(true);
+    try {
+      await base44.entities.JackieSaved.delete(pendingDelete.id);
+      await loadItems();
+      toast({ title: 'Prompt deleted' });
+    } catch (error) {
+      toast({ title: 'Delete failed', description: error?.message || 'Could not delete this prompt.', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+      setPendingDelete(null);
+    }
   };
 
   return (
@@ -105,7 +136,8 @@ export default function PromptLibraryPanel({ onInject, onAppend }) {
           <div className="flex gap-2">
             <button
               onClick={savePrompt}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+              disabled={busy || !form.content.trim()}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" /> Save prompt
             </button>
@@ -140,19 +172,25 @@ export default function PromptLibraryPanel({ onInject, onAppend }) {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => onInject(item.content)}
+                onClick={() => {
+                  onInject(item.content);
+                  toast({ title: 'Prompt loaded into Jackie' });
+                }}
                 className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary"
               >
                 <ArrowRight className="w-3 h-3" /> Replace input
               </button>
               <button
-                onClick={() => onAppend(item.content)}
+                onClick={() => {
+                  onAppend(item.content);
+                  toast({ title: 'Prompt appended to input' });
+                }}
                 className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground"
               >
                 Append
               </button>
               <button
-                onClick={() => removePrompt(item.id)}
+                onClick={() => setPendingDelete(item)}
                 className="inline-flex items-center gap-1 rounded-lg border border-destructive/20 bg-destructive/10 px-2.5 py-1.5 text-[11px] text-destructive"
               >
                 <Trash2 className="w-3 h-3" /> Delete
@@ -161,6 +199,17 @@ export default function PromptLibraryPanel({ onInject, onAppend }) {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={`Delete ${pendingDelete?.title || 'this prompt'}?`}
+        description="This removes the saved prompt from Jackie’s prompt library."
+        confirmLabel="Delete"
+        tone="danger"
+        busy={busy}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={removePrompt}
+      />
     </div>
   );
 }
