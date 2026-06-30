@@ -83,7 +83,7 @@ const THINK_MODES = [
   { id: 'explainer', label: 'Explainer',  emoji: '📖', color: 'text-green-400',  desc: 'Simple, clear breakdowns',         prompt: 'THINK MODE: EXPLAINER — Break down every concept into the simplest possible terms. Use analogies, bullet points, and examples. Assume no prior knowledge.' },
 ];
 
-const FOUNDARY_PERMISSION_RULES = [
+const FOUNDRY_PERMISSION_RULES = [
   { pattern: /web|search|crawl|browse/, permission: 'bot:websearch' },
   { pattern: /code|dev|developer|decompose|decomposer|reform|refactor|cybernetic|sas/, permission: 'bot:code' },
   { pattern: /squad|pipeline|orchestrate|multi-agent|automation/, permission: 'bot:squad' },
@@ -95,7 +95,7 @@ function buildFoundryPermissions(lower, hasBotSurface) {
       ? ['bot:chat', 'bot:create', 'bot:memory', 'bot:analytics', 'jackie:read', 'jackie:write']
       : ['bot:chat', 'bot:analytics', 'jackie:read']
   );
-  FOUNDARY_PERMISSION_RULES.forEach(({ pattern, permission }) => {
+  FOUNDRY_PERMISSION_RULES.forEach(({ pattern, permission }) => {
     if (pattern.test(lower)) permissions.add(permission);
   });
   return [...permissions];
@@ -114,7 +114,7 @@ export default function JackieAI() {
   const userEmail = currentUser?.email || '';
   const jackieProgressEntity = base44.entities?.JackieProgress || null;
   const [messages, setMessages] = useState([]);
-  const [thinkMode, _setThinkMode] = useState('default');
+  const [thinkMode] = useState('default');
   const [userBots, setUserBots] = useState([]);
   const [apiKeyCount, setApiKeyCount] = useState(0);
   const [apiKeyCapabilities, setApiKeyCapabilities] = useState({ webSearch: false, code: false, squad: false });
