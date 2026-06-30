@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bot, Plus, Zap, Edit3, Trash2, Play, Copy, Globe, Lock, FlaskConical, Sparkles, MapPin, Link2, Wand2, Network, Brain, BarChart2, History, Pin, LayoutDashboard, Download, Save, CheckSquare, Square, Search, ShieldCheck, GraduationCap, Rocket, Users, BookOpen, GitBranch } from 'lucide-react';
 import BotFactory from '../components/ailab/BotFactory';
 import AgentRunner from '../components/ailab/AgentRunner';
@@ -86,6 +87,7 @@ const downloadJson = (filename, data) => {
 };
 
 export default function AILab() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('my');
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -277,6 +279,7 @@ export default function AILab() {
     { id: 'test-lab', label: 'Test Lab', icon: FlaskConical },
     { id: 'build', label: editId ? 'Edit' : 'Build', icon: Plus },
     { id: 'factory', label: 'Factory', icon: Wand2 },
+    { id: 'team', label: 'Team of Five', icon: Users, link: '/team-builder' },
     { id: 'agents', label: 'Agents', icon: Zap },
     { id: 'memory', label: 'Memory', icon: Brain },
     { id: 'orchestrator', label: 'Orchestra', icon: Network },
@@ -316,7 +319,10 @@ export default function AILab() {
       {/* Tabs */}
       <div className="flex border-b border-border overflow-x-auto">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); if (t.id !== 'build') { setForm(BLANK); setEditId(null); } }}
+          <button key={t.id} onClick={() => {
+            if (t.link) { navigate(t.link); return; }
+            setTab(t.id); if (t.id !== 'build') { setForm(BLANK); setEditId(null); }
+          }}
             className={`flex-shrink-0 flex items-center gap-1 px-3 py-2.5 text-xs font-medium transition-colors whitespace-nowrap ${tab === t.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
             <t.icon className="w-3 h-3" />{t.label}
           </button>

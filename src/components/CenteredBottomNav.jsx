@@ -32,6 +32,7 @@ const ALL_PAGES = [
   { id: 'reputation',   labelKey: 'nav.reputation',   fallback: 'Reputation',   icon: Award,         to: '/reputation' },
   { id: 'tgapps',       labelKey: 'nav.tgapps',       fallback: 'TG Apps',      icon: Send,          to: '/tgapps' },
   { id: 'ailab',        labelKey: 'nav.ailab',        fallback: 'AI Lab',       icon: FlaskConical,  to: '/ailab' },
+  { id: 'teambuilder',  labelKey: 'nav.teambuilder',  fallback: 'Team of Five', icon: Users,         to: '/team-builder' },
   { id: 'devlab',       labelKey: 'nav.devlab',       fallback: 'Dev Lab',      icon: Code2,         to: '/dev-lab' },
   { id: 'cardscan',     labelKey: 'nav.cardscan',     fallback: 'Card Scan',    icon: ScanLine,      to: '/card-scanner' },
   { id: 'integrations', labelKey: 'nav.integrations', fallback: 'Connections',  icon: Plug,          to: '/integrations' },
