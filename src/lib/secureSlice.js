@@ -9,14 +9,15 @@ const STORAGE_KEYS = {
 const LOCKOUT_AFTER_FAILURES = 3;
 const WIPE_AFTER_FAILURES = 10;
 const LOCKOUT_MS = 15 * 60 * 1000;
+const MAX_AUDIT_ENTRIES = 500;
+const MAX_VAULT_DOCUMENTS = 200;
 
 function encoder() {
   return new TextEncoder();
 }
 
 function toBase64(bytes) {
-  let binary = '';
-  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  const binary = Array.from(bytes, (b) => String.fromCharCode(b)).join('');
   return btoa(binary);
 }
 
@@ -147,7 +148,7 @@ async function appendAudit(event) {
   }));
 
   const next = [...chain, { ...entry, hash }];
-  saveJson(STORAGE_KEYS.audit, next.slice(-500));
+  saveJson(STORAGE_KEYS.audit, next.slice(-MAX_AUDIT_ENTRIES));
   return next[next.length - 1];
 }
 
@@ -197,7 +198,6 @@ export async function verifyAuditChain() {
   const chain = readAuditChain();
   let prevHash = null;
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const entry of chain) {
     const expected = await sha256Base64(JSON.stringify({
       timestamp: entry.timestamp,
@@ -257,7 +257,7 @@ export async function storeSecureDocument({ title, plaintext, passphrase, expire
   };
 
   const docs = listVaultDocuments();
-  writeVaultDocuments([doc, ...docs].slice(0, 200));
+  writeVaultDocuments([doc, ...docs].slice(0, MAX_VAULT_DOCUMENTS));
   await appendAudit({ type: 'document.stored', docId: doc.id, title: doc.title });
   return doc;
 }
@@ -313,7 +313,12 @@ export async function unlockSecureDocument({ docId, passphrase }) {
       throw new Error('Document signature verification failed.');
     }
 
-    writeState({ failedAttempts: 0, lockoutUntil: null, wipeTriggered: false, updatedAt: nowIso() });
+    writeState({
+      failedAttempts: 0,
+      lockoutUntil: null,
+      wipeTriggered: state.wipeTriggered === true,
+      updatedAt: nowIso(),
+    });
     await appendAudit({ type: 'document.unlocked', docId: doc.id, title: doc.title });
     return { doc, plaintext };
   } catch (error) {
@@ -347,9 +352,7 @@ export async function purgeExpiredDocuments() {
 
   writeVaultDocuments(docs.filter((doc) => !doc.expiresAt || now < new Date(doc.expiresAt).getTime()));
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const doc of expired) {
-    // eslint-disable-next-line no-await-in-loop
     await appendAudit({ type: 'document.auto_destroyed', docId: doc.id, title: doc.title });
   }
 
@@ -364,10 +367,11 @@ export function getLockoutState() {
 }
 
 export async function wipeSecureSliceData(reason = 'manual_wipe') {
+  const state = readState();
   localStorage.removeItem(STORAGE_KEYS.docs);
   localStorage.removeItem(STORAGE_KEYS.audit);
   writeState({
-    failedAttempts: WIPE_AFTER_FAILURES,
+    failedAttempts: state.failedAttempts || 0,
     lockoutUntil: null,
     wipeTriggered: true,
     updatedAt: nowIso(),

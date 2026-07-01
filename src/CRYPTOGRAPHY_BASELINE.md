@@ -7,7 +7,7 @@
 - **Document signature (v1 software baseline):** HMAC-SHA256 over canonical payload.
 
 ## non-v1 or conditional controls
-- **Argon2id:** deferred unless production runtime includes vetted implementation path.
+- **Argon2id:** deferred in v1 because PBKDF2-SHA512 is available in the current WebCrypto runtime and aligns with FIPS-oriented deployment paths; adopt Argon2id when a vetted, policy-approved runtime/module path is available for all target endpoints.
 - **Post-quantum KEM (Kyber/NTRU):** roadmap only; not claimed in v1 ATO package.
 - **Ed25519/RSA-4096 production signatures:** target for backend/HSM phase where key lifecycle and compliance can be enforced.
 - **HSM/TEE integration:** out of v1 software-only secure slice boundary.

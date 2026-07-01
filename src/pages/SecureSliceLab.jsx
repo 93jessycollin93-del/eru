@@ -58,9 +58,13 @@ function SecureSliceLabInner() {
   };
 
   useEffect(() => {
-    initializeSecureSlice().finally(() => {
-      refresh();
-    });
+    initializeSecureSlice()
+      .catch((e) => {
+        setError(e.message || 'Secure slice initialization failed.');
+      })
+      .finally(() => {
+        void refresh();
+      });
 
     const unsubscribe = subscribeOperationalStatus(setStatus);
     const timer = setInterval(() => {
@@ -210,7 +214,7 @@ function SecureSliceLabInner() {
           <select className="w-full rounded-lg bg-background border border-border px-2 py-1.5 text-xs" value={selectedDocId} onChange={(e) => setSelectedDocId(e.target.value)}>
             <option value="">Select document</option>
             {docs.map((doc) => (
-              <option key={doc.id} value={doc.id}>{doc.title} {doc.expiresAt ? `· expires ${new Date(doc.expiresAt).toLocaleString()}` : ''}</option>
+              <option key={doc.id} value={doc.id}>{doc.title} {doc.expiresAt ? `expires ${new Date(doc.expiresAt).toLocaleString()}` : ''}</option>
             ))}
           </select>
           <input className="w-full rounded-lg bg-background border border-border px-2 py-1.5 text-xs" type="password" placeholder="Unlock passphrase" value={unlockPassphrase} onChange={(e) => setUnlockPassphrase(e.target.value)} />
