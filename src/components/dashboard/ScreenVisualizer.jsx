@@ -13,7 +13,6 @@ const QUICK_LINKS = [
 export default function ScreenVisualizer() {
   const [url, setUrl] = useState('');
   const [activeUrl, setActiveUrl] = useState(null);
-  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef(null);
 
   const load = (u) => {

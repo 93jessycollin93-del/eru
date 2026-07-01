@@ -42,7 +42,7 @@ export default function ThinkersClub() {
           channel={activeChannel}
           serverColor={activeServer.color}
           onClose={() => setShowScratchpad(false)}
-          onSubmitReview={(content) => {
+          onSubmitReview={() => {
             setShowScratchpad(false);
             alert('Submitted for review! Check the App Review page.');
           }}

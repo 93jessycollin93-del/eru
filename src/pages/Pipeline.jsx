@@ -101,7 +101,7 @@ function AssetCard({ asset, onAdvance }) {
 }
 
 export default function Pipeline() {
-  const { currentUser } = useAuth();
+  const { currentUser: _currentUser } = useAuth();
   const [bots, setBots] = useState([]);
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);

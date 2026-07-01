@@ -11,7 +11,6 @@ const PRESET_TASKS = [
 export default function AgentRunner({ bots }) {
   const [runningAgents, setRunningAgents] = useState({});
   const [logs, setLogs] = useState([]);
-  const [selectedTask, setSelectedTask] = useState(PRESET_TASKS[0]);
   const [selectedBot, setSelectedBot] = useState(null);
   const intervals = useRef({});
   const logBottom = useRef(null);

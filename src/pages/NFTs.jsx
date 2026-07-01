@@ -27,7 +27,7 @@ const RARITY_COLORS = { Common: 'text-gray-400', Uncommon: 'text-green-400', Rar
 const BLANK_LIST = { title: '', price: '', description: '', image_url: '', currency: 'TON', rarity: 'Common', tags: '' };
 
 export default function NFTs() {
-  const { currentUser } = useAuth();
+  const { currentUser: _currentUser } = useAuth();
   const [tab, setTab] = useState('explore');
   const [view, setView] = useState('grid');
   const [selected, setSelected] = useState(null);

@@ -139,7 +139,7 @@ export default function AdminEconomyCharts() {
           setSupplyData(supplyGrowth);
 
           // Inflation factor (simulated)
-          const inflation = days.map((day, i) => ({
+          const inflation = days.map(day => ({
             date: day,
             factor: 1.0 + (Math.random() - 0.5) * 0.01, // ±0.5% variation
           }));

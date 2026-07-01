@@ -60,7 +60,7 @@ export default function AlertManager() {
       await base44.entities.PriceAlert.delete(id);
       toast.success('Alert deleted');
       fetchAlerts();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete alert');
     }
   };
@@ -69,7 +69,7 @@ export default function AlertManager() {
     try {
       await base44.entities.PriceAlert.update(id, { is_active: !isActive });
       fetchAlerts();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update alert');
     }
   };

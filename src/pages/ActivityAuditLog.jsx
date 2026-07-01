@@ -79,7 +79,7 @@ function LogItem({ log }) {
 }
 
 export default function ActivityAuditLog() {
-  const { currentUser } = useAuth();
+  const { currentUser: _currentUser } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

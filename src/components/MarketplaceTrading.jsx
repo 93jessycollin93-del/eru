@@ -12,7 +12,7 @@ export default function MarketplaceTrading() {
   const [activeTab, setActiveTab] = useState('browse');
   const [selectedListing, setSelectedListing] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('GOLD');
-  const [creatingListing, setCreatingListing] = useState(false);
+  const [, setCreatingListing] = useState(false);
 
   useEffect(() => {
     loadListings();
@@ -43,7 +43,7 @@ export default function MarketplaceTrading() {
     }
   };
 
-  const handleCreateListing = async (assetType, assetId, title, price) => {
+  const _handleCreateListing = async (assetType, assetId, title, price) => {
     try {
       setCreatingListing(true);
       const listing = await base44.entities.StorefrontListing.create({

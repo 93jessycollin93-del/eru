@@ -84,12 +84,6 @@ export function generateAIDeck(difficulty, factionOverride = null) {
   const pool = STARTER_CARDS.filter(c => c.faction === faction);
   
   // Pick 5 cards weighted by difficulty
-  const rarityWeights = {
-    1: { common: 0.6, rare: 0.3, epic: 0.1, legendary: 0 },
-    2: { common: 0.3, rare: 0.4, epic: 0.2, legendary: 0.1 },
-    3: { common: 0.1, rare: 0.3, epic: 0.4, legendary: 0.2 },
-  }[difficulty] || { common: 0.4, rare: 0.35, epic: 0.2, legendary: 0.05 };
-
   const sorted = [...pool].sort((a, b) => {
     const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4 };
     return (rarityOrder[b.rarity] * difficulty) - (rarityOrder[a.rarity] * difficulty);

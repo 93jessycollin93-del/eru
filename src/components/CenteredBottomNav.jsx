@@ -80,7 +80,7 @@ export default function FloatingNav({ onSearchOpen }) {
     localStorage.setItem(ORIENTATION_KEY, newOrientation);
   };
 
-  const toggleExpanded = () => {
+  const _toggleExpanded = () => {
     setIsExpanded(!isExpanded);
     localStorage.setItem(EXPANDED_KEY, JSON.stringify(!isExpanded));
   };
@@ -240,7 +240,7 @@ export default function FloatingNav({ onSearchOpen }) {
             <p className="text-[10px] text-muted-foreground px-4 py-2 border-b border-border">Tap to add or remove pages from your floating nav.</p>
             <div className="overflow-y-auto flex-1 px-4 py-3">
               <div className="grid grid-cols-4 gap-3">
-                {ALL_PAGES.map(({ id, label, icon: Icon, to }) => {
+                {ALL_PAGES.map(({ id, label, icon: Icon }) => {
                   const isPinned = pinned.includes(id);
                   return (
                     <button

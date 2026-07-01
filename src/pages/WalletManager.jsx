@@ -94,7 +94,7 @@ export default function WalletManager() {
     setMfaRequired(true);
   };
 
-  const handleMFAVerify = async (code) => {
+  const handleMFAVerify = async () => {
     if (!mfaPendingAction) return;
 
     try {
@@ -103,7 +103,7 @@ export default function WalletManager() {
         setWallets(wallets.filter((w) => w.id !== mfaPendingAction.walletId));
       } else if (mfaPendingAction.action === 'setPrimary') {
         // Update primary wallet
-        const updated = await base44.entities.ConnectedWallet.update(
+        const _updated = await base44.entities.ConnectedWallet.update(
           mfaPendingAction.walletId,
           { is_primary: true }
         );

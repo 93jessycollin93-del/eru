@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 
 export default function ComplianceCenter() {
-  const { currentUser } = useAuth();
+  const { currentUser: _currentUser } = useAuth();
   const [age, setAge] = useState(null);
   const [analyticsConsent, setAnalyticsConsent] = useState(
     JSON.parse(localStorage.getItem('analyticsConsent') || 'true')

@@ -25,10 +25,10 @@ export default function Collectables() {
   const [selected, setSelected] = useState(null);
   const [cart, setCart] = useState([]);
   const [showListingForm, setShowListingForm] = useState(false);
-  // `publishing` is declared at the top of the component (before any early
+  // `setPublishing` is declared at the top of the component (before any early
   // return) to satisfy the Rules of Hooks.
    
-  const [publishing, setPublishing] = useState(false);
+  const [, setPublishing] = useState(false);
 
   const items = tab === 'pokemon' ? POKEMON : NOSTALGIC;
 

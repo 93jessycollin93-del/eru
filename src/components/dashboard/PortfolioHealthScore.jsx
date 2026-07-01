@@ -29,12 +29,6 @@ export default function PortfolioHealthScore() {
     };
   }, []);
 
-  const pieData = [
-    { name: 'Diversification', value: metrics.diversification, fill: 'hsl(210 100% 60%)' },
-    { name: 'Volatility Management', value: metrics.volatility, fill: 'hsl(160 100% 45%)' },
-    { name: 'Stablecoin %', value: metrics.stablecoin, fill: 'hsl(45 100% 55%)' },
-  ];
-
   const getHealthReason = () => {
     const issues = [];
     if (metrics.diversification < 60) issues.push('Low diversification');

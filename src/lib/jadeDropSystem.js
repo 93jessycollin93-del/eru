@@ -111,8 +111,6 @@ export async function executeSafeJadeDrop(userId, orderId, dropContext = {}) {
     throw new Error('❌ JADE DROP: No verified payment found for this user');
   }
 
-  const order = orders[0];
-
   // STEP 2: Generate drop (server-side only)
   const drop = generateJadeDrop();
 

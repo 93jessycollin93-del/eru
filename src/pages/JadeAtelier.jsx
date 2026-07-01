@@ -75,7 +75,7 @@ export default function JadeAtelier() {
 
   const totalExtracted = jades.reduce((s, j) => s + (j.volume_kg || 0), 0);
 
-  const handleExtracted = (jade) => {
+  const handleExtracted = () => {
     loadJades();
     setTab('vault');
   };

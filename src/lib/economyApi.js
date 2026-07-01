@@ -182,12 +182,12 @@ export const confirmAndTransferAsset = async (escrowId, escrow) => {
 
     // Transfer asset to buyer (entity-specific logic)
     if (escrow.asset_type === 'card') {
-      const card = await base44.entities.Card.read(escrow.asset_id);
+      const _card = await base44.entities.Card.read(escrow.asset_id);
       await base44.entities.Card.update(escrow.asset_id, {
         created_by: escrow.buyer_email
       });
     } else if (escrow.asset_type === 'jade') {
-      const jade = await base44.entities.JadeAsset.read(escrow.asset_id);
+      const _jade = await base44.entities.JadeAsset.read(escrow.asset_id);
       await base44.entities.JadeAsset.update(escrow.asset_id, {
         created_by: escrow.buyer_email
       });

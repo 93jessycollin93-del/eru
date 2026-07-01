@@ -3,14 +3,9 @@ import { Palette, Layers, Zap, Sliders, Lock, Unlock, RotateCcw, CheckCircle2, B
 import { useTheme, BG_ENVS, TYPOGRAPHY_PACKS } from '../context/ThemeContext';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
-const THEME_CATS = {
-  cyber:'Cyber', neon:'Neon', jade:'Jade', gold:'Gold', void:'Void',
-  organic:'Organic', energy:'Energy', mythic:'Mythic', cool:'Cool',
-  warm:'Warm', minimal:'Minimal',
-};
 const BG_CATS = { off:'Off', digital:'Digital', space:'Space', nature:'Nature', energy:'Energy', mythic:'Mythic', still:'Astronomical', wildlife:'Wildlife', scenery:'Scenery' };
 
-function ColorWheel({ colors, size = 44 }) {
+function _ColorWheel({ colors, size = 44 }) {
   const r = size / 2;
   const segments = colors.length;
   const slices = segments < 2 ? [...colors, ...colors, ...colors] : colors;
@@ -188,8 +183,7 @@ function ThemesTab() {
 // ─── TAB: BACKGROUNDS ────────────────────────────────────────────────────────
 function BackgroundsTab() {
   const theme = useTheme() || {};
-  const { bg, setBg, bgOpacity, setBgOpacity, particleDensity, setParticleDensity, lowPowerMode, setLowPowerMode, isLocked = () => false } = theme;
-  const [preview, setPreview] = useState(null);
+  const { bg, setBg, bgOpacity, setBgOpacity, particleDensity, setParticleDensity, lowPowerMode, setLowPowerMode } = theme;
   const [cat, setCat] = useState('all');
 
   const filtered = Object.entries(BG_ENVS).filter(([, v]) => cat === 'all' || v.cat === cat);

@@ -3,8 +3,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, Lightbulb, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-const COLORS = ['#00e676', '#2196f3', '#7c4dff', '#ff9800', '#e91e63'];
-
 export default function AnalyticsWidget() {
   const [analytics, setAnalytics] = useState([]);
   const [recommendations, setRecommendations] = useState([]);

@@ -10,7 +10,7 @@ export function isBiometricSupported() {
 function bufferToBase64(buffer) {
   return btoa(String.fromCharCode(...new Uint8Array(buffer)));
 }
-function base64ToBuffer(base64) {
+function _base64ToBuffer(base64) {
   const bin = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
   return Uint8Array.from(bin, c => c.charCodeAt(0)).buffer;
 }

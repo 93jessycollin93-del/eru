@@ -28,7 +28,7 @@ export default function CardArena() {
   const [cards, setCards] = useState([]);
   const [deck, setDeck] = useState([]);
   const [gold, setGold] = useState(0);
-  const [goldLoading, setGoldLoading] = useState(true);
+  const [, setGoldLoading] = useState(true);
   const [tournamentRound, setTournamentRound] = useState(0);
   const [battling, setBattling] = useState(false);
   const [currentRound, setCurrentRound] = useState(null);
@@ -95,7 +95,7 @@ export default function CardArena() {
     setBattling(true);
   };
 
-  const handleBattleEnd = async (won, aiBoardPower, aiDeck) => {
+  const handleBattleEnd = async (won) => {
     const round = TOURNAMENT_ROUNDS[tournamentRound - 1];
     const newResults = [...roundResults, { round: tournamentRound, won }];
     setRoundResults(newResults);

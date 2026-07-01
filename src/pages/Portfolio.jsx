@@ -45,7 +45,7 @@ export default function Portfolio() {
     </div>
   );
 
-  const totalValue = jadeAssets.reduce((sum, j) => sum + (j.valuation || 0), 0) + cards.length * 100;
+  const _totalValue = jadeAssets.reduce((sum, j) => sum + (j.valuation || 0), 0) + cards.length * 100;
   const stats = [
     { label: 'Jade Assets', value: jadeAssets.length, icon: Flame, color: 'text-orange-400' },
     { label: 'Cards', value: cards.length, icon: Star, color: 'text-yellow-400' },

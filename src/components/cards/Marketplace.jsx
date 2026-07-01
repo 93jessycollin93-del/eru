@@ -20,7 +20,7 @@ export default function Marketplace({ gold, onGoldChange }) {
   const [posting, setPosting] = useState(false);
   const [buying, setBuying] = useState(null);
   const [toast, setToast] = useState(null);
-  const [user, setUser] = useState(null);
+  const [, setUser] = useState(null);
 
   useEffect(() => {
     loadAll();
@@ -34,7 +34,7 @@ export default function Marketplace({ gold, onGoldChange }) {
 
   const loadAll = async () => {
     setLoading(true);
-    const [all, mine, cards] = await Promise.all([
+    const [all, _mine, cards] = await Promise.all([
       base44.entities.CardListing.filter({ status: 'active' }, '-created_date', 50),
       base44.entities.CardListing.list('-created_date', 30),
       base44.entities.Card.list('-created_date', 100),

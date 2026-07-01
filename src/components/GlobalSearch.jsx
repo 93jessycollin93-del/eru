@@ -1,12 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, X, Loader2, FileText, CheckSquare, User, ExternalLink } from 'lucide-react';
+import { Search, X, Loader2, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-
-const TYPE_ICONS = {
-  file: FileText,
-  task: CheckSquare,
-  contact: User,
-};
 
 const SOURCE_COLORS = {
   'Google Drive': 'text-blue-400',
@@ -20,7 +14,6 @@ const SOURCE_COLORS = {
 };
 
 function ResultItem({ result }) {
-  const Icon = TYPE_ICONS[result.type] || FileText;
   const colorClass = SOURCE_COLORS[result.source] || 'text-muted-foreground';
 
   return (

@@ -266,12 +266,12 @@ function FindingCard({ finding, onStatusChange }) {
   );
 }
 
-function PlatformView({ platform, data, findings, onStatusChange }) {
+function PlatformView({ data, findings, onStatusChange }) {
   const Icon = data.icon;
   const bySeverity = { critical: [], high: [], medium: [], low: [] };
   findings.forEach(f => bySeverity[f.severity]?.push(f));
   const fixed = findings.filter(f => f.status === 'fixed').length;
-  const open = findings.filter(f => f.status === 'open').length;
+  const _open = findings.filter(f => f.status === 'open').length;
   const critical = bySeverity.critical.length;
 
   const rawScore = Math.round(
@@ -330,7 +330,7 @@ export default function SecurityAnalysis() {
   const [activePlatform, setActivePlatform] = useState('telegram');
   const [findings, setFindings] = useState(() => {
     const all = {};
-    Object.entries(PLATFORMS).forEach(([pKey, pData]) => {
+    Object.entries(PLATFORMS).forEach(([, pData]) => {
       pData.findings.forEach(f => { all[f.id] = { ...f }; });
     });
     return all;

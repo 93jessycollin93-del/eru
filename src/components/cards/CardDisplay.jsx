@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ELEMENT_COLORS, RARITY_STYLES, ABILITY_LABELS } from './StarterCards';
 import { Sword, Shield, Zap, Star } from 'lucide-react';
 
 export default function CardDisplay({ card, size = 'md', selected, onClick, glowing, disabled }) {
-  const [flipped, setFlipped] = useState(false);
   const el = ELEMENT_COLORS[card.element] || ELEMENT_COLORS.fire;
   const rar = RARITY_STYLES[card.rarity] || RARITY_STYLES.common;
   const ab = card.ability ? ABILITY_LABELS[card.ability] : null;

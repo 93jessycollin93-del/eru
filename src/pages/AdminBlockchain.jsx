@@ -23,7 +23,7 @@ export default function AdminBlockchain() {
   const { currentUser } = useAuth();
   const [config, setConfig] = useState(BLANK_CONFIG);
   const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     // Load from user's saved settings

@@ -47,7 +47,7 @@ const THINK_MODES = [
 export default function JackieAI() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
-  const [thinkMode, setThinkMode] = useState('default');
+  const [thinkMode] = useState('default');
   const [userBots, setUserBots] = useState([]);
   const [apiKeyCount, setApiKeyCount] = useState(0);
   const [apiKeyCapabilities, setApiKeyCapabilities] = useState({ webSearch: false, code: false, squad: false });

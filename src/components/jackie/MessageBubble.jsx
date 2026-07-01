@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Bot, Bookmark, Copy, PenLine, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-export default function MessageBubble({ message, onSave, onRefine, onInject }) {
+export default function MessageBubble({ message, onSave, onRefine }) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const isUser = message.role === 'user';
@@ -20,7 +20,7 @@ export default function MessageBubble({ message, onSave, onRefine, onInject }) {
   };
 
   // Extract code blocks for special rendering
-  const hasCode = message.content?.includes('```');
+  const _hasCode = message.content?.includes('```');
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-2`}>

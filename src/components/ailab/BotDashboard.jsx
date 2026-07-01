@@ -56,7 +56,7 @@ export default function BotDashboard({ bots }) {
 
   // Summary stats
   const totalXP = bots.reduce((s, b) => s + (b.xp || 0), 0);
-  const totalUsage = bots.reduce((s, b) => s + (b.usage_count || 0), 0);
+  const _totalUsage = bots.reduce((s, b) => s + (b.usage_count || 0), 0);
   const totalRuns = automations.reduce((s, a) => s + (a.run_count || 0), 0);
   const avgScore = improvements.length ? (improvements.reduce((s, i) => s + (i.score || 0), 0) / improvements.length).toFixed(1) : '—';
 

@@ -13,7 +13,7 @@ export default function PageNotFound({}) {
             try {
                 const user = await base44.auth.me();
                 return { user, isAuthenticated: true };
-            } catch (error) {
+            } catch {
                 return { user: null, isAuthenticated: false };
             }
         }

@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function DataVisualizer() {
   const [progress, setProgress] = useState([]);
-  const [reputation, setReputation] = useState(null);
+  const [, setReputation] = useState(null);
   const [bots, setBots] = useState([]);
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);

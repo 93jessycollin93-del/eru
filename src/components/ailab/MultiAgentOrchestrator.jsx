@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 const STAGES = ['plan', 'execution', 'analysis', 'improvement'];
 const STAGE_LABELS = { plan: '🗺️ Plan', execution: '⚡ Execute', analysis: '🔍 Analyze', improvement: '📈 Improve' };
 
-export default function MultiAgentOrchestrator({ bots }) {
+export default function MultiAgentOrchestrator() {
   const { currentUser } = useAuth();
   const [goal, setGoal] = useState('');
   const [running, setRunning] = useState(false);

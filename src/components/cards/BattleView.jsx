@@ -23,7 +23,7 @@ export default function BattleView({ playerCards, opponentName, difficulty, onBa
   const [turn, setTurn] = useState(1);
   const [log, setLog] = useState([]);
   const [phase, setPhase] = useState('player'); // player | ai | result
-  const [lastPlayed, setLastPlayed] = useState(null);
+  const [, setLastPlayed] = useState(null);
   const [result, setResult] = useState(null);
 
   const addLog = (msg) => setLog(p => [msg, ...p].slice(0, 8));

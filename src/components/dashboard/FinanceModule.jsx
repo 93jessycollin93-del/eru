@@ -49,7 +49,7 @@ const VIBE_DATA = AI_PLATFORMS
   .map(p => ({ name: p.name, monthly: p.monthly, color: p.color }));
 
 // Monthly AI spend simulation
-const AI_SPEND_DATA = MONTHS.slice(0, NOW + 1).map((m, i) => {
+const _AI_SPEND_DATA = MONTHS.slice(0, NOW + 1).map((m, i) => {
   const base = { month: m };
   AI_PLATFORMS.slice(0, 6).forEach(p => {
     base[p.id] = Math.round(Math.random() * 200 + i * 10);

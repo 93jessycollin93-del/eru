@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function MemoryViewer({ bots }) {
-  const { currentUser } = useAuth();
+  const { currentUser: _currentUser } = useAuth();
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBot, setSelectedBot] = useState('all');

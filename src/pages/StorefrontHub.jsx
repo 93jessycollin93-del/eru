@@ -60,8 +60,6 @@ function SyncBadge({ status }) {
 }
 
 function ConnectorCard({ connector, onToggle, onEdit, onDelete, isAdmin }) {
-  const sc = STATUS_CONFIG[connector.status] || STATUS_CONFIG.inactive;
-  const Icon = sc.icon;
   return (
     <div className={`rounded-xl border p-4 transition-all ${connector.is_enabled ? 'border-primary/30 bg-primary/5' : 'border-border bg-card'}`}>
       <div className="flex items-start justify-between mb-3">
@@ -112,7 +110,7 @@ function ConnectorCard({ connector, onToggle, onEdit, onDelete, isAdmin }) {
   );
 }
 
-function ListingCard({ listing, connectors, onEdit, selected, onSelect }) {
+function ListingCard({ listing, selected, onSelect }) {
   const AssetIcon = ASSET_ICONS[listing.asset_type] || Package;
   const syncs = listing.external_syndications || [];
   const syncedCount = syncs.filter(s => s.sync_status === 'synced').length;
@@ -302,7 +300,7 @@ function AddConnectorModal({ onClose, onSave }) {
 }
 
 // ─── CREATE LISTING MODAL ─────────────────────────────────────────────────────
-function CreateListingModal({ connectors, onClose, onSave }) {
+function CreateListingModal({ onClose, onSave }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={onClose}>
       <div className="w-full max-w-md bg-card rounded-t-2xl border-t border-border p-5 space-y-4 max-h-[85vh] overflow-y-auto"

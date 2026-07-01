@@ -52,7 +52,7 @@ const MOCK_TRANSACTIONS = [
 export default function TransactionHistory() {
   const { currentUser } = useAuth();
   const [wallets, setWallets] = useState([]);
-  const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS);
+  const [transactions] = useState(MOCK_TRANSACTIONS);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
 
