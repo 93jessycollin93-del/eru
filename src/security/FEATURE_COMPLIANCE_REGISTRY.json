@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "policy": "Every release-blocking feature must map to controls and be marked compliant before merge.",
+  "features": [
+    {
+      "id": "FEATURE-PHASE1-BASELINE",
+      "name": "Phase 1 baseline governance artifacts",
+      "release_blocking": true,
+      "controls": [
+        "ERU-CTRL-001",
+        "ERU-CTRL-002",
+        "ERU-CTRL-003",
+        "ERU-CTRL-004",
+        "ERU-CTRL-005",
+        "ERU-CTRL-006",
+        "ERU-CTRL-007",
+        "ERU-CTRL-008",
+        "ERU-CTRL-009",
+        "ERU-CTRL-010"
+      ],
+      "compliant": true,
+      "evidence": [
+        "Control matrix established",
+        "Boundary and data flow definitions documented",
+        "Cryptography architecture decisions documented",
+        "Incident and destruction controls documented",
+        "Acceptance gates and CI validator enabled"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "version": "1.0.0",
+  "phase": "Phase 1 — Security Baseline & Compliance Mapping",
+  "last_updated_utc": "2026-07-01T00:00:00Z",
+  "frameworks": [
+    "NIST SP 800-171",
+    "FIPS 140-3",
+    "FedRAMP IL5",
+    "DoD SRG"
+  ],
+  "controls": [
+    {
+      "id": "ERU-CTRL-001",
+      "title": "Data-at-rest cryptography baseline",
+      "status": "defined",
+      "owner": "Security Engineering",
+      "acceptance_gate_id": "GATE-CRYPTO-AT-REST",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.13.16" },
+        { "framework": "FIPS 140-3", "control": "Approved cryptographic modules" },
+        { "framework": "FedRAMP IL5", "control": "SC-28" },
+        { "framework": "DoD SRG", "control": "SC-28 / SC-13" }
+      ],
+      "requirement": "Classified and controlled data must use approved at-rest cryptography with key separation and integrity protection."
+    },
+    {
+      "id": "ERU-CTRL-002",
+      "title": "Data-in-transit cryptography baseline",
+      "status": "defined",
+      "owner": "Platform Security",
+      "acceptance_gate_id": "GATE-CRYPTO-IN-TRANSIT",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.13.8" },
+        { "framework": "FIPS 140-3", "control": "Approved key establishment" },
+        { "framework": "FedRAMP IL5", "control": "SC-8 / SC-12" },
+        { "framework": "DoD SRG", "control": "SC-8 / SC-12" }
+      ],
+      "requirement": "All network paths must enforce TLS 1.3+ with perfect forward secrecy and approved cipher suites."
+    },
+    {
+      "id": "ERU-CTRL-003",
+      "title": "Key lifecycle and custody",
+      "status": "defined",
+      "owner": "Crypto Operations",
+      "acceptance_gate_id": "GATE-KEY-LIFECYCLE",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.5.3 / 3.13.11" },
+        { "framework": "FIPS 140-3", "control": "Key generation, storage, rotation" },
+        { "framework": "FedRAMP IL5", "control": "SC-12 / SC-17" },
+        { "framework": "DoD SRG", "control": "IA-5 / SC-12" }
+      ],
+      "requirement": "All cryptographic keys require lifecycle control for generation, escrow policy, rotation, revocation, and destruction."
+    },
+    {
+      "id": "ERU-CTRL-004",
+      "title": "System boundary and enclave enforcement",
+      "status": "defined",
+      "owner": "Security Architecture",
+      "acceptance_gate_id": "GATE-BOUNDARY-ISOLATION",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.1.3 / 3.13.1" },
+        { "framework": "FedRAMP IL5", "control": "SC-7 / AC-4" },
+        { "framework": "DoD SRG", "control": "SC-7 boundary protection" }
+      ],
+      "requirement": "SIPR, NIPR, and offline execution paths must remain explicitly segmented and policy-enforced."
+    },
+    {
+      "id": "ERU-CTRL-005",
+      "title": "Data classification and handling",
+      "status": "defined",
+      "owner": "Information Assurance",
+      "acceptance_gate_id": "GATE-DATA-CLASSIFICATION",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.8.4 / 3.8.5" },
+        { "framework": "FedRAMP IL5", "control": "MP-4 / MP-5" },
+        { "framework": "DoD SRG", "control": "Data handling & media protection" }
+      ],
+      "requirement": "Data classes (public, CUI, secret, TS/SCI) must have explicit access, transport, storage, and destruction rules."
+    },
+    {
+      "id": "ERU-CTRL-006",
+      "title": "Incident detection and response orchestration",
+      "status": "defined",
+      "owner": "Security Operations",
+      "acceptance_gate_id": "GATE-INCIDENT-RESPONSE",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.6.1 / 3.6.2 / 3.6.3" },
+        { "framework": "FedRAMP IL5", "control": "IR-4 / IR-5" },
+        { "framework": "DoD SRG", "control": "IR family" }
+      ],
+      "requirement": "Detection-to-containment workflows must trigger immediate session controls, alerting, and forensic capture."
+    },
+    {
+      "id": "ERU-CTRL-007",
+      "title": "Immutable audit and chain-of-custody logging",
+      "status": "defined",
+      "owner": "Security Operations",
+      "acceptance_gate_id": "GATE-IMMUTABLE-AUDIT",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.3.1 / 3.3.2 / 3.3.6" },
+        { "framework": "FedRAMP IL5", "control": "AU-2 / AU-9 / AU-11" },
+        { "framework": "DoD SRG", "control": "AU family" }
+      ],
+      "requirement": "All security-sensitive actions must be logged as tamper-evident records with signed UTC timestamps."
+    },
+    {
+      "id": "ERU-CTRL-008",
+      "title": "Classified destruction and cryptographic erasure",
+      "status": "defined",
+      "owner": "Data Protection",
+      "acceptance_gate_id": "GATE-DESTRUCTION-POLICY",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.8.3 / 3.8.8" },
+        { "framework": "FedRAMP IL5", "control": "MP-6 / SI-12" },
+        { "framework": "DoD SRG", "control": "Media sanitization" }
+      ],
+      "requirement": "Data destruction requires enforceable sanitization policies, cryptographic shredding, and signed evidence."
+    },
+    {
+      "id": "ERU-CTRL-009",
+      "title": "Device trust and hardware root of trust",
+      "status": "defined",
+      "owner": "Endpoint Security",
+      "acceptance_gate_id": "GATE-DEVICE-ATTESTATION",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.1.20 / 3.1.12" },
+        { "framework": "FIPS 140-3", "control": "Hardware-backed key protection" },
+        { "framework": "FedRAMP IL5", "control": "IA-3 / IA-5 / CM-6" },
+        { "framework": "DoD SRG", "control": "IA / CM families" }
+      ],
+      "requirement": "Only attested, government-managed devices with validated hardware trust anchors can access sensitive vault operations."
+    },
+    {
+      "id": "ERU-CTRL-010",
+      "title": "Offline mode and operational continuity",
+      "status": "defined",
+      "owner": "Platform Engineering",
+      "acceptance_gate_id": "GATE-OFFLINE-OPERATIONS",
+      "framework_mappings": [
+        { "framework": "NIST SP 800-171", "control": "3.1.1 / 3.13.5" },
+        { "framework": "FedRAMP IL5", "control": "CP-2 / CP-10" },
+        { "framework": "DoD SRG", "control": "Contingency and continuity" }
+      ],
+      "requirement": "Air-gapped operations must preserve confidentiality and auditable synchronization while signaling offline state."
+    }
+  ]
+}

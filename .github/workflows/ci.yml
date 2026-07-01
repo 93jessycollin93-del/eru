@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Security compliance gate
+        run: npm run compliance:security
+
       # Informational only: the i18n hardcoded-string budget currently has a
       # few files over budget, so this is allowed to fail without blocking the
       # PR. Remove continue-on-error once the budgets are cleared.

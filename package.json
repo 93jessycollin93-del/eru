@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "lint:i18n": "node scripts/lint-i18n.mjs",
     "typecheck": "tsc -p ./jsconfig.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "compliance:security": "node scripts/validate-security-compliance.mjs"
   },
   "dependencies": {
     "@base44/sdk": "^0.8.34",
