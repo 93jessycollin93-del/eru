@@ -97,6 +97,7 @@ const Community = lazy(() => import('./pages/Community'));
 const SimTradingLab = lazy(() => import('./pages/SimTradingLab'));
 const MediaConverter = lazy(() => import('./pages/MediaConverter'));
 const BotForge = lazy(() => import('./pages/BotForge'));
+const BotStudio = lazy(() => import('./pages/BotStudio'));
 const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
 const Playlists = lazy(() => import('./pages/Playlists'));
 const PlaylistDetail = lazy(() => import('./pages/PlaylistDetail'));
@@ -222,6 +223,7 @@ const AuthenticatedApp = () => {
         <Route path="/community" element={<Community />} />
         <Route path="/bot-lab" element={<SimTradingLab />} />
         <Route path="/bot-forge" element={<BotForge />} />
+        <Route path="/bot-studio" element={<BotStudio />} />
         <Route path="/media-converter" element={<MediaConverter />} />
         <Route path="/music" element={<MediaLibrary />} />
         <Route path="/playlists" element={<Playlists />} />

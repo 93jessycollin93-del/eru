@@ -4,6 +4,7 @@ import {
   BarChart2, Wallet, ArrowUpDown, Image,
   Bot, Workflow, Plug, Cpu,
   Scale, TrendingUp, Repeat,
+  Brain, WifiOff,
 } from 'lucide-react';
 import HomeHero from '../components/home/HomeHero';
 import HomeSection from '../components/home/HomeSection';
@@ -96,6 +97,22 @@ export default function Home() {
             { icon: Repeat, title: 'Adapt', desc: 'Adjust strategies as conditions change.' },
           ]}
           cta={{ label: 'Open Performance', to: '/performance' }}
+        />
+
+        {/* OFFLINE AI STUDIO — local Ollama bots, memory pods, installable PWA */}
+        <HomeSection
+          eyebrow="Offline"
+          title="Offline AI Studio"
+          subtitle="Run AI bots & agents locally via Ollama — installable, works with no cloud."
+          Icon={Cpu}
+          accent="cyan"
+          half
+          steps={[
+            { icon: Cpu, title: 'Bots', desc: 'Create offline bots with avatars & memory pods.' },
+            { icon: Brain, title: 'Memory', desc: 'Compressed knowledge pods for context.' },
+            { icon: WifiOff, title: 'Offline', desc: 'Installable PWA, usable with no network.' },
+          ]}
+          cta={{ label: 'Open Bot Studio', to: '/bot-studio' }}
         />
 
         {/* ADVERTISING TEASER — small "coming soon" slogan strip at the bottom */}

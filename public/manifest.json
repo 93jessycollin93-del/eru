@@ -1,0 +1,25 @@
+{
+  "name": "Cybernetic67",
+  "short_name": "Cyber67",
+  "description": "Cybernetic67 — Telegram AI, digital assets, offline AI studio, and launch rewards.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070912",
+  "theme_color": "#070912",
+  "icons": [
+    {
+      "src": "https://media.base44.com/images/public/69cd26bdd3ed52f2bb2ce965/2f8859e04_generated_image.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/69cd26bdd3ed52f2bb2ce965/2f8859e04_generated_image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

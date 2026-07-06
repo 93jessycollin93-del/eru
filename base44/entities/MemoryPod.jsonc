@@ -1,0 +1,54 @@
+{
+  "name": "MemoryPod",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Pod name"
+    },
+    "description": {
+      "type": "string",
+      "default": "",
+      "description": "Short description"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "summary": {
+      "type": "string",
+      "default": "",
+      "description": "Compressed summary injected into bot context"
+    },
+    "raw_notes": {
+      "type": "string",
+      "default": "",
+      "description": "Full raw notes"
+    },
+    "token_estimate": {
+      "type": "number",
+      "default": 0,
+      "description": "Rough token estimate of summary"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

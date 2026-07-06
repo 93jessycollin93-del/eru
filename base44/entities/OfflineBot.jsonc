@@ -1,0 +1,75 @@
+{
+  "name": "OfflineBot",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Bot display name"
+    },
+    "avatar_image_url": {
+      "type": "string",
+      "description": "Uploaded avatar image URL (persisted)"
+    },
+    "role": {
+      "type": "string",
+      "default": "assistant",
+      "description": "Bot role label"
+    },
+    "system_prompt": {
+      "type": "string",
+      "default": "",
+      "description": "System prompt sent to Ollama"
+    },
+    "model": {
+      "type": "string",
+      "default": "llama3.2",
+      "description": "Ollama model name"
+    },
+    "temperature": {
+      "type": "number",
+      "default": 0.7
+    },
+    "top_p": {
+      "type": "number",
+      "default": 0.9
+    },
+    "max_tokens": {
+      "type": "number",
+      "default": 2048
+    },
+    "memory_pod_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Attached MemoryPod ids"
+    },
+    "is_agent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is an agent"
+    },
+    "tools_enabled": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

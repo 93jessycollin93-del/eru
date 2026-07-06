@@ -12,6 +12,7 @@ import BotWidget from './BotWidget';
 import ScreenVisualizer from './dashboard/ScreenVisualizer';
 import NotesWidgetMount from './notes/NotesWidgetMount';
 import PersistentPlayer from './media/PersistentPlayer';
+import OfflineBanner from './botstudio/OfflineBanner';
 import { playSound, getSoundPrefs, VIBRATE } from '../lib/soundEngine';
 
 // JackieFloat / FloatingQuickActions / BazarStandDock are intentionally NOT
@@ -129,6 +130,7 @@ export default function Layout() {
           className="sticky z-50 eru-theme-header eru-enter"
           style={{ top: 'env(safe-area-inset-top, 0px)' }}
         >
+          <OfflineBanner />
           <TickerBar />
         </div>
         <main className="flex-1 min-w-0 overflow-hidden">

@@ -1,0 +1,36 @@
+{
+  "name": "BotChat",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string",
+      "description": "Owning OfflineBot id"
+    },
+    "bot_name": {
+      "type": "string",
+      "description": "Snapshot of bot name"
+    },
+    "title": {
+      "type": "string",
+      "description": "Conversation title"
+    }
+  },
+  "required": [
+    "bot_id",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
