@@ -276,6 +276,74 @@
       margin-top: 12px;
     }
 
+    .light-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .light-info {
+      flex: 1;
+    }
+
+    .light-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .light-status {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .light-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      border: none;
+    }
+
+    .hue-discovery {
+      margin-bottom: 12px;
+    }
+
+    .hue-discovery button {
+      width: 100%;
+    }
+
     @media (prefers-color-scheme: dark) {
       :root {
         --bg: #1a1a1a;
@@ -297,6 +365,7 @@
     <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
     <button class="nav-tab" data-tab="sisters">Sisters</button>
     <button class="nav-tab" data-tab="thermal">Thermal</button>
+    <button class="nav-tab" data-tab="lights">Lights</button>
     <button class="nav-tab" data-tab="compression">Pods</button>
     <button class="nav-tab" data-tab="sync">Sync</button>
   </div>
@@ -378,9 +447,23 @@
       </div>
     </div>
 
-    <!-- Compression Tab -->
-    <div id="compression" class="tab-content">
-      <div id="compressionList"></div>
+    <!-- Smart Lights Tab -->
+    <div id="lights" class="tab-content">
+      <div class="hue-discovery">
+        <button onclick="discoverHueBridge()" style="width: 100%;">🔍 Discover Hue Bridge</button>
+      </div>
+      <div id="hueStatus" class="card" style="display: none;">
+        <div class="card-title">Hue Bridge Status</div>
+        <div class="stat-row">
+          <span class="stat-label">Connected</span>
+          <span class="stat-value" id="hueConnected">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Lights Found</span>
+          <span class="stat-value" id="hueCount">0</span>
+        </div>
+      </div>
+      <div id="lightsList"></div>
     </div>
 
     <!-- Sync Tab -->
@@ -506,6 +589,40 @@
       document.getElementById('compressionList').innerHTML = html;
     }
 
+    function updateHueStatus() {
+      const hueStatus = appState.data.hueStatus || { bridgeConnected: false, lights: [] };
+      const statusDiv = document.getElementById('hueStatus');
+      if (hueStatus.bridgeConnected || hueStatus.lights.length > 0) {
+        statusDiv.style.display = 'block';
+        document.getElementById('hueConnected').textContent = hueStatus.bridgeConnected ? '✓ Connected' : '✗ Discovering';
+        document.getElementById('hueCount').textContent = hueStatus.lights.length;
+        updateHueLights();
+      }
+    }
+
+    function updateHueLights() {
+      const lights = appState.data.hueStatus?.lights || [];
+      if (lights.length === 0) {
+        document.getElementById('lightsList').innerHTML = '';
+        return;
+      }
+
+      const html = lights.map(light => `
+        <div class="light-item">
+          <div class="light-info">
+            <div class="light-name">${light.name}</div>
+            <div class="light-status">${light.state.on ? '🟢 On' : '🔴 Off'}</div>
+            ${light.state.bri ? `<div class="light-controls">
+              <input type="range" min="0" max="254" value="${light.state.bri}" class="slider"
+                oninput="setBrightness(${light.id}, this.value)">
+            </div>` : ''}
+          </div>
+          <button onclick="toggleHueLight(${light.id})">${light.state.on ? 'Off' : 'On'}</button>
+        </div>
+      `).join('');
+      document.getElementById('lightsList').innerHTML = html;
+    }
+
     // Fetch data
     async function fetchData() {
       try {
@@ -518,6 +635,16 @@
         console.log('Offline:', err);
       }
       updateOnlineStatus();
+
+      // Fetch Hue status separately
+      try {
+        const hueResponse = await fetch('/api/hue/status');
+        const hueData = await hueResponse.json();
+        appState.data.hueStatus = hueData;
+        updateHueStatus();
+      } catch (err) {
+        console.log('Hue unavailable');
+      }
     }
 
     function updateUI() {
@@ -557,6 +684,55 @@
         fetchData();
       } catch (err) {
         console.log('Sync queued');
+      }
+    }
+
+    // Hue Functions
+    async function discoverHueBridge() {
+      try {
+        const response = await fetch('/api/hue/discover');
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Bridge discovered:', data.bridgeIp);
+          // Attempt authorization
+          const authResponse = await fetch('/api/hue/authorize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bridgeIp: data.bridgeIp })
+          });
+          if (authResponse.ok) {
+            fetchData();
+          }
+        }
+      } catch (err) {
+        alert('Bridge not found. Make sure it\'s on the same network.');
+        console.log('Discovery failed:', err);
+      }
+    }
+
+    async function toggleHueLight(id) {
+      try {
+        const response = await fetch(`/api/hue/lights/${id}/toggle`, { method: 'POST' });
+        if (response.ok) {
+          fetchData();
+        }
+      } catch (err) {
+        console.log('Toggle queued offline');
+      }
+    }
+
+    async function setBrightness(id, brightness) {
+      try {
+        const response = await fetch(`/api/hue/lights/${id}/brightness`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brightness: parseInt(brightness) })
+        });
+        if (response.ok) {
+          fetchData();
+        }
+      } catch (err) {
+        console.log('Brightness change queued offline');
       }
     }
 

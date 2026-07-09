@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
 import { v4 as uuid } from 'uuid';
+import hueService from './hue-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,6 +44,11 @@ let orchestrationState = {
     connected: false,
     lastSync: new Date(Date.now() - 3600000).toISOString(),
     pendingSync: 12,
+  },
+  hueStatus: {
+    bridgeConnected: false,
+    lights: [],
+    authorized: false,
   },
 };
 
@@ -131,6 +137,81 @@ app.get('/manifest.json', (req, res) => {
       },
     ],
   });
+});
+
+// Hue Smart Lights API
+app.get('/api/hue/discover', async (req, res) => {
+  try {
+    const bridgeIp = await hueService.discoverBridge();
+    orchestrationState.hueStatus.bridgeConnected = true;
+    res.json({ bridgeIp, status: 'discovered' });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.post('/api/hue/authorize', async (req, res) => {
+  try {
+    const { bridgeIp } = req.body;
+    const user = await hueService.createUser(bridgeIp);
+    orchestrationState.hueStatus.authorized = true;
+    res.json({ username: user, status: 'authorized' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/hue/lights', async (req, res) => {
+  try {
+    const lights = await hueService.getLights();
+    orchestrationState.hueStatus.lights = lights;
+    res.json({ lights });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/hue/lights/:id/toggle', async (req, res) => {
+  try {
+    const light = await hueService.toggleLight(req.params.id);
+    res.json({ success: true, light });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/hue/lights/:id/brightness', async (req, res) => {
+  try {
+    const { brightness } = req.body;
+    const light = await hueService.setBrightness(req.params.id, brightness);
+    res.json({ success: true, light });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/hue/lights/:id/color', async (req, res) => {
+  try {
+    const { x, y } = req.body;
+    const light = await hueService.setColor(req.params.id, x, y);
+    res.json({ success: true, light });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/hue/lights/:id/colortemp', async (req, res) => {
+  try {
+    const { ct } = req.body;
+    const light = await hueService.setColorTemp(req.params.id, ct);
+    res.json({ success: true, light });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/hue/status', (req, res) => {
+  res.json(orchestrationState.hueStatus);
 });
 
 // Catch-all for SPA routing
