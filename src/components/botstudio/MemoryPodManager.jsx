@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, Loader2, Brain, Wand2, Save } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 import * as store from '@/lib/botStudioStore';
 import { summarizeNotes, estimateTokens, getOllamaUrl, testConnection, friendlyOllamaError } from '@/lib/ollama';
 import { useOnline } from '@/lib/connectivity';

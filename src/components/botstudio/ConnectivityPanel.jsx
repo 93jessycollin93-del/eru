@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Cloud, Wifi, WifiOff, Bluetooth, RefreshCw, Loader2, CheckCircle2, XCircle, Cpu } from 'lucide-react';
-import { useOnline, useConnectionInfo, hasBluetooth, requestBluetoothDevice, getConnectionInfo } from '@/lib/connectivity';
+import { useOnline, useConnectionInfo, hasBluetooth, requestBluetoothDevice } from '@/lib/connectivity';
 import * as store from '@/lib/botStudioStore';
 import { toast } from 'sonner';
 
