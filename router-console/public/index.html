@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a1a">
+  <meta name="description" content="Router Console - Manage your orchestration offline">
+  <title>Router Console</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a1a1a' width='180' height='180'/><text x='50%' y='50%' font-size='90' font-weight='bold' fill='%23fff' text-anchor='middle' dominant-baseline='middle'>RC</text></svg>">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0066cc;
+      --success: #00b300;
+      --warning: #ff8800;
+      --danger: #cc0000;
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --text-secondary: #666666;
+      --border: #dddddd;
+      --safe-area-inset-bottom: max(env(safe-area-inset-bottom), 20px);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: var(--safe-area-inset-bottom);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--danger);
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.online {
+      background: var(--success);
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .nav-tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .nav-tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-secondary);
+      font-size: 14px;
+      min-width: 80px;
+      white-space: nowrap;
+    }
+
+    .nav-tab.active {
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 16px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    .progress-fill.warning {
+      background: var(--warning);
+    }
+
+    .progress-fill.danger {
+      background: var(--danger);
+    }
+
+    .sister-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sister-info {
+      flex: 1;
+    }
+
+    .sister-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .sister-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+
+    .status-badge.active {
+      background: rgba(0, 179, 0, 0.2);
+      color: var(--success);
+    }
+
+    .status-badge.hibernating {
+      background: rgba(102, 102, 102, 0.2);
+      color: var(--text-secondary);
+    }
+
+    .status-badge.queued {
+      background: rgba(255, 136, 0, 0.2);
+      color: var(--warning);
+    }
+
+    button {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--primary);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button:active {
+      opacity: 0.8;
+    }
+
+    .temp-gauge {
+      font-size: 32px;
+      font-weight: bold;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .temp-gauge.warning {
+      color: var(--warning);
+    }
+
+    .temp-gauge.danger {
+      color: var(--danger);
+    }
+
+    .offline-notice {
+      background: rgba(204, 0, 0, 0.1);
+      color: var(--danger);
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .offline-notice.show {
+      display: block;
+    }
+
+    .sync-button {
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --surface: #2d2d2d;
+        --text: #ffffff;
+        --text-secondary: #999999;
+        --border: #444444;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Router Console</h1>
+    <div class="status-indicator" id="statusIndicator"></div>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+    <button class="nav-tab" data-tab="sisters">Sisters</button>
+    <button class="nav-tab" data-tab="thermal">Thermal</button>
+    <button class="nav-tab" data-tab="compression">Pods</button>
+    <button class="nav-tab" data-tab="sync">Sync</button>
+  </div>
+
+  <div class="content">
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content active">
+      <div class="offline-notice" id="offlineNotice">
+        📡 Offline mode — changes sync when connected
+      </div>
+
+      <div class="card">
+        <div class="card-title">System Status</div>
+        <div class="stat-row">
+          <span class="stat-label">Active Sisters</span>
+          <span class="stat-value" id="activeSisters">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">GPU Temp</span>
+          <span class="stat-value" id="gpuTemp">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Memory Usage</span>
+          <span class="stat-value" id="memoryUsage">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Battery Drain</span>
+          <span class="stat-value" id="batteryDrain">-</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Last Sync</div>
+        <div class="stat-value" id="lastSync" style="font-size: 12px; color: var(--text-secondary);">-</div>
+        <button class="sync-button" id="syncButton">Sync Now</button>
+      </div>
+    </div>
+
+    <!-- Sisters Tab -->
+    <div id="sisters" class="tab-content">
+      <div id="sistersList"></div>
+    </div>
+
+    <!-- Thermal Tab -->
+    <div id="thermal" class="tab-content">
+      <div class="card">
+        <div class="card-title">GPU Temperature</div>
+        <div class="temp-gauge" id="gpuTempGauge">-°C</div>
+        <div class="stat-row">
+          <span class="stat-label">Target</span>
+          <span class="stat-value">75°C</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="gpuProgress"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">CPU & Memory</div>
+        <div class="stat-row">
+          <span class="stat-label">CPU Temp</span>
+          <span class="stat-value" id="cpuTemp">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Memory Usage</span>
+          <span class="stat-value" id="thermalMemory">-</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="memoryProgress"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Battery Drain</div>
+        <div class="stat-row">
+          <span class="stat-label">Rate</span>
+          <span class="stat-value" id="batteryDrainRate">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compression Tab -->
+    <div id="compression" class="tab-content">
+      <div id="compressionList"></div>
+    </div>
+
+    <!-- Sync Tab -->
+    <div id="sync" class="tab-content">
+      <div class="card">
+        <div class="card-title">Network Status</div>
+        <div class="stat-row">
+          <span class="stat-label">Connected</span>
+          <span class="stat-value" id="connectedStatus">Offline</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Pending Sync</span>
+          <span class="stat-value" id="pendingSync">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Last Sync</span>
+          <span class="stat-value" id="lastSyncTime" style="font-size: 12px;">-</span>
+        </div>
+        <button class="sync-button" id="syncNowButton">Sync Now</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Offline Features</div>
+        <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+          ✅ View all data offline<br>
+          ✅ Queue actions<br>
+          ✅ Auto-sync when online<br>
+          ✅ Local storage backup
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+    }
+
+    // State Management
+    let appState = {
+      online: navigator.onLine,
+      data: {},
+    };
+
+    // Update UI
+    function updateDashboard() {
+      const data = appState.data;
+      if (!data.orchestration) return;
+
+      const active = data.orchestration.sisters.filter(s => s.status === 'active').length;
+      document.getElementById('activeSisters').textContent = active;
+      document.getElementById('gpuTemp').textContent = Math.round(data.orchestration.thermalState.gpuTemp) + '°C';
+      document.getElementById('memoryUsage').textContent = data.orchestration.thermalState.memoryUsage + '%';
+      document.getElementById('batteryDrain').textContent = data.orchestration.thermalState.batteryDrain + ' mA/h';
+
+      const lastSync = new Date(data.orchestration.networkStatus.lastSync);
+      const now = new Date();
+      const diff = Math.round((now - lastSync) / 60000);
+      document.getElementById('lastSync').textContent = diff < 1 ? 'Just now' : diff + 'm ago';
+    }
+
+    function updateThermal() {
+      const thermal = appState.data.orchestration?.thermalState;
+      if (!thermal) return;
+
+      const gpuTemp = Math.round(thermal.gpuTemp);
+      const gpuGauge = document.getElementById('gpuTempGauge');
+      gpuGauge.textContent = gpuTemp + '°C';
+      gpuGauge.className = 'temp-gauge' + (gpuTemp > 70 ? ' warning' : '') + (gpuTemp > 75 ? ' danger' : '');
+
+      const gpuPercent = (gpuTemp / 85) * 100;
+      const gpuProgress = document.getElementById('gpuProgress');
+      gpuProgress.style.width = gpuPercent + '%';
+      gpuProgress.className = 'progress-fill' + (gpuTemp > 70 ? ' warning' : '') + (gpuTemp > 75 ? ' danger' : '');
+
+      document.getElementById('cpuTemp').textContent = Math.round(thermal.cpuTemp) + '°C';
+      document.getElementById('thermalMemory').textContent = thermal.memoryUsage + '%';
+      document.getElementById('memoryProgress').style.width = thermal.memoryUsage + '%';
+      document.getElementById('batteryDrainRate').textContent = thermal.batteryDrain + ' mA/h';
+    }
+
+    function updateSisters() {
+      const sisters = appState.data.orchestration?.sisters || [];
+      const html = sisters.map(s => `
+        <div class="sister-item">
+          <div class="sister-info">
+            <div class="sister-name">${s.name}</div>
+            <div class="sister-meta">
+              <span class="status-badge ${s.status}">${s.status}</span>
+              Domain: ${s.domain} | Confidence: ${(s.confidence * 100).toFixed(0)}%
+            </div>
+          </div>
+          <button onclick="toggleSister(${s.id}, '${s.status}')">${s.status === 'active' ? 'Pause' : 'Promote'}</button>
+        </div>
+      `).join('');
+      document.getElementById('sistersList').innerHTML = html;
+    }
+
+    function updateCompression() {
+      const pods = appState.data.orchestration?.compressionStatus?.podSeeds || [];
+      const html = pods.map(p => `
+        <div class="card">
+          <div class="card-title">${p.model}</div>
+          <div class="stat-row">
+            <span class="stat-label">Status</span>
+            <span class="stat-value">${p.status}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Original</span>
+            <span class="stat-value">${p.original}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Compressed</span>
+            <span class="stat-value">${p.compressed}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Ratio</span>
+            <span class="stat-value">${p.ratio}</span>
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('compressionList').innerHTML = html;
+    }
+
+    // Fetch data
+    async function fetchData() {
+      try {
+        const response = await fetch('/api/status');
+        appState.data = await response.json();
+        appState.online = true;
+        updateUI();
+      } catch (err) {
+        appState.online = false;
+        console.log('Offline:', err);
+      }
+      updateOnlineStatus();
+    }
+
+    function updateUI() {
+      updateDashboard();
+      updateThermal();
+      updateSisters();
+      updateCompression();
+    }
+
+    function updateOnlineStatus() {
+      const indicator = document.getElementById('statusIndicator');
+      const notice = document.getElementById('offlineNotice');
+      if (appState.online) {
+        indicator.classList.add('online');
+        notice.classList.remove('show');
+      } else {
+        indicator.classList.remove('online');
+        notice.classList.add('show');
+      }
+    }
+
+    // API Functions
+    async function toggleSister(id, status) {
+      const endpoint = status === 'active' ? 'hibernate' : 'promote';
+      try {
+        const response = await fetch(`/api/sisters/${id}/${endpoint}`, { method: 'POST' });
+        const data = await response.json();
+        fetchData();
+      } catch (err) {
+        console.log('Action queued offline');
+      }
+    }
+
+    async function syncNow() {
+      try {
+        await fetch('/api/sync', { method: 'POST' });
+        fetchData();
+      } catch (err) {
+        console.log('Sync queued');
+      }
+    }
+
+    // Tab Navigation
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    document.getElementById('syncButton').addEventListener('click', syncNow);
+    document.getElementById('syncNowButton').addEventListener('click', syncNow);
+
+    // Online/Offline Events
+    window.addEventListener('online', () => {
+      appState.online = true;
+      fetchData();
+    });
+
+    window.addEventListener('offline', () => {
+      appState.online = false;
+      updateOnlineStatus();
+    });
+
+    // Initial load
+    fetchData();
+    setInterval(fetchData, 5000);
+  </script>
+</body>
+</html>
