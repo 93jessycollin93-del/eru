@@ -158,6 +158,7 @@ function QuickLinks() {
   const links = [
     { to: '/admin/review', label: 'Admin Review Center', desc: 'Portals, moderation, audit ring' },
     { to: '/security-dashboard', label: 'Live audit log', desc: 'SecurityAuditLog feed' },
+    { to: '/admin/secure-slice', label: 'Secure Slice Lab', desc: 'Encrypted vault + lockout/wipe controls' },
     { to: '/role-management', label: 'Role management', desc: 'Custom roles & assignments' },
     { to: '/audit', label: 'Activity audit log', desc: 'Recent platform activity' },
   ];

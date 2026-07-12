@@ -80,6 +80,7 @@ const PhoenixInvestor = lazy(() => import('./pages/PhoenixInvestor'));
 const AdminReviewCenter = lazy(() => import('./pages/AdminReviewCenter'));
 const SecurityCommandCenter = lazy(() => import('./pages/SecurityCommandCenter'));
 const SecurityTestRunner = lazy(() => import('./pages/SecurityTestRunner'));
+const SecureSliceLab = lazy(() => import('./pages/SecureSliceLab'));
 const LanguageDiagnostics = lazy(() => import('./pages/LanguageDiagnostics'));
 const AdminBazarProducts = lazy(() => import('./pages/AdminBazarProducts'));
 const PlayerProgress = lazy(() => import('./pages/PlayerProgress'));
@@ -208,6 +209,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/review" element={<AdminReviewCenter />} />
         <Route path="/admin/security" element={<SecurityCommandCenter />} />
         <Route path="/admin/security-test" element={<SecurityTestRunner />} />
+        <Route path="/admin/secure-slice" element={<SecureSliceLab />} />
         <Route path="/language-diagnostics" element={<LanguageDiagnostics />} />
         <Route path="/player-progress" element={<PlayerProgress />} />
         <Route path="/lore-insights" element={<LoreInsights />} />
