@@ -7,6 +7,7 @@ import BotEditor from '@/components/botstudio/BotEditor';
 import BotChatPanel from '@/components/botstudio/BotChatPanel';
 import MemoryPodManager from '@/components/botstudio/MemoryPodManager';
 import ConnectivityPanel from '@/components/botstudio/ConnectivityPanel';
+import ConnectionStatus from '@/components/botstudio/ConnectionStatus';
 import { useOnline } from '@/lib/connectivity';
 import * as store from '@/lib/botStudioStore';
 import { toast } from 'sonner';
@@ -107,6 +108,7 @@ export default function BotStudio() {
         </div>
 
         <div className="mt-3 space-y-3">
+          <ConnectionStatus />
           <OllamaConfig onModels={setModels} />
 
           {/* Tabs */}
