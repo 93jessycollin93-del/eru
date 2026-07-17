@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Eye, EyeOff, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
 export default function Register() {
   const [step, setStep] = useState('register'); // 'register' | 'otp'
