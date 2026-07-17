@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Cpu, Brain, Plug, ArrowLeft, Plus, Pencil, Copy, Trash2 } from 'lucide-react';
+import { Cpu, Brain, Plug, ArrowLeft } from 'lucide-react';
 import OllamaConfig from '@/components/botstudio/OllamaConfig';
 import BotGallery from '@/components/botstudio/BotGallery';
 import BotEditor from '@/components/botstudio/BotEditor';
