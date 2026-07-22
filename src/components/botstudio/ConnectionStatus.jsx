@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Cloud, RefreshCw, Loader2, CheckCircle2, XCircle, Wifi, WifiOff, CloudOff } from 'lucide-react';
+import { Cloud, RefreshCw, Loader2, CheckCircle2, Wifi, WifiOff, CloudOff } from 'lucide-react';
 import { useOnline } from '@/lib/connectivity';
 import * as store from '@/lib/botStudioStore';
 
