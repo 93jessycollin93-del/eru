@@ -14,7 +14,7 @@
     "compliance:security": "node scripts/validate-security-compliance.mjs"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.39",
+    "@base44/sdk": "^0.8.40",
     "@base44/vite-plugin": "^1.0.30",
     "@codemirror/lang-javascript": "^6.2.5",
     "@hello-pangea/dnd": "^17.0.0",
