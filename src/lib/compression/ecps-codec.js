@@ -11,13 +11,10 @@
  * 5. QR Theory Parity (lossless recovery layer)
  */
 
-// Try to load zstd, fall back to LZ4 if unavailable
-let zstdModule = null;
-try {
-  zstdModule = require('zstd');
-} catch (e) {
-  console.warn('[ECPS] Zstd module not available, will use LZ4 fallback');
-}
+// Zstd is a Node-only native module and is not available in the browser
+// ESM bundle. The codec falls back to its pure-JS LZ4 path automatically
+// whenever zstdModule is null — so we simply leave it null here.
+const zstdModule = null;
 
 class ECPSCodec {
   constructor(modelName = 'mistral-7b', useZstd = true) {
@@ -79,7 +76,7 @@ class ECPSCodec {
     }
 
     try {
-      const deltaBytes = Buffer.from(new Uint8Array(deltas));
+      const deltaBytes = new Uint8Array(deltas);
       const compressed = zstdModule.compress(deltaBytes, 1);  // Level 1 = balanced
 
       const compressedArray = Array.from(new Uint8Array(compressed));
@@ -288,7 +285,7 @@ class ECPSCodec {
     }
 
     try {
-      const compressedBuffer = Buffer.from(new Uint8Array(compressed));
+      const compressedBuffer = new Uint8Array(compressed);
       const decompressed = zstdModule.decompress(compressedBuffer);
       const decompressedArray = Array.from(new Uint8Array(decompressed));
 
@@ -443,7 +440,6 @@ class ECPSCodec {
   }
 }
 
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ECPSCodec };
-}
+// ESM exports (Vite browser bundle)
+export { ECPSCodec };
+export default ECPSCodec;

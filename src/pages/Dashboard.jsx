@@ -29,6 +29,7 @@ import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import PullToRefresh from '../components/mobile/PullToRefresh';
 import TelegramRevenuePanel from '../components/dashboard/TelegramRevenuePanel';
 import TelegramKnowledgeGapPanel from '../components/dashboard/TelegramKnowledgeGapPanel';
+import SyncHealthWidget from '../components/dashboard/SyncHealthWidget';
 export default function Dashboard() {
   useFeatureTracking('Dashboard');
   const { t } = useLanguage();
@@ -89,6 +90,7 @@ export default function Dashboard() {
         </div>
         <div className="px-4 pt-4 space-y-4">
           <EruHero />
+          <SyncHealthWidget />
         </div>
         <PortfolioSummary />
         <QuickActions />
