@@ -1,5 +1,3 @@
-import { Bot, Flag, Activity, Radio } from 'lucide-react';
-
 const TONES = {
   cyan: 'text-cyan-300',
   emerald: 'text-emerald-300',
