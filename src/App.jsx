@@ -39,6 +39,7 @@ const TelegramApps = lazy(() => import('./pages/TelegramApps'));
 const TelegramBotManagement = lazy(() => import('./pages/TelegramBotManagement'));
 const JackieAI = lazy(() => import('./pages/JackieAI'));
 const AILab = lazy(() => import('./pages/AILab'));
+const JackyLive = lazy(() => import('./pages/JackyLive'));
 const APIKeys = lazy(() => import('./pages/APIKeys'));
 const SystemBuilder = lazy(() => import('./pages/SystemBuilder'));
 const Pipeline = lazy(() => import('./pages/Pipeline'));
@@ -150,6 +151,7 @@ const AuthenticatedApp = () => {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/jacky-live" element={<JackyLive />} />
         <Route path="/markets" element={<Markets />} />
         <Route path="/trade" element={<Trade />} />
         <Route path="/nfts" element={<NFTs />} />
