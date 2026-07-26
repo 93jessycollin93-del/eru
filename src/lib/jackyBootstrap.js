@@ -27,11 +27,21 @@ export function bootstrapJacky() {
     // The SDK can only issue POSTs, so the engine path and method ride in the
     // body. `path` arrives as `/api/status`; jackyProxy also accepts the bare
     // `status` spelling JackyLive uses and normalizes both.
-    const raw = await base44.functions.invoke('jackyProxy', {
-      path,
-      method: init.method,
-      body: init.body,
-    });
+    let raw;
+    try {
+      raw = await base44.functions.invoke('jackyProxy', {
+        path,
+        method: init.method,
+        body: init.body,
+      });
+    } catch (err) {
+      // invoke() is axios-based: it REJECTS on any non-2xx, so every deliberate
+      // error jackyProxy returns (403 not allowlisted, 503 missing secret, 504
+      // timeout) arrives here rather than in the success path. Without this,
+      // those messages are replaced by a generic "status code 403".
+      const relayed = err?.response?.data;
+      throw new Error(relayed?.error || relayed?.detail || err?.message || 'jackyProxy invoke failed');
+    }
 
     if (raw?.error) throw new Error(raw.error.message || 'jackyProxy invoke failed');
 

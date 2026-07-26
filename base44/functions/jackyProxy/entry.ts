@@ -86,6 +86,13 @@ function canonicalizePath(raw: string): string {
   return `/api/${trimmed.replace(/^api\//, '')}`;
 }
 
+/**
+ * Paths that change engine state rather than read it, and so need more than a
+ * logged-in caller. `/api/control` is the engine's master on/off switch —
+ * being authenticated shouldn't be enough to flip it for everyone.
+ */
+const ADMIN_ONLY = new Set(['/api/control']);
+
 /** Reads default fast; inference needs room to think. */
 const READ_TIMEOUT_MS = 8_000;
 const INFERENCE_TIMEOUT_MS = 60_000;
@@ -149,6 +156,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Authentication is not authorization: `auth.me()` only proves the caller is
+    // logged in, and the engine's master switch affects every user.
+    if (ADMIN_ONLY.has(enginePath) && user.role !== 'admin') {
+      return envelope(false, 403, {
+        error: 'Admin role required',
+        detail: `${enginePath} changes engine state for everyone, so it is restricted to admins.`,
+      });
+    }
+
     // The method the ENGINE should see, which is not always this request's own.
     const method =
       String(payload.method || '').toUpperCase() === 'POST' ||
@@ -184,7 +200,10 @@ Deno.serve(async (req) => {
       try {
         data = JSON.parse(text);
       } catch {
-        data = { raw: text.slice(0, 2_000) };
+        // Don't echo the upstream body back. A misconfigured tunnel typically
+        // answers with someone else's HTML error page, and any logged-in user
+        // can reach this relay — the status code is enough to diagnose from.
+        data = { error: 'Engine returned a non-JSON response' };
       }
       // Pass the engine's own status through, so a broken tunnel and an engine
       // that answered with an error stay distinguishable.
@@ -204,9 +223,9 @@ Deno.serve(async (req) => {
       clearTimeout(timer);
     }
   } catch (e) {
-    return envelope(false, 500, {
-      error: 'jacky proxy error',
-      detail: String((e as Error)?.message || e),
-    });
+    // Logged for the operator, not returned: an unexpected throw here comes from
+    // the SDK or auth layer and its message can carry internal detail.
+    console.error('jackyProxy unhandled error:', e);
+    return envelope(false, 500, { error: 'jacky proxy error' });
   }
 });
