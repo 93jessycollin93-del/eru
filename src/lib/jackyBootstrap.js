@@ -25,21 +25,31 @@ export function bootstrapJacky() {
 
   jackyClient.setProxyInvoker(async (path, init) => {
     // The SDK can only issue POSTs, so the engine path and method ride in the
-    // body — the envelope shape jackyProxy expects.
-    const { data, error } = await base44.functions.invoke('jackyProxy', {
+    // body. `path` arrives as `/api/status`; jackyProxy also accepts the bare
+    // `status` spelling JackyLive uses and normalizes both.
+    const raw = await base44.functions.invoke('jackyProxy', {
       path,
       method: init.method,
       body: init.body,
     });
 
-    if (error) throw new Error(error.message || 'jackyProxy invoke failed');
-    // The proxy passes engine-level errors through in the payload rather than
-    // as a transport failure; surface them as thrown errors so jackyClient
-    // flips the link state instead of handing a bad payload to a dashboard.
-    if (data && typeof data === 'object' && 'error' in data && data.error) {
-      throw new Error(String(data.error));
+    if (raw?.error) throw new Error(raw.error.message || 'jackyProxy invoke failed');
+
+    // Unwrap to the engine payload. Base44 may hand back the function body
+    // directly or nested under `data`, and the function itself answers with a
+    // { ok, status, data } envelope — so peel at most two layers, the same way
+    // JackyLive.jsx does.
+    let env = raw?.data ?? raw;
+    if (env?.data && (env.data.ok !== undefined || env.data.data !== undefined)) {
+      env = env.data;
     }
-    return data;
+
+    // Surface engine-level failures as thrown errors so jackyClient flips the
+    // link state rather than handing a bad payload to a dashboard.
+    if (env?.ok === false) {
+      throw new Error(env.error || `jacky ${path} → HTTP ${env.status || '??'}`);
+    }
+    return env?.data ?? env;
   });
 
   return jackyClient;
