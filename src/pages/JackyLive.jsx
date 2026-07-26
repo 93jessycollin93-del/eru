@@ -5,7 +5,7 @@
 // orders through /api/ask. Falls back to a labelled DEMO when the backend isn't
 // linked (JACKY_API_BASE secret unset / unreachable).
 import { useEffect, useRef, useState } from 'react';
-import { Radio, Thermometer, Cpu, Activity, Zap, Send } from 'lucide-react';
+import { Radio, Thermometer, Cpu, Activity, Zap, Send, Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -62,6 +62,7 @@ export default function JackyLive() {
   const [verdict, setVerdict] = useState('');
   const [prompt, setPrompt] = useState('');
   const [asking, setAsking] = useState(false);
+  const [squadBusy, setSquadBusy] = useState(false);
   const [log, setLog] = useState([
     { who: 'system', text: 'Jacky Live console — link the backend (JACKY_API_BASE secret) to go live.' },
   ]);
@@ -108,6 +109,27 @@ export default function JackyLive() {
   useEffect(() => {
     if (logEnd.current) logEnd.current.scrollIntoView({ behavior: 'smooth' });
   }, [log]);
+
+  async function dispatchSquad(squad) {
+    const text = prompt.trim();
+    if (!text || squadBusy) return;
+    setLog((l) => [...l, { who: 'you', text: `[${squad}] ${text}` }]);
+    setSquadBusy(true);
+    try {
+      const r = await callJacky(`squads/${squad}/ask`, 'POST', { prompt: text });
+      setLog((l) => [
+        ...l,
+        { who: 'jackie', text: (r && r.response) || '(no response)' },
+        { who: 'system', text: `↳ ${squad} squad lead${r && r.model ? ' · ' + r.model : ''}` },
+      ]);
+      setLive(true);
+    } catch (e) {
+      setLog((l) => [...l, { who: 'system', text: `⚠ ${squad} squad unreachable (${e.message})` }]);
+      setLive(false);
+    } finally {
+      setSquadBusy(false);
+    }
+  }
 
   const tier = tierFor(sit.gpu, sit.cpu, sit.ram);
 
@@ -184,6 +206,20 @@ export default function JackyLive() {
             <Input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="issue an order — routed local→free→paid by the 3090's temp…" disabled={asking} />
             <Button type="submit" disabled={asking || !prompt.trim()}>{asking ? '…' : 'Send'}</Button>
           </form>
+        </Card>
+
+        <Card className="p-4">
+          <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+            <Users className="h-4 w-4" /> Dispatch to Squad
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {['coding', 'security', 'archivist'].map((sq) => (
+              <Button key={sq} variant="outline" size="sm" disabled={squadBusy || !prompt.trim()} onClick={() => dispatchSquad(sq)}>
+                {sq}
+              </Button>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">Sends the box above to the squad lead (memory-aware) via /api/squads.</p>
         </Card>
       </div>
     </div>
