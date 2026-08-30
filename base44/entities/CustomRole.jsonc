@@ -80,16 +80,9 @@
       }
     },
     "delete": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "can_be_deleted": true
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }

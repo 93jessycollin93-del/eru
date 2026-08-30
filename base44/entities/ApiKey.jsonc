@@ -84,7 +84,6 @@
       ]
     },
     "delete": {
-      "style": "user_condition",
       "$or": [
         {
           "created_by_id": "{{user.id}}"

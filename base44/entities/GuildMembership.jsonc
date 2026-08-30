@@ -58,13 +58,13 @@
   ],
   "rls": {
     "create": {
-      "user_email": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
-    "read": {},
+    "read": null,
     "update": {
       "$or": [
         {
-          "user_email": "{{user.email}}"
+          "data.user_email": "{{user.email}}"
         },
         {
           "user_condition": {
@@ -76,7 +76,7 @@
     "delete": {
       "$or": [
         {
-          "user_email": "{{user.email}}"
+          "data.user_email": "{{user.email}}"
         },
         {
           "user_condition": {

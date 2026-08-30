@@ -39,9 +39,9 @@
   ],
   "rls": {
     "create": {
-      "user_email": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
-    "read": {},
+    "read": null,
     "update": {
       "user_condition": {
         "role": "admin"
