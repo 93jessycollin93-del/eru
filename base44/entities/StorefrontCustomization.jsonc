@@ -140,10 +140,10 @@
     "read": {
       "$or": [
         {
-          "visibility": "public"
+          "data.visibility": "public"
         },
         {
-          "owner_email": "{{user.email}}"
+          "data.owner_email": "{{user.email}}"
         },
         {
           "user_condition": {

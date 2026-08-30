@@ -225,10 +225,10 @@
     "read": {
       "$or": [
         {
-          "created_by": "{{user.email}}"
+          "created_by_id": "{{user.id}}"
         },
         {
-          "is_public": true
+          "data.is_public": true
         }
       ]
     },
