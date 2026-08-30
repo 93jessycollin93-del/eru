@@ -138,12 +138,12 @@
   ],
   "rls": {
     "create": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
     "read": {
       "$or": [
         {
-          "buyer_email": "{{user.email}}"
+          "data.buyer_email": "{{user.email}}"
         },
         {
           "user_condition": {
