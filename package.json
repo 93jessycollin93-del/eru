@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@base44/sdk": "^0.8.44",
-    "@base44/vite-plugin": "^1.0.33",
+    "@base44/vite-plugin": "^1.0.34",
     "@codemirror/lang-javascript": "^6.2.5",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
