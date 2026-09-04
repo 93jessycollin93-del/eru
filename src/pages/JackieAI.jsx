@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, FlaskConical, Key, Send } from 'lucide-react';
+import { Bot, FlaskConical, Key, Send, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import JackieHeader from '../components/jackie/JackieHeader';
@@ -81,6 +81,14 @@ const THINK_MODES = [
   { id: 'explainer', label: 'Explainer',  emoji: '📖', color: 'text-green-400',  desc: 'Simple, clear breakdowns',         prompt: 'THINK MODE: EXPLAINER — Break down every concept into the simplest possible terms. Use analogies, bullet points, and examples. Assume no prior knowledge.' },
 ];
 
+const MODES = [
+  { id: 'chat', label: 'Chat' },
+  { id: 'code', label: 'Code' },
+  { id: 'visual', label: 'Visual' },
+  { id: 'builder', label: 'Builder' },
+  { id: 'conversion', label: 'Convert' },
+];
+
 export default function JackieAI() {
   const navigate = useNavigate();
   const jackieProgressEntity = base44.entities?.JackieProgress || null;
@@ -94,6 +102,7 @@ export default function JackieAI() {
   const [mode, setMode] = useState('chat');
   const [tab, setTab] = useState('main');
   const [showCommands, setShowCommands] = useState(false);
+  const [showChats, setShowChats] = useState(false);
   const [workingContext, setWorkingContext] = useState('');
   const [voice, setVoice] = useState('default');
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -447,61 +456,126 @@ export default function JackieAI() {
 
       {tab === 'main' && (
         <>
-          <div className="flex flex-1 flex-col md:flex-row min-h-0">
-            <ConversationSidebar
-              messages={messages}
-              onLoadConversation={loadConversation}
-              onNewConversation={clearChat}
-            />
+          <div className="flex flex-1 min-h-0">
+            {/* Left rail — Cursor-style: mode selector + conversations */}
+            <aside className="hidden md:flex md:w-72 md:min-w-72 flex-col border-r border-border bg-card/40">
+              <div className="flex flex-wrap gap-1.5 px-3 py-2.5 border-b border-border/50">
+                {MODES.map(m => (
+                  <button key={m.id} onClick={() => setMode(m.id)}
+                    className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${mode === m.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary text-muted-foreground border-border hover:border-primary/30'}`}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ConversationSidebar
+                  messages={messages}
+                  onLoadConversation={loadConversation}
+                  onNewConversation={clearChat}
+                />
+              </div>
+            </aside>
 
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              {messages.length === 0 ? (
-                <WelcomeScreen mode={mode} onSend={(s) => setInput(s)} />
-              ) : (
-                messages.map((m, i) => (
-                  <MessageBubble
-                    key={i}
-                    message={m}
-                    onSave={handleSave}
-                    onRefine={handleRefine}
-                    onInject={handleInjectAsset}
+            {/* Center — Lovable-style: centered thread */}
+            <main className="flex-1 flex flex-col min-w-0">
+              {/* Mobile mode pills + chats toggle */}
+              <div className="md:hidden flex items-center gap-1.5 px-4 py-2 border-b border-border/50 overflow-x-auto">
+                {MODES.map(m => (
+                  <button key={m.id} onClick={() => setMode(m.id)}
+                    className={`flex-shrink-0 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-all ${mode === m.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary text-muted-foreground border-border'}`}>
+                    {m.label}
+                  </button>
+                ))}
+                <button onClick={() => setShowChats(p => !p)}
+                  className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium border bg-secondary text-muted-foreground border-border">
+                  <MessageSquare className="w-3 h-3" /> Chats
+                </button>
+              </div>
+
+              {/* Mobile conversations panel */}
+              {showChats && (
+                <div className="md:hidden border-b border-border max-h-[40vh] overflow-y-auto">
+                  <ConversationSidebar
+                    messages={messages}
+                    onLoadConversation={(c) => { loadConversation(c); setShowChats(false); }}
+                    onNewConversation={() => { clearChat(); setShowChats(false); }}
                   />
-                ))
-              )}
-
-              {foundryPreview && (
-                <FoundryControlPanel
-                  preview={foundryPreview}
-                  onConfirm={applyFoundryPreview}
-                  onDiscard={discardFoundryPreview}
-                  busy={applyingFoundry}
-                />
-              )}
-
-              {(mode === 'code' || workspaceCode) && (
-                <CodeWorkspace
-                  content={workspaceCode || workingContext}
-                  onInject={setWorkspaceCode}
-                  onSave={handleSave}
-                />
-              )}
-
-              <TelegramBotSetupPanel onOpenManagement={() => navigate('/telegram-bots')} />
-
-              {loading && (
-                <div className="flex justify-start gap-2">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-3 h-3 text-primary" />
-                  </div>
-                  <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
                 </div>
               )}
-              <div ref={bottomRef} />
-            </div>
+
+              <div className="flex-1 overflow-y-auto">
+                <div className="mx-auto w-full max-w-3xl px-4 py-4 space-y-4">
+                  {messages.length === 0 ? (
+                    <WelcomeScreen mode={mode} onSend={(s) => setInput(s)} />
+                  ) : (
+                    messages.map((m, i) => (
+                      <MessageBubble
+                        key={i}
+                        message={m}
+                        onSave={handleSave}
+                        onRefine={handleRefine}
+                        onInject={handleInjectAsset}
+                      />
+                    ))
+                  )}
+                  {loading && (
+                    <div className="flex justify-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-3 h-3 text-primary" />
+                      </div>
+                      <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  )}
+                  <div ref={bottomRef} />
+                </div>
+              </div>
+            </main>
+
+            {/* Right panel — workspace/preview (desktop) */}
+            <aside className="hidden lg:flex lg:w-96 lg:min-w-96 flex-col border-l border-border bg-card/40">
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {foundryPreview && (
+                  <FoundryControlPanel
+                    preview={foundryPreview}
+                    onConfirm={applyFoundryPreview}
+                    onDiscard={discardFoundryPreview}
+                    busy={applyingFoundry}
+                  />
+                )}
+                {(mode === 'code' || workspaceCode) && (
+                  <CodeWorkspace
+                    content={workspaceCode || workingContext}
+                    onInject={setWorkspaceCode}
+                    onSave={handleSave}
+                  />
+                )}
+                <TelegramBotSetupPanel onOpenManagement={() => navigate('/telegram-bots')} />
+              </div>
+            </aside>
+          </div>
+
+          {/* Mobile: workspace content inline */}
+          <div className="lg:hidden px-4 pb-4 space-y-3">
+            {foundryPreview && (
+              <FoundryControlPanel
+                preview={foundryPreview}
+                onConfirm={applyFoundryPreview}
+                onDiscard={discardFoundryPreview}
+                busy={applyingFoundry}
+              />
+            )}
+            {(mode === 'code' || workspaceCode) && (
+              <CodeWorkspace
+                content={workspaceCode || workingContext}
+                onInject={setWorkspaceCode}
+                onSave={handleSave}
+              />
+            )}
+            <TelegramBotSetupPanel onOpenManagement={() => navigate('/telegram-bots')} />
           </div>
 
           <QuickCommands visible={showCommands} onCommand={handleQuickCommand} />

@@ -34,16 +34,6 @@ export default function JackieHeader({ mode, setMode, tab, setTab, onClear, proj
           </button>
         </div>
       </div>
-      {tab === 'main' && (
-        <div className="flex px-4 pb-2 gap-1.5 overflow-x-auto">
-          {MODES.map(m => (
-            <button key={m.id} onClick={() => setMode(m.id)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${mode === m.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary text-muted-foreground border-border hover:border-primary/30'}`}>
-              {m.label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
