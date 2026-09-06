@@ -20,6 +20,8 @@ import PromptLibraryPanel from '../components/jackie/PromptLibraryPanel.jsx';
 import { VOICES } from '../components/jackie/VoiceSelector.jsx';
 import { selectRelevantMemoryFacts } from '@/lib/jackieMemoryRetrieval';
 import { getCachedOrFetch, invalidateCachedValue, writeCachedValue } from '@/lib/metadataCache';
+import { isLocalProvider, streamProviderChat } from '@/lib/localModelProviders';
+import LocalModelConnector from '../components/jackie/LocalModelConnector.jsx';
 
 const PAGE_NAV_MAP = [
   { keywords: ['ai lab', 'ailab', 'lab', 'bots', 'bot lab'], path: '/ailab' },
@@ -103,6 +105,9 @@ export default function JackieAI() {
   const [tab, setTab] = useState('main');
   const [showCommands, setShowCommands] = useState(false);
   const [showChats, setShowChats] = useState(false);
+  const [modelProvider, setModelProvider] = useState(() => { try { return localStorage.getItem('jackie_model_provider') || 'base44'; } catch { return 'base44'; } });
+  const [modelName, setModelName] = useState(() => { try { return localStorage.getItem('jackie_model_name') || ''; } catch { return ''; } });
+  const [showModelConnector, setShowModelConnector] = useState(false);
   const [workingContext, setWorkingContext] = useState('');
   const [voice, setVoice] = useState('default');
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -182,6 +187,30 @@ export default function JackieAI() {
     const history = messages.slice(-20).map(m => `${m.role === 'user' ? 'User' : 'Jackie'}: ${m.content}`).join('\n');
     return `${systemPrompt}${botContext}${keyContext}${contextBlock}${retrievalBlock}\n\nConversation:\n${history}\nUser: ${userMessage}\n\nJackie:`;
   }, [mode, thinkMode, messages, workingContext, voice, userBots, apiKeyCount]);
+
+  const buildMessages = useCallback((userMessage, retrievedFacts = []) => {
+    const voiceStyle = VOICES.find(v => v.id === voice)?.style || '';
+    const thinkModePrompt = THINK_MODES.find(t => t.id === thinkMode)?.prompt || '';
+    const enhancementContext = `\n[ENABLED FEATURES]\n- Educational content suggestions: recommend articles, videos, and webinars when users ask to learn a topic.\n- Feedback awareness: encourage users to submit product feedback and improvement ideas when relevant.\n- API integration awareness: mention that connected data platforms can be used for broader financial analysis.\n- Advanced alerts: discuss price and percentage-change triggers for alert customization.\n- Core programming memory: Jackie has built-in master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua.\n[END FEATURES]`;
+    const systemPrompt = `${MODE_PROMPTS[mode]}\n\nVoice & Style: ${voiceStyle}${thinkModePrompt ? '\n\n' + thinkModePrompt : ''}${enhancementContext}`;
+    const botContext = userBots.length > 0
+      ? `\n[USER'S AI BOTS]\n${userBots.map(b => `- ${b.name} (${b.role}, Lv${b.level || 1}, ${b.xp || 0}XP): ${b.description || b.instructions?.slice(0, 80) || 'no description'}`).join('\n')}\n[END BOTS]`
+      : '';
+    const keyContext = apiKeyCount > 0
+      ? `\n[API KEYS] User has ${apiKeyCount} active key(s). Bot capabilities unlocked via keys: ${[apiKeyCapabilities.webSearch && 'web-search', apiKeyCapabilities.code && 'code-engine', apiKeyCapabilities.squad && 'squad-pipelines'].filter(Boolean).join(', ') || 'basic-only'}. You can reference these capabilities when advising on bot tasks.`
+      : '';
+    const contextBlock = workingContext ? `\n[ACTIVE CONTEXT]\n${workingContext}\n[END CONTEXT]\n` : '';
+    const retrievalBlock = retrievedFacts.length > 0
+      ? `\n[RELEVANT MEMORY FACTS]\n${retrievedFacts.map((fact) => `- ${fact}`).join('\n')}\n[END RELEVANT MEMORY FACTS]\n`
+      : '';
+    const systemContent = `${systemPrompt}${botContext}${keyContext}${contextBlock}${retrievalBlock}`;
+    const historyMessages = messages.slice(-20).map(m => ({ role: m.role, content: m.content }));
+    return [
+      { role: 'system', content: systemContent },
+      ...historyMessages,
+      { role: 'user', content: userMessage }
+    ];
+  }, [mode, thinkMode, messages, workingContext, voice, userBots, apiKeyCount, apiKeyCapabilities]);
 
   const updateJackieProgress = async (changes) => {
     if (!jackieProgressEntity) return null;
@@ -271,11 +300,21 @@ export default function JackieAI() {
       limit: 6
     });
 
-    const prompt = buildPrompt(msg || 'Analyze the attached files.', relevantFacts);
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      ...(fileUrls.length > 0 ? { file_urls: fileUrls } : {}),
-    });
+    let response;
+    if (isLocalProvider(modelProvider)) {
+      const chatMessages = buildMessages(msg || 'Analyze the attached files.', relevantFacts);
+      response = await streamProviderChat({
+        provider: modelProvider,
+        model: modelName || 'automatic',
+        messages: chatMessages,
+      });
+    } else {
+      const prompt = buildPrompt(msg || 'Analyze the attached files.', relevantFacts);
+      response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        ...(fileUrls.length > 0 ? { file_urls: fileUrls } : {}),
+      });
+    }
 
     setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     setWorkingContext(response);
@@ -587,6 +626,9 @@ export default function JackieAI() {
             onToggleCommands={() => setShowCommands(p => !p)}
             voice={voice} setVoice={setVoice}
             onFilesReady={setPendingFiles}
+            modelProvider={modelProvider}
+            modelName={modelName}
+            onOpenModelConnector={() => setShowModelConnector(true)}
           />
         </>
       )}
@@ -605,6 +647,23 @@ export default function JackieAI() {
           </div>
         </div>
       )}
+
+      <LocalModelConnector
+        open={showModelConnector}
+        onClose={() => setShowModelConnector(false)}
+        provider={modelProvider}
+        model={modelName}
+        onChange={({ provider: p, model: m }) => {
+          if (p !== undefined) {
+            setModelProvider(p);
+            try { localStorage.setItem('jackie_model_provider', p); } catch {}
+          }
+          if (m !== undefined) {
+            setModelName(m);
+            try { localStorage.setItem('jackie_model_name', m); } catch {}
+          }
+        }}
+      />
     </div>
   );
 }

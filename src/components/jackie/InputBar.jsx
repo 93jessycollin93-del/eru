@@ -1,17 +1,17 @@
 import { useRef, useState } from 'react';
-import { Send, Mic, MicOff, Plus, X, Loader2, Image as ImageIcon, Video, FileCode, Zap } from 'lucide-react';
+import { Send, Mic, MicOff, Plus, X, Loader2, Image as ImageIcon, Video, FileCode, Zap, Cpu } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import VoiceSelector from './VoiceSelector.jsx';
+import { isLocalProvider, LOCAL_PROVIDERS } from '@/lib/localModelProviders';
 
 /**
- * InputBar — clean, ChatGPT-style single-row input.
+ * InputBar — minimalist, near-invisible single-row input (Cursor/Lovable style).
  *
- * One rounded bar: [+] attachment menu · textarea · mic (if supported) · send.
- * Voice, attachments, and commands are tucked behind the + menu so the surface
- * stays calm and uncluttered, but every capability is still one tap away.
- * All props preserved for backwards compatibility with JackieAI.
+ * No heavy borders or backgrounds — the bar blends into the page. A subtle
+ * model chip on the left opens the local-model connection layer. All prior
+ * capabilities (attachments, voice, commands, drag-drop) are preserved.
  */
-export default function InputBar({ input, setInput, onSend, loading, mode, onToggleCommands, showCommands, voice, setVoice, onFilesReady }) {
+export default function InputBar({ input, setInput, onSend, loading, mode, onToggleCommands, showCommands, voice, setVoice, onFilesReady, modelProvider, modelName, onOpenModelConnector }) {
   const [listening, setListening] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState([]);
@@ -32,6 +32,10 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
   };
 
   const speechSupported = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const modelLabel = isLocalProvider(modelProvider)
+    ? `${LOCAL_PROVIDERS[modelProvider]?.label || 'Local'}${modelName ? ' · ' + modelName : ''}`
+    : 'Base44';
 
   const toggleMic = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -95,17 +99,17 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
 
   return (
     <div
-      className="jackie-input-bar fixed left-0 right-0 bg-background/95 backdrop-blur border-t border-border z-[90] transition-colors"
+      className="jackie-input-bar fixed left-0 right-0 z-[90] transition-colors"
       onDrop={handleDrop}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
     >
-      <div className="mx-auto max-w-md px-4 pt-2 pb-2">
+      <div className="mx-auto max-w-3xl px-4 pt-2 pb-2">
         {/* Attachment / uploading chips */}
         {(attachments.length > 0 || uploadingFiles.length > 0) && (
           <div className="mb-1.5 flex flex-wrap gap-1.5">
             {uploadingFiles.map((f) => (
-              <div key={f.id} className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-2 py-1 text-[11px] text-muted-foreground">
+              <div key={f.id} className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-[11px] text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 <span className="max-w-[100px] truncate">{f.name}</span>
               </div>
@@ -122,19 +126,28 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
           </div>
         )}
 
-        {/* Single clean input row */}
-        <div
-          className={`relative flex items-end gap-1.5 rounded-2xl border bg-secondary px-1.5 py-1.5 transition-colors ${dragOver ? 'border-primary/60 bg-primary/5' : 'border-border'}`}
-        >
-          {/* Persona selector — subtle pill on the left, opens above */}
-          <VoiceSelector voice={voice} setVoice={setVoice} />
+        {/* Minimal input row — borderless, blends into background */}
+        <div className={`flex items-end gap-0.5 rounded-2xl bg-secondary/20 px-1.5 py-1.5 transition-colors ${dragOver ? 'bg-primary/10' : 'focus-within:bg-secondary/30'}`}>
+          {/* Model chip — opens local model connection layer */}
+          <button
+            onClick={onOpenModelConnector}
+            className="flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[11px] font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground flex-shrink-0 transition-colors"
+          >
+            <Cpu className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="max-w-[140px] truncate hidden sm:inline">{modelLabel}</span>
+          </button>
+
+          {/* Voice selector — subtle, no border */}
+          <div className="flex-shrink-0">
+            <VoiceSelector voice={voice} setVoice={setVoice} />
+          </div>
 
           {/* + attachment / tools menu */}
           <button
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Attach or use tools"
             aria-expanded={menuOpen}
-            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border transition-colors ${menuOpen ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground hover:text-foreground'}`}
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground ${menuOpen ? 'text-primary' : ''}`}
           >
             <Plus className={`h-4 w-4 transition-transform ${menuOpen ? 'rotate-45' : ''}`} />
           </button>
@@ -143,7 +156,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-0" onClick={() => setMenuOpen(false)} />
-              <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-10 w-44 overflow-hidden rounded-xl border border-border bg-popover shadow-xl">
+              <div className="absolute bottom-[calc(100%+0.5rem)] left-2 z-10 w-44 overflow-hidden rounded-xl border border-border bg-popover shadow-xl">
                 <MenuItem icon={ImageIcon} label="Image" onClick={() => imageRef.current?.click()} />
                 <MenuItem icon={Video} label="Video" onClick={() => videoRef.current?.click()} />
                 <MenuItem icon={FileCode} label="File" onClick={() => fileRef.current?.click()} />
@@ -155,7 +168,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
             </>
           )}
 
-          {/* Textarea */}
+          {/* Textarea — borderless, transparent */}
           <textarea
             ref={textareaRef}
             value={input}
@@ -164,26 +177,26 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
             placeholder={dragOver ? 'Drop files here…' : placeholders[mode]}
             rows={1}
             style={{ fontSize: '16px' }}
-            className="min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-foreground outline-none placeholder:text-muted-foreground max-h-32"
+            className="min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-foreground outline-none placeholder:text-muted-foreground/70 max-h-32"
           />
 
-          {/* Mic (inline, only if supported) */}
+          {/* Mic — borderless icon */}
           {speechSupported && (
             <button
               onClick={toggleMic}
               aria-label={listening ? 'Stop voice input' : 'Voice input'}
-              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border transition-colors ${listening ? 'border-red-500/50 bg-red-500/20 text-red-400 animate-pulse' : 'border-border bg-background text-muted-foreground hover:text-foreground'}`}
+              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-secondary/60 ${listening ? 'text-red-400 animate-pulse' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
           )}
 
-          {/* Send */}
+          {/* Send — subtle, only colored when active */}
           <button
             onClick={handleSend}
             disabled={!canSend}
             aria-label="Send"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-all ${canSend ? 'bg-primary text-primary-foreground' : 'text-muted-foreground/40 hover:text-muted-foreground'}`}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
