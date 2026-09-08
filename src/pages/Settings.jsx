@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Bell, ChevronRight, Lock, AlertTriangle, ExternalLink,
   Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send, Globe,
-  Copy, CheckCircle2, Sparkles, SlidersHorizontal, User2,
+  Copy, CheckCircle2, Sparkles, SlidersHorizontal, User2, Database,
 } from 'lucide-react';
 import BiometricAuth from '../components/BiometricAuth';
 import SoundSettings from '../components/SoundSettings';
@@ -255,6 +255,7 @@ export default function Settings() {
         <GroupCard title="Account">
           <Row icon={User2} label="User Settings" sublabel="Profile, alerts, and integrations" to="/user-settings" accent="text-primary" />
           <Row icon={SlidersHorizontal} label="Preferences" sublabel="Display, saved content, payment defaults" to="/preferences" />
+          <Row icon={Database} label="Import / Export Data" sublabel="Backup and restore bots, assets, notes, prompts" to="/data" accent="text-primary" />
         </GroupCard>
 
         {/* Appearance — single entry point to Visual Engine */}
