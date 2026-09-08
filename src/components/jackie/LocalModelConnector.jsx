@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Wifi, WifiOff, RefreshCw, Cpu, Check } from 'lucide-react';
+import { X, Wifi, WifiOff, RefreshCw, Cpu, Check, ExternalLink, Smartphone } from 'lucide-react';
 import {
   LOCAL_PROVIDERS,
   isLocalProvider,
@@ -13,6 +13,8 @@ const PROVIDER_OPTIONS = [
   { value: 'ollama', label: 'Ollama', desc: 'localhost:11434' },
   { value: 'lmstudio', label: 'LM Studio', desc: 'localhost:1234' },
   { value: 'bionic', label: 'Bionic', desc: 'LM Studio agent' },
+  { value: 'offgrid', label: 'Off-Grid-AI', desc: 'localhost:1337' },
+  { value: 'pocketpal', label: 'PocketPal', desc: 'On-device mobile' },
 ];
 
 export default function LocalModelConnector({ open, onClose, provider, model, onChange }) {
@@ -22,6 +24,8 @@ export default function LocalModelConnector({ open, onClose, provider, model, on
   const [error, setError] = useState('');
 
   const isLocal = isLocalProvider(provider);
+  const isApp = LOCAL_PROVIDERS[provider]?.type === 'app';
+  const providerConfig = LOCAL_PROVIDERS[provider];
 
   const probe = async (key) => {
     setStatus('testing');
@@ -41,7 +45,7 @@ export default function LocalModelConnector({ open, onClose, provider, model, on
   };
 
   useEffect(() => {
-    if (open && isLocal) {
+    if (open && isLocal && !isApp) {
       setEndpointDraft(getProviderUrl(provider));
       probe(provider);
     }
@@ -59,7 +63,7 @@ export default function LocalModelConnector({ open, onClose, provider, model, on
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-border bg-card p-4 space-y-3 eru-enter"
+        className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-border bg-card p-4 space-y-3 eru-enter max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -85,14 +89,14 @@ export default function LocalModelConnector({ open, onClose, provider, model, on
           ))}
         </div>
 
-        {isLocal ? (
+        {isLocal && !isApp && (
           <div className="space-y-2.5 rounded-xl border border-border bg-background p-3">
-            <p className="text-[11px] text-muted-foreground">{LOCAL_PROVIDERS[provider].description}</p>
+            <p className="text-[11px] text-muted-foreground">{providerConfig.description}</p>
             <div className="flex items-center gap-2">
               <input
                 value={endpointDraft}
                 onChange={(e) => setEndpointDraft(e.target.value)}
-                placeholder={LOCAL_PROVIDERS[provider].defaultBaseUrl}
+                placeholder={providerConfig.defaultBaseUrl}
                 style={{ fontSize: '16px' }}
                 className="flex-1 rounded-lg border border-border bg-secondary px-2.5 py-1.5 text-[11px] text-foreground outline-none focus:border-primary/40"
               />
@@ -135,13 +139,27 @@ export default function LocalModelConnector({ open, onClose, provider, model, on
               </select>
             )}
             {status === 'ok' && models.length === 0 && (
-              <p className="text-[11px] text-amber-400">Server reachable but no models loaded. Load a model in {LOCAL_PROVIDERS[provider].label} first.</p>
+              <p className="text-[11px] text-amber-400">Server reachable but no models loaded. Load a model in {providerConfig.label} first.</p>
             )}
             <p className="text-[10px] text-muted-foreground">
               Tip: enable CORS on your server (Ollama: set <code className="text-primary">OLLAMA_ORIGINS</code>; LM Studio: toggle CORS in server settings).
             </p>
           </div>
-        ) : (
+        )}
+
+        {isApp && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground">
+            <Smartphone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+            <div className="space-y-1.5">
+              <p>{providerConfig.note}</p>
+              <a href={providerConfig.appUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                <ExternalLink className="w-3 h-3" /> Get {providerConfig.label}
+              </a>
+            </div>
+          </div>
+        )}
+
+        {!isLocal && (
           <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground">
             <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             <span>Using Base44's built-in AI — no configuration needed.</span>

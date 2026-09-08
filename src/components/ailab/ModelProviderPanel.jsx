@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link2, Sparkles, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Link2, Sparkles, Wifi, WifiOff, RefreshCw, Smartphone, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import {
   LOCAL_PROVIDERS,
@@ -21,6 +21,8 @@ const PROVIDERS = [
   { value: 'ollama', label: 'Ollama (local)', models: [], local: true },
   { value: 'lmstudio', label: 'LM Studio (local)', models: [], local: true },
   { value: 'bionic', label: 'Bionic (local)', models: [], local: true },
+  { value: 'offgrid', label: 'Off-Grid-AI (local)', models: [], local: true },
+  { value: 'pocketpal', label: 'PocketPal (mobile)', models: [], local: true },
 ];
 
 export default function ModelProviderPanel({ value, onChange }) {
@@ -31,6 +33,7 @@ export default function ModelProviderPanel({ value, onChange }) {
   const [endpointDraft, setEndpointDraft] = useState('');
 
   const isLocal = isLocalProvider(value.model_provider);
+  const isApp = LOCAL_PROVIDERS[value.model_provider]?.type === 'app';
   const provider = PROVIDERS.find((item) => item.value === value.model_provider) || PROVIDERS[0];
 
   const probeLocal = async (providerKey) => {
@@ -51,7 +54,7 @@ export default function ModelProviderPanel({ value, onChange }) {
   };
 
   useEffect(() => {
-    if (isLocal) {
+    if (isLocal && !isApp) {
       setEndpointDraft(getProviderUrl(value.model_provider));
       probeLocal(value.model_provider);
     }
@@ -106,7 +109,7 @@ export default function ModelProviderPanel({ value, onChange }) {
         {PROVIDERS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
       </select>
 
-      {isLocal ? (
+      {isLocal && !isApp ? (
         <div className="space-y-2 rounded-xl border border-border bg-background p-3">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-medium text-muted-foreground">{LOCAL_PROVIDERS[value.model_provider].description}</p>
@@ -143,6 +146,16 @@ export default function ModelProviderPanel({ value, onChange }) {
           {localStatus === 'ok' && localModels.length === 0 && (
             <p className="text-[11px] text-amber-400">Server reachable but no models loaded. Load a model in {LOCAL_PROVIDERS[value.model_provider].label} first.</p>
           )}
+        </div>
+      ) : isApp ? (
+        <div className="flex items-start gap-2 rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground">
+          <Smartphone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p>{LOCAL_PROVIDERS[value.model_provider]?.note}</p>
+            <a href={LOCAL_PROVIDERS[value.model_provider]?.appUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+              <ExternalLink className="w-3 h-3" /> Get {LOCAL_PROVIDERS[value.model_provider]?.label}
+            </a>
+          </div>
         </div>
       ) : (
         <select
