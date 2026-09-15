@@ -9,6 +9,8 @@ import SyncHealthWidget from '@/components/dashboard/SyncHealthWidget';
 import FleetStatCard from '@/components/commander/FleetStatCard';
 import MissionCard from '@/components/commander/MissionCard';
 import AgentRow from '@/components/commander/AgentRow';
+import LocalModelConnector from '@/components/jackie/LocalModelConnector';
+import { isLocalProvider, LOCAL_PROVIDERS } from '@/lib/localModelProviders';
 
 const ACTIVE_MISSION_STATUSES = ['active', 'paused', 'escalated', 'planned'];
 const STATUS_FILTERS = ['all', 'active', 'idle', 'assigned', 'maintenance', 'offline'];
@@ -19,6 +21,9 @@ export default function AppCommander() {
   const { data: bots, loading: loadingBots } = useRealtimeEntityList('BotFarmBot', { sort: '-updated_date', limit: 300 });
   const { data: missions } = useRealtimeEntityList('CommandMission', { sort: '-updated_date', limit: 100 });
   const [statusFilter, setStatusFilter] = useState('all');
+  const [modelProvider, setModelProvider] = useState(() => { try { return localStorage.getItem('jackie_model_provider') || 'base44'; } catch { return 'base44'; } });
+  const [modelName, setModelName] = useState(() => { try { return localStorage.getItem('jackie_model_name') || ''; } catch { return ''; } });
+  const [showModelConnector, setShowModelConnector] = useState(false);
 
   const fleet = useMemo(() => bots || [], [bots]);
   const activeMissions = useMemo(
@@ -69,6 +74,25 @@ export default function AppCommander() {
         </div>
 
         <SyncHealthWidget />
+
+        {/* Model Layer — local LLM connection */}
+        <div className="eru-theme-card flex items-center gap-3 rounded-xl border border-border p-3">
+          <Cpu className="h-4 w-4 text-primary flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">Model Layer</p>
+            <p className="text-xs font-medium text-foreground truncate">
+              {isLocalProvider(modelProvider)
+                ? `${LOCAL_PROVIDERS[modelProvider]?.label || 'Local'}${modelName ? ' · ' + modelName : ''}`
+                : 'Base44 AI'}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowModelConnector(true)}
+            className="inline-flex h-8 items-center rounded-lg border border-primary/30 bg-primary/10 px-3 text-[11px] font-medium text-foreground hover:bg-primary/20"
+          >
+            Switch
+          </button>
+        </div>
 
         {/* Stat grid */}
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
@@ -133,6 +157,23 @@ export default function AppCommander() {
           <QuickLink to="/dashboard" icon={Activity} label="Dashboard" />
         </div>
       </div>
+
+      <LocalModelConnector
+        open={showModelConnector}
+        onClose={() => setShowModelConnector(false)}
+        provider={modelProvider}
+        model={modelName}
+        onChange={({ provider: p, model: m }) => {
+          if (p !== undefined) {
+            setModelProvider(p);
+            try { localStorage.setItem('jackie_model_provider', p); } catch {}
+          }
+          if (m !== undefined) {
+            setModelName(m);
+            try { localStorage.setItem('jackie_model_name', m); } catch {}
+          }
+        }}
+      />
     </div>
   );
 }
