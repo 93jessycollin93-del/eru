@@ -1,0 +1,37 @@
+{
+  "name": "Learn From Successful Squad Runs",
+  "description": "Automatically learns from strong squad runs and refreshes related bot instructions.",
+  "trigger": {
+    "condition": "${ ((.trigger.changed_fields | index(\"execution_history\") != null) and (.trigger.data.execution_history[\"0\"].success_rate >= 80) and (.trigger.data.execution_history[\"0\"].estimated_roi >= 80)) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "BotSquad"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "learn_from_successful_squad_runs",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "learnFromSuccessfulSquadRun",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "learnFromSuccessfulSquadRun"
+  }
+}
