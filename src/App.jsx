@@ -110,6 +110,7 @@ const Listening = lazy(() => import('./pages/Listening'));
 const TeamBuilder = lazy(() => import('./pages/TeamBuilder'));
 const AppCommander = lazy(() => import('./pages/AppCommander'));
 const DataPortability = lazy(() => import('./pages/DataPortability'));
+const Vault = lazy(() => import('./pages/Vault'));
 // Payment verification system initialized on app load
 import '@/lib/paymentGuards';
 import '@/lib/assetGrant';
@@ -241,6 +242,7 @@ const AuthenticatedApp = () => {
         <Route path="/team-builder" element={<TeamBuilder />} />
         <Route path="/command" element={<AppCommander />} />
         <Route path="/data" element={<DataPortability />} />
+        <Route path="/vault" element={<Vault />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>

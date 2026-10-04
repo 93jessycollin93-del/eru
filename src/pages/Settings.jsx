@@ -256,6 +256,7 @@ export default function Settings() {
           <Row icon={User2} label="User Settings" sublabel="Profile, alerts, and integrations" to="/user-settings" accent="text-primary" />
           <Row icon={SlidersHorizontal} label="Preferences" sublabel="Display, saved content, payment defaults" to="/preferences" />
           <Row icon={Database} label="Import / Export Data" sublabel="Backup and restore bots, assets, notes, prompts" to="/data" accent="text-primary" />
+          <Row icon={Lock} label="Personal Vault" sublabel="Nested vault login — 3 PIN layers" to="/vault" accent="text-primary" />
         </GroupCard>
 
         {/* Appearance — single entry point to Visual Engine */}
