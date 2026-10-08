@@ -1,7 +1,7 @@
 # Parity Matrix — PC → Eru → Jackie → Empath
 
 Living tracker for the Fleet Parity Plan. PC is the reference; this maps every PC
-capability to its status in **Eru** (Base44), **Jackie** (`ocd-jacky-777`,
+capability to its status in **Eru** (backend removed), **Jackie** (`ocd-jacky-777`,
 Lovable/Supabase) and **Empath** (`CYBERNETIC_EMPATH`, greenfield). Update the
 cells as each wave lands. Two people/sessions have edited this file in parallel —
 if a cell looks wrong, check `git log` before assuming it's stale.
@@ -11,7 +11,7 @@ if a cell looks wrong, check `git log` before assuming it's stale.
 
 > Baseline from `FEATURE_AUDIT.md`. Jackie already embeds the whole PC OS and holds
 > the Eru pages, so many of its cells start at 🪟/🔶 rather than ❌. Eru is its own
-> large Base44 app, so several domains start 🔶 (its own take exists) rather than ❌.
+> large app, so several domains start 🔶 (its own take exists) rather than ❌.
 > Empath was an empty repo — see its own row below rather than every domain table.
 
 ## Baseline counts (measured, not estimated)
@@ -19,8 +19,8 @@ if a cell looks wrong, check `git log` before assuming it's stale.
 | | PC | Eru | Jackie |
 |---|---|---|---|
 | App/page components | 90 (`components/apps/*.tsx`) | 95 (`src/pages/*.jsx`) | 91 Eru pages copied into `src/eru/pages/` + native `src/pages/` |
-| Backend data | Firebase + IndexedDB + Express | 143 Base44 entities | Supabase Postgres |
-| Backend logic | `server.ts` routes | 68 Base44 functions, 4 agents | 15 Supabase edge functions |
+| Backend data | Firebase + IndexedDB + Express | none (backend removed) | Supabase Postgres |
+| Backend logic | `server.ts` routes | none (backend removed) | 15 Supabase edge functions |
 | PC OS embed | — | no | yes (`public/pc-os/`, mounted by `src/pages/PCDesktop.tsx`) |
 
 Jackie's embed is why its parity story differs from Eru's: PC's apps are already
@@ -31,7 +31,7 @@ Jackie's embed is why its parity story differs from Eru's: PC's apps are already
 | Capability | PC | Eru | Jackie | Empath |
 |---|---|---|---|---|
 | `jackyClient` engine client | ✅ `lib/jackyClient.ts` | ✅ `src/lib/jackyClient.ts` | ✅ `src/lib/jackyClient.ts` | ✅ `src/lib/jackyClient.ts` (no app yet) |
-| Server-side engine relay | ✅ `/api/jacky` in `server.ts` | ✅ `base44/functions/jackyProxy` | ✅ `supabase/functions/jacky-proxy` | ❌ (platform undecided) |
+| Server-side engine relay | ✅ `/api/jacky` in `server.ts` | ✅ the `jackyProxy` server function | ✅ `supabase/functions/jacky-proxy` | ❌ (platform undecided) |
 | Live System Monitor (real GPU/CPU/RAM/thermal) | ✅ App Commander proxy mode | ✅ native `/jacky-live` | ✅ native `/jacky-live` | — |
 | Ask Jackie w/ situation-aware routing | ✅ App Commander console (proxy) | ✅ `/jacky-live` | ✅ `/jacky-live` | — |
 | Squad console (coding/security/archivist) | 🔶 client ready → surface next | 🔶 client ready → surface next | 🔶 client ready → surface next | — |
@@ -46,7 +46,7 @@ verified by checksum, not by inspection. The client's request allowlist
 `/api/models`, `/api/bots`, `/api/squads/*`, `/api/ecps/*`) is likewise identical
 across all three relays, but the three don't gate `/api/control` — the engine's
 master switch — equally. Only **Eru** adds a real role check beyond plain auth
-(`user.role === 'admin'`, which Base44 supplies directly). **PC** applies the
+(`user.role === 'admin'`, supplied by its backend at the time). **PC** applies the
 same `requireAuth` to `/api/control` as to every other allowlisted path — no
 extra gate, and `requireAuth` passes every caller through when
 `JACKIE_API_TOKEN` is unset, same as it does for `/api/shell/exec`. **Jackie**
@@ -120,7 +120,7 @@ allowlist (the stricter of the two) always wins, and no caller had to change.
 
 | PC app | PC | Eru | Jackie |
 |---|---|---|---|
-| HomeScreen / SystemSettings / NotificationCenter / Automation / VoiceCommands / ClipboardManager | ✅ | 🔶 (Base44 pages) | 🔶 (shadcn pages) |
+| HomeScreen / SystemSettings / NotificationCenter / Automation / VoiceCommands / ClipboardManager | ✅ | 🔶 (React pages) | 🔶 (shadcn pages) |
 | SuperSayen (Web MIDI/audio) / FlipperZero | ✅ | ❌ | 🪟 |
 | Blender / UnrealEngine integrations | ✅ | ❌ | ❌ |
 | Games (ZenithChess/SnakeGame/LaserTag/IronMenArcade) | ✅ | ❌ | 🔶 `game/` (own 4X/idle) |
@@ -160,7 +160,7 @@ above would just read `todo` by definition. Tracked here instead:
 
 | Item | Status |
 |---|---|
-| Platform | ❌ undecided (self-hosted / Base44 / Lovable / something else) |
+| Platform | ❌ undecided (self-hosted / Lovable / something else) |
 | `jackyClient` + `fleet-ui` | ✅ seeded, byte-identical to the other three |
 | Server-side relay | ❌ (needs a platform decision first) |
 | Relationship to `PC/cybernetic/` monorepo | ❌ unresolved — see `FLEET_PARITY_PLAN.md` and the repo's own `README.md` |

@@ -13,7 +13,6 @@ or delete them.
 | Module | Purpose |
 |---|---|
 | `src/lib/AuthContext.jsx` | `AuthProvider` / `useAuth`: session, user, public settings, login redirect |
-| `src/lib/app-params.js` | reads app id, token and base URL from the URL, localStorage and env |
 | `src/lib/query-client.js` | shared React Query client |
 | `src/lib/utils.js` | `cn()` class merge, `isIframe` |
 | `src/lib/logger.js` | build-aware logger |
@@ -35,8 +34,8 @@ or delete them.
 | `src/lib/securityChecks.js` | security readiness checks (`/admin/security`) |
 | `src/lib/securityTestRunner.js` | simulated permission-attack suite (`/admin/security-test`) |
 | `src/lib/auditEvents.js` | audit event helper |
-| `src/lib/encryption.js` | client stub; **every export throws**. The real code is `base44/functions/encryptUserPII/` |
-| `src/lib/webhookValidator.js` | client stub; **always invalid**. The real code is `base44/functions/validatePaymentWebhook/` |
+| `src/lib/encryption.js` | client stub; **every export throws**. Encryption belongs on a server (the `encryptUserPII` server call, not connected) |
+| `src/lib/webhookValidator.js` | client stub; **always invalid**. Validation belongs on a server (the `validatePaymentWebhook` server call, not connected) |
 
 ## Economy, payments & commerce
 
@@ -77,7 +76,7 @@ or delete them.
 | `src/lib/offlineDb.js` | IndexedDB cache and write queue |
 | `src/lib/connectivity.js` | device capability and online-state hooks |
 | `src/lib/jackyClient.ts` | the fleet's link to the `jacky` Flask engine (shared across repos) |
-| `src/lib/jackyBootstrap.js` | wires `jackyClient` to this app (calls `base44/functions/jackyProxy/`) |
+| `src/lib/jackyBootstrap.js` | wires `jackyClient` to this app (calls the `jackyProxy` server function, not connected) |
 | `src/lib/jackieMemoryRetrieval.js` | picks relevant memory facts for Jackie chat |
 | `src/lib/devLab.js` | Jackie Dev Lab plan, task and patch templates |
 | `src/lib/simEngine.js` | trading-bot simulation engine (no real money) |

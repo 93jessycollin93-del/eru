@@ -193,7 +193,7 @@ async function executeSafeJadeDrop(userId, orderId) {
   validateDropData(drop);
   
   // Step 6: Create Jade asset in database
-  const jadeAsset = await base44.entities.JadeAsset.create({
+  const jadeAsset = await backend.entities.JadeAsset.create({
     volume_kg: drop.amount_kg,
     ownership_timeline: [{ owner: userId, ... }],
     resonance_history: [{
@@ -210,13 +210,13 @@ async function executeSafeJadeDrop(userId, orderId) {
   const anomalies = await detectEconomicAnomalies(userId, drop);
   
   // Step 9: Link order to asset
-  await base44.entities.Order.update(orderId, {
+  await backend.entities.Order.update(orderId, {
     asset_granted_at: now,
     asset_grant_reference: jadeAsset.id,
   });
   
   // Step 10: Log to immutable audit
-  await base44.entities.EconomyAuditLog.create({
+  await backend.entities.EconomyAuditLog.create({
     action: 'asset_granted',
     order_id: orderId,
     user_email: userId,

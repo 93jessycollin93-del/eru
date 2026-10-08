@@ -1,6 +1,6 @@
 # fleet-ui — the shared eYe design system
 
-One visual identity across the four apps: **PC** (reference), **Eru** (Base44),
+One visual identity across the four apps: **PC** (reference), **Eru**,
 **Jackie** (`ocd-jacky-777`, Lovable/Supabase) and **Cybernetic Empath**.
 
 These files are **copied verbatim** into `src/fleet-ui/` in every repo. They are
@@ -20,7 +20,7 @@ source of truth: edit here, then copy outward.
 1. **`--eye-*` raw tokens** (`var(--eye-accent)`) — for HUD chrome, canvas
    drawing, and anything hand-written. **Always active.** A fresh namespace, so
    it collides with nothing.
-2. **shadcn/Base44 bridge** — the same colors as the bare `H S% L%` triplets
+2. **shadcn bridge** — the same colors as the bare `H S% L%` triplets
    that `hsl(var(--background))` expects. **Opt-in** via `data-eye-theme`.
 
 The bridge is what makes this cheap. Eru and Jackie are both shadcn builds with

@@ -248,7 +248,7 @@ user.phone = decrypt(user.phone);
 ```javascript
 // functions/rateLimitAuth.js
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const RATE_LIMITS = {
   login: 5,      // 5 attempts per minute
@@ -258,10 +258,10 @@ const RATE_LIMITS = {
 
 export async function checkRateLimit(userId, action) {
   const key = `ratelimit:${action}:${userId}`;
-  const count = await base44.cache.increment(key);
+  const count = await backend.cache.increment(key);
   
   if (count === 1) {
-    await base44.cache.setExpiry(key, 3600); // 1 hour
+    await backend.cache.setExpiry(key, 3600); // 1 hour
   }
   
   if (count > RATE_LIMITS[action]) {
@@ -458,12 +458,12 @@ const validated = PaymentSchema.parse(formData);
 // functions/deleteMyData.js
 
 Deno.serve(async (req) => {
-  const user = await base44.auth.me();
+  const user = await backend.auth.me();
   
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   
   // Delete all personal data
-  await base44.entities.User.delete(user.id);
+  await backend.entities.User.delete(user.id);
   // Delete orders, transactions, etc.
   
   return Response.json({ success: true });

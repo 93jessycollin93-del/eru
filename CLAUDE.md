@@ -7,7 +7,7 @@ the global agent map, which is imported below.
 
 ## Path
 
-1. [AGENTS.md](AGENTS.md): global map with hard rules (Base44 is quarantined), a task router and the top-level tree.
+1. [AGENTS.md](AGENTS.md): global map with the hard rules (no outside services; read files with `head`, never `cat`), a task router and the top-level tree.
 2. [docs/agents/](docs/agents/): one map per area, each listing exact file paths.
    - [commands.md](docs/agents/commands.md)
    - [frontend.md](docs/agents/frontend.md)

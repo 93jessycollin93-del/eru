@@ -29,7 +29,6 @@ before acting on them.
 | Path | What |
 |---|---|
 | `src/SOCIAL_LAYER_PLAN.md` | social platform architecture and phases |
-| `src/ENTITY_SETUP.md` | entities to create for Community and Bot Lab (fields + access) |
 | `src/lib/TRANSLATIONS_README.md` | i18n workflow and Crowdin |
 
 ## Economy & payments

@@ -43,7 +43,7 @@ entry if needed (see Shell) → add i18n keys → add a row to [pages.md](pages.
 | Bottom nav (item list at top of file) | `src/components/CenteredBottomNav.jsx` |
 | Mobile tab bar, bottom sheet, pull-to-refresh | `src/components/mobile/` |
 | Nav walkthrough, quick-actions popover | `src/components/nav/` |
-| Global search | `src/components/GlobalSearch.jsx` (server side: `base44/functions/globalSearch/`) |
+| Global search | `src/components/GlobalSearch.jsx` (calls the `globalSearch` server function; not connected) |
 | Floating bot widget | `src/components/BotWidget.jsx` |
 | Notes widget | `src/components/notes/` |
 | Persistent media player | `src/components/media/PersistentPlayer.jsx` |
@@ -56,8 +56,8 @@ entry if needed (see Shell) → add i18n keys → add a row to [pages.md](pages.
 
 | Piece | Path |
 |---|---|
-| Session, user, login redirect | `src/lib/AuthContext.jsx`, `src/lib/app-params.js` |
-| Auth pages | `src/pages/Login.jsx`, `Register.jsx`, `ForgotPassword.jsx`, `ResetPassword.jsx`, `OAuthConsent.jsx` (unrouted), `src/components/AuthLayout.jsx` |
+| Session, user, login redirect | `src/lib/AuthContext.jsx` (always signed out while no backend is connected) |
+| Auth pages | `src/pages/Login.jsx`, `Register.jsx`, `ForgotPassword.jsx`, `ResetPassword.jsx`, `src/components/AuthLayout.jsx` |
 | Route / role / permission gates | `src/components/ProtectedRoute.jsx`, `RoleGate.jsx`, `PermissionGate.jsx` |
 | Role and permission helpers | `src/lib/permissions.js`, `src/lib/rbac.js` |
 | MFA, biometric | `src/components/MFAVerification.jsx`, `src/components/BiometricAuth.jsx` |
@@ -67,7 +67,7 @@ entry if needed (see Shell) → add i18n keys → add a row to [pages.md](pages.
 
 | Piece | Path |
 |---|---|
-| Backend client (quarantined, see [backend.md](backend.md)) | `src/api/base44Client.js` |
+| Backend client (connects to nothing, see [backend.md](backend.md)) | `src/api/backend.js` |
 | React Query client | `src/lib/query-client.js` |
 | Short-lived cache | `src/lib/metadataCache.js` |
 | Offline cache + write queue | `src/lib/offlineDb.js`, `src/lib/botStudioStore.js` |

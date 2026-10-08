@@ -1,118 +1,63 @@
-# Backend map (QUARANTINED)
+# Backend map
 
-Folder: `base44/`.
+↑ [AGENTS.md](../../AGENTS.md) · per-feature trails → [features.md](features.md) · security → [security.md](security.md)
 
-↑ [AGENTS.md](../../AGENTS.md) · per-feature trails → [features.md](features.md) · security functions → [security.md](security.md)
+**No backend service is connected.** Every data, sign-in, server-function and AI/file call in the app
+goes through one file, `src/api/backend.js`, and that file talks to nothing outside the device.
+To connect a backend later, change that file only; the call sites stay the same.
 
-> **Read-only for agents.** This folder defines the hosted backend the app still runs on.
-> Read it to understand data and server behavior. Do not edit it, do not add to it, and do
-> not contact the service behind it unless the user explicitly asks ([AGENTS.md](../../AGENTS.md) rule 1).
+## What each call does today
 
-## How the frontend reaches it
-
-| Call in frontend code | Goes to |
+| Call in app code | Result now |
 |---|---|
-| `import { base44 } from '@/api/base44Client'` | client created in `src/api/base44Client.js` with values from `src/lib/app-params.js` |
-| `base44.entities.<Name>.list / filter / create / update / delete` | data model `base44/entities/<Name>.jsonc` |
-| `base44.functions.invoke('<name>', payload)` | server function `base44/functions/<name>/entry.ts` (Deno) |
-| `base44.auth.*` | login and session (`src/lib/AuthContext.jsx`) |
-| `base44.integrations.Core.*` | hosted LLM, upload and email helpers (no file in repo) |
-| `base44.asServiceRole.*` | privileged access inside server functions only |
+| `import { backend } from '@/api/backend'` | the client (`src/api/backend.js`) |
+| `backend.entities.<Name>.list()` / `.filter()` | resolves to `[]` (no records) |
+| `backend.entities.<Name>.subscribe(cb)` | returns an unsubscribe function; never fires |
+| `backend.entities.<Name>.create / update / delete / bulkCreate / get / …` | rejects with `BackendNotConnectedError` |
+| `backend.functions.invoke('<name>', payload)` | rejects with `BackendNotConnectedError` |
+| `backend.auth.me()` | rejects with status 401, so the app treats the visitor as signed out |
+| `backend.auth.isAuthenticated()` | resolves to `false` |
+| `backend.auth.login / register / loginViaEmailPassword / …` | rejects with `BackendNotConnectedError` |
+| `backend.auth.logout(url)`, `backend.auth.redirectToLogin()` | local navigation only |
+| `backend.integrations.Core.InvokeLLM / UploadFile` | rejects with `BackendNotConnectedError` |
+| `backend.connectors.*` | rejects with `BackendNotConnectedError` |
 
-Dev proxy: `/api` → `VITE_BASE44_APP_BASE_URL`, set up by the plugin in `vite.config.js`.
+Sign-in state for the whole app: `src/lib/AuthContext.jsx` (`useAuth()`).
 
-Turned off on purpose (quarantine): the SDK's automatic usage analytics (`src/api/base44Client.js`)
-and the plugin's page-view tracker, visual-edit bridge and HMR/navigation notifiers (`vite.config.js`).
+## Record types the app uses (135)
 
-## Folder layout
+Names used as `backend.entities.<Name>` in `src/`. They describe the app's data model; no schema
+files exist in the repo.
 
-| Path | Contents |
+| Domain | Record types |
 |---|---|
-| `base44/config.jsonc` | app name and install/build/serve commands |
-| `base44/entities/*.jsonc` | 143 data model schemas (fields + RLS) |
-| `base44/functions/<name>/entry.ts` | 68 server functions (Deno, `npm:@base44/sdk`) |
-| `base44/workflows/*.jsonc` | 19 scheduled or entity-triggered jobs that call a function |
-| `base44/agents/*.jsonc` | 4 in-app AI agents |
-| `base44/connectors/gmail.jsonc` | Gmail send connector |
-| `base44/.app.jsonc` | gitignored, local only |
-
-## Entities by domain (`base44/entities/<Name>.jsonc`)
-
-| Domain | Entities |
-|---|---|
-| Bot farm | BotFarmActivityHistory, BotFarmBot, BotFarmMaintenanceLog, BotFarmMetric, BotFarmMission, BotFarmOutputLog, BotFarmRiskFlag, BotFarmSquad, BotFarmTask, BotFarmUpgrade |
-| Bots (AI Lab, memory, versions, tests) | BotAutomation, BotChat, BotCollaborationSession, BotDeployment, BotGlobalPolicy, BotImprovement, BotMemory, BotMemoryChunk, BotMemoryProfile, BotMessage, BotPerformanceAlert, BotRating, BotResourceSnapshot, BotSemanticMemory, BotSquad, BotTestCase, BotTestRun, BotTradeProposal, BotVersion, BotVersionComparison, MemoryPod, OfflineBot, SharedBotWorkspace, UserBot |
-| Squads, agents, knowledge | AgentTask, AgentTaskRun, IntegrityReport, KnowledgeBaseDocument, MissionKnowledge, PerformanceMetric, ProgrammingLanguageMemory, PromptTemplate, PromptTemplateComment, PromptTemplateVersion, RiskReport, SharedKnowledgeBase, SquadDeliveryLog, SquadKnowledge, SquadTemplate |
+| Bot farm | BotFarmActivityHistory, BotFarmBot, BotFarmMaintenanceLog, BotFarmMission, BotFarmOutputLog, BotFarmRiskFlag, BotFarmSquad, BotFarmTask, BotFarmUpgrade |
+| Bots (AI Lab, memory, versions, tests) | BotAutomation, BotCollaborationSession, BotDeployment, BotGlobalPolicy, BotImprovement, BotMemory, BotMemoryChunk, BotMemoryProfile, BotPerformanceAlert, BotRating, BotResourceSnapshot, BotSemanticMemory, BotSquad, BotTestCase, BotTestRun, BotTradeProposal, BotVersion, BotVersionComparison, SharedBotWorkspace, UserBot |
+| Squads, agents, knowledge | AgentTask, AgentTaskRun, IntegrityReport, KnowledgeBaseDocument, MissionKnowledge, PerformanceMetric, ProgrammingLanguageMemory, PromptTemplate, PromptTemplateComment, PromptTemplateVersion, RiskReport, SharedKnowledgeBase, SquadKnowledge, SquadTemplate |
 | Command Center | CommandAlert, CommandBot, CommandCommunication, CommandMission, CommandMissionHistory, CommandRecommendation, CommandTask |
-| Telegram | TelegramAccount, TelegramBot, TelegramBotExperiment, TelegramBotExperimentRun, TelegramBotLog, TelegramBotMessage, TelegramBotSession, TelegramKnowledgeGap |
-| Cards & game | Card, CardBattleHistory, CardListing, CardManualPrice, CardMatchmakingQueue, CardMatchmakingRoom, CardPlayerProfile, CardScanSession, CardTradeProposal, CardUsageHistory, CollectorRewardProfile, Creature, DailyQuest, ExcavationEvent, PinnedCard, PlayerDeck, RealityPressure |
-| Economy, payments, commerce | BazarProduct, EconomyAuditLog, Escrow, IntegrationTopupOrder, JadeAsset, JadeTransaction, MarketConnector, Order, PaymentEvent, PricingAuditLog, StorefrontCustomization, StorefrontListing, Transaction |
-| Wallets, portfolio, markets | ConnectedWallet, PortfolioThreshold, PortfolioWeighting, PriceAlert, RebalancingSuggestion, WalletHolding |
-| Social & collaboration | Guild, GuildBankTransaction, GuildMembership, Note, Reputation, SharedDashboardComment, SharedDashboardSession, SharedDashboardState, SocialStrategyPost, TradeNegotiationChat, TradeNegotiationPost |
-| Jackie & Dev Lab | JackieSaved, DevAgentTask, DevAuditLog, DevFileReference, DevKnowledgeDoc, DevPatch, DevPlan, DevProject, DevSession |
-| Integrations | IntegrationAuditLog, IntegrationHealthCheck, IntegrationProvider, IntegrationSecretReference, IntegrationUsageEvent, IntegrationWebhookEvent |
-| Users, roles, security, audit | User, ApiKey, CustomRole, RoleAssignment, SecurityAlert, SecurityAuditLog, AuditLog, AlertNotification, AppNotification, FeatureAnalytics |
-| Learning, projects, misc. | StudyModule, UserProgress, Resource, Project, Task, WebsiteGeneratorProject, CustomThemeSetting |
+| Telegram | TelegramAccount, TelegramBot, TelegramBotExperiment, TelegramBotExperimentRun, TelegramBotSession, TelegramKnowledgeGap |
+| Cards & game | Card, CardBattleHistory, CardListing, CardManualPrice, CardMatchmakingQueue, CardMatchmakingRoom, CardPlayerProfile, CardScanSession, CardTradeProposal, CardUsageHistory, CollectorRewardProfile, Creature, DailyQuest, ExcavationEvent, MasterCard, PinnedCard, PlayerDeck, RealityPressure, SimBot |
+| Economy, payments, commerce | BazarProduct, EconomyAuditLog, Escrow, IntegrationTopupOrder, JadeAsset, JadeTransaction, MarketConnector, Order, PricingAuditLog, StorefrontCustomization, StorefrontListing, Transaction |
+| Wallets, portfolio, markets | ConnectedWallet, InvestmentJournalEntry, NFT, PortfolioWeighting, PriceAlert, RebalancingSuggestion, WalletHolding |
+| Social & collaboration | CommunityPost, CommunityPostComment, CommunityPostReaction, Guild, GuildBankTransaction, GuildMembership, Note, ReferralEvent, ReferralProfile, Reputation, SharedDashboardComment, SharedDashboardSession, SharedDashboardState, SocialStrategyPost, TradeNegotiationChat, TradeNegotiationPost |
+| Jackie & Dev Lab | DevAgentTask, DevAuditLog, DevFileReference, DevKnowledgeDoc, DevPatch, DevPlan, DevProject, DevSession, JackieFeedback, JackieSaved |
+| Users, roles, security, audit | ApiKey, AppNotification, AuditLog, CustomRole, FeatureAnalytics, RoleAssignment, SecurityAlert, SecurityAuditLog, User |
+| Learning, projects, misc. | CustomThemeSetting, Project, StudyModule, Task, UserProgress, WebsiteGeneratorProject |
 
-**Used in code but not defined in `base44/entities/`.** Calls to these fail until the entity
-exists: CommunityPost, CommunityPostComment, CommunityPostReaction, SimBot (field specs in
-`src/ENTITY_SETUP.md`); RateLimitCounter (`base44/functions/rateLimitAuth/`); TelegramConversation,
-TelegramMessageLog (`base44/functions/listTelegramBots/`); MasterCard (`src/lib/cardCatalog.js`);
-NFT, InvestmentJournalEntry, JackieFeedback, ReferralEvent, ReferralProfile (these five only have
-a copy in `src/entities/`).
+Also accessed by computed name: `src/lib/botStudioStore.js` (Offline AI Studio records) and
+`src/pages/DataPortability.jsx` (export/import).
 
-## Functions by domain (`base44/functions/<name>/entry.ts`)
+## Server functions the app calls (44)
+
+Names passed to `backend.functions.invoke()`. None exist anymore; each call fails until a backend
+provides it.
 
 | Domain | Functions |
 |---|---|
-| Telegram | createTelegramBot, updateTelegramBot, listTelegramBots, listTelegramBotDashboard, manageTelegramWebhook, registerTelegramWebhook, telegramWebhook, generateTelegramLinkCode, createTelegramStarsInvoice, ingestTelegramBotKnowledge, analyzeTelegramKnowledgeGaps, simulateTelegramSwarm |
-| Bots, memory, training | adaptBotStrategyFromPerformance, archiveBotMemory, archiveOldBotMemory, summarizeInactiveBotMemory, indexBotSemanticMemory, searchBotSemanticMemory, retrieveKnowledgeBaseContext, retrainBotsFromKnowledge, generateBotTrainingInsights, monitorBotRegression, botAutomationWebhook, dispatchBotAutomationAlert, botExternalDataAccess |
-| Squads & bot farm | deliverSquadOutput, learnFromSuccessfulSquadRun, syncTrainingToSquadMemory, sendWeeklySquadReport, autoReassignBotFarmTasks, notifyCriticalBotFarmRisk |
-| Models & AI | invokeExternalModel, invokeHuggingFaceUserModel, renderPromptTemplate, jackyProxy (bridge to the `jacky` engine), generateListingCopy, generateSmartRecommendations, generateStrategyRecommendations, predictAssetPerformance |
-| Portfolio, wallets, markets | assessPortfolioRisk, calculatePortfolioRebalance, calculateRebalancing, monitorRebalancing, emailRebalanceSummary, fetchWalletHoldings, detectWalletSuspiciousActivity, checkPriceAlerts |
-| Economy & payments | executeJadeDrop, mintMonolithJade, verifyTonPayment, validatePaymentWebhook, sendPurchaseReceipt, runMarketplaceSyndication |
-| Security, privacy, roles | assignRole, rateLimitAuth, encryptUserPII, deleteMyData |
-| Integrations | whatsappSendMessage, whatsappTemplateMessage, whatsappWebhookReceive, whatsappWebhookVerify, syncGoogleSheet, globalSearch, getIntegrationQuotaStatus, checkEditorPackageUpdates |
-| Tasks & projects | checkTaskDueNotifications, handleTaskNotifications, handleProjectStatusNotifications |
-
-## Workflows → function (`base44/workflows/<Name>.jsonc`)
-
-| Workflow file | Trigger | Calls |
-|---|---|---|
-| `Bot Farm Auto Reassignment Scheduler.jsonc` | scheduled | autoReassignBotFarmTasks |
-| `Bot Farm Critical Risk Alert.jsonc` | entity | notifyCriticalBotFarmRisk |
-| `Bot Memory Hot Store Trimmer.jsonc` | scheduled | archiveOldBotMemory |
-| `Bot Memory Retraining.jsonc` | scheduled, `0 3 * * *` | retrainBotsFromKnowledge |
-| `Bot Regression Monitor.jsonc` | entity | monitorBotRegression |
-| `Check Price Alerts Every Hour.jsonc` | scheduled | checkPriceAlerts |
-| `Daily Editor Package Update Check.jsonc` | scheduled, `0 9 * * *` | checkEditorPackageUpdates |
-| `Daily Inactive Bot Memory Cleanup.jsonc` | scheduled, `0 7 * * *` | summarizeInactiveBotMemory |
-| `Daily Portfolio Rebalance Summary Email.jsonc` | scheduled, `0 13 * * *` | emailRebalanceSummary |
-| `Learn From Successful Squad Runs.jsonc` | entity | learnFromSuccessfulSquadRun |
-| `Marketplace Syndication Engine.jsonc` | scheduled | runMarketplaceSyndication |
-| `Price Alert Monitor.jsonc` | scheduled | checkPriceAlerts |
-| `Project Status Change Notifications.jsonc` | entity | handleProjectStatusNotifications |
-| `Retrain On New Squad Knowledge.jsonc` | entity | retrainBotsFromKnowledge |
-| `Task Assignment Notifications.jsonc` | entity | handleTaskNotifications |
-| `Task Due Soon Notifications.jsonc` | scheduled | checkTaskDueNotifications |
-| `Telegram Knowledge Gap Analysis.jsonc` | scheduled | analyzeTelegramKnowledgeGaps |
-| `Training Results To Squad Memory.jsonc` | entity | syncTrainingToSquadMemory |
-| `Weekly Bot Squad Report.jsonc` | scheduled, `0 13 * * 1` | sendWeeklySquadReport |
-
-## Agents & connectors
-
-| Path | What |
-|---|---|
-| `base44/agents/progress_tracker.jsonc` | tracks learning progress (UserProgress; reads StudyModule) |
-| `base44/agents/reputation_manager.jsonc` | reviews and adjusts reputation (Reputation, User) |
-| `base44/agents/resource_curator.jsonc` | recommends learning resources (Resource, StudyModule, UserProgress) |
-| `base44/agents/study_guide_creator.jsonc` | builds personal study guides (StudyModule, UserProgress) |
-| `base44/connectors/gmail.jsonc` | Gmail send scope |
-
-## Legacy copies in `src/`
-
-| Path | What |
-|---|---|
-| `src/entities/*.json` (43) | older schema copies. 13 have no `base44/entities/` match: InvestmentJournalEntry, JackieFeedback, JackieProgress, NFT, PlayHistory, Playlist, PlaylistCollaborator, PlaylistTrack, ReferralEvent, ReferralProfile, Tag, Track, TrackTag |
-| `src/functions/*.js` (11) | older function copies. Duplicated in `base44/functions/`: generateTelegramLinkCode, listTelegramBotDashboard, manageTelegramWebhook, notifyCriticalBotFarmRisk, telegramWebhook. Only here: collaborativePlaylist, getSharedPlaylist, importTelegramNfts, jackieCodeEdit, listCollaborativePlaylists, listPublicPlaylists |
-| `src/ENTITY_SETUP.md` | fields and access rules for entities that git-added definitions lost |
+| Telegram | createTelegramStarsInvoice, generateTelegramLinkCode, importTelegramNfts, ingestTelegramBotKnowledge, listTelegramBotDashboard, manageTelegramWebhook, simulateTelegramSwarm, updateTelegramBot |
+| Bots, memory, squads, models | adaptBotStrategyFromPerformance, archiveBotMemory, deliverSquadOutput, dispatchBotAutomationAlert, generateBotTrainingInsights, generateSmartRecommendations, indexBotSemanticMemory, invokeExternalModel, jackieCodeEdit, jackyProxy, renderPromptTemplate, retrieveKnowledgeBaseContext, searchBotSemanticMemory, summarizeInactiveBotMemory, syncTrainingToSquadMemory |
+| Portfolio, wallets, markets | calculatePortfolioRebalance, checkPriceAlerts, detectWalletSuspiciousActivity, fetchWalletHoldings |
+| Economy, payments, storefront | executeJadeDrop, generateListingCopy, mintMonolithJade, runMarketplaceSyndication, validatePaymentWebhook, verifyTonPayment |
+| Media | collaborativePlaylist, getSharedPlaylist, listCollaborativePlaylists, listPublicPlaylists |
+| Privacy & security | deleteMyData, encryptUserPII |
+| Integrations & other | checkEditorPackageUpdates, getIntegrationQuotaStatus, globalSearch, syncGoogleSheet, whatsappSendMessage |

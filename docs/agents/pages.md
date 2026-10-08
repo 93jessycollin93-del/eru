@@ -115,6 +115,5 @@ These exist in `src/pages/` but `src/App.jsx` does not mount them. Check before 
 | File | Note |
 |---|---|
 | `src/pages/Marketplace.jsx` | uses `src/components/BiddingHistory.jsx`, `src/components/marketplace/` |
-| `src/pages/OAuthConsent.jsx` | OAuth consent screen (uses `src/lib/app-params.js`) |
 | `src/pages/Studio.jsx` | theme, background and layout picker (older; theming now lives in `/visual`) |
 | `src/pages/Workstation.jsx` | stub that redirects to `/visual` (merged into Visual Engine) |

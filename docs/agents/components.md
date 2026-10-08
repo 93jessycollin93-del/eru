@@ -53,7 +53,7 @@ open first. To list a whole folder, open the folder path.
 | `src/components/settings/` | 1 | Settings, UserSettings | `DeleteAccountButton.jsx` |
 | `src/components/storefront/` | 14 | StorefrontHub, SellerDashboard, CreatorHub, Collectables, NFTs, PhoenixInvestor | `ListingManager.jsx`, `ListingEditor.jsx`, `SellerOrderTable.jsx` |
 | `src/components/telegram/` | 23 | TelegramBotManagement, TelegramApps, Dashboard | `TelegramBotDashboard.jsx`, `BotFlowBuilder.jsx`, `TelegramBotDetail.jsx`, `telegramExperimentUtils.jsx` |
-| `src/components/theme/` | 10 | VisualEngine, `Layout.jsx` | `ThemeEnginePanel.jsx`, `PageThemeLayer.jsx`, `AdvancedThemeStudio.jsx` |
+| `src/components/theme/` | 9 | VisualEngine, `Layout.jsx` | `ThemeEnginePanel.jsx`, `PageThemeLayer.jsx`, `AdvancedThemeStudio.jsx` |
 | `src/components/ui/` | 49 | everywhere | shadcn primitives (generated; `components.json`) |
 | `src/components/vault/` | 1 | Vault | `VaultLogin.jsx` (nested PIN layers, `src/lib/secretAreaPin.js`) |
 

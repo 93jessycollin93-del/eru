@@ -15,10 +15,10 @@ free — straight from devtools.
 
 **Fix:**
 - New backend functions (run with the service role):
-  - `base44/functions/mintMonolithJade/entry.ts` — authoritative Monolith roll +
+  - the `mintMonolithJade` server function — authoritative Monolith roll +
     `JadeAsset`/`JadeTransaction` create + bonus card grant. Optional payment
     gate via `orderId`; make it mandatory with `MONOLITH_REQUIRE_PAYMENT=true`.
-  - `base44/functions/executeJadeDrop/entry.ts` — paid-order-gated drop grant.
+  - the `executeJadeDrop` server function — paid-order-gated drop grant.
 - `JTAMonolith.jsx` and `jadeDropSystem.js` now invoke those functions instead
   of writing entities directly.
 - `JadeAsset` RLS `create` set to `created_by == "system@eru.internal"`, which
@@ -29,23 +29,23 @@ free — straight from devtools.
 ### Verify on deploy (cannot be tested from the dev container)
 1. Open the Monolith, roll, confirm → a jade asset is created and **owned by
    you** (appears in your inventory; `created_by` is your email).
-2. Try `base44.entities.JadeAsset.create({...})` from the browser console →
+2. Try `backend.entities.JadeAsset.create({...})` from the browser console →
    must be **rejected** by RLS.
 3. Confirm a `JadeTransaction` row is written with `price_usd: 20` and the
    server-side stats.
 4. If you turn on `MONOLITH_REQUIRE_PAYMENT`, confirm minting without a paid
    `orderId` returns HTTP 402.
 5. Sanity-check that setting `created_by` on a service-role create is honored by
-   your Base44 instance (ownership depends on it). If not, set ownership via a
+   your backend (ownership depends on it). If not, set ownership via a
    dedicated owner field and adjust the read RLS accordingly.
 
 ## ⚠️ Remaining — Currency (gold / jadeite / bonus_cards / balance)
 
 **Why it's still open:** these balances live on the **user profile** and are
-written with `base44.auth.updateMe({ gold: ... })` in `economyApi.js`,
-`BazarStand.jsx`, and `assetGrant.js`. Base44 has **no field-level RLS on
+written with `backend.auth.updateMe({ gold: ... })` in `economyApi.js`,
+`BazarStand.jsx`, and `assetGrant.js`. The backend had **no field-level RLS on
 `updateMe`** — a user can always set their own profile fields — so a user can
-run `base44.auth.updateMe({ gold: 1e12 })` from the console regardless of UI
+run `backend.auth.updateMe({ gold: 1e12 })` from the console regardless of UI
 logic. This was left unchanged on purpose: a half-finished migration (some code
 reading a new Wallet, other code still writing `user.gold`) would desync and
 corrupt balances. It must be done in one deliberate, tested pass.

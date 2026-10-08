@@ -65,7 +65,7 @@ Marketplace/Storefront patterns (listings), profiles.
 **Core flows:** searchable directory + matching (by niche/budget/audience/platform)
 → brief posting → proposals → messaging → escrow-backed deal → reputation review.
 
-**No major new infra/cost** — this stays within Base44 + existing integrations.
+**No major new infra/cost** — this stays within the app's backend + existing integrations.
 
 > **Decided:** primary user is **brands/advertisers seeking creators**. First
 > screen = post a brief + search creators by niche / audience / platform. Creator

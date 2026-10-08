@@ -7,7 +7,7 @@ video at a chosen resolution (240p–1080p), using **yt-dlp + ffmpeg**.
 ## Why is this a separate service?
 
 `yt-dlp` and `ffmpeg` spawn OS processes and write temporary files. That makes
-them **incompatible with serverless / hosted backends** (Base44, Lovable, Vercel
+them **incompatible with serverless / hosted backends** (Lovable, Vercel
 functions, Netlify, etc.), which don't allow long-running child processes or
 local disk writes.
 
@@ -148,7 +148,7 @@ ships a **Dockerfile** that installs ffmpeg + yt-dlp. Railway auto-detects it.
    to `media-converter` (Settings → Source).
 4. Railway detects the `Dockerfile` and builds the image (Node + ffmpeg + yt-dlp).
 5. Under **Variables**, set:
-   - `ALLOWED_ORIGINS` = your app's origin(s), e.g. `https://your-app.base44.app`
+   - `ALLOWED_ORIGINS` = your app's origin(s), e.g. `https://your-app.example.com`
    - (optional) `MAX_DURATION_SECONDS`, timeouts, etc.
    - Leave `PORT` unset — Railway injects it and the server reads it.
 6. Under **Settings → Networking**, click **Generate Domain**. You'll get a URL
@@ -162,7 +162,7 @@ ships a **Dockerfile** that installs ffmpeg + yt-dlp. Railway auto-detects it.
 ```bash
 cd media-converter
 fly launch --no-deploy        # creates fly.toml from the Dockerfile
-fly secrets set ALLOWED_ORIGINS=https://your-app.base44.app
+fly secrets set ALLOWED_ORIGINS=https://your-app.example.com
 fly deploy
 ```
 

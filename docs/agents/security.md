@@ -54,11 +54,11 @@ If you add a feature that the registry should cover, update `FEATURE_COMPLIANCE_
 | Gates (UI) | `src/components/ProtectedRoute.jsx`, `RoleGate.jsx`, `PermissionGate.jsx`, `MFAVerification.jsx`, `BiometricAuth.jsx` |
 | Lib | `src/lib/permissions.js`, `rbac.js`, `privacy.js`, `secretAreaPin.js`, `secureSlice.js`, `securityChecks.js`, `securityTestRunner.js`, `auditEvents.js`, `safeUrl.js`, `paymentGuards.js`, `eruRedteam.js`; disabled client stubs `encryption.js`, `webhookValidator.js` |
 | Components | `src/components/privacy/`, `src/components/vault/`, `src/components/settings/DeleteAccountButton.jsx`, `src/components/SecurityAnalysis.jsx`; `src/components/security/` (security operations UI, **not imported anywhere**) |
-| Server (quarantined) | `base44/functions/` rateLimitAuth, encryptUserPII, deleteMyData, assignRole, validatePaymentWebhook, verifyTonPayment, detectWalletSuspiciousActivity |
-| Data (quarantined) | CustomRole, RoleAssignment, ApiKey, AuditLog, SecurityAuditLog, SecurityAlert, EconomyAuditLog, PricingAuditLog, IntegrationAuditLog, IntegrationSecretReference |
+| Server calls (not connected) | encryptUserPII, deleteMyData, validatePaymentWebhook, verifyTonPayment, detectWalletSuspiciousActivity |
+| Records | CustomRole, RoleAssignment, ApiKey, AuditLog, SecurityAuditLog, SecurityAlert, EconomyAuditLog, PricingAuditLog |
 
 ## Rules
 
-- Do not put secrets in client code or `VITE_*` vars. Server secrets are read in `base44/functions/*` via `Deno.env.get`.
+- Do not put secrets in client code or `VITE_*` vars. Secrets belong only in a server's environment.
 - Grant nothing of value without a verified transaction (`src/PAYMENT_VERIFICATION_RULES.md`).
 - Validate external URLs with `src/lib/safeUrl.js` before rendering them.

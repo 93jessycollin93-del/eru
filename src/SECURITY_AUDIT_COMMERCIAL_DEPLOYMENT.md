@@ -173,7 +173,7 @@ async function verifyAttestation(attestationResponse) {
   
   // Decode and verify with FIDO2 server-side validation
   // Uses attestation certificates from Apple/Google/Microsoft
-  const attestationValid = await base44.functions.invoke(
+  const attestationValid = await backend.functions.invoke(
     'verifyBiometricAttestation',
     { attestationObject, clientDataJSON }
   );
@@ -293,7 +293,7 @@ export async function enforceRateLimit(userId, endpoint) {
 export const authenticateWithRateLimit = async (email, password) => {
   try {
     await enforceRateLimit(email, 'login');
-    return await base44.auth.login(email, password);
+    return await backend.auth.login(email, password);
   } catch (err) {
     if (err.message.includes('Rate limit')) {
       return { success: false, reason: 'Too many attempts. Try again in 60 seconds.' };
@@ -453,7 +453,7 @@ Deno.serve(async (req) => {
     const telegramUser = validateTelegramInitData(initData);
     
     // 2. Bind payment to Telegram user ID
-    const payment = await base44.entities.Order.create({
+    const payment = await backend.entities.Order.create({
       buyer_email: `telegram_${telegramUser.userId}@telegram.local`,
       telegram_user_id: telegramUser.userId,
       // ...
@@ -529,7 +529,7 @@ export async function logSecurityEvent(eventType, data) {
   };
   
   // Store in immutable audit log
-  await base44.entities.SecurityAuditLog.create(entry);
+  await backend.entities.SecurityAuditLog.create(entry);
   
   // 🚨 Alert on suspicious activity
   if (entry.severity === 'critical') {

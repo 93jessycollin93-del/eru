@@ -331,5 +331,5 @@ To launch on ANY app store, you MUST have:
 
 **For questions or clarifications, contact:** security@yourapp.com
 
-**Audit Conducted By:** Base44 Security Team  
+**Audit Conducted By:** automated security review  
 **Final Review Date:** 2026-04-10

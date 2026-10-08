@@ -9,19 +9,10 @@ every area of the codebase is one link away from it.
 ## Run locally
 
 1. `npm install`
-2. Create `.env.local` with the backend values the app reads (see
-   [docs/agents/commands.md](docs/agents/commands.md#setup)):
+2. `npm run dev`
 
-   ```
-   VITE_BASE44_APP_ID=…
-   VITE_BASE44_APP_BASE_URL=…
-   ```
-
-3. `npm run dev`
+No backend is connected. Pages open and local features work, but sign-in, saved data and
+server features stay off until a backend is added behind `src/api/backend.js`
+(see [docs/agents/backend.md](docs/agents/backend.md)).
 
 Before pushing: `npm run lint`, `npm run build`, `npm run compliance:security`.
-
-## Backend status
-
-The app still depends on the Base44 SDK and the definitions in `base44/`. That dependency is
-quarantined: see rule 1 in [AGENTS.md](AGENTS.md#1-hard-rules-apply-everywhere).

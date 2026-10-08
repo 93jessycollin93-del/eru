@@ -8,7 +8,7 @@ idiomatic to the platform it lives on so you can manipulate it there.
 | App | Repo | Platform | Backend it must fit |
 |---|---|---|---|
 | **PC** | `PC` (`jackies-pc`) | Vite/React 19, self-hosted | Express `server.ts` + Firebase + on-device AI + the `jacky` Flask engine |
-| **Eru** | `eru` | **base44.com** | Base44 entities + serverless functions + Base44 auth |
+| **Eru** | `eru` | *backend removed — undecided* | None connected; `src/api/backend.js` is the single seam |
 | **Jackie** | `ocd-jacky-777` | **lovable.dev** | Supabase (Postgres + RLS + edge functions) + Lovable auth |
 | **Empath** | `CYBERNETIC_EMPATH` | *undecided — greenfield* | None yet; carries the shared layer only (see §6 tracker) |
 
@@ -31,9 +31,9 @@ feel-identical** supersets.
 - **PC** — ~90 windowed apps, on-device AI, vault/compression subsystem, PWA. The
   reference. Gaps: not wired to the real `jacky` telemetry; missing a few "best of
   fleet" patterns (see `FEATURE_AUDIT.md`).
-- **Eru** — a large Base44 super-app already (~90 pages, ~150 entities, ~70 functions:
+- **Eru** — a large super-app already (~90 pages; its old hosted backend has been removed:
   bots, trading, TCG, security, media). Rich, but a *different* app; needs PC's app
-  set + a shared shell/theme, expressed in Base44 primitives.
+  set + a shared shell/theme, and a new backend behind `src/api/backend.js`.
 - **Jackie (ocd-jacky-777)** — the furthest along structurally: it **already embeds the
   whole PC OS** (`public/pc-os/` via `PCDesktop.tsx` at `/pc`) and **already has all 91
   Eru pages** copied into `src/eru/`, on Supabase with real edge functions
@@ -53,7 +53,7 @@ One portable identity applied across all three, seeded by the App Commander:
 - **Palette / tokens** — the eYe situation-room set: ground `#0a0e14`, panels `#111a26`,
   ink `#cdd9ea`, teal `#00e6c9` (eYe), gold `#e8b552` (rank), semantics nominal/warn/crit.
   Ship as CSS custom-property tokens (`eye-theme.css`) + a Tailwind theme preset so both
-  the shadcn (Jackie) and Base44 (Eru) styling layers consume the same variables.
+  the shadcn styling layers in Jackie and Eru consume the same variables.
 - **Shell language** — the windowed "desktop OS" metaphor from PC (`DraggableWindow`,
   `FloatingNav`, `CommandPalette`, `HomeScreen`) as the common frame; App Commander as the
   home/launcher in each.
@@ -71,14 +71,14 @@ the App Commander components) copied into each repo, each importing the same tok
 
 PC's ~90 apps group into domains. For each, the target implementation per platform:
 
-| PC domain (examples) | Eru — Base44 target | Jackie — Supabase/Lovable target |
+| PC domain (examples) | Eru target (backend to be chosen) | Jackie — Supabase/Lovable target |
 |---|---|---|
-| **AI / agents / models** (ModelRouter, OnDeviceModels, Claude/Grok/Codex, SmallAgentFleet, KnowledgeCompressor) | Base44 `agents/` + functions calling providers; entities for models/agents/routes | Extend existing edge fns (`jackie-orchestrate/groq/ollama/openrouter`) + tables `agents/models/routes` |
-| **Security / vault / secrets** (SecretsVault, SecurityCenter, PermissionBroker, AuditTrail) | Base44 entities `Secret/AuditEvent/Permission` + functions for hygiene scans | Supabase tables + **RLS** (roles table + `has_role()` pattern from tikkerlive) + edge fns |
-| **Data / knowledge / pods** (DataPods, KnowledgeCompressor, TimeMachine, Archiver, ECPS) | Base44 entities `Pod/Snapshot` + functions; ECPS via `jacky` API | Supabase `pods/snapshots` + storage buckets; ECPS via `jacky` API |
-| **Infra / cost / ops** (BudgetGuardian, CostAnalytics, FleetAtlas, MissionControl) | Base44 entities `Budget/SpendEvent`; MissionControl reads `jacky /api/status` | Supabase tables + realtime; MissionControl reads `jacky /api/status` |
-| **Devices / creative / games** (SuperSayen, Flipper, Blender/Unreal, chess/arcade) | Base44 pages (client-heavy; little backend) | Lovable pages (client-heavy) — reuse PC components where possible |
-| **System shell** (Home, Settings, Notifications, Automation, Voice, Clipboard) | Base44 pages + `Notification/Automation` entities | Supabase `notifications/automations` + edge fns |
+| **AI / agents / models** (ModelRouter, OnDeviceModels, Claude/Grok/Codex, SmallAgentFleet, KnowledgeCompressor) | server functions calling providers; records for models/agents/routes | Extend existing edge fns (`jackie-orchestrate/groq/ollama/openrouter`) + tables `agents/models/routes` |
+| **Security / vault / secrets** (SecretsVault, SecurityCenter, PermissionBroker, AuditTrail) | records `Secret/AuditEvent/Permission` + functions for hygiene scans | Supabase tables + **RLS** (roles table + `has_role()` pattern from tikkerlive) + edge fns |
+| **Data / knowledge / pods** (DataPods, KnowledgeCompressor, TimeMachine, Archiver, ECPS) | records `Pod/Snapshot` + functions; ECPS via `jacky` API | Supabase `pods/snapshots` + storage buckets; ECPS via `jacky` API |
+| **Infra / cost / ops** (BudgetGuardian, CostAnalytics, FleetAtlas, MissionControl) | records `Budget/SpendEvent`; MissionControl reads `jacky /api/status` | Supabase tables + realtime; MissionControl reads `jacky /api/status` |
+| **Devices / creative / games** (SuperSayen, Flipper, Blender/Unreal, chess/arcade) | React pages (client-heavy; little backend) | Lovable pages (client-heavy) — reuse PC components where possible |
+| **System shell** (Home, Settings, Notifications, Automation, Voice, Clipboard) | React pages + `Notification/Automation` records | Supabase `notifications/automations` + edge fns |
 
 The full per-app checklist lives in **§6 Parity tracker** (kept as a living matrix).
 
@@ -94,17 +94,14 @@ Generalize the App Commander's fetch layer: configurable base URL + token, offli
 fallback, typed wrappers for `/api/status`, `/api/assessment`, `/api/ask`, `/api/control`,
 `/api/squads/*`, `/api/ecps/*`. Gives every app real GPU/thermal/routing without
 re-implementing it. Files: `PC/lib/jackyClient.ts`, `eru` function
-`base44/functions/jackyProxy.js` (server-side to avoid CORS), Jackie edge function
+the `jackyProxy` server function (server-side to avoid CORS), Jackie edge function
 `supabase/functions/jacky-proxy`.
 
-**Eru → Base44.**
-- *Data* → Base44 **entities** (`.jsonc` schema): one per PC persisted concept
-  (Model, Agent, Route, Secret, Pod, Budget, Notification, Automation…).
-- *Logic* → Base44 **serverless functions** (`base44/functions/`): provider calls,
-  scans, rebalancing, the `jackyProxy`.
-- *Auth* → Base44 auth (already in use).
-- *UI* → Base44 React pages under `src/pages/`, using the shared theme kit + PC components
-  adapted to `@base44/sdk` data access.
+**Eru → backend to be chosen.**
+- Its previous hosted backend was removed. Every data, auth and function call goes
+  through `src/api/backend.js`, which currently connects to nothing.
+- *Data / logic / auth* → whatever backend replaces it, wired in behind that one file.
+- *UI* → React pages under `src/pages/`, using the shared theme kit + PC components.
 
 **Jackie → Lovable + Supabase.**
 - *Data* → Supabase **Postgres tables** with **RLS** (extend the existing
@@ -132,14 +129,14 @@ Each item is independently shippable; waves are sequence, not a single commit.
   - ✅ `jackyClient` shim, byte-identical in all four repos (zero imports, so it
     ports unchanged). Typed wrappers for status/assessment/ask/control/squads/ecps.
   - ✅ Platform relays, all speaking one contract: PC `/api/jacky` in `server.ts`,
-    Eru `base44/functions/jackyProxy`, Jackie `supabase/functions/jacky-proxy`.
+    Eru the `jackyProxy` server function, Jackie `supabase/functions/jacky-proxy`.
     Each keeps the engine token server-side and forwards only allowlisted paths.
   - ✅ Platform bootstraps wiring the client to each relay's auth.
   - ⬜ Re-point the panels: **real System Monitor**, **Ask Jackie w/ fallback chain**,
     **master switch**. The unlock is available but not yet consumed — see
     `PARITY_MATRIX.md` for the honest per-item state.
 - **Wave 2 — core app domains, platform-native.** AI/agents, security/vault, data/pods —
-  ported as Base44 entities+functions (Eru) and Supabase tables+edge fns (Jackie), behind
+  ported to Eru's future backend and to Supabase tables+edge fns (Jackie), behind
   the shared shell. Jackie leans on its PC embed + Eru pages to move fast.
 - **Wave 3 — breadth + best-of-fleet.** Remaining domains (creative/devices/games/system)
   + ECPS compression suite, yt-dlp Media Converter (eru backend + Jackie Vault UI),
