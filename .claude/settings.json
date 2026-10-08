@@ -1,17 +1,42 @@
 {
   "permissions": {
     "deny": [
-      "WebFetch(domain:base44.com)",
-      "WebFetch(domain:www.base44.com)",
-      "WebFetch(domain:app.base44.com)",
-      "WebFetch(domain:docs.base44.com)",
-      "WebFetch(domain:media.base44.com)",
-      "WebFetch(domain:base44.app)",
+      "Bash(cat *)",
+      "WebFetch",
+      "WebSearch",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(npx *)",
+      "Bash(sudo *)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(nc *)",
+      "Bash(ncat *)",
+      "Bash(telnet *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f *)",
+      "Bash(git filter-branch *)",
+      "Bash(git filter-repo *)",
+      "Edit(.claude/**)",
       "Bash(base44 *)",
       "Bash(npx base44 *)",
       "Bash(npx @base44/cli *)"
-    ]
+    ],
+    "ask": [
+      "Bash(npm install *)",
+      "Bash(npm i *)",
+      "Bash(npm add *)",
+      "Bash(npm uninstall *)",
+      "Bash(git push origin main*)",
+      "Edit(.github/workflows/**)",
+      "Edit(scripts/security-guard*)",
+      "Edit(package.json)"
+    ],
+    "disableBypassPermissionsMode": "disable"
   },
+  "enableAllProjectMcpServers": false,
   "sandbox": {
     "network": {
       "deniedDomains": [
@@ -21,6 +46,24 @@
         "*.base44.app"
       ]
     }
+  },
+  "enabledPlugins": {
+    "activecampaign@knowledge-work-plugins": false,
+    "base44@knowledge-work-plugins": false,
+    "cowork-plugin-management@knowledge-work-plugins": false,
+    "data@knowledge-work-plugins": false,
+    "design@knowledge-work-plugins": false,
+    "desktop-commander@knowledge-work-plugins": false,
+    "engineering@knowledge-work-plugins": false,
+    "fastly-agent-toolkit@knowledge-work-plugins": false,
+    "hubspot-sales@knowledge-work-plugins": false,
+    "legal@knowledge-work-plugins": false,
+    "marketing@knowledge-work-plugins": false,
+    "modern-web-guidance@knowledge-work-plugins": false,
+    "productivity@knowledge-work-plugins": false,
+    "qodo-standards@knowledge-work-plugins": false,
+    "searchfit-seo@knowledge-work-plugins": false,
+    "lr-ai@anthropic-plugin-directory": false
   },
   "skillOverrides": {
     "base44:base44-cli": "off",

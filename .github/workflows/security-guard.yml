@@ -1,0 +1,35 @@
+name: Security guard
+
+# Runs the repo security rules (scripts/security-guard.mjs) on every push and
+# PR, and once a day so a change pushed by anyone (including an app or bot)
+# is still caught. A failed run makes GitHub email the repo owner — turn this
+# on under GitHub Settings → Notifications → Actions → "Only notify for
+# failed workflows".
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Security rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Security guard
+        run: node scripts/security-guard.mjs
+
+      - name: Security guard tests
+        run: node --test scripts/__tests__/security-guard.test.mjs

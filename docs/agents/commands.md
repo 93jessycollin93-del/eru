@@ -46,13 +46,18 @@ Standalone services have their own `package.json`: `router-console/`, `media-con
 `npm ci` → `npm run lint` → `npm run build` → `npm run compliance:security` →
 `npm run lint:i18n` (allowed to fail; some files are still over budget).
 
+`.github/workflows/security-guard.yml` runs `node scripts/security-guard.mjs` and its tests on every
+push and PR and daily at 05:41 UTC (the daily run only starts once this workflow is on `main`).
+For failure emails, turn on GitHub Settings → Notifications → Actions → "Only notify for failed workflows".
+
 ## Before you push
 
 1. `npm run lint`
 2. `npm run build`
 3. `npm run compliance:security`
-4. If you touched `scripts/validate-security-compliance.mjs` or `src/security/`: `node --test scripts/__tests__/*.test.mjs`
-5. If you added UI strings: `npm run lint:i18n`, and no file should go over its budget
+4. `node scripts/security-guard.mjs` (the security rules in [AGENTS.md](../../AGENTS.md#security-rules-enforced))
+5. If you touched `scripts/validate-security-compliance.mjs` or `src/security/`: `node --test scripts/__tests__/*.test.mjs`
+6. If you added UI strings: `npm run lint:i18n`, and no file should go over its budget
 
 ## Git
 

@@ -34,6 +34,37 @@ that row. Every map links back up here.
    Treat `src/components/ui/` as generated shadcn primitives: change them only on purpose.
 7. **Keep the maps true.** If you add, move, rename or delete something a map lists, update that map
    in the same change.
+8. **The security rules below are enforced. Never weaken them to get something working.**
+
+## Security rules (enforced)
+
+**For agents** (`.claude/settings.json`, Claude Code; agents cannot edit this file):
+
+- Blocked: `cat`, web browsing (WebFetch, WebSearch), `curl`, `wget`, `npx`, `sudo`, `ssh`, `scp`,
+  `nc`/`ncat`/`telnet`, force-push, history rewriting (`filter-branch`, `filter-repo`), and the
+  retired builder's CLI.
+- Asks the owner first: installing or removing npm packages, pushing to `main`, and editing CI
+  workflows, the security guard or `package.json`.
+- Bypass-permissions mode is off. Project MCP servers are never auto-approved. Third-party plugins
+  are switched off for this repo.
+
+**For the repo** (`scripts/security-guard.mjs`; allow-lists live in `scripts/security-guard.config.json`).
+It runs in CI on every push and PR and once a day. A failed run emails the owner.
+
+| Rule | Fails when |
+|---|---|
+| secrets | an API key, token, private key or JWT is committed |
+| credential-files | a `.env`, `.pem`, `.key`, `id_rsa`-style file is committed |
+| retired-service | the retired builder is referenced anywhere outside its block lists |
+| no-cat | a shell script, workflow, Dockerfile or npm script uses `cat` |
+| remote-html | HTML loads a remote script, frame, stylesheet, `<object>`/`<embed>` or sets `<base>` |
+| dangerous-js | `eval`, `new Function` or `document.write` appears, or raw HTML insertion appears outside the allow-list |
+| package-json | an install-time script or a non-registry dependency is added |
+| lockfile-source | a package resolves from anywhere but `registry.npmjs.org` |
+| workflows | a workflow lacks read-only permissions, grants write, uses `pull_request_target`, or uses an unlisted action |
+| outside-hosts | app code names a web host that is not in `allowedHosts` |
+| agent-settings | a required deny rule is removed from `.claude/settings.json` |
+| commit-identity | the latest commit's author or committer is not on the allow-list (catches bots and apps) |
 
 ## 2. Where to go
 
@@ -77,7 +108,7 @@ that row. Every map links back up here.
 | `src/context/`, `src/hooks/`, `src/utils/` | providers, hooks, URL helper | [frontend.md](docs/agents/frontend.md) |
 | `src/security/`, `src/*.md` | security artifacts and plans | [security.md](docs/agents/security.md), [reference-docs.md](docs/agents/reference-docs.md) |
 | `src/fleet-ui/` | shared eYe design kit (do not edit here) | [services.md](docs/agents/services.md) |
-| `scripts/` | i18n lint, security gate, swarm runner, tests | [commands.md](docs/agents/commands.md) |
+| `scripts/` | security guard, i18n lint, compliance gate, swarm runner, tests | [commands.md](docs/agents/commands.md), [security.md](docs/agents/security.md) |
 | `public/` | PWA shell: service worker, manifest, icons, App Commander HTML | [services.md](docs/agents/services.md) |
 | `router-console/` | standalone offline router-console PWA (own `package.json`) | [services.md](docs/agents/services.md) |
 | `media-converter/` | standalone yt-dlp/ffmpeg service (own `package.json`) | [services.md](docs/agents/services.md) |

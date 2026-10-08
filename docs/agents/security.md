@@ -2,6 +2,16 @@
 
 ↑ [AGENTS.md](../../AGENTS.md) · all documents → [reference-docs.md](reference-docs.md) · gates in CI → [commands.md](commands.md#ci)
 
+## Security guard (runs in CI and daily)
+
+| Path | Role |
+|---|---|
+| `scripts/security-guard.mjs` | the 12 repo rules ([AGENTS.md](../../AGENTS.md#security-rules-enforced)) |
+| `scripts/security-guard.config.json` | allow-lists: hosts, HTML-insertion files, CI actions, commit identities, required agent deny rules |
+| `scripts/__tests__/security-guard.test.mjs` | proves each rule catches what it claims |
+| `.github/workflows/security-guard.yml` | runs it on push, PR and daily; a failure emails the owner |
+| `.claude/settings.json` | agent deny/ask rules, plugins off, bypass mode off |
+
 ## Compliance gate (runs in CI)
 
 | Path | Role |
