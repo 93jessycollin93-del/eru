@@ -10,10 +10,13 @@ export default defineConfig({
       // Support for legacy code that imports the base44 SDK with @/integrations, @/entities, etc.
       // can be removed if the code has been updated to use the new SDK imports from @base44/sdk
       legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
-      hmrNotifier: true,
-      navigationNotifier: true,
-      analyticsTracker: true,
-      visualEditAgent: true
+      // Base44 quarantine (see AGENTS.md): the plugin stays only for the `@/`
+      // alias, JSX-in-.js and the dev /api proxy. These four inject scripts that
+      // report page views to Base44 or open a bridge to its builder — keep them off.
+      hmrNotifier: false,
+      navigationNotifier: false,
+      analyticsTracker: false,
+      visualEditAgent: false
     }),
     react(),
   ]

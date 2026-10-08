@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "deny": [
+      "WebFetch(domain:base44.com)",
+      "WebFetch(domain:www.base44.com)",
+      "WebFetch(domain:app.base44.com)",
+      "WebFetch(domain:docs.base44.com)",
+      "WebFetch(domain:media.base44.com)",
+      "WebFetch(domain:base44.app)",
+      "Bash(base44 *)",
+      "Bash(npx base44 *)",
+      "Bash(npx @base44/cli *)"
+    ]
+  },
+  "sandbox": {
+    "network": {
+      "deniedDomains": [
+        "base44.com",
+        "*.base44.com",
+        "base44.app",
+        "*.base44.app"
+      ]
+    }
+  },
+  "skillOverrides": {
+    "base44:base44-cli": "off",
+    "base44:base44-remote-dev": "off",
+    "base44:base44-sandbox": "off",
+    "base44:base44-sdk": "off",
+    "base44:base44-troubleshooter": "off"
+  }
+}

@@ -10,13 +10,13 @@
   "theme_color": "#070912",
   "icons": [
     {
-      "src": "https://media.base44.com/images/public/69cd26bdd3ed52f2bb2ce965/2f8859e04_generated_image.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://media.base44.com/images/public/69cd26bdd3ed52f2bb2ce965/2f8859e04_generated_image.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

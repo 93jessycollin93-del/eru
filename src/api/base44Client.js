@@ -10,5 +10,8 @@ export const base44 = createClient({
   functionsVersion,
   serverUrl: '',
   requiresAuth: false,
-  appBaseUrl
+  appBaseUrl,
+  // Base44 quarantine (see AGENTS.md): the SDK reports usage analytics to
+  // Base44 automatically unless this is off. Nothing in the app uses it.
+  analytics: { enabled: false }
 });
