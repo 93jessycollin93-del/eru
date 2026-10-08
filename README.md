@@ -1,39 +1,27 @@
-**Welcome to your Base44 project** 
+# Eru
 
-**About**
+A React + Vite web app (installable PWA): Telegram bots, an AI lab, a card game, a digital
+economy, media and more.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+**Agents and new contributors start at [AGENTS.md](AGENTS.md).** It is the global map, and
+every area of the codebase is one link away from it.
 
-This project contains everything you need to run your app locally.
+## Run locally
 
-**Edit the code in your local development environment**
+1. `npm install`
+2. Create `.env.local` with the backend values the app reads (see
+   [docs/agents/commands.md](docs/agents/commands.md#setup)):
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+   ```
+   VITE_BASE44_APP_ID=…
+   VITE_BASE44_APP_BASE_URL=…
+   ```
 
-**Prerequisites:** 
+3. `npm run dev`
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+Before pushing: `npm run lint`, `npm run build`, `npm run compliance:security`.
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+## Backend status
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
-
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+The app still depends on the Base44 SDK and the definitions in `base44/`. That dependency is
+quarantined: see rule 1 in [AGENTS.md](AGENTS.md#1-hard-rules-apply-everywhere).
