@@ -34,7 +34,7 @@ export default function TelegramAgentBuilder({ form, setForm, knowledgeState, on
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">System prompt</label>
+        <label className="text-xs text-muted-foreground">Personality &amp; system prompt</label>
         <textarea
           value={form.system_prompt}
           onChange={(e) => setForm((prev) => ({ ...prev, system_prompt: e.target.value }))}

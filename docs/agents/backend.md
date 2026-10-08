@@ -61,3 +61,39 @@ provides it.
 | Media | collaborativePlaylist, getSharedPlaylist, listCollaborativePlaylists, listPublicPlaylists |
 | Privacy & security | deleteMyData, encryptUserPII |
 | Integrations & other | checkEditorPackageUpdates, getIntegrationQuotaStatus, globalSearch, syncGoogleSheet, whatsappSendMessage |
+
+## Recovered definitions (lost from history, still needed)
+
+These record types are used by app code but their definitions were deleted from the repo in June
+2026 and never restored. Fields marked `*` are required. Rebuild them on whatever backend replaces
+`src/api/backend.js`.
+
+| Record | Fields | Access rule |
+|---|---|---|
+| RateLimitCounter | key* (`"<action>:<identifier>"`, e.g. `login:user@example.com`), action* (`login`, `signup`, `passwordReset`), count, reset_time | server only |
+| CommunityPost | body* (max 2000), post_type (`text`, `jade`, `card`, `nft`, `note`, `prompt`, `portfolio`, `link`), ref_id, ref_label, guild_id, is_public | write: creator; read: creator or `is_public` |
+| CommunityPostComment | post_id*, body* (max 1000), is_public | write: creator; read: creator or `is_public` |
+| CommunityPostReaction | post_id*, reaction (`like`, `love`, `celebrate`, `insightful`), is_public | write: creator; read: creator or `is_public` |
+| SimBot | name*, strategy* (`hodl`, `dca`, `sma_momentum`, `mean_reversion`, `rebalance`), asset_symbol*, start_balance, horizon_days, seed, config, equity_curve, final_value, return_pct, max_drawdown_pct, trade_count, is_public | write: creator; read: creator or `is_public` |
+| TelegramConversation | bot_id*, telegram_chat_id*, telegram_user_id, telegram_username, last_user_message, last_bot_reply, message_count, status (`active`, `paused`, `blocked`), last_activity_at | bot owner |
+| TelegramMessageLog | bot_id*, conversation_id, direction* (`incoming`, `outgoing`, `system`, `error`), message_text, telegram_message_id, command, error_message, latency_ms, metadata | bot owner |
+| TelegramBot (field) | webhook_secret_token: per-bot secret Telegram echoes in `X-Telegram-Bot-Api-Secret-Token` | server only, never sent to the browser |
+
+## Required server-side protections for any future backend
+
+The removed backend had these protections, some of them broken at the end. A replacement must
+enforce them on the server, not in the browser:
+
+- **Login brute-force limit:** count attempts per `login:`/`signup:`/`passwordReset:` + identifier
+  (RateLimitCounter) and refuse further attempts until `reset_time`.
+- **Webhook authenticity:** reject any Telegram webhook call whose secret header doesn't match the
+  bot's `webhook_secret_token`, including plain messages, not just payments. Verify WhatsApp,
+  Stripe and wallet webhooks by signature.
+- **Admin-only actions:** sending WhatsApp messages and templates, role assignment, and
+  Telegram knowledge-gap analysis require `role === 'admin'`.
+- **Ownership checks:** a user may only change their own bots, listings, orders and records.
+- **Value grants:** nothing of value is granted without a verified transaction
+  (`src/PAYMENT_VERIFICATION_RULES.md`).
+- **Receipts and outgoing email:** build the message from the stored transaction only; never take
+  the recipient or content from the request.
+

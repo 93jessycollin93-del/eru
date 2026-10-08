@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, FlaskConical, Key, Send, MessageSquare } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { backend } from '@/api/backend';
 import JackieHeader from '../components/jackie/JackieHeader';
@@ -42,10 +43,10 @@ const PAGE_NAV_MAP = [
 ];
 
 const MODE_PROMPTS = {
-  chat: `You are Jackie, an elite AI assistant. Be helpful, concise, and intelligent. Use markdown formatting. You have permanent access to Jackie's core programming memory covering Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Treat this as always-available built-in knowledge for teaching, comparison, generation, debugging, and architecture decisions.`,
-  code: `You are Jackie Code Engine. Generate production-ready code. Always use markdown code blocks with language tags. Be precise and clean. You have permanent access to Jackie's core programming memory covering Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that built-in knowledge proactively whenever coding or explaining.`,
-  visual: `You are Jackie Visual Studio. Output structured visual descriptions using markdown headers, lists, and tables. Think in components and modules.`,
-  builder: `You are Jackie System Builder. Guide users step-by-step through building complex systems. Break work into phases with clear milestones.`,
+  chat: `You are Jackie, an elite AI assistant. Be helpful, concise, and intelligent. Use markdown formatting. Never invent financial data. You have permanent access to Jackie's core programming memory covering Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Treat this as always-available built-in knowledge for teaching, comparison, generation, debugging, and architecture decisions.`,
+  code: `You are Jackie Code Engine. Generate production-ready code. Always use markdown code blocks with language tags. When refining, show only the changed code. Be precise and clean. Prefer modern patterns. You have permanent access to Jackie's core programming memory covering Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that built-in knowledge proactively whenever coding or explaining.`,
+  visual: `You are Jackie Visual Studio. When asked about layouts, systems, or flows, output structured visual descriptions using markdown headers, lists, and tables. Use clear hierarchy. Think in components and modules.`,
+  builder: `You are Jackie System Builder. Guide users step-by-step through building complex systems. Break work into phases. Output structured plans with clear milestones. Ask clarifying questions when needed.`,
   conversion: `You are Jackie, a global conversion optimization engine for multilingual AI systems.
 
 Your task is to generate and optimize content for maximum conversion performance across multiple languages, with priority on:
@@ -81,6 +82,9 @@ const THINK_MODES = [
   { id: 'designer',  label: 'Designer',   emoji: '🎨', color: 'text-pink-400',   desc: 'UI/UX + aesthetics focus',          prompt: 'THINK MODE: DESIGNER — Think in user flows, visual hierarchy, accessibility, and interface patterns. Prioritize clarity, delight, and usability in all output.' },
   { id: 'strategist',label: 'Strategist', emoji: '♟️', color: 'text-yellow-400', desc: 'Game theory + economy balance',     prompt: 'THINK MODE: STRATEGIST — Reason like a game theorist and economist. Analyze incentives, balance mechanics, model player behavior, and optimize for long-term outcomes.' },
   { id: 'explainer', label: 'Explainer',  emoji: '📖', color: 'text-green-400',  desc: 'Simple, clear breakdowns',         prompt: 'THINK MODE: EXPLAINER — Break down every concept into the simplest possible terms. Use analogies, bullet points, and examples. Assume no prior knowledge.' },
+  { id: 'markets',   label: 'Markets',    emoji: '📈', color: 'text-emerald-400', desc: 'Crypto + markets educator',        prompt: 'THINK MODE: MARKETS — Act as a knowledgeable crypto and financial markets educator. Explain concepts clearly. Never invent price data.' },
+  { id: 'gaming',    label: 'Gaming',     emoji: '🎮', color: 'text-violet-400',  desc: 'Game guide + strategy',            prompt: 'THINK MODE: GAMING — Act as a game guide and strategy expert.' },
+  { id: 'creative',  label: 'Creative',   emoji: '💡', color: 'text-orange-400',  desc: 'Writing + ideation',               prompt: 'THINK MODE: CREATIVE — Act as a creative writing and ideation expert.' },
 ];
 
 const MODES = [
@@ -92,10 +96,19 @@ const MODES = [
 ];
 
 export default function JackieAI() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const jackieProgressEntity = backend.entities?.JackieProgress || null;
   const [messages, setMessages] = useState([]);
-  const [thinkMode, setThinkMode] = useState('default');
+  const [thinkMode, setThinkMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jackie_think_mode');
+      return THINK_MODES.some(t => t.id === saved) ? saved : 'default';
+    } catch { return 'default'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('jackie_think_mode', thinkMode); } catch { /* storage unavailable */ }
+  }, [thinkMode]);
   const [userBots, setUserBots] = useState([]);
   const [apiKeyCount, setApiKeyCount] = useState(0);
   const [apiKeyCapabilities, setApiKeyCapabilities] = useState({ webSearch: false, code: false, squad: false });
@@ -506,6 +519,17 @@ export default function JackieAI() {
                   </button>
                 ))}
               </div>
+              <div className="px-3 py-2.5 border-b border-border/50 space-y-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">{t('jackie.personality', undefined, 'Personality')}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {THINK_MODES.map(tm => (
+                    <button key={tm.id} onClick={() => setThinkMode(tm.id)} title={tm.desc} aria-pressed={thinkMode === tm.id}
+                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${thinkMode === tm.id ? 'bg-primary/15 text-foreground border-primary' : 'bg-secondary text-muted-foreground border-border hover:border-primary/30'}`}>
+                      <span aria-hidden="true">{tm.emoji}</span> {tm.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex-1 min-h-0 overflow-hidden">
                 <ConversationSidebar
                   messages={messages}
@@ -529,6 +553,15 @@ export default function JackieAI() {
                   className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium border bg-secondary text-muted-foreground border-border">
                   <MessageSquare className="w-3 h-3" /> Chats
                 </button>
+              </div>
+              <div className="md:hidden flex items-center gap-1.5 px-4 py-2 border-b border-border/50 overflow-x-auto">
+                <span className="flex-shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">{t('jackie.personality', undefined, 'Personality')}</span>
+                {THINK_MODES.map(tm => (
+                  <button key={tm.id} onClick={() => setThinkMode(tm.id)} aria-pressed={thinkMode === tm.id}
+                    className={`flex-shrink-0 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-all ${thinkMode === tm.id ? 'bg-primary/15 text-foreground border-primary' : 'bg-secondary text-muted-foreground border-border'}`}>
+                    <span aria-hidden="true">{tm.emoji}</span> {tm.label}
+                  </button>
+                ))}
               </div>
 
               {/* Mobile conversations panel */}

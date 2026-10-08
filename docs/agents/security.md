@@ -56,6 +56,7 @@ If you add a feature that the registry should cover, update `FEATURE_COMPLIANCE_
 | `/vault` | `src/pages/Vault.jsx` | nested PIN vault (`src/components/vault/VaultLogin.jsx`) |
 | `/user-settings` | `src/pages/UserSettings.jsx` | secret area, roles, API keys, account deletion |
 | `/eru-redteam-test` | `src/pages/EruRedteamTest.jsx` | simulated red-team run |
+| `/review` | `src/pages/AppReview.jsx` | on-device code scanner (`src/lib/codeScanner.js`): malware techniques, exfiltration, miners, keys |
 
 ## Code
 

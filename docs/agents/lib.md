@@ -34,6 +34,7 @@ or delete them.
 | `src/lib/securityChecks.js` | security readiness checks (`/admin/security`) |
 | `src/lib/securityTestRunner.js` | simulated permission-attack suite (`/admin/security-test`) |
 | `src/lib/auditEvents.js` | audit event helper |
+| `src/lib/codeScanner.js` | on-device malware-pattern scanner used by App Review (`/review`); tests in `scripts/__tests__/code-scanner.test.mjs` |
 | `src/lib/encryption.js` | client stub; **every export throws**. Encryption belongs on a server (the `encryptUserPII` server call, not connected) |
 | `src/lib/webhookValidator.js` | client stub; **always invalid**. Validation belongs on a server (the `validatePaymentWebhook` server call, not connected) |
 
