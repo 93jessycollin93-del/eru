@@ -21,7 +21,7 @@ export default function AppCommander() {
   const { data: bots, loading: loadingBots } = useRealtimeEntityList('BotFarmBot', { sort: '-updated_date', limit: 300 });
   const { data: missions } = useRealtimeEntityList('CommandMission', { sort: '-updated_date', limit: 100 });
   const [statusFilter, setStatusFilter] = useState('all');
-  const [modelProvider, setModelProvider] = useState(() => { try { return localStorage.getItem('jackie_model_provider') || 'base44'; } catch { return 'base44'; } });
+  const [modelProvider, setModelProvider] = useState(() => { try { return localStorage.getItem('jackie_model_provider') || 'builtin'; } catch { return 'builtin'; } });
   const [modelName, setModelName] = useState(() => { try { return localStorage.getItem('jackie_model_name') || ''; } catch { return ''; } });
   const [showModelConnector, setShowModelConnector] = useState(false);
 
@@ -83,7 +83,7 @@ export default function AppCommander() {
             <p className="text-xs font-medium text-foreground truncate">
               {isLocalProvider(modelProvider)
                 ? `${LOCAL_PROVIDERS[modelProvider]?.label || 'Local'}${modelName ? ' · ' + modelName : ''}`
-                : 'Base44 AI'}
+                : 'Built-in AI'}
             </p>
           </div>
           <button

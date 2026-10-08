@@ -10,7 +10,7 @@
  * EconomyAuditLog ledger via logRefresh() so the action is auditable.
  */
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const STORAGE_KEY = 'jade_refresh_state_v1';
 const FREE_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24h
@@ -81,8 +81,8 @@ export function formatCountdown(ms) {
  */
 export async function logRefresh({ kind, scope, currency = 'USD', amount = 0, metadata = {} }) {
   try {
-    const me = await base44.auth.me().catch(() => null);
-    await base44.entities.EconomyAuditLog.create({
+    const me = await backend.auth.me().catch(() => null);
+    await backend.entities.EconomyAuditLog.create({
       action: kind === 'free' ? 'jade_refresh_free' : 'jade_refresh_paid',
       user_email: me?.email,
       amount,

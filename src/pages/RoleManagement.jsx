@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { isAdmin } from '@/lib/rbac';
 import { ShieldCheck, Plus, Trash2, Edit, AlertTriangle } from 'lucide-react';
 
@@ -26,10 +26,10 @@ export default function RoleManagement() {
       setLoading(true);
 
       if (tab === 'roles') {
-        const data = await base44.entities.CustomRole.filter({}, '-created_date', 100);
+        const data = await backend.entities.CustomRole.filter({}, '-created_date', 100);
         setRoles(data || []);
       } else {
-        const data = await base44.entities.RoleAssignment.filter(
+        const data = await backend.entities.RoleAssignment.filter(
           { is_active: true },
           '-assigned_at',
           100
@@ -47,7 +47,7 @@ export default function RoleManagement() {
     if (!confirm('Delete this role?')) return;
 
     try {
-      await base44.entities.CustomRole.delete(roleId);
+      await backend.entities.CustomRole.delete(roleId);
       setRoles(roles.filter((r) => r.id !== roleId));
     } catch (err) {
       alert('Error: ' + err.message);
@@ -56,7 +56,7 @@ export default function RoleManagement() {
 
   const revokeAssignment = async (assignmentId) => {
     try {
-      await base44.entities.RoleAssignment.update(assignmentId, { is_active: false });
+      await backend.entities.RoleAssignment.update(assignmentId, { is_active: false });
       setAssignments(assignments.filter((a) => a.id !== assignmentId));
     } catch (err) {
       alert('Error: ' + err.message);

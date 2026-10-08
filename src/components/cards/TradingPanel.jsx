@@ -4,7 +4,7 @@ import {
   Send, Inbox, Coins, Repeat, Handshake, AlertTriangle, CheckCircle2,
   Loader2, X, MessageSquare, History, ArrowLeftRight, Reply,
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import CardDisplay from './CardDisplay';
 import { RARITY_STYLES } from './StarterCards';
 import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
@@ -59,10 +59,10 @@ export default function TradingPanel({ gold, onGoldChange }) {
   const loadAll = async () => {
     setLoading(true);
     const [meRes, userRows, myCardRows, props] = await Promise.all([
-      base44.auth.me().catch(() => null),
-      base44.entities.User.list().catch(() => []),
-      base44.entities.Card.list('-created_date', 200).catch(() => []),
-      base44.entities.CardTradeProposal.list('-created_date', 200).catch(() => []),
+      backend.auth.me().catch(() => null),
+      backend.entities.User.list().catch(() => []),
+      backend.entities.Card.list('-created_date', 200).catch(() => []),
+      backend.entities.CardTradeProposal.list('-created_date', 200).catch(() => []),
     ]);
     setMe(meRes);
     setUsers(userRows.filter((u) => u.email !== meRes?.email));
@@ -145,10 +145,10 @@ export default function TradingPanel({ gold, onGoldChange }) {
 
     // If countering, mark the original as 'countered'.
     if (isCounter && parent) {
-      await base44.entities.CardTradeProposal.update(parent.id, { status: 'countered' }).catch(() => null);
+      await backend.entities.CardTradeProposal.update(parent.id, { status: 'countered' }).catch(() => null);
     }
 
-    await base44.entities.CardTradeProposal.create({
+    await backend.entities.CardTradeProposal.create({
       proposer_email: me.email,
       recipient_email: isCounter ? parent.proposer_email : recipient,
       proposal_type: isCounter ? 'counter' : (requestType === 'sale' ? 'sale' : 'swap'),
@@ -184,7 +184,7 @@ export default function TradingPanel({ gold, onGoldChange }) {
         const escrow = await initiateEscrow(proposal.id, proposal.proposer_email, me.email, proposal.offered_card_id, 'card', wantsGold, 'GOLD');
         await holdFundsInEscrow(escrow.id, me.email, wantsGold);
         await confirmAndTransferAsset(escrow.id, { ...escrow, asset_type: 'card', price: wantsGold, buyer_email: me.email, listing_id: proposal.id });
-        await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed', escrow_id: escrow.id, escrow_status: 'completed' });
+        await backend.entities.CardTradeProposal.update(proposal.id, { status: 'completed', escrow_id: escrow.id, escrow_status: 'completed' });
         onGoldChange?.((gold || 0) - wantsGold);
         showToast('Trade completed via escrow.');
         await loadAll();
@@ -215,7 +215,7 @@ export default function TradingPanel({ gold, onGoldChange }) {
           actor: me.email,
           metadata: { proposal_id: proposal.id, kind: 'trade_out' },
         });
-        await base44.entities.Card.delete(myRequestedCard.id).catch(() => null);
+        await backend.entities.Card.delete(myRequestedCard.id).catch(() => null);
       }
 
       // Gold supplements via escrow (recipient pays wantsGold OR proposer pays offersGold).
@@ -232,7 +232,7 @@ export default function TradingPanel({ gold, onGoldChange }) {
         onGoldChange?.((gold || 0) + offersGold);
       }
 
-      await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed' });
+      await backend.entities.CardTradeProposal.update(proposal.id, { status: 'completed' });
       showToast('Trade completed.');
       await loadAll();
     } finally {
@@ -242,7 +242,7 @@ export default function TradingPanel({ gold, onGoldChange }) {
 
   const declineProposal = async (proposal) => {
     setActingOn(proposal.id);
-    await base44.entities.CardTradeProposal.update(proposal.id, { status: 'declined' });
+    await backend.entities.CardTradeProposal.update(proposal.id, { status: 'declined' });
     setActingOn(null);
     showToast('Proposal declined.');
     await loadAll();
@@ -250,7 +250,7 @@ export default function TradingPanel({ gold, onGoldChange }) {
 
   const cancelProposal = async (proposal) => {
     setActingOn(proposal.id);
-    await base44.entities.CardTradeProposal.update(proposal.id, { status: 'cancelled' });
+    await backend.entities.CardTradeProposal.update(proposal.id, { status: 'cancelled' });
     setActingOn(null);
     showToast('Proposal cancelled.');
     await loadAll();

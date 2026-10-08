@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Brain, Trash2, User, Bot, Search, Pin, Gauge } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function MemoryViewer({ bots }) {
   const [memories, setMemories] = useState([]);
@@ -10,7 +10,7 @@ export default function MemoryViewer({ bots }) {
 
   const load = async () => {
     setLoading(true);
-    const data = await base44.entities.BotMemory.list('-created_date', 200);
+    const data = await backend.entities.BotMemory.list('-created_date', 200);
     setMemories(data);
     setLoading(false);
   };
@@ -19,7 +19,7 @@ export default function MemoryViewer({ bots }) {
 
   const clearMemory = async (botId) => {
     const toDelete = memories.filter(m => m.bot_id === botId);
-    await Promise.all(toDelete.map(m => base44.entities.BotMemory.delete(m.id)));
+    await Promise.all(toDelete.map(m => backend.entities.BotMemory.delete(m.id)));
     load();
   };
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Bot, FlaskConical, Play, MessageSquare, ArrowRight, CheckCircle2, AlertTriangle, Paperclip, X } from 'lucide-react';
 import { invokeSelectedModel } from './modelRouting';
 import SpeechToTextInput from './SpeechToTextInput.jsx';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function BotTestingLabWidget({ bots = [], testCases = [], testRuns = [], globalPolicy }) {
   const [selectedBotId, setSelectedBotId] = useState('');
@@ -33,7 +33,7 @@ export default function BotTestingLabWidget({ bots = [], testCases = [], testRun
       ? (selectedBot.data_sources || []).map((source) => `${source.service || 'source'} (${source.mode || 'direct'}${source.resource_label ? ` · ${source.resource_label}` : ''})`).join(', ')
       : 'None';
     const uploadedUrls = await Promise.all(manualFiles.map(async (file) => {
-      const response = await base44.integrations.Core.UploadFile({ file });
+      const response = await backend.integrations.Core.UploadFile({ file });
       return response.file_url;
     }));
     const prompt = `You are ${selectedBot.name}. ${selectedBot.instructions || ''}\nPersonality: ${selectedBot.personality || 'helpful'}\nResponse style: ${selectedBot.response_style || 'detailed'}${policyBlock}\n\nConnected external/internal data sources: ${dataSourceSummary}\nUse them when relevant to the request and explain when your answer depends on those connected sources.\n\nUser: ${manualPrompt || 'Analyze the attached files.'}\nAttached files: ${manualFiles.length > 0 ? manualFiles.map((file) => file.name).join(', ') : 'None'}\n\n${selectedBot.name}:`;

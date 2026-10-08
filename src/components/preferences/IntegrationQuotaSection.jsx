@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Gauge, AlertTriangle, Star, Loader2, ExternalLink } from 'lucide-react';
 
 export default function IntegrationQuotaSection() {
@@ -10,7 +10,7 @@ export default function IntegrationQuotaSection() {
 
   const loadQuota = async () => {
     setLoading(true);
-    const response = await base44.functions.invoke('getIntegrationQuotaStatus', {});
+    const response = await backend.functions.invoke('getIntegrationQuotaStatus', {});
     setQuota(response.data?.quota || null);
     setLoading(false);
   };
@@ -20,8 +20,8 @@ export default function IntegrationQuotaSection() {
   const createStarsOrder = async () => {
     setCreatingOrder(true);
     setInvoiceUrl('');
-    const me = await base44.auth.me();
-    const order = await base44.entities.IntegrationTopupOrder.create({
+    const me = await backend.auth.me();
+    const order = await backend.entities.IntegrationTopupOrder.create({
       user_email: me.email,
       pack_name: '100 extra uses',
       extra_uses: 100,
@@ -30,14 +30,14 @@ export default function IntegrationQuotaSection() {
       payment_status: 'draft'
     });
 
-    const telegramAccount = await base44.entities.TelegramAccount.filter({ user_email: me.email }, '-created_date', 1);
+    const telegramAccount = await backend.entities.TelegramAccount.filter({ user_email: me.email }, '-created_date', 1);
     const chatId = telegramAccount?.[0]?.telegram_user_id;
     if (!chatId) {
       setCreatingOrder(false);
       return;
     }
 
-    const response = await base44.functions.invoke('createTelegramStarsInvoice', {
+    const response = await backend.functions.invoke('createTelegramStarsInvoice', {
       orderId: order.id,
       chatId
     });

@@ -57,7 +57,7 @@ export default function ConnectivityPanel() {
   return (
     <div className="space-y-3">
       {/* Cloud sync */}
-      <Section icon={Cloud} accent="cyan" title="Cloud sync" subtitle="Base44 entities (bots, chats, messages, pods)">
+      <Section icon={Cloud} accent="cyan" title="Cloud sync" subtitle="Backend records (bots, chats, messages, pods)">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[12px] text-foreground">

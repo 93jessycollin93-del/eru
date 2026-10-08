@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
@@ -37,8 +37,8 @@ export default function StorefrontAnalytics() {
 
   const load = async () => {
     const [l, c] = await Promise.all([
-      base44.entities.StorefrontListing.list('-created_date', 200),
-      base44.entities.MarketConnector.list('-created_date', 50).catch(() => []),
+      backend.entities.StorefrontListing.list('-created_date', 200),
+      backend.entities.MarketConnector.list('-created_date', 50).catch(() => []),
     ]);
     setListings(l);
     setConnectors(c);

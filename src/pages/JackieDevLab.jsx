@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import {
   FileText, ListChecks, BookOpen, FileCode, FileDiff, Network, ShieldCheck, Settings, History,
@@ -44,7 +44,7 @@ const DEFAULT_PROJECT = {
   title: 'ERU Core System',
   description: 'Default project for the ERU app — used as the working surface for the Jackie Dev Lab. Customize freely.',
   status: 'active',
-  primary_stack: 'React + Base44 + Tailwind',
+  primary_stack: 'React + Vite + Tailwind',
   provider_status: emptyProviderStatus(),
 };
 
@@ -107,9 +107,9 @@ export default function JackieDevLab() {
       setLoading(true);
 
       // Load projects (or seed a default one)
-      let projectRows = await base44.entities.DevProject.list('-updated_date', 50).catch(() => []);
+      let projectRows = await backend.entities.DevProject.list('-updated_date', 50).catch(() => []);
       if (!projectRows || projectRows.length === 0) {
-        const created = await base44.entities.DevProject.create({
+        const created = await backend.entities.DevProject.create({
           ...DEFAULT_PROJECT,
           owner_email: userEmail,
           owner_role: isAdmin ? 'admin' : 'user',
@@ -125,11 +125,11 @@ export default function JackieDevLab() {
       if (!initialProject) { setLoading(false); return; }
 
       // Seed Golden Rules if missing
-      const seedDocs = await base44.entities.DevKnowledgeDoc
+      const seedDocs = await backend.entities.DevKnowledgeDoc
         .filter({ project_id: initialProject.id }, '-created_date', 200)
         .catch(() => []);
       if (!seedDocs || seedDocs.length === 0) {
-        await base44.entities.DevKnowledgeDoc.bulkCreate(
+        await backend.entities.DevKnowledgeDoc.bulkCreate(
           GOLDEN_RULES.map((r) => ({
             ...r,
             project_id: initialProject.id,
@@ -150,11 +150,11 @@ export default function JackieDevLab() {
   const reloadProjectScope = async (projectId) => {
     if (!projectId) return;
     const [docRows, fileRows, patchRows, auditRows, sessionRows] = await Promise.all([
-      base44.entities.DevKnowledgeDoc.filter({ project_id: projectId }, '-updated_date', 200).catch(() => []),
-      base44.entities.DevFileReference.filter({ project_id: projectId }, '-updated_date', 200).catch(() => []),
-      base44.entities.DevPatch.filter({ project_id: projectId }, '-updated_date', 200).catch(() => []),
-      base44.entities.DevAuditLog.filter({ owner_email: userEmail }, '-created_date', 100).catch(() => []),
-      base44.entities.DevSession.filter({ project_id: projectId, status: 'active' }, '-updated_date', 1).catch(() => []),
+      backend.entities.DevKnowledgeDoc.filter({ project_id: projectId }, '-updated_date', 200).catch(() => []),
+      backend.entities.DevFileReference.filter({ project_id: projectId }, '-updated_date', 200).catch(() => []),
+      backend.entities.DevPatch.filter({ project_id: projectId }, '-updated_date', 200).catch(() => []),
+      backend.entities.DevAuditLog.filter({ owner_email: userEmail }, '-created_date', 100).catch(() => []),
+      backend.entities.DevSession.filter({ project_id: projectId, status: 'active' }, '-updated_date', 1).catch(() => []),
     ]);
     setDocs(docRows || []);
     setFiles(fileRows || []);
@@ -163,7 +163,7 @@ export default function JackieDevLab() {
 
     let activeSession = (sessionRows && sessionRows[0]) || null;
     if (!activeSession) {
-      activeSession = await base44.entities.DevSession.create({
+      activeSession = await backend.entities.DevSession.create({
         project_id: projectId,
         title: 'Working session',
         mode: 'plan',
@@ -174,11 +174,11 @@ export default function JackieDevLab() {
     setSession(activeSession);
 
     if (activeSession) {
-      const planRows = await base44.entities.DevPlan
+      const planRows = await backend.entities.DevPlan
         .filter({ session_id: activeSession.id }, '-version_number', 50)
         .catch(() => []);
       setPlans(planRows || []);
-      const allTasks = await base44.entities.DevAgentTask
+      const allTasks = await backend.entities.DevAgentTask
         .filter({ session_id: activeSession.id }, '-queue_index', 200)
         .catch(() => []);
       setTasks(allTasks || []);
@@ -197,7 +197,7 @@ export default function JackieDevLab() {
   const handleCreateProject = async () => {
     const title = window.prompt('Name your new project');
     if (!title?.trim()) return;
-    const created = await base44.entities.DevProject.create({
+    const created = await backend.entities.DevProject.create({
       title: title.trim(),
       status: 'active',
       owner_email: userEmail,
@@ -221,7 +221,7 @@ export default function JackieDevLab() {
     try {
       if (mode === 'plan') {
         const tpl = buildPlanTemplate({ prompt, projectTitle: activeProject.title });
-        const created = await base44.entities.DevPlan.create({
+        const created = await backend.entities.DevPlan.create({
           ...tpl,
           session_id: session.id,
           project_id: activeProject.id,
@@ -231,7 +231,7 @@ export default function JackieDevLab() {
         });
         if (created) {
           setPlans((prev) => [created, ...prev]);
-          await base44.entities.DevSession.update(session.id, { current_plan_id: created.id, mode: 'plan' });
+          await backend.entities.DevSession.update(session.id, { current_plan_id: created.id, mode: 'plan' });
           setSession((s) => ({ ...s, current_plan_id: created.id, mode: 'plan' }));
           setTab('plan');
           logDevAudit({ actor: userEmail, action: 'plan.drafted', targetType: 'plan', targetId: created.id, details: created.title });
@@ -246,7 +246,7 @@ export default function JackieDevLab() {
           alert('Approve the current plan before queueing agent tasks.');
           return;
         }
-        const created = await base44.entities.DevAgentTask.create({
+        const created = await backend.entities.DevAgentTask.create({
           plan_id: currentPlan.id,
           session_id: session.id,
           project_id: activeProject.id,
@@ -269,32 +269,32 @@ export default function JackieDevLab() {
   };
 
   const handleApprovePlan = async (plan) => {
-    const updated = await base44.entities.DevPlan.update(plan.id, { approval_status: 'approved' });
+    const updated = await backend.entities.DevPlan.update(plan.id, { approval_status: 'approved' });
     setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, ...updated } : p)));
     logDevAudit({ actor: userEmail, action: 'plan.approved', targetType: 'plan', targetId: plan.id, details: plan.title, severity: 'warning' });
   };
 
   const handleArchivePlan = async (plan) => {
-    const updated = await base44.entities.DevPlan.update(plan.id, { approval_status: 'archived' });
+    const updated = await backend.entities.DevPlan.update(plan.id, { approval_status: 'archived' });
     setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, ...updated } : p)));
     logDevAudit({ actor: userEmail, action: 'plan.archived', targetType: 'plan', targetId: plan.id, details: plan.title });
   };
 
   const handleUpdatePlanField = async (plan, field, value) => {
-    const updated = await base44.entities.DevPlan.update(plan.id, { [field]: value });
+    const updated = await backend.entities.DevPlan.update(plan.id, { [field]: value });
     setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, ...updated } : p)));
   };
 
   const handleSelectPlan = async (plan) => {
     if (!session) return;
-    await base44.entities.DevSession.update(session.id, { current_plan_id: plan.id });
+    await backend.entities.DevSession.update(session.id, { current_plan_id: plan.id });
     setSession((s) => ({ ...s, current_plan_id: plan.id }));
   };
 
   const handleConvertToTasks = async (plan) => {
     const seeds = buildTasksFromPlan(plan);
     if (!seeds.length) return;
-    const created = await base44.entities.DevAgentTask.bulkCreate(seeds).catch(() => []);
+    const created = await backend.entities.DevAgentTask.bulkCreate(seeds).catch(() => []);
     if (created?.length) {
       setTasks((prev) => [...prev.filter((t) => t.plan_id !== plan.id), ...created]);
       setMode('agent');
@@ -305,7 +305,7 @@ export default function JackieDevLab() {
 
   // ---- task / patch actions ---------------------------------------------
   const handleAdvanceTask = async (task, nextStatus) => {
-    const updated = await base44.entities.DevAgentTask.update(task.id, {
+    const updated = await backend.entities.DevAgentTask.update(task.id, {
       status: nextStatus,
       completed_at: nextStatus === 'completed' ? new Date().toISOString() : task.completed_at,
     });
@@ -314,7 +314,7 @@ export default function JackieDevLab() {
   };
 
   const handleDeleteTask = async (task) => {
-    await base44.entities.DevAgentTask.delete(task.id).catch(() => null);
+    await backend.entities.DevAgentTask.delete(task.id).catch(() => null);
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
     logDevAudit({ actor: userEmail, action: 'task.deleted', targetType: 'task', targetId: task.id, details: task.title });
   };
@@ -322,7 +322,7 @@ export default function JackieDevLab() {
   const handleClearQueue = async () => {
     if (!currentPlan) return;
     const ids = currentTasks.map((t) => t.id);
-    await Promise.all(ids.map((id) => base44.entities.DevAgentTask.delete(id).catch(() => null)));
+    await Promise.all(ids.map((id) => backend.entities.DevAgentTask.delete(id).catch(() => null)));
     setTasks((prev) => prev.filter((t) => t.plan_id !== currentPlan.id));
     logDevAudit({ actor: userEmail, action: 'queue.cleared', targetType: 'plan', targetId: currentPlan.id, details: `${ids.length} tasks` , severity: 'warning' });
   };
@@ -331,7 +331,7 @@ export default function JackieDevLab() {
     setPatchBusyId(task.id);
     try {
       const patchData = buildManualPatch({ task, plan: currentPlan });
-      const created = await base44.entities.DevPatch.create({
+      const created = await backend.entities.DevPatch.create({
         ...patchData,
         task_id: task.id,
         plan_id: currentPlan?.id,
@@ -340,7 +340,7 @@ export default function JackieDevLab() {
       });
       if (created) {
         setPatches((prev) => [created, ...prev]);
-        await base44.entities.DevAgentTask.update(task.id, { status: 'manually_exported', output_summary: `Patch ready: ${created.title}` });
+        await backend.entities.DevAgentTask.update(task.id, { status: 'manually_exported', output_summary: `Patch ready: ${created.title}` });
         setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: 'manually_exported', output_summary: `Patch ready: ${created.title}` } : t)));
         setTab('patches');
         logDevAudit({ actor: userEmail, action: 'patch.exported', targetType: 'patch', targetId: created.id, details: created.title });
@@ -351,7 +351,7 @@ export default function JackieDevLab() {
   };
 
   const handleUpdatePatchStatus = async (patch, nextStatus) => {
-    const updated = await base44.entities.DevPatch.update(patch.id, { status: nextStatus });
+    const updated = await backend.entities.DevPatch.update(patch.id, { status: nextStatus });
     setPatches((prev) => prev.map((p) => (p.id === patch.id ? { ...p, ...updated } : p)));
     logDevAudit({
       actor: userEmail,
@@ -366,7 +366,7 @@ export default function JackieDevLab() {
   // ---- knowledge / files -------------------------------------------------
   const handleCreateDoc = async (doc) => {
     if (!activeProject) return;
-    const created = await base44.entities.DevKnowledgeDoc.create({
+    const created = await backend.entities.DevKnowledgeDoc.create({
       ...doc,
       project_id: activeProject.id,
       owner_email: userEmail,
@@ -375,17 +375,17 @@ export default function JackieDevLab() {
     if (created) setDocs((prev) => [created, ...prev]);
   };
   const handleUpdateDoc = async (id, next) => {
-    const updated = await base44.entities.DevKnowledgeDoc.update(id, next);
+    const updated = await backend.entities.DevKnowledgeDoc.update(id, next);
     setDocs((prev) => prev.map((d) => (d.id === id ? { ...d, ...updated } : d)));
   };
   const handleDeleteDoc = async (doc) => {
-    await base44.entities.DevKnowledgeDoc.delete(doc.id).catch(() => null);
+    await backend.entities.DevKnowledgeDoc.delete(doc.id).catch(() => null);
     setDocs((prev) => prev.filter((d) => d.id !== doc.id));
   };
 
   const handleCreateFile = async (file) => {
     if (!activeProject) return;
-    const created = await base44.entities.DevFileReference.create({
+    const created = await backend.entities.DevFileReference.create({
       ...file,
       project_id: activeProject.id,
       owner_email: userEmail,
@@ -394,7 +394,7 @@ export default function JackieDevLab() {
     if (created) setFiles((prev) => [created, ...prev]);
   };
   const handleDeleteFile = async (file) => {
-    await base44.entities.DevFileReference.delete(file.id).catch(() => null);
+    await backend.entities.DevFileReference.delete(file.id).catch(() => null);
     setFiles((prev) => prev.filter((f) => f.id !== file.id));
   };
 
@@ -402,7 +402,7 @@ export default function JackieDevLab() {
   const handleToggleProviderStatus = async (key, nextValue) => {
     if (!activeProject) return;
     const next = { ...(activeProject.provider_status || emptyProviderStatus()), [key]: nextValue };
-    const updated = await base44.entities.DevProject.update(activeProject.id, { provider_status: next });
+    const updated = await backend.entities.DevProject.update(activeProject.id, { provider_status: next });
     setProjects((prev) => prev.map((p) => (p.id === activeProject.id ? { ...p, ...updated } : p)));
     logDevAudit({ actor: userEmail, action: 'settings.provider_status', targetType: 'settings', targetId: activeProject.id, details: `${key} → ${nextValue}` });
   };

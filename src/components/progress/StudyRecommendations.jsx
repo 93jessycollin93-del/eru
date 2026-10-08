@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, TrendingUp, AlertCircle, ChevronRight, Loader2, Star } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * StudyRecommendations
@@ -82,8 +82,8 @@ export default function StudyRecommendations({ onModuleClick }) {
     async function load() {
       setLoading(true);
       const [allModules, allProgress] = await Promise.all([
-        base44.entities.StudyModule.list('-chapter_number', 200).catch(() => []),
-        base44.entities.UserProgress.list('-updated_date', 500).catch(() => []),
+        backend.entities.StudyModule.list('-chapter_number', 200).catch(() => []),
+        backend.entities.UserProgress.list('-updated_date', 500).catch(() => []),
       ]);
       if (!mounted) return;
 

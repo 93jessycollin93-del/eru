@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BarChart2, CheckCircle2, Scale } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 
 function ScoreBar({ label, value, color }) {
@@ -38,7 +38,7 @@ export default function BotVersionComparator({ versions = [], selectedBot, onSav
   const saveComparison = async () => {
     if (!versionA || !versionB || versionA.id === versionB.id) return;
     setSaving(true);
-    await base44.entities.BotVersionComparison.create({
+    await backend.entities.BotVersionComparison.create({
       bot_id: versionA.bot_id,
       bot_name: versionA.bot_name,
       version_a_id: versionA.id,

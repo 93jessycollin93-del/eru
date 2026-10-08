@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Copy, Gift, Link2, Trophy, Users } from 'lucide-react';
 import ReferralLeaderboard from '@/components/referrals/ReferralLeaderboard';
 
@@ -21,15 +21,15 @@ export default function ReferralDashboard() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const me = await base44.auth.me();
+    const me = await backend.auth.me();
     const [profileRows, eventRows] = await Promise.all([
-      base44.entities.ReferralProfile.filter({ user_email: me.email }, '-created_date', 1).catch(() => []),
-      base44.entities.ReferralEvent.list('-created_date', 200).catch(() => []),
+      backend.entities.ReferralProfile.filter({ user_email: me.email }, '-created_date', 1).catch(() => []),
+      backend.entities.ReferralEvent.list('-created_date', 200).catch(() => []),
     ]);
 
     let currentProfile = profileRows?.[0] || null;
     if (!currentProfile) {
-      currentProfile = await base44.entities.ReferralProfile.create({
+      currentProfile = await backend.entities.ReferralProfile.create({
         user_email: me.email,
         invite_code: makeCode(me.email),
         invite_link: buildInviteLink(makeCode(me.email)),
@@ -38,10 +38,10 @@ export default function ReferralDashboard() {
         successful_referrals: 0,
         pending_referrals: 0,
       });
-      currentProfile = await base44.entities.ReferralProfile.filter({ user_email: me.email }, '-created_date', 1).then((rows) => rows?.[0] || null);
+      currentProfile = await backend.entities.ReferralProfile.filter({ user_email: me.email }, '-created_date', 1).then((rows) => rows?.[0] || null);
     }
 
-    const allProfiles = await base44.entities.ReferralProfile.list('-successful_referrals', 200).catch(() => []);
+    const allProfiles = await backend.entities.ReferralProfile.list('-successful_referrals', 200).catch(() => []);
 
     setUser(me);
     setProfile(currentProfile);
@@ -70,7 +70,7 @@ export default function ReferralDashboard() {
   const simulateReferral = async () => {
     if (!profile || !user) return;
     const referredEmail = `friend${Date.now()}@example.com`;
-    await base44.entities.ReferralEvent.create({
+    await backend.entities.ReferralEvent.create({
       referrer_email: user.email,
       referred_email: referredEmail,
       invite_code: profile.invite_code,
@@ -80,7 +80,7 @@ export default function ReferralDashboard() {
       signup_date: new Date().toISOString(),
       rewarded_at: new Date().toISOString(),
     });
-    await base44.entities.ReferralProfile.update(profile.id, {
+    await backend.entities.ReferralProfile.update(profile.id, {
       successful_referrals: Number(profile.successful_referrals || 0) + 1,
       reputation_reward_total: Number(profile.reputation_reward_total || 0) + DEFAULT_REWARD,
       pending_referrals: Math.max(0, Number(profile.pending_referrals || 0) - 1),

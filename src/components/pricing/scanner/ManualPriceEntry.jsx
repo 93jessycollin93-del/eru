@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import PricingTrustBadge from '../PricingTrustBadge';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * ManualPriceEntry — let owner enter a price, always labeled "Owner Manual
@@ -17,7 +17,7 @@ export default function ManualPriceEntry({ scanId, candidateId, cardName, userEm
     const num = parseFloat(amount);
     if (Number.isNaN(num) || num <= 0) return;
     setSaving(true);
-    const row = await base44.entities.CardManualPrice.create({
+    const row = await backend.entities.CardManualPrice.create({
       scan_id: scanId || '',
       candidate_id: candidateId || '',
       card_name: cardName || '',

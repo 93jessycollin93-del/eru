@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { SlidersHorizontal, Plus, Trash2, ArrowRightLeft, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ export default function TargetAllocationPanel({ holdings }) {
 
   const loadTargets = async () => {
     setLoading(true);
-    const rows = await base44.entities.PortfolioWeighting.list('-updated_date', 100);
+    const rows = await backend.entities.PortfolioWeighting.list('-updated_date', 100);
     const merged = symbols.map((item) => {
       const saved = rows.find((row) => row.asset_symbol === item.symbol && row.is_active !== false);
       return {
@@ -68,8 +68,8 @@ export default function TargetAllocationPanel({ holdings }) {
   const totalTarget = targets.reduce((sum, item) => sum + Number(item.target || 0), 0);
 
   const saveTargets = async () => {
-    const existing = await base44.entities.PortfolioWeighting.list('-updated_date', 100);
-    await Promise.all(existing.map((row) => base44.entities.PortfolioWeighting.update(row.id, { is_active: false })));
+    const existing = await backend.entities.PortfolioWeighting.list('-updated_date', 100);
+    await Promise.all(existing.map((row) => backend.entities.PortfolioWeighting.update(row.id, { is_active: false })));
     await Promise.all(targets.filter((item) => item.symbol).map((item) => {
       const existingRow = existing.find((row) => row.asset_symbol === item.symbol);
       const payload = {
@@ -82,8 +82,8 @@ export default function TargetAllocationPanel({ holdings }) {
         rebalance_frequency: 'manual',
       };
       return existingRow
-        ? base44.entities.PortfolioWeighting.update(existingRow.id, payload)
-        : base44.entities.PortfolioWeighting.create(payload);
+        ? backend.entities.PortfolioWeighting.update(existingRow.id, payload)
+        : backend.entities.PortfolioWeighting.create(payload);
     }));
   };
 
@@ -91,7 +91,7 @@ export default function TargetAllocationPanel({ holdings }) {
     setPlanning(true);
     await saveTargets();
     const allocation = Object.fromEntries(targets.filter((item) => item.symbol).map((item) => [item.symbol, Number(item.target || 0)]));
-    const response = await base44.functions.invoke('calculatePortfolioRebalance', {
+    const response = await backend.functions.invoke('calculatePortfolioRebalance', {
       holdings,
       targetAllocation: allocation,
     });
@@ -102,7 +102,7 @@ export default function TargetAllocationPanel({ holdings }) {
 
   const markReviewed = async () => {
     if (review?.suggestion_id) {
-      await base44.entities.RebalancingSuggestion.update(review.suggestion_id, { status: 'reviewed' });
+      await backend.entities.RebalancingSuggestion.update(review.suggestion_id, { status: 'reviewed' });
     }
     setReviewOpen(false);
   };

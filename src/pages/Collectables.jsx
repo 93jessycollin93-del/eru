@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Star, ShoppingCart, Plus, X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ListingManager from '../components/storefront/ListingManager';
 import DemoDataBanner from '../components/marketplace/DemoDataBanner';
@@ -63,7 +63,7 @@ export default function Collectables() {
   );
 
   const createCollectableListing = async (values) => {
-    await base44.entities.StorefrontListing.create({
+    await backend.entities.StorefrontListing.create({
       title: values.title,
       description: values.description,
       asset_type: 'collectible',

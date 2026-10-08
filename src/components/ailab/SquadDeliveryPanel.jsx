@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BellRing, Slack, NotebookPen } from 'lucide-react';
 
 const SLACK_CONNECTOR_ID = '69db73abc7ef44b228d18b2b';
@@ -12,7 +12,7 @@ export default function SquadDeliveryPanel({ squad, onRefresh }) {
       ? deliveryTargets.filter((item) => item !== target)
       : [...deliveryTargets, target];
 
-    await base44.entities.BotSquad.update(squad.id, {
+    await backend.entities.BotSquad.update(squad.id, {
       delivery_enabled: nextTargets.length > 0,
       delivery_targets: nextTargets,
       delivery_condition: 'manual_toggle',
@@ -21,12 +21,12 @@ export default function SquadDeliveryPanel({ squad, onRefresh }) {
   };
 
   const connectTarget = async (connectorId) => {
-    const authed = await base44.auth.isAuthenticated();
+    const authed = await backend.auth.isAuthenticated();
     if (!authed) {
-      base44.auth.redirectToLogin();
+      backend.auth.redirectToLogin();
       return;
     }
-    const url = await base44.connectors.connectAppUser(connectorId);
+    const url = await backend.connectors.connectAppUser(connectorId);
     const popup = window.open(url, '_blank');
     const timer = setInterval(() => {
       if (!popup || popup.closed) {

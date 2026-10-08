@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Shield, Users, LogOut, Loader2, Coins, AlertTriangle, ScrollText, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { fetchUserGold } from '@/lib/economyApi';
 import {
   loadGuildDetail,
@@ -37,11 +37,11 @@ export default function GuildsPage() {
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const user = await base44.auth.me().catch(() => null);
+      const user = await backend.auth.me().catch(() => null);
       setMe(user);
       const [my, list, balance] = await Promise.all([
         getMyMembership(),
-        base44.entities.Guild.list('-rank_points', 200).catch(() => []),
+        backend.entities.Guild.list('-rank_points', 200).catch(() => []),
         fetchUserGold().catch(() => 0),
       ]);
       setMembership(my);

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Send, Mic, MicOff, Plus, X, Loader2, Image as ImageIcon, Video, FileCode, Zap, Cpu } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import VoiceSelector from './VoiceSelector.jsx';
 import { isLocalProvider, LOCAL_PROVIDERS } from '@/lib/localModelProviders';
 
@@ -35,7 +35,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
 
   const modelLabel = isLocalProvider(modelProvider)
     ? `${LOCAL_PROVIDERS[modelProvider]?.label || 'Local'}${modelName ? ' · ' + modelName : ''}`
-    : 'Base44';
+    : 'Built-in AI';
 
   const toggleMic = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -60,7 +60,7 @@ export default function InputBar({ input, setInput, onSend, loading, mode, onTog
   const uploadFile = async (file) => {
     const tempId = Date.now() + Math.random();
     setUploadingFiles((prev) => [...prev, { id: tempId, name: file.name }]);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await backend.integrations.Core.UploadFile({ file });
     setUploadingFiles((prev) => prev.filter((f) => f.id !== tempId));
     const attachment = { name: file.name, url: file_url, type: file.type };
     setAttachments((prev) => {

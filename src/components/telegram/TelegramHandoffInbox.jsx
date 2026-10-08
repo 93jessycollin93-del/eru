@@ -1,5 +1,5 @@
 import { LifeBuoy, CheckCircle2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function TelegramHandoffInbox({ bot, sessions = [], onRefresh }) {
   if (!bot) return null;
@@ -7,7 +7,7 @@ export default function TelegramHandoffInbox({ bot, sessions = [], onRefresh }) 
   const handoffSessions = sessions.filter((session) => session.human_handoff_status === 'requested' || session.human_handoff_status === 'active');
 
   const resolveHandoff = async (session) => {
-    await base44.entities.TelegramBotSession.update(session.id, {
+    await backend.entities.TelegramBotSession.update(session.id, {
       human_handoff_requested: false,
       human_handoff_status: 'resolved',
       human_handoff_resolved_at: new Date().toISOString()

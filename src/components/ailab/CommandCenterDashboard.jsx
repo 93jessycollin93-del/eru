@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Shield, Target, Users, MessageSquareText, Link2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import CommandCenterMissionBuilder from './CommandCenterMissionBuilder.jsx';
 import CommandCenterHierarchy from './CommandCenterHierarchy.jsx';
 import { COMMAND_BOT_SEEDS, DEMO_KNOWLEDGE, DEMO_MISSION } from './commandCenterData';
@@ -32,12 +32,12 @@ export default function CommandCenterDashboard() {
 
   const loadAll = async () => {
     const [botRows, missionRows, taskRows, alertRows, communicationRows, riskRows] = await Promise.all([
-      base44.entities.CommandBot.list('-updated_date', 50),
-      base44.entities.CommandMission.list('-updated_date', 20),
-      base44.entities.CommandTask.list('-updated_date', 100),
-      base44.entities.CommandAlert.list('-updated_date', 30),
-      base44.entities.CommandCommunication.list('-updated_date', 60),
-      base44.entities.RiskReport.list('-updated_date', 20)
+      backend.entities.CommandBot.list('-updated_date', 50),
+      backend.entities.CommandMission.list('-updated_date', 20),
+      backend.entities.CommandTask.list('-updated_date', 100),
+      backend.entities.CommandAlert.list('-updated_date', 30),
+      backend.entities.CommandCommunication.list('-updated_date', 60),
+      backend.entities.RiskReport.list('-updated_date', 20)
     ]);
     setBots(botRows || []);
     setMissions(missionRows || []);
@@ -49,39 +49,39 @@ export default function CommandCenterDashboard() {
   };
 
   const seedIfNeeded = async () => {
-    const existingBots = await base44.entities.CommandBot.list('-created_date', 1);
+    const existingBots = await backend.entities.CommandBot.list('-created_date', 1);
     if ((existingBots || []).length > 0) return;
 
-    const mission = await base44.entities.CommandMission.create(DEMO_MISSION);
+    const mission = await backend.entities.CommandMission.create(DEMO_MISSION);
     await Promise.all([
-      base44.entities.MissionKnowledge.create({ mission_id: mission.id, ...DEMO_KNOWLEDGE }),
-      ...COMMAND_BOT_SEEDS.map((bot) => base44.entities.CommandBot.create({ ...bot, active_mission_id: mission.id })),
-      base44.entities.CommandTask.bulkCreate([
+      backend.entities.MissionKnowledge.create({ mission_id: mission.id, ...DEMO_KNOWLEDGE }),
+      ...COMMAND_BOT_SEEDS.map((bot) => backend.entities.CommandBot.create({ ...bot, active_mission_id: mission.id })),
+      backend.entities.CommandTask.bulkCreate([
         { mission_id: mission.id, title: 'Alpha threat scan', description: 'Assess launch weaknesses and blockers.', assigned_squad: 'alpha', assigned_commander: 'AC01', assigned_bot_code: 'AS001', status: 'in_progress', confidence_level: 84, output_summary: 'Threat scan underway.' },
         { mission_id: mission.id, title: 'Beta forecast model', description: 'Model launch success under current constraints.', assigned_squad: 'beta', assigned_commander: 'AC02', assigned_bot_code: 'BS002', status: 'assigned', confidence_level: 81 },
         { mission_id: mission.id, title: 'Charlie consistency review', description: 'Resolve contradictory content outputs.', assigned_squad: 'charlie', assigned_commander: 'AC01', assigned_bot_code: 'CS003', status: 'blocked', confidence_level: 63, blockers: 'Inconsistent outputs detected.' },
         { mission_id: mission.id, title: 'Delta final readiness brief', description: 'Prepare final mission completion packet.', assigned_squad: 'delta', assigned_commander: 'AC02', assigned_bot_code: 'DS001', status: 'pending', confidence_level: 78 }
       ]),
-      base44.entities.CommandCommunication.bulkCreate([
+      backend.entities.CommandCommunication.bulkCreate([
         { mission_id: mission.id, from_bot_code: 'L420', to_bot_code: 'AC01', squad_name: 'alpha', severity: 'info', message_type: 'directive', message: 'Prioritize Alpha scan and Charlie stabilization.' },
         { mission_id: mission.id, from_bot_code: 'L420', to_bot_code: 'AC02', squad_name: 'beta', severity: 'info', message_type: 'directive', message: 'Advance Beta forecasting and Delta completion support.' },
         { mission_id: mission.id, from_bot_code: 'SS002', to_bot_code: 'SS001', squad_name: 'charlie', severity: 'warning', message_type: 'risk', message: 'Charlie outputs show contradiction drift.' },
         { mission_id: mission.id, from_bot_code: 'SS001', to_bot_code: 'L420', squad_name: 'charlie', severity: 'warning', message_type: 'recommendation', message: 'Recommend review of CS003 and temporary workload rebalance.' }
       ]),
-      base44.entities.RiskReport.bulkCreate([
+      backend.entities.RiskReport.bulkCreate([
         { mission_id: mission.id, reported_by: 'SS001', target_squad: 'charlie', risk_level: 'high', summary: 'Charlie Squad integrity is slipping due to contradictory outputs.', recommended_action: 'Reduce load on CS003 and route validation through Delta.', recommendation_priority: 'high' }
       ]),
-      base44.entities.IntegrityReport.bulkCreate([
+      backend.entities.IntegrityReport.bulkCreate([
         { mission_id: mission.id, bot_code: 'CS003', squad_name: 'charlie', anomaly_type: 'contradictory_outputs', integrity_score: 68, stability_score: 71, details: 'Multiple outputs conflict with mission rules and commander directives.' }
       ]),
-      base44.entities.CommandAlert.bulkCreate([
+      backend.entities.CommandAlert.bulkCreate([
         { mission_id: mission.id, alert_type: 'contradictory_outputs', severity: 'warning', title: 'Charlie contradiction warning', details: 'CS003 generated conflicting outputs; commander review needed.', target_bot_code: 'CS003', target_squad: 'charlie', escalated_to: 'SS001', status: 'open' },
         { mission_id: mission.id, alert_type: 'overloaded_squad', severity: 'caution', title: 'Beta nearing load threshold', details: 'Beta Squad load is climbing and should be monitored.', target_squad: 'beta', escalated_to: 'AC02', status: 'open' }
       ]),
-      base44.entities.CommandRecommendation.bulkCreate([
+      backend.entities.CommandRecommendation.bulkCreate([
         { mission_id: mission.id, source_bot_code: 'SS001', target_bot_code: 'L420', priority: 'high', recommendation: 'Reassign part of Charlie validation to Delta and continue mission with caution.', action_type: 'reassign' }
       ]),
-      base44.entities.CommandMissionHistory.bulkCreate([
+      backend.entities.CommandMissionHistory.bulkCreate([
         { mission_id: mission.id, event_type: 'mission_created', summary: 'Mission initialized and routed to command hierarchy.', actor_bot_code: 'L420' },
         { mission_id: mission.id, event_type: 'risk_escalation', summary: 'SS002 escalated anomaly findings to SS001 and L420.', actor_bot_code: 'SS002' }
       ])
@@ -99,7 +99,7 @@ export default function CommandCenterDashboard() {
     const assignedCommanders = form.assigned_commanders?.length ? form.assigned_commanders : form.priority === 'critical' ? ['AC01', 'AC02'] : ['AC01'];
     const assignedSquads = form.assigned_squads?.length ? form.assigned_squads : form.priority === 'critical' ? ['alpha', 'beta', 'charlie', 'delta'] : ['alpha', 'charlie'];
 
-    const mission = await base44.entities.CommandMission.create({
+    const mission = await backend.entities.CommandMission.create({
       ...form,
       status: 'planned',
       leader_decision: 'reviewing',
@@ -124,14 +124,14 @@ export default function CommandCenterDashboard() {
     }));
 
     await Promise.all([
-      base44.entities.MissionKnowledge.create({ mission_id: mission.id, objectives: form.objective, instructions: form.description, facts: form.knowledge_summary, rules: 'Chain of command required.', priorities: form.priority, constraints: 'Do not bypass command hierarchy.' }),
-      base44.entities.CommandCommunication.bulkCreate([
+      backend.entities.MissionKnowledge.create({ mission_id: mission.id, objectives: form.objective, instructions: form.description, facts: form.knowledge_summary, rules: 'Chain of command required.', priorities: form.priority, constraints: 'Do not bypass command hierarchy.' }),
+      backend.entities.CommandCommunication.bulkCreate([
         { mission_id: mission.id, from_bot_code: 'L420', to_bot_code: assignedCommanders[0] || 'AC01', squad_name: assignedSquads[0] || 'alpha', severity: 'info', message_type: 'directive', message: `Mission queued for review: ${form.title}` },
         ...assignedCommanders.slice(1).map((code) => ({ mission_id: mission.id, from_bot_code: 'L420', to_bot_code: code, squad_name: assignedSquads[0] || 'alpha', severity: 'info', message_type: 'directive', message: `Secondary command assignment accepted for ${form.title}` })),
         { mission_id: mission.id, from_bot_code: 'SS001', to_bot_code: 'L420', squad_name: 'security', severity: 'info', message_type: 'recommendation', message: `Security oversight attached to ${form.title}` }
       ]),
-      starterTasks.length ? base44.entities.CommandTask.bulkCreate(starterTasks) : Promise.resolve(),
-      base44.entities.CommandMissionHistory.create({ mission_id: mission.id, event_type: 'mission_created', summary: `Mission ${form.title} created and linked to ${assignedCommanders.join(', ')}.`, actor_bot_code: 'L420' })
+      starterTasks.length ? backend.entities.CommandTask.bulkCreate(starterTasks) : Promise.resolve(),
+      backend.entities.CommandMissionHistory.create({ mission_id: mission.id, event_type: 'mission_created', summary: `Mission ${form.title} created and linked to ${assignedCommanders.join(', ')}.`, actor_bot_code: 'L420' })
     ]);
 
     setForm(EMPTY_MISSION);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Download, Gauge, Smile, Timer, Trophy } from 'lucide-react';
 import BotResourceManagementPanel from './BotResourceManagementPanel';
 import AdaptiveLearningPanel from './AdaptiveLearningPanel';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const METRIC_META = {
@@ -44,9 +44,9 @@ export default function BotMonitoringDashboard({ bots, onBotsUpdated }) {
 
   const load = async () => {
     const [ratingRows, improvementRows, alertRows] = await Promise.all([
-      base44.entities.BotRating.list('-created_date', 200),
-      base44.entities.BotImprovement.list('-created_date', 100),
-      base44.entities.BotPerformanceAlert.list('-created_date', 100),
+      backend.entities.BotRating.list('-created_date', 200),
+      backend.entities.BotImprovement.list('-created_date', 100),
+      backend.entities.BotPerformanceAlert.list('-created_date', 100),
     ]);
     setRatings(ratingRows);
     setImprovements(improvementRows);
@@ -73,7 +73,7 @@ export default function BotMonitoringDashboard({ bots, onBotsUpdated }) {
   const saveAlert = async () => {
     const bot = bots.find((item) => item.id === alertForm.bot_id);
     if (!bot) return;
-    await base44.entities.BotPerformanceAlert.create({
+    await backend.entities.BotPerformanceAlert.create({
       ...alertForm,
       bot_name: bot.name,
       threshold: Number(alertForm.threshold),

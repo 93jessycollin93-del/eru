@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { FileSpreadsheet, Link2, Unlink, RefreshCw, Eye, Download, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const CONNECTOR_ID = '69d3600598df7cb56812ae75';
 
@@ -31,9 +31,9 @@ export default function SheetsSync() {
 
   useEffect(() => {
     (async () => {
-      const authed = await base44.auth.isAuthenticated();
+      const authed = await backend.auth.isAuthenticated();
       if (authed) {
-        const me = await base44.auth.me();
+        const me = await backend.auth.me();
         setUser(me);
         // Assume connected until an action fails with 403; this avoids a noisy probe.
         setConnected(true);
@@ -43,7 +43,7 @@ export default function SheetsSync() {
   }, []);
 
   const handleConnect = async () => {
-    const url = await base44.connectors.connectAppUser(CONNECTOR_ID);
+    const url = await backend.connectors.connectAppUser(CONNECTOR_ID);
     const popup = window.open(url, '_blank');
     const timer = setInterval(() => {
       if (!popup || popup.closed) {
@@ -55,7 +55,7 @@ export default function SheetsSync() {
   };
 
   const handleDisconnect = async () => {
-    await base44.connectors.disconnectAppUser(CONNECTOR_ID);
+    await backend.connectors.disconnectAppUser(CONNECTOR_ID);
     setConnected(false);
     setPreview(null);
     setResult(null);
@@ -71,7 +71,7 @@ export default function SheetsSync() {
     setResult(null);
     if (dryRun) setPreview(null);
     try {
-      const res = await base44.functions.invoke('syncGoogleSheet', {
+      const res = await backend.functions.invoke('syncGoogleSheet', {
         spreadsheet: spreadsheet.trim(),
         range: range.trim() || 'Sheet1',
         target,
@@ -102,7 +102,7 @@ export default function SheetsSync() {
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
         <div className="max-w-sm text-center space-y-3">
           <p className="text-sm text-muted-foreground">Sign in to link your Google Sheets.</p>
-          <button onClick={() => base44.auth.redirectToLogin()} className="h-11 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">Sign in</button>
+          <button onClick={() => backend.auth.redirectToLogin()} className="h-11 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">Sign in</button>
         </div>
       </div>
     );

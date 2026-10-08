@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Wand2, Bot, Loader2, CheckCircle2, Code2, Layout, Settings2, Rocket, ChevronDown, ChevronUp, Copy, Check, Zap, Globe } from 'lucide-react';
 import WebsiteGeneratorPanel from '../components/builder/WebsiteGeneratorPanel';
 
@@ -89,7 +89,7 @@ export default function SystemBuilder() {
       setStage(STAGES[s]);
     }, 900);
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await backend.integrations.Core.InvokeLLM({
       prompt: `${SYSTEM_PROMPT}\n\nUser request: "${prompt}"\n\nReturn ONLY valid JSON, no markdown, no explanation.`,
       response_json_schema: {
         type: 'object',
@@ -120,7 +120,7 @@ export default function SystemBuilder() {
   const createBotInLab = async () => {
     if (!system) return;
     setCreatingBot(true);
-    await base44.entities.UserBot.create({
+    await backend.entities.UserBot.create({
       name: system.bot_name,
       description: system.bot_description,
       role: system.bot_role || 'custom',

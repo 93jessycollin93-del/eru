@@ -11,14 +11,14 @@
  * - Entity: TelegramAccount (stores mapping + verification state)
  */
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * Check if user has Telegram account linked
  */
 export const getTelegramAccount = async (userEmail) => {
   try {
-    const accounts = await base44.entities.TelegramAccount.filter(
+    const accounts = await backend.entities.TelegramAccount.filter(
       { user_email: userEmail },
       '-created_date',
       1
@@ -40,7 +40,7 @@ export const initiateTelegramLinking = async (userEmail) => {
     // Create pending account record with verification token
     const linkingToken = Math.random().toString(36).substring(2, 10).toUpperCase();
     
-    const account = await base44.entities.TelegramAccount.create({
+    const account = await backend.entities.TelegramAccount.create({
       user_email: userEmail,
       telegram_user_id: 'pending',
       linking_token: linkingToken,
@@ -65,7 +65,7 @@ export const initiateTelegramLinking = async (userEmail) => {
  */
 export const completeTelegramLinking = async (accountId, telegramUserId, userName) => {
   try {
-    await base44.entities.TelegramAccount.update(accountId, {
+    await backend.entities.TelegramAccount.update(accountId, {
       telegram_user_id: telegramUserId,
       telegram_username: userName,
       is_verified: true,
@@ -84,7 +84,7 @@ export const completeTelegramLinking = async (accountId, telegramUserId, userNam
  */
 export const updateTelegramNotifications = async (accountId, enabled, notificationTypes = []) => {
   try {
-    await base44.entities.TelegramAccount.update(accountId, {
+    await backend.entities.TelegramAccount.update(accountId, {
       notifications_enabled: enabled,
       notification_types: notificationTypes,
     });
@@ -100,7 +100,7 @@ export const updateTelegramNotifications = async (accountId, enabled, notificati
  */
 export const revokeTelegramAccount = async (accountId) => {
   try {
-    await base44.entities.TelegramAccount.update(accountId, {
+    await backend.entities.TelegramAccount.update(accountId, {
       status: 'revoked',
       notifications_enabled: false,
     });
@@ -134,7 +134,7 @@ export const revokeTelegramAccount = async (accountId) => {
 export const sendTelegramNotification = async (accountId, title, message, type = 'alert') => {
   try {
     // In production, this would call a backend function that uses the Bot API
-    const account = await base44.entities.TelegramAccount.filter({ id: accountId });
+    const account = await backend.entities.TelegramAccount.filter({ id: accountId });
     
     if (!account || !account.notifications_enabled) {
       return { success: false, error: 'Notifications not enabled' };
@@ -147,7 +147,7 @@ export const sendTelegramNotification = async (accountId, title, message, type =
     // This would be handled by backend Bot API call
     // bot.sendMessage(account.telegram_user_id, `${title}\n${message}`);
     
-    await base44.entities.TelegramAccount.update(accountId, {
+    await backend.entities.TelegramAccount.update(accountId, {
       last_notified_at: new Date().toISOString(),
     });
 

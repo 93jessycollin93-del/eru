@@ -3,27 +3,27 @@
  * ------------------------------------------------------------------
  * Every read/write for tracks, playlists, audio files, tags, play history and
  * collaborators goes through this module. UI components must NOT touch the
- * Base44 SDK (or any storage backend) directly — they import from here. This
+ * backend client (or any storage backend) directly — they import from here. This
  * mirrors the `streamingProvider` pattern: one module owns the data contract,
  * so the backend can change without touching the UI.
  *
- * Backend today: Base44 entities + Base44 file storage (Core.UploadFile).
- * To migrate to Supabase later, only this file changes.
+ * Backend: `src/api/backend.js` (entities + file upload via Core.UploadFile).
+ * To move to another backend later, only this file changes.
  *
  * Sharing model: a public/unlisted playlist shares the playlist AND its audio
  * files. That decision is centralized in `sharedPayloadForPlaylist()` so it can
  * later switch to metadata-only sharing without a schema change or UI edits.
  *
- * Privacy note: Base44 row-level security here is all-or-nothing (owner-scoped
+ * Privacy note: backend row-level security here is all-or-nothing (owner-scoped
  * or fully public). Mixed-visibility tables therefore enforce "what a non-owner
  * may see" in this module. Genuine server-side privacy for community browse is
- * implemented in a later phase via a Base44 backend function; until then these
+ * implemented in a later phase via a backend function; until then these
  * helpers are the single chokepoint for that logic.
  */
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
-const E = base44.entities;
+const E = backend.entities;
 
 // ---------------------------------------------------------------------------
 // Visibility
@@ -67,12 +67,12 @@ export function sharedPayloadForPlaylist(playlist, tracks = []) {
 // ---------------------------------------------------------------------------
 
 /**
- * Upload an audio/video file blob to Base44 storage and return its URL.
+ * Upload an audio/video file blob to backend storage and return its URL.
  * @param {File|Blob} file
  * @returns {Promise<string>} the stored file URL
  */
 export async function uploadAudioFile(file) {
-  const { file_url } = await base44.integrations.Core.UploadFile({ file });
+  const { file_url } = await backend.integrations.Core.UploadFile({ file });
   return file_url;
 }
 
@@ -222,7 +222,7 @@ export function shareUrlForPlaylist(id) {
  * @returns {Promise<{ playlist: object, tracks: object[] }>}
  */
 export async function getSharedPlaylist(id) {
-  const res = await base44.functions.invoke('getSharedPlaylist', { id });
+  const res = await backend.functions.invoke('getSharedPlaylist', { id });
   return res?.data;
 }
 
@@ -233,7 +233,7 @@ export async function getSharedPlaylist(id) {
  * @returns {Promise<object[]>}
  */
 export async function listPublicPlaylists({ q = '', limit = 60 } = {}) {
-  const res = await base44.functions.invoke('listPublicPlaylists', { q, limit });
+  const res = await backend.functions.invoke('listPublicPlaylists', { q, limit });
   return res?.data?.playlists || [];
 }
 
@@ -485,28 +485,28 @@ export async function removeCollaborator(collaboratorId) {
 
 /** Playlists shared WITH the current user (they collaborate but don't own). */
 export async function listCollaborativePlaylists() {
-  const res = await base44.functions.invoke('listCollaborativePlaylists', {});
+  const res = await backend.functions.invoke('listCollaborativePlaylists', {});
   return res?.data?.playlists || [];
 }
 
 /** Read a collaborative playlist (+ tracks, collaborators, caller role). */
 export async function getCollabPlaylist(id) {
-  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'get', id });
+  const res = await backend.functions.invoke('collaborativePlaylist', { action: 'get', id });
   return res?.data;
 }
 
 /** Add one of the caller's own tracks to a collaborative playlist. */
 export async function collabAddTrack(id, trackId) {
-  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'addTrack', id, trackId });
+  const res = await backend.functions.invoke('collaborativePlaylist', { action: 'addTrack', id, trackId });
   return res?.data;
 }
 
 export async function collabRemoveTrack(id, linkId) {
-  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'removeTrack', id, linkId });
+  const res = await backend.functions.invoke('collaborativePlaylist', { action: 'removeTrack', id, linkId });
   return res?.data;
 }
 
 export async function collabReorder(id, orderedLinkIds = []) {
-  const res = await base44.functions.invoke('collaborativePlaylist', { action: 'reorder', id, orderedLinkIds });
+  const res = await backend.functions.invoke('collaborativePlaylist', { action: 'reorder', id, orderedLinkIds });
   return res?.data;
 }

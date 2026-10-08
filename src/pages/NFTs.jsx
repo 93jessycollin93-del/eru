@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, Grid, List, AlertTriangle, Plus, X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectBar from '../components/WalletConnectBar';
 import ListingEditor from '../components/storefront/ListingEditor';
@@ -35,7 +35,7 @@ export default function NFTs() {
   const wallet = useWallet();
 
   const loadImportedNfts = async () => {
-    const rows = await base44.entities.NFT?.list?.('-updated_date', 50).catch(() => []);
+    const rows = await backend.entities.NFT?.list?.('-updated_date', 50).catch(() => []);
     setImportedNfts(rows || []);
   };
 
@@ -47,7 +47,7 @@ export default function NFTs() {
 
   const submitListing = async (values) => {
     setListing(true);
-    await base44.entities.StorefrontListing.create({
+    await backend.entities.StorefrontListing.create({
       title: values.title,
       description: values.description,
       asset_type: 'nft',

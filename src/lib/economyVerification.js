@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { enforceOrderStateGate, canGrantAsset } from '@/lib/orderStateMachine';
 import crypto from 'crypto';
 
@@ -17,7 +17,7 @@ import crypto from 'crypto';
 export async function createOrder(buyerEmail, assetType, assetId, price, paymentMethod, currency = 'GOLD') {
   const orderNumber = `ORD-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
-  const order = await base44.entities.Order.create({
+  const order = await backend.entities.Order.create({
     order_number: orderNumber,
     buyer_email: buyerEmail,
     asset_type: assetType,
@@ -47,9 +47,9 @@ export async function createOrder(buyerEmail, assetType, assetId, price, payment
  * Record payment provider and ID, transition to pending_payment
  */
 export async function submitPayment(orderId, paymentProviderId, paymentProvider = 'stripe') {
-  const order = await base44.entities.Order.read(orderId);
+  const order = await backend.entities.Order.read(orderId);
 
-  await base44.entities.Order.update(orderId, {
+  await backend.entities.Order.update(orderId, {
     status: 'pending_payment',
     payment_id: paymentProviderId,
     payment_provider: paymentProvider,
@@ -75,7 +75,7 @@ export async function submitPayment(orderId, paymentProviderId, paymentProvider 
  * - webhook signature verified
  */
 export async function verifyPayment(orderId, paymentData) {
-  const order = await base44.entities.Order.read(orderId);
+  const order = await backend.entities.Order.read(orderId);
 
   if (!order) {
     throw new Error('❌ VERIFICATION: Order not found');
@@ -128,7 +128,7 @@ export async function verifyPayment(orderId, paymentData) {
   }
 
   // Update order with verification
-  await base44.entities.Order.update(orderId, {
+  await backend.entities.Order.update(orderId, {
     status: 'pending_verification',
     amount_paid: paymentData.amount,
     verification_status: 'verified',
@@ -153,12 +153,12 @@ export async function verifyPayment(orderId, paymentData) {
  * After verification passes, transition to paid state
  */
 export async function markOrderAsPaid(orderId) {
-  const order = await base44.entities.Order.read(orderId);
+  const order = await backend.entities.Order.read(orderId);
 
   // Enforce state machine gate
   await enforceOrderStateGate(order, 'paid');
 
-  await base44.entities.Order.update(orderId, {
+  await backend.entities.Order.update(orderId, {
     status: 'paid',
   });
 
@@ -178,7 +178,7 @@ export async function markOrderAsPaid(orderId) {
  * Hard enforcement: will throw if any condition not met
  */
 export async function grantAssetSafely(orderId, grantFunction) {
-  const order = await base44.entities.Order.read(orderId);
+  const order = await backend.entities.Order.read(orderId);
 
   if (!order) {
     throw new Error('❌ ASSET GATE: Order does not exist');
@@ -197,7 +197,7 @@ export async function grantAssetSafely(orderId, grantFunction) {
     const result = await grantFunction(order);
 
     // Record successful grant
-    await base44.entities.Order.update(orderId, {
+    await backend.entities.Order.update(orderId, {
       asset_granted_at: new Date().toISOString(),
       asset_grant_reference: result.grantId || 'granted',
     });
@@ -265,7 +265,7 @@ export async function detectInconsistencies(order) {
  */
 export async function logEconomyAction(action, data) {
   try {
-    await base44.entities.EconomyAuditLog.create({
+    await backend.entities.EconomyAuditLog.create({
       action,
       order_id: data.order_id || null,
       user_email: data.user_email,
@@ -290,9 +290,9 @@ export async function logEconomyAction(action, data) {
  * Only for exceptional cases, requires manual review
  */
 export async function adminOverride(orderId, reason) {
-  const order = await base44.entities.Order.read(orderId);
+  const order = await backend.entities.Order.read(orderId);
 
-  await base44.entities.Order.update(orderId, {
+  await backend.entities.Order.update(orderId, {
     status: 'paid',
     verification_status: 'verified',
     admin_notes: reason,

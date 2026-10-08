@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export const COLLECTOR_STATUS_ICONS = {
   seed: '🌱',
@@ -104,7 +104,7 @@ function daysBetween(previousDateKey, currentDateKey) {
 export async function syncCollectorRewardProfile(userEmail) {
   if (!userEmail) return null;
 
-  const hasRewardEntity = typeof base44.entities?.CollectorRewardProfile?.filter === 'function';
+  const hasRewardEntity = typeof backend.entities?.CollectorRewardProfile?.filter === 'function';
   if (!hasRewardEntity) {
     return {
       user_email: userEmail,
@@ -118,13 +118,13 @@ export async function syncCollectorRewardProfile(userEmail) {
     };
   }
 
-  const rewardEntity = base44.entities.CollectorRewardProfile;
+  const rewardEntity = backend.entities.CollectorRewardProfile;
 
   const [existingProfiles, jadeAssets, cards, transactions] = await Promise.all([
     rewardEntity.filter({ user_email: userEmail }, '-updated_date', 1),
-    base44.entities.JadeAsset.filter({ created_by: userEmail }, '-updated_date', 200),
-    base44.entities.Card.filter({ created_by: userEmail }, '-updated_date', 200),
-    base44.entities.Transaction.filter({ buyer_email: userEmail }, '-updated_date', 200),
+    backend.entities.JadeAsset.filter({ created_by: userEmail }, '-updated_date', 200),
+    backend.entities.Card.filter({ created_by: userEmail }, '-updated_date', 200),
+    backend.entities.Transaction.filter({ buyer_email: userEmail }, '-updated_date', 200),
   ]).catch(() => [null, [], [], []]);
 
   if (!existingProfiles) {

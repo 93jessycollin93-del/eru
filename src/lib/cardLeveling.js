@@ -3,9 +3,9 @@
 // ----------------------------------------------------------------------------
 // Players invest gold OR duplicate copies of a card to raise its level (1-10).
 // Each level grants +1 power and +1 guard on top of the card's base stats.
-// All math is pure — `runLevelUp` orchestrates the I/O against base44.
+// All math is pure — `runLevelUp` orchestrates the I/O against the backend.
 // ----------------------------------------------------------------------------
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export const MAX_LEVEL = 10;
 export const POWER_PER_LEVEL = 1;
@@ -123,7 +123,7 @@ export async function runLevelUp(card, options) {
       return { ok: false, error: `Need ${need} duplicate copy${need === 1 ? '' : 'ies'}.` };
     }
     consumedIds = candidates.map((c) => c.id);
-    await Promise.all(consumedIds.map((id) => base44.entities.Card.delete(id).catch(() => null)));
+    await Promise.all(consumedIds.map((id) => backend.entities.Card.delete(id).catch(() => null)));
   } else {
     return { ok: false, error: 'Unknown level-up method.' };
   }
@@ -140,7 +140,7 @@ export async function runLevelUp(card, options) {
     timestamp: new Date().toISOString(),
   };
 
-  await base44.entities.Card.update(card.id, {
+  await backend.entities.Card.update(card.id, {
     level: target,
     base_power: basePower,
     base_guard: baseGuard,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Brain, RefreshCw, TrendingUp } from 'lucide-react';
 
 export default function AdaptiveLearningPanel({ bots, onBotsUpdated }) {
@@ -9,8 +9,8 @@ export default function AdaptiveLearningPanel({ bots, onBotsUpdated }) {
 
   const load = async () => {
     const [improvementRows, runRows] = await Promise.all([
-      base44.entities.BotImprovement.list('-created_date', 100),
-      base44.entities.BotTestRun.list('-created_date', 200),
+      backend.entities.BotImprovement.list('-created_date', 100),
+      backend.entities.BotTestRun.list('-created_date', 200),
     ]);
     setImprovements(improvementRows);
     setRuns(runRows);
@@ -36,7 +36,7 @@ export default function AdaptiveLearningPanel({ bots, onBotsUpdated }) {
 
   const triggerLearning = async () => {
     setLearning(true);
-    await base44.functions.invoke('adaptBotStrategyFromPerformance', {});
+    await backend.functions.invoke('adaptBotStrategyFromPerformance', {});
     await load();
     onBotsUpdated?.();
     setLearning(false);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -117,7 +117,7 @@ export default function AdminEconomyCharts() {
         setLoading(true);
 
         // Fetch all Jade assets
-        const assets = await base44.entities.JadeAsset.list('-created_date', 1000);
+        const assets = await backend.entities.JadeAsset.list('-created_date', 1000);
 
         if (assets && assets.length > 0) {
           // Calculate tier distribution

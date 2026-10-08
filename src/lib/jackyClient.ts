@@ -8,11 +8,11 @@
  * fetch layer in `public/app-commander.html` so one implementation serves all
  * front-ends.
  *
- * Portability is deliberate: the same file drops into Eru (Base44) and Jackie
+ * Portability is deliberate: the same file drops into Eru and Jackie
  * (Lovable/Supabase) unchanged. Those platforms cannot call the engine directly
  * — the browser origin differs and the engine ships no CORS headers — so the
  * client supports a `proxy` transport that tunnels the same paths through a
- * platform serverless function (`base44/functions/jackyProxy`,
+ * platform serverless function (`the jackyProxy server function`,
  * `supabase/functions/jacky-proxy`). Only the transport differs; callers don't
  * change.
  *
@@ -79,7 +79,7 @@ const LS_PROXY_PATH = 'eye_api_proxy_path';
 const DEFAULT_PROXY_PATH = '/api/jacky';
 
 function readEnv(key: string): string {
-  // Vite inlines `import.meta.env`; Base44/Deno builds may not define it at all.
+  // Vite inlines `import.meta.env`; Deno/serverless builds may not define it at all.
   try {
     const env = (import.meta as unknown as { env?: Record<string, string> }).env;
     return env?.[key] ?? '';
@@ -437,7 +437,7 @@ class JackyClient {
   private linkState: JackyLinkState = 'demo';
   /**
    * Platform function invoker for proxy transport. Eru and Jackie always set
-   * one, so the call goes through `base44.functions.invoke` /
+   * one, so the call goes through `backend.functions.invoke` /
    * `supabase.functions.invoke` and inherits platform auth.
    *
    * Left unset, proxy mode falls back to a plain same-origin fetch against
@@ -582,7 +582,7 @@ class JackyClient {
       throw new JackyLinkError('No Jacky engine configured', 'no-base');
     }
 
-    // Platform-invoker path. The SDK underneath (base44/Supabase `invoke`) owns
+    // Platform-invoker path. The SDK underneath (the platform's `invoke`) owns
     // its own transport, but nothing upstream of it bounds how long that call
     // can run — without a timeout here, a stalled relay leaves this pending
     // forever: telemetry() never settles, pollTelemetry stops emitting, and the

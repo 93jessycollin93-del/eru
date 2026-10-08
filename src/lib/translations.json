@@ -252,28 +252,6 @@
         "terms": "Terms",
         "privacy": "Privacy",
         "tax": "Tax Notice"
-      },
-      "domain": {
-        "title": "Custom Domain",
-        "description": "Connect your own domain and point it to your hosted site with the DNS records below.",
-        "label": "Your domain",
-        "placeholder": "example.com or app.example.com",
-        "help": "Enter either your root domain or a subdomain you want to use.",
-        "dnsSetup": "DNS setup",
-        "recordType": "Type",
-        "recordHost": "Name / Host",
-        "recordValue": "Value / Target",
-        "rootRecord": "Root domain (@)",
-        "fallbackA": "Fallback A record",
-        "wwwCname": "www CNAME",
-        "setupSteps": "Setup steps",
-        "step1": "Open your domain registrar or DNS provider.",
-        "step2": "Create the record shown above for your domain.",
-        "step3": "If you are using the root domain, also add the www CNAME to base44.onrender.com.",
-        "step4": "Remove conflicting AAAA records for the same host if they exist.",
-        "step5": "If you use Cloudflare, set the record to DNS only while connecting.",
-        "step6": "Then go to your app dashboard domain settings and verify the domain.",
-        "dnsNotice": "DNS changes can take up to 48–72 hours to fully propagate, and SSL is issued automatically after verification."
       }
     },
     "theme": {
@@ -688,28 +666,6 @@
         "terms": "Умови",
         "privacy": "Конфіденційність",
         "tax": "Податкове повідомлення"
-      },
-      "domain": {
-        "title": "Власний домен",
-        "description": "Підключіть власний домен і спрямуйте його на ваш сайт за допомогою DNS-записів нижче.",
-        "label": "Ваш домен",
-        "placeholder": "example.com або app.example.com",
-        "help": "Введіть кореневий домен або субдомен, який ви хочете використати.",
-        "dnsSetup": "Налаштування DNS",
-        "recordType": "Тип",
-        "recordHost": "Ім'я / хост",
-        "recordValue": "Значення / ціль",
-        "rootRecord": "Кореневий домен (@)",
-        "fallbackA": "Резервний A-запис",
-        "wwwCname": "www CNAME",
-        "setupSteps": "Кроки налаштування",
-        "step1": "Відкрийте реєстратора домену або DNS-провайдера.",
-        "step2": "Створіть запис, показаний вище, для свого домену.",
-        "step3": "Якщо ви використовуєте кореневий домен, додайте також CNAME www → base44.onrender.com.",
-        "step4": "Видаліть конфліктуючі AAAA-записи для того ж хоста, якщо вони існують.",
-        "step5": "Якщо ви використовуєте Cloudflare, переведіть запис у режим DNS only під час підключення.",
-        "step6": "Потім перейдіть до налаштувань домену в інформпанелі застосунку та підтвердьте домен.",
-        "dnsNotice": "DNS-зміни можуть поширюватися до 48–72 годин, SSL видається автоматично після перевірки."
       }
     },
     "theme": {
@@ -1124,28 +1080,6 @@
         "terms": "条款",
         "privacy": "隐私",
         "tax": "税务提示"
-      },
-      "domain": {
-        "title": "自定义域名",
-        "description": "通过下方 DNS 记录将您自己的域名连接到托管站点。",
-        "label": "您的域名",
-        "placeholder": "example.com 或 app.example.com",
-        "help": "输入要使用的根域名或子域名。",
-        "dnsSetup": "DNS 设置",
-        "recordType": "类型",
-        "recordHost": "名称 / 主机",
-        "recordValue": "值 / 目标",
-        "rootRecord": "根域名 (@)",
-        "fallbackA": "备用 A 记录",
-        "wwwCname": "www CNAME",
-        "setupSteps": "设置步骤",
-        "step1": "打开您的域名注册商或 DNS 提供商。",
-        "step2": "为您的域名创建上面显示的记录。",
-        "step3": "如果使用根域名,还需添加 CNAME:www → base44.onrender.com。",
-        "step4": "如果存在指向同一主机的冲突 AAAA 记录,请将其删除。",
-        "step5": "如果使用 Cloudflare,在连接期间将记录设为 DNS only 模式。",
-        "step6": "然后前往应用控制台的域名设置并验证域名。",
-        "dnsNotice": "DNS 变更可能需要最长 48–72 小时才能完全传播,验证完成后会自动签发 SSL。"
       }
     },
     "theme": {
@@ -1560,28 +1494,6 @@
         "terms": "Условия",
         "privacy": "Конфиденциальность",
         "tax": "Налоговое уведомление"
-      },
-      "domain": {
-        "title": "Собственный домен",
-        "description": "Подключите свой домен и направьте его на размещённый сайт с помощью DNS-записей ниже.",
-        "label": "Ваш домен",
-        "placeholder": "example.com или app.example.com",
-        "help": "Введите корневой домен или поддомен, который хотите использовать.",
-        "dnsSetup": "Настройка DNS",
-        "recordType": "Тип",
-        "recordHost": "Имя / хост",
-        "recordValue": "Значение / цель",
-        "rootRecord": "Корневой домен (@)",
-        "fallbackA": "Резервная A-запись",
-        "wwwCname": "www CNAME",
-        "setupSteps": "Шаги настройки",
-        "step1": "Откройте регистратора домена или DNS-провайдера.",
-        "step2": "Создайте запись, показанную выше, для вашего домена.",
-        "step3": "Если используете корневой домен, добавьте также CNAME www → base44.onrender.com.",
-        "step4": "Удалите конфликтующие AAAA-записи для того же хоста, если они существуют.",
-        "step5": "Если используете Cloudflare, переведите запись в режим DNS only на время подключения.",
-        "step6": "Затем перейдите в настройки домена в панели приложения и подтвердите домен.",
-        "dnsNotice": "Изменения DNS могут распространяться до 48–72 часов, SSL выпускается автоматически после проверки."
       }
     },
     "theme": {

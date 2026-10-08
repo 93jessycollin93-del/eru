@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Globe, Plus } from 'lucide-react';
 import WebsiteGeneratorProjectList from './WebsiteGeneratorProjectList';
 import WebsiteGeneratorForm from './WebsiteGeneratorForm';
@@ -51,7 +51,7 @@ export default function WebsiteGeneratorPanel() {
 
   const loadProjects = async () => {
     setLoading(true);
-    const rows = await base44.entities.WebsiteGeneratorProject.list('-updated_date', 100).catch(() => []);
+    const rows = await backend.entities.WebsiteGeneratorProject.list('-updated_date', 100).catch(() => []);
     setProjects(rows);
     if (selectedProjectId && !rows.some((row) => row.id === selectedProjectId)) {
       setSelectedProjectId(rows[0]?.id || null);
@@ -75,14 +75,14 @@ export default function WebsiteGeneratorPanel() {
     setSaving(true);
     let savedProjectId = selectedProjectId;
     if (selectedProjectId) {
-      await base44.entities.WebsiteGeneratorProject.update(selectedProjectId, {
+      await backend.entities.WebsiteGeneratorProject.update(selectedProjectId, {
         ...form,
         status: selectedProject?.status || 'draft',
         site_blueprint: selectedProject?.site_blueprint || undefined,
         generated_copy: selectedProject?.generated_copy || undefined,
       });
     } else {
-      const created = await base44.entities.WebsiteGeneratorProject.create({
+      const created = await backend.entities.WebsiteGeneratorProject.create({
         ...form,
         status: 'draft',
       });
@@ -98,7 +98,7 @@ export default function WebsiteGeneratorPanel() {
     if (!form.name.trim()) return;
     setGenerating(true);
     let savedProjectId = selectedProjectId;
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await backend.integrations.Core.InvokeLLM({
       prompt: `You are generating a structured website system for an integrated website generator inside ERU.
 Return a clean website blueprint with reusable sections and page structure.
 Support these site types: landing_page, business_site, portfolio.
@@ -169,14 +169,14 @@ Notes: ${form.notes}`,
     });
 
     if (selectedProjectId) {
-      await base44.entities.WebsiteGeneratorProject.update(selectedProjectId, {
+      await backend.entities.WebsiteGeneratorProject.update(selectedProjectId, {
         ...form,
         status: 'generated',
         site_blueprint: result.site_blueprint,
         generated_copy: result.generated_copy,
       });
     } else {
-      const created = await base44.entities.WebsiteGeneratorProject.create({
+      const created = await backend.entities.WebsiteGeneratorProject.create({
         ...form,
         status: 'generated',
         site_blueprint: result.site_blueprint,

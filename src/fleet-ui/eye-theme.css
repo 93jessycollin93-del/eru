@@ -13,7 +13,7 @@
  *      `public/app-commander.html`. Always active. A fresh namespace that
  *      collides with nothing, so importing this file is inert for existing UI.
  *
- *   2. shadcn / Base44 bridge — the same colors re-expressed as the bare
+ *   2. shadcn bridge — the same colors re-expressed as the bare
  *      `H S% L%` triplets that `hsl(var(--background))` expects. This is the
  *      cheap path to fleet-wide consistency: Eru and Jackie are shadcn builds
  *      with hundreds of components, and the bridge restyles all of them from
@@ -146,7 +146,7 @@
 }
 
 /* ============================================================================
- * LAYER 2 — shadcn / Base44 bridge. Opt-in per the header note.
+ * LAYER 2 — shadcn bridge. Opt-in per the header note.
  *
  * Each block restates the theme's colors as bare HSL triplets. Setting
  * `data-eye-theme` hands the host app's entire shadcn component tree over to

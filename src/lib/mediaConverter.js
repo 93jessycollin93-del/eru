@@ -5,7 +5,7 @@
  * ffmpeg on a VPS). The service base URL is provided at build time via
  *   VITE_MEDIA_CONVERTER_URL=https://media-converter-production.up.railway.app
  *
- * The converter CANNOT live in the Base44 serverless backend because yt-dlp and
+ * The converter CANNOT live in a serverless backend because yt-dlp and
  * ffmpeg spawn processes and write temp files. See /media-converter for the
  * service itself.
  */

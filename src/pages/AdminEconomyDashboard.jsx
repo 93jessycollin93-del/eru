@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { TrendingUp, Gem, Package, Zap, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import AdminMetricCard from '../components/AdminMetricCard';
@@ -17,7 +17,7 @@ export default function AdminEconomyDashboard() {
       try {
         setLoading(true);
 
-        const assets = await base44.entities.JadeAsset.list('-created_date', 1000);
+        const assets = await backend.entities.JadeAsset.list('-created_date', 1000);
         const totalSupply = assets.reduce((sum, asset) => sum + (asset.volume_kg || 0), 0);
         const assetCount = assets.length;
 
@@ -36,14 +36,14 @@ export default function AdminEconomyDashboard() {
           inflationFactor: 1.0 + (Math.random() - 0.5) * 0.02,
         });
 
-        const txns = await base44.entities.EconomyAuditLog.filter(
+        const txns = await backend.entities.EconomyAuditLog.filter(
           { action: 'asset_granted' },
           '-created_date',
           10
         );
         setTransactions(txns || []);
 
-        const activeOrders = await base44.entities.Order.filter(
+        const activeOrders = await backend.entities.Order.filter(
           { status: 'pending_payment' },
           '-created_date',
           10

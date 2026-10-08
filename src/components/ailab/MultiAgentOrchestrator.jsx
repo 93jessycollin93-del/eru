@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Network, ChevronRight, Loader2, Star, GitBranch, MessageSquareShare, Wrench, BrainCircuit } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import CollaborationWorkspace from './CollaborationWorkspace';
 import OrchestratorBotSetupPanel from './OrchestratorBotSetupPanel';
@@ -22,11 +22,11 @@ ${sharedContext || 'No shared findings yet.'}
 Complete your assignment and share your findings in a concise but useful way for other bots.`;
 
   try {
-    const finding = await base44.integrations.Core.InvokeLLM({ prompt: basePrompt });
+    const finding = await backend.integrations.Core.InvokeLLM({ prompt: basePrompt });
     return { finding, recovered: false, retryUsed: false, healingNotes: '' };
   } catch (error) {
     const errorStack = error?.message || String(error);
-    const healingResponse = await base44.integrations.Core.InvokeLLM({
+    const healingResponse = await backend.integrations.Core.InvokeLLM({
       prompt: `You are the master orchestration agent.
 A sub-agent failed while trying to complete a delegated task.
 
@@ -62,7 +62,7 @@ ${sharedContext || 'No shared findings yet.'}
 This is a single retry after a failure. Complete the task clearly and avoid the previous error.`;
 
     try {
-      const retryFinding = await base44.integrations.Core.InvokeLLM({ prompt: retryPrompt });
+      const retryFinding = await backend.integrations.Core.InvokeLLM({ prompt: retryPrompt });
       return {
         finding: retryFinding,
         recovered: true,
@@ -96,7 +96,7 @@ export default function MultiAgentOrchestrator({ bots }) {
 
   const loadHistory = async () => {
     setLoadingHistory(true);
-    const data = await base44.entities.BotImprovement.list('-created_date', 10);
+    const data = await backend.entities.BotImprovement.list('-created_date', 10);
     setHistory(data);
     setLoadingHistory(false);
   };
@@ -125,7 +125,7 @@ export default function MultiAgentOrchestrator({ bots }) {
     setStage('plan');
     const decisionPlan = await createDecisionPlan({ goal, bots: [routerBot, ...specialistBots] });
     const selectedBots = [routerBot, ...specialistBots].filter((bot) => (decisionPlan.selected_bot_ids || []).includes(bot.id) || specialistBots.some((item) => item.id === bot.id)).slice(0, 6);
-    cycleResult.plan = await base44.integrations.Core.InvokeLLM({
+    cycleResult.plan = await backend.integrations.Core.InvokeLLM({
       prompt: `You are ${routerBot.name}, the master router bot coordinating specialist agents.
 Goal: "${goal}"
 Router bot: ${routerBot.name} (${routerBot.role})
@@ -172,7 +172,7 @@ Create a short collaboration plan describing how the router should delegate work
           notes: executionResult.healingNotes,
         });
       }
-      await base44.entities.UserBot.update(bot.id, { xp: (bot.xp || 0) + 8, usage_count: (bot.usage_count || 0) + 1 }).catch(() => {});
+      await backend.entities.UserBot.update(bot.id, { xp: (bot.xp || 0) + 8, usage_count: (bot.usage_count || 0) + 1 }).catch(() => {});
     }
 
     setStage('feedback');
@@ -180,7 +180,7 @@ Create a short collaboration plan describing how the router should delegate work
       const current = cycleResult.findings[i];
       const reviewer = selectedBots.find((bot) => bot.id !== current.bot_id);
       if (!reviewer) continue;
-      const feedback = await base44.integrations.Core.InvokeLLM({
+      const feedback = await backend.integrations.Core.InvokeLLM({
         prompt: `You are ${reviewer.name}, reviewing another bot's work.
 Goal: "${goal}"
 Bot finding to review:
@@ -198,7 +198,7 @@ Give short feedback that improves accuracy, catches gaps, or suggests a better n
     });
 
     setStage('improvement');
-    const finalResponse = await base44.integrations.Core.InvokeLLM({
+    const finalResponse = await backend.integrations.Core.InvokeLLM({
       prompt: `You are a lead orchestration AI creating the final team answer.
 Goal: "${goal}"
 Plan: ${cycleResult.plan}
@@ -227,7 +227,7 @@ Produce:
     cycleResult.score = score;
     cycleResult.network_insights = await analyzeNetworkImprovements({ bots: selectedBots, result: cycleResult });
 
-    await base44.entities.BotImprovement.create({
+    await backend.entities.BotImprovement.create({
       goal,
       plan: cycleResult.plan,
       execution: cycleResult.execution,

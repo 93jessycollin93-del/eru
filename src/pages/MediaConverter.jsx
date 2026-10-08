@@ -36,7 +36,7 @@ import { importConvertedTrack } from '@/lib/mediaLibrary';
  * (MP3/M4A/WAV) or an MP4 video (240p–1080p).
  *
  * The heavy lifting (yt-dlp + ffmpeg) happens in the standalone converter
- * service, because those tools can't run on the Base44 serverless backend.
+ * service, because those tools can't run on a serverless backend.
  * This page just collects input, enforces the terms acknowledgment, and streams
  * the result back as a download. Configure VITE_MEDIA_CONVERTER_URL to point at
  * your deployed service.

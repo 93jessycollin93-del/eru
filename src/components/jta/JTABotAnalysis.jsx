@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Bot, Loader2, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const ANALYSIS_TYPES = [
   { id: 'valuation', label: 'Valuation Guidance', prompt: (j) => `You are a JTA Jade Analyst. Analyze this Jade asset's 4-layer valuation system and provide market guidance. Do NOT invent prices — only discuss relative value, rarity tier, and demand signals.\n\nJade Data:\n- Color: ${j.color_type}\n- Purity: ${j.purity}%\n- Vividness: ${j.vividness}%\n- Size Grade: ${j.size_grade}% (${j.volume_kg}kg)\n- Texture: ${j.texture}%\n- Composite Score: ${j.composite_score}%\n- Batch: ${j.batch}\n- Form: ${j.crafted_form}\n- Masterwork: ${j.is_masterwork}\n- Resonance History Events: ${(j.resonance_history||[]).length}\n\nProvide: rarity tier, key value drivers, any weaknesses, and demand signal estimate. Keep it concise.` },
@@ -17,7 +17,7 @@ export default function JTABotAnalysis({ jade }) {
     setSelected(type.id);
     setResponse('');
     setLoading(true);
-    const res = await base44.integrations.Core.InvokeLLM({ prompt: type.prompt(jade) });
+    const res = await backend.integrations.Core.InvokeLLM({ prompt: type.prompt(jade) });
     setResponse(res);
     setLoading(false);
   };

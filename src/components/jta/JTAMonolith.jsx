@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Gem, Package, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useLivePriceMap } from '@/hooks/useLiveSync';
 import JTAPriceConverter from './JTAPriceConverter';
 import JTARefreshControls from './JTARefreshControls';
@@ -83,7 +83,7 @@ export default function JTAMonolith({ onExtracted, totalExtracted = 0 }) {
       // The jade is rolled and minted authoritatively by the backend. The
       // client `preview` is for display only — it is NOT trusted or sent as the
       // final stats (that previously let users mint arbitrary jade for free).
-      const res = await base44.functions.invoke('mintMonolithJade', {});
+      const res = await backend.functions.invoke('mintMonolithJade', {});
       const data = res?.data ?? res;
       if (!data?.ok) throw new Error(data?.error || 'Extraction failed');
       setConfirmed(true);

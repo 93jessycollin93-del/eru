@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 import { Gem, Send, Swords, MessageCircle } from 'lucide-react';
@@ -36,8 +36,8 @@ function buildInventory(jadeAssets = [], cards = [], listings = []) {
 export default function TradeNegotiationFeed({ onOpenChat }) {
   const { user } = useAuth();
   const ownerQuery = useMemo(() => user?.email ? { created_by: user.email } : {}, [user?.email]);
-  const tradePostEnabled = Boolean(base44.entities?.TradeNegotiationPost);
-  const tradeChatEnabled = Boolean(base44.entities?.TradeNegotiationChat);
+  const tradePostEnabled = Boolean(backend.entities?.TradeNegotiationPost);
+  const tradeChatEnabled = Boolean(backend.entities?.TradeNegotiationChat);
   const { data: posts } = useRealtimeEntityList('TradeNegotiationPost', { sort: '-created_date', limit: 50, enabled: tradePostEnabled });
   const { data: jadeAssets } = useRealtimeEntityList('JadeAsset', { query: ownerQuery, sort: '-updated_date', limit: 50, enabled: !!user?.email });
   const { data: cards } = useRealtimeEntityList('Card', { query: ownerQuery, sort: '-updated_date', limit: 50, enabled: !!user?.email });
@@ -52,10 +52,10 @@ export default function TradeNegotiationFeed({ onOpenChat }) {
   const selectedAsset = inventory.find((item) => item.key === selectedKey) || null;
 
   const handlePost = async () => {
-    if (!user || !selectedAsset || !base44.entities?.TradeNegotiationPost) return;
+    if (!user || !selectedAsset || !backend.entities?.TradeNegotiationPost) return;
     setPosting(true);
     try {
-      await base44.entities.TradeNegotiationPost.create({
+      await backend.entities.TradeNegotiationPost.create({
         author_email: user.email,
         author_name: user.full_name || user.email.split('@')[0],
         asset_type: selectedAsset.asset_type,
@@ -76,14 +76,14 @@ export default function TradeNegotiationFeed({ onOpenChat }) {
   };
 
   const handleStartNegotiation = async (post) => {
-    if (!user || post.author_email === user.email || !base44.entities?.TradeNegotiationChat) return;
-    const existing = await base44.entities.TradeNegotiationChat.filter({ post_id: post.id, buyer_email: user.email }, '-created_date', 1);
+    if (!user || post.author_email === user.email || !backend.entities?.TradeNegotiationChat) return;
+    const existing = await backend.entities.TradeNegotiationChat.filter({ post_id: post.id, buyer_email: user.email }, '-created_date', 1);
     if (existing?.[0]) {
       onOpenChat(existing[0].id);
       return;
     }
 
-    const chat = await base44.entities.TradeNegotiationChat.create({
+    const chat = await backend.entities.TradeNegotiationChat.create({
       post_id: post.id,
       post_title: post.title,
       asset_type: post.asset_type,
@@ -102,8 +102,8 @@ export default function TradeNegotiationFeed({ onOpenChat }) {
       ],
       last_message: `Hi, I want to negotiate for ${post.title}.`,
     });
-    if (base44.entities?.TradeNegotiationPost) {
-      await base44.entities.TradeNegotiationPost.update(post.id, { chat_count: Number(post.chat_count || 0) + 1, status: 'negotiating' });
+    if (backend.entities?.TradeNegotiationPost) {
+      await backend.entities.TradeNegotiationPost.update(post.id, { chat_count: Number(post.chat_count || 0) + 1, status: 'negotiating' });
     }
     onOpenChat(chat.id);
   };

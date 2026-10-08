@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Clock, Plus, Play, Pause, Trash2, Zap, Bot, Edit3, Link as LinkIcon, MessageCircle, BellRing } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 
 const INTERVALS = [
@@ -36,8 +36,8 @@ export default function BotAutomations() {
   const load = async () => {
     setLoading(true);
     const [a, b] = await Promise.all([
-      base44.entities.BotAutomation.list('-created_date', 50),
-      base44.entities.UserBot.filter({ status: 'active' }, '-created_date', 50),
+      backend.entities.BotAutomation.list('-created_date', 50),
+      backend.entities.UserBot.filter({ status: 'active' }, '-created_date', 50),
     ]);
     setAutomations(a);
     setBots(b);
@@ -63,15 +63,15 @@ export default function BotAutomations() {
     if (!data.inbound_webhook_key) {
       data.inbound_webhook_key = crypto.randomUUID();
     }
-    if (editId) await base44.entities.BotAutomation.update(editId, data);
-    else await base44.entities.BotAutomation.create(data);
+    if (editId) await backend.entities.BotAutomation.update(editId, data);
+    else await backend.entities.BotAutomation.create(data);
     setShowForm(false); setForm(BLANK); setEditId(null); load();
   };
 
-  const del = async (id) => { await base44.entities.BotAutomation.delete(id); load(); };
+  const del = async (id) => { await backend.entities.BotAutomation.delete(id); load(); };
 
   const toggle = async (auto) => {
-    await base44.entities.BotAutomation.update(auto.id, { status: auto.status === 'active' ? 'paused' : 'active' });
+    await backend.entities.BotAutomation.update(auto.id, { status: auto.status === 'active' ? 'paused' : 'active' });
     load();
   };
 
@@ -100,7 +100,7 @@ export default function BotAutomations() {
     const bot = bots.find(b => b.id === auto.bot_id);
     const prompt = `You are ${bot?.name || 'an AI assistant'}. ${bot?.instructions || ''}\n\nAutomation task: ${auto.task_prompt}\n\nProvide a clear, concise report of your findings.`;
     
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await backend.integrations.Core.InvokeLLM({
       prompt,
       add_context_from_internet: true,
       model: 'gemini_3_flash',
@@ -108,7 +108,7 @@ export default function BotAutomations() {
 
     const shouldAlert = !auto.alert_condition || result.toLowerCase().includes(auto.alert_condition.toLowerCase());
     if (shouldAlert) {
-      await base44.functions.invoke('dispatchBotAutomationAlert', {
+      await backend.functions.invoke('dispatchBotAutomationAlert', {
         automationId: auto.id,
         eventType: 'automation_run',
         title: `${auto.name} alert`,
@@ -121,7 +121,7 @@ export default function BotAutomations() {
       }).catch(() => null);
     }
 
-    await base44.entities.BotAutomation.update(auto.id, {
+    await backend.entities.BotAutomation.update(auto.id, {
       last_run_at: new Date().toISOString(),
       last_run_result: result.slice(0, 500),
       run_count: (auto.run_count || 0) + 1,

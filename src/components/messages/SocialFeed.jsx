@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { ImagePlus, Send, Swords, Trophy, Wallet } from 'lucide-react';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
@@ -69,7 +69,7 @@ export default function SocialFeed() {
       payload.deck_snapshot = myBestDeck?.deck || [];
     }
 
-    await base44.entities.SocialStrategyPost.create(payload);
+    await backend.entities.SocialStrategyPost.create(payload);
     setTitle('');
     setContent('');
     setTradeValue('');
@@ -80,7 +80,7 @@ export default function SocialFeed() {
   };
 
   const likePost = async (post) => {
-    await base44.entities.SocialStrategyPost.update(post.id, { likes: Number(post.likes || 0) + 1 });
+    await backend.entities.SocialStrategyPost.update(post.id, { likes: Number(post.likes || 0) + 1 });
   };
 
   return (
@@ -142,7 +142,7 @@ export default function SocialFeed() {
                     {bestDeck?.deck?.length > 0 && (
                       <button
                         onClick={async () => {
-                          await base44.entities.SocialStrategyPost.create({
+                          await backend.entities.SocialStrategyPost.create({
                             author_email: player.user_email,
                             author_name: player.display_name || player.user_email,
                             post_type: 'deck_copy',

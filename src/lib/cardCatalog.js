@@ -27,7 +27,7 @@
 //     source:     'starter' | 'collection' | 'master' (extensible)
 //   }
 // ----------------------------------------------------------------------------
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { STARTER_CARDS } from '@/components/cards/StarterCards';
 
 const norm = (v) => (v ?? '').toString().trim().toLowerCase();
@@ -68,7 +68,7 @@ function toEntry(card, source, ownedIndex) {
  * contain it. Owned data always wins on tie because it's player-specific.
  */
 export async function loadCardCatalog() {
-  const ownedCards = await base44.entities.Card.list('-created_date', 500).catch(() => []);
+  const ownedCards = await backend.entities.Card.list('-created_date', 500).catch(() => []);
   const ownedIndex = buildOwnedIndex(ownedCards);
 
   const seen = new Set();
@@ -92,7 +92,7 @@ export async function loadCardCatalog() {
   });
 
   // FUTURE: merge MasterCard entity here when introduced.
-  // const master = await base44.entities.MasterCard.list().catch(() => []);
+  // const master = await backend.entities.MasterCard.list().catch(() => []);
   // master.forEach(...) — same dedup pattern.
 
   return entries;

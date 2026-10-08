@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Lightbulb, Megaphone, Star, Lock, CheckCircle, Clock } from 'lucide-react';
 import CreatorAnalytics from '../components/CreatorAnalytics';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import ListingEditor from '../components/storefront/ListingEditor';
 import ListingManager from '../components/storefront/ListingManager';
 
@@ -91,7 +91,7 @@ export default function CreatorHub() {
             <ListingEditor
               initialValue={{ asset_type: 'item', sale_mode: 'sell_or_trade' }}
               onSave={async (values) => {
-                await base44.entities.StorefrontListing.create({
+                await backend.entities.StorefrontListing.create({
                   title: values.title,
                   description: values.description,
                   asset_type: 'item',

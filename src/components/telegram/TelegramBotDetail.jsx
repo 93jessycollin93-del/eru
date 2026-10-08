@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Loader2, Save, Trash2 } from 'lucide-react';
 import TelegramKnowledgeLinkPanel from './TelegramKnowledgeLinkPanel';
 import TelegramSwarmConfigPanel from './TelegramSwarmConfigPanel';
@@ -17,7 +17,7 @@ export default function TelegramBotDetail({ bot, onSaved, onDeleted, bots = [] }
 
   const handleSave = async () => {
     setSaving(true);
-    await base44.functions.invoke('updateTelegramBot', {
+    await backend.functions.invoke('updateTelegramBot', {
       botId: bot.id,
       system_prompt: form.system_prompt,
       greeting_message: form.greeting_message,
@@ -39,7 +39,7 @@ export default function TelegramBotDetail({ bot, onSaved, onDeleted, bots = [] }
 
   const handleDelete = async () => {
     setDeleting(true);
-    await base44.entities.TelegramBot.delete(bot.id);
+    await backend.entities.TelegramBot.delete(bot.id);
     setDeleting(false);
     onDeleted();
   };

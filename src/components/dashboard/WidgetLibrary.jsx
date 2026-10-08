@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Bot, Pin, Zap, Plus, Check, Activity, RefreshCw, Pause, Play, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NewsFeedWidget from './NewsFeedWidget';
@@ -47,7 +47,7 @@ function BotStatusWidget() {
     setLoading(true);
 
     try {
-      const data = await base44.entities.UserBot.list('-updated_date', 8);
+      const data = await backend.entities.UserBot.list('-updated_date', 8);
       setBots(data || []);
       setLastUpdated(new Date());
     } catch (error) {
@@ -62,7 +62,7 @@ function BotStatusWidget() {
 
   useEffect(() => {
     loadBots().catch(() => {});
-    const unsubscribe = base44.entities.UserBot.subscribe((event) => {
+    const unsubscribe = backend.entities.UserBot.subscribe((event) => {
       if (event.type === 'create' || event.type === 'update') {
         setBots((prev) => mergeBot(prev, event.data));
       }
@@ -86,7 +86,7 @@ function BotStatusWidget() {
     if (selectedBotIds.length === 0 || batchLoading) return;
     setBatchLoading(true);
     setBots((prev) => prev.map((item) => selectedBotIds.includes(item.id) ? { ...item, status: nextStatus } : item));
-    await Promise.all(selectedBotIds.map((botId) => base44.entities.UserBot.update(botId, { status: nextStatus }).catch(() => null)));
+    await Promise.all(selectedBotIds.map((botId) => backend.entities.UserBot.update(botId, { status: nextStatus }).catch(() => null)));
     setSelectedBotIds([]);
     setBatchLoading(false);
     setLastUpdated(new Date());
@@ -95,7 +95,7 @@ function BotStatusWidget() {
   const toggleStatus = async (bot) => {
     const nextStatus = bot.status === 'active' ? 'inactive' : 'active';
     setBots((prev) => prev.map((item) => item.id === bot.id ? { ...item, status: nextStatus } : item));
-    await base44.entities.UserBot.update(bot.id, { status: nextStatus }).catch(() => {});
+    await backend.entities.UserBot.update(bot.id, { status: nextStatus }).catch(() => {});
   };
 
   return (

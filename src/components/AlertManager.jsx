@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Bell, Plus, Trash2, Check, Loader2, Smartphone, Send, Link as LinkIcon } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { toast } from 'sonner';
 import { useDashboardEvents } from '@/context/DashboardEventsContext';
 import { getTelegramAccount } from '@/lib/telegramConnector';
@@ -20,7 +20,7 @@ export default function AlertManager() {
 
   useEffect(() => {
     fetchAlerts();
-    const unsubscribe = base44.entities.PriceAlert.subscribe((event) => {
+    const unsubscribe = backend.entities.PriceAlert.subscribe((event) => {
       if (event.type === 'create') {
         setAlerts((prev) => [event.data, ...prev]);
       } else if (event.type === 'update') {
@@ -63,7 +63,7 @@ export default function AlertManager() {
 
         if (matchedAlerts.length > 0) {
           await Promise.all(matchedAlerts.map((alert) =>
-            base44.entities.PriceAlert.update(alert.id, {
+            backend.entities.PriceAlert.update(alert.id, {
               triggered_at: new Date().toISOString(),
               notification_sent: true,
               push_notification_status: alert.push_notification_enabled ? 'sent' : 'disabled'
@@ -71,7 +71,7 @@ export default function AlertManager() {
           ));
           emit('alerts', 'thresholdTriggered', { matchedAlerts });
           toast.success(`${matchedAlerts.length} alert rule${matchedAlerts.length > 1 ? 's' : ''} matched live market data`);
-          await base44.functions.invoke('checkPriceAlerts', {});
+          await backend.functions.invoke('checkPriceAlerts', {});
         }
       }
     });
@@ -80,14 +80,14 @@ export default function AlertManager() {
 
   const fetchAlerts = async () => {
     try {
-      const user = await base44.auth.me();
+      const user = await backend.auth.me();
       if (!user) {
         setLoading(false);
         return;
       }
       const [data, walletHoldings, tgAccount] = await Promise.all([
-        base44.entities.PriceAlert.filter({ created_by: user.email }),
-        base44.entities.WalletHolding.filter({ created_by: user.email }, '-value_usd', 100),
+        backend.entities.PriceAlert.filter({ created_by: user.email }),
+        backend.entities.WalletHolding.filter({ created_by: user.email }, '-value_usd', 100),
         getTelegramAccount(user.email),
       ]);
       setAlerts(data || []);
@@ -108,8 +108,8 @@ export default function AlertManager() {
 
     setCreating(true);
     try {
-      const user = await base44.auth.me();
-      await base44.entities.PriceAlert.create({
+      const user = await backend.auth.me();
+      await backend.entities.PriceAlert.create({
         asset_symbol: formData.asset_symbol.toUpperCase(),
         alert_type: formData.alert_type,
         threshold_price: formData.threshold_price ? parseFloat(formData.threshold_price) : 0,
@@ -135,7 +135,7 @@ export default function AlertManager() {
 
   const handleDeleteAlert = async (id) => {
     try {
-      await base44.entities.PriceAlert.delete(id);
+      await backend.entities.PriceAlert.delete(id);
       toast.success('Alert deleted');
       setAlerts((prev) => prev.filter((item) => item.id !== id));
     } catch (error) {
@@ -145,7 +145,7 @@ export default function AlertManager() {
 
   const handleToggleAlert = async (id, isActive) => {
     try {
-      await base44.entities.PriceAlert.update(id, { is_active: !isActive });
+      await backend.entities.PriceAlert.update(id, { is_active: !isActive });
       setAlerts((prev) => prev.map((item) => item.id === id ? { ...item, is_active: !isActive } : item));
     } catch (error) {
       toast.error('Failed to update alert');
@@ -155,7 +155,7 @@ export default function AlertManager() {
   const handleTogglePush = async (alert) => {
     try {
       const nextPushEnabled = !alert.push_notification_enabled;
-      await base44.entities.PriceAlert.update(alert.id, {
+      await backend.entities.PriceAlert.update(alert.id, {
         push_notification_enabled: nextPushEnabled,
         push_notification_status: nextPushEnabled ? 'ready' : 'pending'
       });
@@ -343,7 +343,7 @@ export default function AlertManager() {
                       return;
                     }
                     const nextValue = !alert.telegram_notification_enabled;
-                    await base44.entities.PriceAlert.update(alert.id, { telegram_notification_enabled: nextValue });
+                    await backend.entities.PriceAlert.update(alert.id, { telegram_notification_enabled: nextValue });
                     setAlerts((prev) => prev.map((item) => item.id === alert.id ? { ...item, telegram_notification_enabled: nextValue } : item));
                   }}
                   className={`p-1.5 rounded transition-colors ${alert.telegram_notification_enabled ? 'bg-blue-500/10 text-blue-400' : 'bg-secondary text-muted-foreground'}`}

@@ -7,10 +7,10 @@
  * on the next page load). Either way, browser-side encryption was broken.
  *
  * The real implementation lives in:
- *   base44/functions/encryptUserPII/entry.ts
+ *   the encryptUserPII server function
  *
  * Use the SDK to invoke it from the client. Example:
- *   const { data } = await base44.functions.invoke('encryptUserPII', {
+ *   const { data } = await backend.functions.invoke('encryptUserPII', {
  *     mode: 'encrypt', user: { phone, ssn },
  *   });
  */
@@ -18,7 +18,7 @@
 function notImplemented() {
   throw new Error(
     'Browser-side PII encryption removed for security. ' +
-    'Invoke base44.functions.invoke("encryptUserPII", { mode, user }) instead — ' +
+    'Invoke backend.functions.invoke("encryptUserPII", { mode, user }) instead — ' +
     'the master key must never ship to the bundle.',
   );
 }

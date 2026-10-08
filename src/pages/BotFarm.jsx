@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import BotFarmHeader from '../components/bot-farm/BotFarmHeader';
 import BotFarmMetricGrid from '../components/bot-farm/BotFarmMetricGrid';
 import BotFarmBotCard from '../components/bot-farm/BotFarmBotCard';
@@ -51,15 +51,15 @@ export default function BotFarm() {
   const loadAll = useCallback(async () => {
     try {
       const [botRows, squadRows, taskRows, missionRows, outputRows, riskRows, upgradeRows, historyRows, maintenanceRows] = await Promise.all([
-        base44.entities.BotFarmBot.list('-updated_date', 100),
-        base44.entities.BotFarmSquad.list('-updated_date', 50),
-        base44.entities.BotFarmTask.list('-updated_date', 100),
-        base44.entities.BotFarmMission.list('-updated_date', 50),
-        base44.entities.BotFarmOutputLog.list('-updated_date', 100),
-        base44.entities.BotFarmRiskFlag.list('-updated_date', 100),
-        base44.entities.BotFarmUpgrade.list('-updated_date', 30),
-        base44.entities.BotFarmActivityHistory.list('-updated_date', 80),
-        base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80),
+        backend.entities.BotFarmBot.list('-updated_date', 100),
+        backend.entities.BotFarmSquad.list('-updated_date', 50),
+        backend.entities.BotFarmTask.list('-updated_date', 100),
+        backend.entities.BotFarmMission.list('-updated_date', 50),
+        backend.entities.BotFarmOutputLog.list('-updated_date', 100),
+        backend.entities.BotFarmRiskFlag.list('-updated_date', 100),
+        backend.entities.BotFarmUpgrade.list('-updated_date', 30),
+        backend.entities.BotFarmActivityHistory.list('-updated_date', 80),
+        backend.entities.BotFarmMaintenanceLog.list('-updated_date', 80),
       ]);
       applyLoadedData({
         bots: botRows || [],
@@ -86,7 +86,7 @@ export default function BotFarm() {
   const seedIfNeeded = async () => {
     let existing;
     try {
-      existing = await base44.entities.BotFarmBot.list('-created_date', 1);
+      existing = await backend.entities.BotFarmBot.list('-created_date', 1);
       setSchemaReady(true);
     } catch (error) {
       if (error?.message?.includes('Entity schema BotFarm')) {
@@ -97,13 +97,13 @@ export default function BotFarm() {
     }
     if ((existing || []).length > 0) return;
 
-    const createdSquads = await base44.entities.BotFarmSquad.bulkCreate(DEMO_SQUADS);
+    const createdSquads = await backend.entities.BotFarmSquad.bulkCreate(DEMO_SQUADS);
     const leaderSquad = createdSquads.find((item) => item.role_type === 'leader');
     const commanderSquads = createdSquads.filter((item) => item.role_type === 'commander');
     const securitySquad = createdSquads.find((item) => item.role_type === 'security');
     const taskSquads = createdSquads.filter((item) => item.role_type === 'task');
 
-    const createdBots = await base44.entities.BotFarmBot.bulkCreate(
+    const createdBots = await backend.entities.BotFarmBot.bulkCreate(
       DEMO_BOTS.map((bot, index) => {
         const roleType = bot.role.includes('leader')
           ? 'leader'
@@ -124,7 +124,7 @@ export default function BotFarm() {
     const commanderBots = createdBots.filter((bot) => bot.role.includes('commander'));
     const securityBots = createdBots.filter((bot) => bot.role.includes('security'));
 
-    const createdMissions = await base44.entities.BotFarmMission.bulkCreate(
+    const createdMissions = await backend.entities.BotFarmMission.bulkCreate(
       DEMO_MISSIONS.map((mission, index) => ({
         ...mission,
         leader_bot_id: leaderBot?.id,
@@ -134,7 +134,7 @@ export default function BotFarm() {
       }))
     );
 
-    const createdTasks = await base44.entities.BotFarmTask.bulkCreate(
+    const createdTasks = await backend.entities.BotFarmTask.bulkCreate(
       DEMO_TASKS.map((task, index) => ({
         ...task,
         mission_id: createdMissions[index % createdMissions.length]?.id,
@@ -144,23 +144,23 @@ export default function BotFarm() {
     );
 
     await Promise.all([
-      base44.entities.BotFarmOutputLog.bulkCreate(DEMO_OUTPUTS.map((item, index) => ({
+      backend.entities.BotFarmOutputLog.bulkCreate(DEMO_OUTPUTS.map((item, index) => ({
         ...item,
         bot_id: createdBots[(index + 5) % createdBots.length]?.id,
         task_id: createdTasks[index % createdTasks.length]?.id,
         mission_id: createdMissions[index % createdMissions.length]?.id,
         squad_id: taskSquads[index % Math.max(1, taskSquads.length)]?.id,
       }))),
-      base44.entities.BotFarmRiskFlag.bulkCreate(DEMO_RISKS.map((item, index) => ({
+      backend.entities.BotFarmRiskFlag.bulkCreate(DEMO_RISKS.map((item, index) => ({
         ...item,
         bot_id: createdBots[(index + 2) % createdBots.length]?.id,
         task_id: createdTasks[index % createdTasks.length]?.id,
         mission_id: createdMissions[index % createdMissions.length]?.id,
         squad_id: taskSquads[index % Math.max(1, taskSquads.length)]?.id,
       }))),
-      base44.entities.BotFarmUpgrade.bulkCreate(DEMO_UPGRADES),
-      base44.entities.BotFarmActivityHistory.bulkCreate(DEMO_ACTIVITY),
-      base44.entities.BotFarmMaintenanceLog.bulkCreate(DEMO_MAINTENANCE.map((item, index) => ({
+      backend.entities.BotFarmUpgrade.bulkCreate(DEMO_UPGRADES),
+      backend.entities.BotFarmActivityHistory.bulkCreate(DEMO_ACTIVITY),
+      backend.entities.BotFarmMaintenanceLog.bulkCreate(DEMO_MAINTENANCE.map((item, index) => ({
         ...item,
         bot_id: createdBots.filter((bot) => ['maintenance', 'overloaded'].includes(bot.status))[index % 2]?.id || createdBots[0]?.id,
       }))),
@@ -195,15 +195,15 @@ export default function BotFarm() {
     maintenanceLogs: shouldLoadMaintenanceLogs,
   }) => {
     const requests = [
-      shouldLoadBots ? base44.entities.BotFarmBot.list('-updated_date', 100).then((rows) => ['bots', rows || []]) : null,
-      shouldLoadSquads ? base44.entities.BotFarmSquad.list('-updated_date', 50).then((rows) => ['squads', rows || []]) : null,
-      shouldLoadTasks ? base44.entities.BotFarmTask.list('-updated_date', 100).then((rows) => ['tasks', rows || []]) : null,
-      shouldLoadMissions ? base44.entities.BotFarmMission.list('-updated_date', 50).then((rows) => ['missions', rows || []]) : null,
-      shouldLoadOutputs ? base44.entities.BotFarmOutputLog.list('-updated_date', 100).then((rows) => ['outputs', rows || []]) : null,
-      shouldLoadRisks ? base44.entities.BotFarmRiskFlag.list('-updated_date', 100).then((rows) => ['risks', rows || []]) : null,
-      shouldLoadUpgrades ? base44.entities.BotFarmUpgrade.list('-updated_date', 30).then((rows) => ['upgrades', rows || []]) : null,
-      shouldLoadHistory ? base44.entities.BotFarmActivityHistory.list('-updated_date', 80).then((rows) => ['history', rows || []]) : null,
-      shouldLoadMaintenanceLogs ? base44.entities.BotFarmMaintenanceLog.list('-updated_date', 80).then((rows) => ['maintenanceLogs', rows || []]) : null,
+      shouldLoadBots ? backend.entities.BotFarmBot.list('-updated_date', 100).then((rows) => ['bots', rows || []]) : null,
+      shouldLoadSquads ? backend.entities.BotFarmSquad.list('-updated_date', 50).then((rows) => ['squads', rows || []]) : null,
+      shouldLoadTasks ? backend.entities.BotFarmTask.list('-updated_date', 100).then((rows) => ['tasks', rows || []]) : null,
+      shouldLoadMissions ? backend.entities.BotFarmMission.list('-updated_date', 50).then((rows) => ['missions', rows || []]) : null,
+      shouldLoadOutputs ? backend.entities.BotFarmOutputLog.list('-updated_date', 100).then((rows) => ['outputs', rows || []]) : null,
+      shouldLoadRisks ? backend.entities.BotFarmRiskFlag.list('-updated_date', 100).then((rows) => ['risks', rows || []]) : null,
+      shouldLoadUpgrades ? backend.entities.BotFarmUpgrade.list('-updated_date', 30).then((rows) => ['upgrades', rows || []]) : null,
+      shouldLoadHistory ? backend.entities.BotFarmActivityHistory.list('-updated_date', 80).then((rows) => ['history', rows || []]) : null,
+      shouldLoadMaintenanceLogs ? backend.entities.BotFarmMaintenanceLog.list('-updated_date', 80).then((rows) => ['maintenanceLogs', rows || []]) : null,
     ].filter(Boolean);
 
     if (!requests.length) return;
@@ -242,14 +242,14 @@ export default function BotFarm() {
     const nextRisk = chosen.bot.integrity < 72 || chosen.assignmentQuality < 62 || nextStatus === 'overloaded' ? 'medium' : chosen.bot.risk_level;
 
     await Promise.all([
-      base44.entities.BotFarmTask.update(task.id, {
+      backend.entities.BotFarmTask.update(task.id, {
         assigned_bot_id: chosen.bot.id,
         assigned_squad_id: chosen.squad?.id,
         status: 'assigned',
         bot_fit_score: chosen.fit,
         progress: task.status === 'pending' ? 10 : task.progress,
       }),
-      base44.entities.BotFarmBot.update(chosen.bot.id, {
+      backend.entities.BotFarmBot.update(chosen.bot.id, {
         assigned_task_id: task.id,
         assigned_task_name: task.title,
         load: nextLoad,
@@ -257,11 +257,11 @@ export default function BotFarm() {
         status: nextStatus,
         risk_level: nextRisk,
       }),
-      chosen.squad ? base44.entities.BotFarmSquad.update(chosen.squad.id, {
+      chosen.squad ? backend.entities.BotFarmSquad.update(chosen.squad.id, {
         current_load: Math.min(100, (chosen.squad.current_load || 0) + Math.round((task.estimated_load || 15) * 0.7)),
         status: (chosen.squad.current_load || 0) > ((chosen.squad.capacity_limit || 100) * 0.78) ? 'strained' : 'active',
       }) : Promise.resolve(),
-      base44.entities.BotFarmActivityHistory.create({
+      backend.entities.BotFarmActivityHistory.create({
         actor_type: 'bot',
         actor_id: chosen.bot.id,
         event_type: 'task_assigned',
@@ -271,7 +271,7 @@ export default function BotFarm() {
     ]);
 
     if (chosen.assignmentQuality < 60) {
-      await base44.entities.BotFarmRiskFlag.create({
+      await backend.entities.BotFarmRiskFlag.create({
         bot_id: chosen.bot.id,
         task_id: task.id,
         mission_id: task.mission_id,
@@ -288,13 +288,13 @@ export default function BotFarm() {
 
   const handleRest = async (bot) => {
     const [updatedBot, createdLog] = await Promise.all([
-      base44.entities.BotFarmBot.update(bot.id, {
+      backend.entities.BotFarmBot.update(bot.id, {
         fatigue: Math.max(0, (bot.fatigue || 0) - 28),
         load: Math.max(0, (bot.load || 0) - 18),
         status: 'recovering',
         maintenance_status: 'healthy',
       }),
-      base44.entities.BotFarmMaintenanceLog.create({
+      backend.entities.BotFarmMaintenanceLog.create({
         bot_id: bot.id,
         maintenance_type: 'rest',
         status: 'complete',
@@ -308,13 +308,13 @@ export default function BotFarm() {
 
   const handleRepair = async (bot) => {
     const [updatedBot, createdLog] = await Promise.all([
-      base44.entities.BotFarmBot.update(bot.id, {
+      backend.entities.BotFarmBot.update(bot.id, {
         integrity: Math.min(100, (bot.integrity || 0) + 18),
         system_health: Math.min(100, (bot.system_health || 0) + 16),
         maintenance_status: 'recalibrating',
         status: 'maintenance',
       }),
-      base44.entities.BotFarmMaintenanceLog.create({
+      backend.entities.BotFarmMaintenanceLog.create({
         bot_id: bot.id,
         maintenance_type: 'repair',
         status: 'in_progress',
@@ -328,7 +328,7 @@ export default function BotFarm() {
 
   const handleRecover = async (bot) => {
     const [updatedBot, createdLog] = await Promise.all([
-      base44.entities.BotFarmBot.update(bot.id, {
+      backend.entities.BotFarmBot.update(bot.id, {
         fatigue: Math.max(0, (bot.fatigue || 0) - 12),
         load: Math.max(0, (bot.load || 0) - 10),
         integrity: Math.min(100, (bot.integrity || 0) + 8),
@@ -336,7 +336,7 @@ export default function BotFarm() {
         maintenance_status: 'healthy',
         communication_status: 'clear',
       }),
-      base44.entities.BotFarmMaintenanceLog.create({
+      backend.entities.BotFarmMaintenanceLog.create({
         bot_id: bot.id,
         maintenance_type: 'recalibration',
         status: 'complete',
@@ -350,12 +350,12 @@ export default function BotFarm() {
 
   const handleQuarantine = async (bot) => {
     const [updatedBot, createdRisk] = await Promise.all([
-      base44.entities.BotFarmBot.update(bot.id, {
+      backend.entities.BotFarmBot.update(bot.id, {
         status: 'quarantined',
         communication_status: 'offline',
         risk_level: 'critical',
       }),
-      base44.entities.BotFarmRiskFlag.create({
+      backend.entities.BotFarmRiskFlag.create({
         bot_id: bot.id,
         flag_type: 'security_issue',
         severity: 'critical',
@@ -377,7 +377,7 @@ export default function BotFarm() {
     const nextComplexityCost = (upgrade.complexity_cost || 0) + 1;
 
     try {
-      const updatedUpgrade = await base44.entities.BotFarmUpgrade.update(upgrade.id, {
+      const updatedUpgrade = await backend.entities.BotFarmUpgrade.update(upgrade.id, {
         level: nextLevel,
         effect_value: nextEffectValue,
         complexity_cost: nextComplexityCost,
@@ -385,7 +385,7 @@ export default function BotFarm() {
 
       setUpgrades((current) => current.map((item) => item.id === upgrade.id ? updatedUpgrade : item));
 
-      const createdHistoryEntry = await base44.entities.BotFarmActivityHistory.create({
+      const createdHistoryEntry = await backend.entities.BotFarmActivityHistory.create({
         actor_type: 'system',
         event_type: 'upgrade_expanded',
         summary: `${upgrade.name} advanced to level ${nextLevel}, increasing both capacity and management complexity.`,
@@ -430,7 +430,7 @@ export default function BotFarm() {
     }
 
     if (actions.length > 0) {
-      await base44.entities.BotFarmActivityHistory.create({
+      await backend.entities.BotFarmActivityHistory.create({
         actor_type: 'system',
         event_type: 'predictive_optimization',
         summary: `Predictive optimization executed: ${actions.join(', ')}.`,
@@ -462,19 +462,19 @@ export default function BotFarm() {
       const nextStatus = nextProgress >= 100 ? 'complete' : quality < 50 || scalePressure > 55 && assignmentQuality < 64 ? 'blocked' : 'active';
 
       await Promise.all([
-        base44.entities.BotFarmTask.update(task.id, {
+        backend.entities.BotFarmTask.update(task.id, {
           actual_quality: quality,
           progress: nextProgress,
           status: nextStatus,
           blocked_reason: nextStatus === 'blocked' ? 'Low effective output quality under current load/coordination state.' : undefined,
         }),
-        base44.entities.BotFarmBot.update(bot.id, {
+        backend.entities.BotFarmBot.update(bot.id, {
           fatigue: Math.min(100, (bot.fatigue || 0) + 6 + Math.round(scalePressure * 0.03)),
           load: Math.min(100, (bot.load || 0) + 4 + Math.round(scalePressure * 0.04)),
           output_quality: quality,
           status: quality < 45 ? 'overloaded' : bot.status === 'recovering' ? 'idle' : bot.status,
         }),
-        base44.entities.BotFarmOutputLog.create({
+        backend.entities.BotFarmOutputLog.create({
           bot_id: bot.id,
           task_id: task.id,
           mission_id: task.mission_id,
@@ -491,7 +491,7 @@ export default function BotFarm() {
       ]);
 
       if (quality < 52 || bot.integrity < 70 || bot.status === 'quarantined') {
-        await base44.entities.BotFarmRiskFlag.create({
+        await backend.entities.BotFarmRiskFlag.create({
           bot_id: bot.id,
           task_id: task.id,
           mission_id: task.mission_id,
@@ -504,9 +504,9 @@ export default function BotFarm() {
       }
     }));
 
-    const refreshedOutputs = await base44.entities.BotFarmOutputLog.list('-created_date', 100);
-    const refreshedRisks = await base44.entities.BotFarmRiskFlag.list('-created_date', 100);
-    const refreshedTasks = await base44.entities.BotFarmTask.list('-updated_date', 100);
+    const refreshedOutputs = await backend.entities.BotFarmOutputLog.list('-created_date', 100);
+    const refreshedRisks = await backend.entities.BotFarmRiskFlag.list('-created_date', 100);
+    const refreshedTasks = await backend.entities.BotFarmTask.list('-updated_date', 100);
 
     await Promise.all(missions.map(async (mission) => {
       const missionOutputs = refreshedOutputs.filter((item) => item.mission_id === mission.id);
@@ -517,7 +517,7 @@ export default function BotFarm() {
       const progress = missionTasks.length ? Math.round(missionTasks.reduce((sum, item) => sum + (item.progress || 0), 0) / missionTasks.length) : mission.progress;
       const successProbability = computeMissionSuccessProbability(mission, missionSquads, missionOutputs, missionRisks);
 
-      await base44.entities.BotFarmMission.update(mission.id, {
+      await backend.entities.BotFarmMission.update(mission.id, {
         actual_output_quality: actualOutputQuality,
         progress,
         success_probability: successProbability,
@@ -526,7 +526,7 @@ export default function BotFarm() {
       });
     }));
 
-    await base44.entities.BotFarmActivityHistory.create({
+    await backend.entities.BotFarmActivityHistory.create({
       actor_type: 'farm',
       event_type: 'operational_cycle',
       summary: 'A full operational cycle recalculated assignment quality, output quality, and mission health.',
@@ -554,19 +554,19 @@ export default function BotFarm() {
     }
 
     await Promise.all([
-      ...reserveBots.map((bot) => base44.entities.BotFarmBot.update(bot.id, {
+      ...reserveBots.map((bot) => backend.entities.BotFarmBot.update(bot.id, {
         squad_id: candidateSquad.id,
         farm_group: candidateSquad.farm_group,
         status: 'assigned'
       })),
-      base44.entities.BotFarmSquad.update(candidateSquad.id, {
+      backend.entities.BotFarmSquad.update(candidateSquad.id, {
         member_bot_ids: [...new Set([...(candidateSquad.member_bot_ids || []), ...reserveBots.map((bot) => bot.id)])],
         current_load: Math.max(0, (candidateSquad.current_load || 0) - reserveBots.length * 6),
         capacity_limit: (candidateSquad.capacity_limit || 100) + reserveBots.length * 12,
         coordination_quality: Math.max(68, Math.min(100, (candidateSquad.coordination_quality || 0) - 1 + reserveBots.length)),
         status: 'active'
       }),
-      base44.entities.BotFarmActivityHistory.create({
+      backend.entities.BotFarmActivityHistory.create({
         actor_type: 'farm',
         actor_id: candidateSquad.id,
         event_type: 'dynamic_scale_up',
@@ -603,20 +603,20 @@ export default function BotFarm() {
     }
 
     await Promise.all([
-      ...releasableBots.map((bot) => base44.entities.BotFarmBot.update(bot.id, {
+      ...releasableBots.map((bot) => backend.entities.BotFarmBot.update(bot.id, {
         squad_id: null,
         assigned_task_id: null,
         assigned_task_name: null,
         status: 'idle'
       })),
-      base44.entities.BotFarmSquad.update(candidateSquad.id, {
+      backend.entities.BotFarmSquad.update(candidateSquad.id, {
         member_bot_ids: (candidateSquad.member_bot_ids || []).filter((id) => !releasableBots.some((bot) => bot.id === id)),
         capacity_limit: Math.max(60, (candidateSquad.capacity_limit || 100) - releasableBots.length * 12),
         coordination_quality: Math.min(100, (candidateSquad.coordination_quality || 0) + 2),
         current_load: Math.max(0, (candidateSquad.current_load || 0) - releasableBots.length * 4),
         status: 'idle'
       }),
-      base44.entities.BotFarmActivityHistory.create({
+      backend.entities.BotFarmActivityHistory.create({
         actor_type: 'farm',
         actor_id: candidateSquad.id,
         event_type: 'dynamic_scale_down',

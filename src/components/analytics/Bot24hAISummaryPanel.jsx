@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Bot, RefreshCw, Sparkles, TrendingUp, Trophy, Lightbulb } from 'lucide-react';
 
 function MetricCard({ icon: Icon, label, value, hint, tone }) {
@@ -35,10 +35,10 @@ export default function Bot24hAISummaryPanel() {
     else setLoading(true);
 
     const [botRows, outputRows, activityRows, runRows] = await Promise.all([
-      base44.entities.UserBot.list('-updated_date', 100),
-      base44.entities.BotFarmOutputLog.list('-created_date', 300).catch(() => []),
-      base44.entities.BotFarmActivityHistory.list('-created_date', 300).catch(() => []),
-      base44.entities.BotTestRun.list('-created_date', 300).catch(() => []),
+      backend.entities.UserBot.list('-updated_date', 100),
+      backend.entities.BotFarmOutputLog.list('-created_date', 300).catch(() => []),
+      backend.entities.BotFarmActivityHistory.list('-created_date', 300).catch(() => []),
+      backend.entities.BotTestRun.list('-created_date', 300).catch(() => []),
     ]);
 
     const activeBots = (botRows || []).filter((bot) => bot.status === 'active');
@@ -81,7 +81,7 @@ export default function Bot24hAISummaryPanel() {
 
     let aiSummary = null;
     if (botStats.length > 0) {
-      aiSummary = await base44.integrations.Core.InvokeLLM({
+      aiSummary = await backend.integrations.Core.InvokeLLM({
         prompt: `You are analyzing the last 24 hours of active AI bot operations for an internal analytics dashboard.\n\nActive bot stats:\n${JSON.stringify(botStats, null, 2)}\n\nReturn JSON with:\n- executive_summary: short paragraph\n- roi_assessment: short paragraph\n- win_rate_assessment: short paragraph\n- strategy_improvements: array of 3 concise recommendations\n- strongest_bot: bot name\n- risk_flag: short phrase\n`,
         response_json_schema: {
           type: 'object',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import SquadKnowledgeTrendsDashboard from '../components/ailab/SquadKnowledgeTrendsDashboard.jsx';
 
 export default function SquadKnowledgeTrends() {
@@ -9,8 +9,8 @@ export default function SquadKnowledgeTrends() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.SquadKnowledge.list('-updated_date', 200),
-      base44.entities.UserBot.list('-updated_date', 200),
+      backend.entities.SquadKnowledge.list('-updated_date', 200),
+      backend.entities.UserBot.list('-updated_date', 200),
     ]).then(([knowledgeRows, botRows]) => {
       setKnowledgeItems(knowledgeRows || []);
       setBots(botRows || []);

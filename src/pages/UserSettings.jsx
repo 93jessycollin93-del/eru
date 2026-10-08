@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, ChevronRight, Globe, KeyRound, LogOut, Mail, Shield, SlidersHorizontal, User2, Users, Workflow, Fingerprint, MessageCircleWarning } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
 import SoundSettings from '@/components/SoundSettings';
@@ -105,9 +105,9 @@ export default function UserSettings() {
   useEffect(() => {
     const loadSettingsData = async () => {
       const [apiKeyRows, roleAssignmentRows, customRoleRows] = await Promise.all([
-        base44.entities.ApiKey.list('-updated_date', 50).catch(() => []),
-        base44.entities.RoleAssignment.list('-assigned_at', 50).catch(() => []),
-        base44.entities.CustomRole.list('-created_date', 50).catch(() => []),
+        backend.entities.ApiKey.list('-updated_date', 50).catch(() => []),
+        backend.entities.RoleAssignment.list('-assigned_at', 50).catch(() => []),
+        backend.entities.CustomRole.list('-created_date', 50).catch(() => []),
       ]);
       setApiKeys(apiKeyRows || []);
       setRoleAssignments(roleAssignmentRows || []);
@@ -119,7 +119,7 @@ export default function UserSettings() {
 
   const handleProfileSave = async () => {
     setSavingProfile(true);
-    await base44.auth.updateMe({ display_name: profile.displayName });
+    await backend.auth.updateMe({ display_name: profile.displayName });
     setSavingProfile(false);
   };
 

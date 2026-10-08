@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import MiniAppHeader from '../components/bot-mini-app/MiniAppHeader';
 import MiniAppWalletPanel from '../components/bot-mini-app/MiniAppWalletPanel';
 import MiniAppNftPanel from '../components/bot-mini-app/MiniAppNftPanel';
@@ -23,8 +23,8 @@ export default function BotMiniApp() {
 
     const load = async () => {
       const [botRows, me] = await Promise.all([
-        base44.entities.UserBot.filter({ id: botId }, '-created_date', 1),
-        base44.auth.me().catch(() => null),
+        backend.entities.UserBot.filter({ id: botId }, '-created_date', 1),
+        backend.auth.me().catch(() => null),
       ]);
 
       const activeBot = botRows?.[0] || null;
@@ -33,9 +33,9 @@ export default function BotMiniApp() {
       if (!me) return;
 
       const [walletRows, nftRows, taskRows] = await Promise.all([
-        base44.entities.ConnectedWallet?.filter?.({ user_email: me.email }, '-created_date', 20).catch(() => []),
-        base44.entities.NFT?.filter?.({ owner_email: me.email }, '-updated_date', 4).catch(() => []),
-        base44.entities.Task?.filter?.({ owner_email: me.email, bot_id: botId }, '-updated_date', 10).catch(() => []),
+        backend.entities.ConnectedWallet?.filter?.({ user_email: me.email }, '-created_date', 20).catch(() => []),
+        backend.entities.NFT?.filter?.({ owner_email: me.email }, '-updated_date', 4).catch(() => []),
+        backend.entities.Task?.filter?.({ owner_email: me.email, bot_id: botId }, '-updated_date', 10).catch(() => []),
       ]);
 
       setWallets(walletRows || []);
@@ -44,7 +44,7 @@ export default function BotMiniApp() {
 
       const holdingsMap = {};
       await Promise.all((walletRows || []).map(async (wallet) => {
-        const rows = await base44.entities.WalletHolding?.filter?.({ wallet_id: wallet.id }, '-value_usd', 3).catch(() => []);
+        const rows = await backend.entities.WalletHolding?.filter?.({ wallet_id: wallet.id }, '-value_usd', 3).catch(() => []);
         holdingsMap[wallet.id] = rows || [];
       }));
       setHoldings(holdingsMap);
@@ -63,8 +63,8 @@ export default function BotMiniApp() {
 
   const createTask = async () => {
     if (!taskDraft.trim() || !bot) return;
-    const me = await base44.auth.me().catch(() => null);
-    const newTask = await base44.entities.Task.create({
+    const me = await backend.auth.me().catch(() => null);
+    const newTask = await backend.entities.Task.create({
       bot_id: bot.id,
       bot_name: bot.name,
       title: taskDraft,
@@ -79,7 +79,7 @@ export default function BotMiniApp() {
 
   const toggleTask = async (task) => {
     const nextStatus = task.status === 'todo' ? 'in_progress' : task.status === 'in_progress' ? 'done' : 'todo';
-    await base44.entities.Task.update(task.id, { status: nextStatus });
+    await backend.entities.Task.update(task.id, { status: nextStatus });
     setTasks((prev) => prev.map((item) => item.id === task.id ? { ...item, status: nextStatus } : item));
   };
 

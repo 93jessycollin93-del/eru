@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Gem, Plus, ChevronRight, Hammer, Zap, Bot, FileText, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import JTAMonolith from '../components/jta/JTAMonolith';
 import JTAWorkstation from '../components/jta/JTAWorkstation';
 import JTAFractureEngine from '../components/jta/JTAFractureEngine';
@@ -66,7 +66,7 @@ export default function JadeAtelier() {
 
   const loadJades = async () => {
     setLoading(true);
-    const data = await base44.entities.JadeAsset.list('-created_date', 50);
+    const data = await backend.entities.JadeAsset.list('-created_date', 50);
     setJades(data);
     setLoading(false);
   };

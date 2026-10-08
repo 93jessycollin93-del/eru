@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, MousePointerClick, Save } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import AIEditBar from './AIEditBar';
 import CodeDiffPanel from './CodeDiffPanel';
 import CodePreviewPanel from './CodePreviewPanel';
@@ -45,7 +45,7 @@ export default function CodeWorkspace({ content = '', onInject, onSave }) {
       setSuggestions([]);
       return;
     }
-    base44.entities.ProgrammingLanguageMemory.get?.(selectedMemoryId)
+    backend.entities.ProgrammingLanguageMemory.get?.(selectedMemoryId)
       ?.then(setSelectedMemory)
       .catch(() => {});
   }, [selectedMemoryId]);
@@ -58,7 +58,7 @@ export default function CodeWorkspace({ content = '', onInject, onSave }) {
 
     const timer = setTimeout(async () => {
       setSuggestionsLoading(true);
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await backend.integrations.Core.InvokeLLM({
         prompt: `You are a code assistant using a selected programming knowledge reference.
 Selected reference: ${selectedMemory.name}
 Summary: ${selectedMemory.summary}
@@ -105,7 +105,7 @@ Code:\n${code}`,
     if (!targetCode) return;
     setBusy(true);
     const referenceBlock = selectedMemory ? `\n\nSelected programming memory reference:\nName: ${selectedMemory.name}\nSummary: ${selectedMemory.summary}\nCore concepts: ${(selectedMemory.core_concepts || []).join(', ')}\nStrengths: ${(selectedMemory.strengths || []).join(', ')}\nBest for: ${(selectedMemory.best_for || []).join(', ')}` : '';
-    const response = await base44.functions.invoke('jackieCodeEdit', {
+    const response = await backend.functions.invoke('jackieCodeEdit', {
       action,
       instruction,
       code: targetCode,

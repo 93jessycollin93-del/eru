@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Square, Clock, Plus, ArrowRight } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useRealtimeAgentStatus } from '@/hooks/useLiveSync';
 import { runCustomAgentTask } from './agentTaskUtils';
 
@@ -25,7 +25,7 @@ export default function AgentRunner({ bots, globalPolicy = null }) {
   }, [bots, selectedBot]);
 
   useEffect(() => {
-    base44.entities.AgentTask.list('-updated_date', 100).then(setCustomTasks).catch(() => setCustomTasks([]));
+    backend.entities.AgentTask.list('-updated_date', 100).then(setCustomTasks).catch(() => setCustomTasks([]));
   }, []);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function AgentRunner({ bots, globalPolicy = null }) {
     addLog(task.id, `Running: ${task.description}`, 'running');
 
     const policyBlock = globalPolicy?.is_active ? `\nGlobal instructions: ${globalPolicy.shared_instructions || 'None'}\nSafety guardrails: ${globalPolicy.safety_guardrails || 'None'}\nDefault max response length: ${globalPolicy.max_response_length || 1200} characters\n${globalPolicy.require_caution_for_security ? 'Apply extra caution on security-sensitive topics.\n' : ''}${globalPolicy.require_human_review ? 'Advise human review before risky or irreversible actions.\n' : ''}` : '';
-    const res = await base44.integrations.Core.InvokeLLM({
+    const res = await backend.integrations.Core.InvokeLLM({
       prompt: `You are ${bot.name} agent. ${bot.instructions || ''}${policyBlock}\n\nAutonomous task: ${task.description}\n\nExecute this task and provide a brief status report (2-3 sentences max). Be direct and factual.`,
     });
 

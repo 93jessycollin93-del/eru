@@ -15,7 +15,7 @@
  *     `metadata` carrying the richer event shape.
  * --------------------------------------------------------------------------*/
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { getRole } from './permissions';
 
 const LOCAL_KEY = 'app_audit_events';
@@ -86,7 +86,7 @@ export function logAuditEvent(user, event) {
   // Persist via existing EconomyAuditLog entity. We deliberately don't await
   // or throw — audit failures must never block the user's real action.
   try {
-    base44.entities.EconomyAuditLog.create({
+    backend.entities.EconomyAuditLog.create({
       action: payload.action,
       user_email: payload.actor_email || undefined,
       reason: payload.reason || payload.action,

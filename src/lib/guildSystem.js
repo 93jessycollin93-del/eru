@@ -5,7 +5,7 @@
 // GuildBankTransaction entities. All gold movement reuses the central
 // economyApi so audit logs stay consistent with the rest of the app.
 // ----------------------------------------------------------------------------
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { awardGold, deductGold } from '@/lib/economyApi';
 
 // ─── Rank ladder ────────────────────────────────────────────────────────────
@@ -101,9 +101,9 @@ export function validateGuildTag(tag) {
 
 /** Get the current user's active guild membership (or null). */
 export async function getMyMembership() {
-  const me = await base44.auth.me().catch(() => null);
+  const me = await backend.auth.me().catch(() => null);
   if (!me?.email) return null;
-  const rows = await base44.entities.GuildMembership.filter(
+  const rows = await backend.entities.GuildMembership.filter(
     { user_email: me.email, status: 'active' },
     '-created_date',
     5,
@@ -115,9 +115,9 @@ export async function getMyMembership() {
 export async function loadGuildDetail(guildId) {
   if (!guildId) return null;
   const [guild, members, transactions] = await Promise.all([
-    base44.entities.Guild.list('-created_date', 200).then((all) => all.find((g) => g.id === guildId)).catch(() => null),
-    base44.entities.GuildMembership.filter({ guild_id: guildId }, '-created_date', 200).catch(() => []),
-    base44.entities.GuildBankTransaction.filter({ guild_id: guildId }, '-created_date', 50).catch(() => []),
+    backend.entities.Guild.list('-created_date', 200).then((all) => all.find((g) => g.id === guildId)).catch(() => null),
+    backend.entities.GuildMembership.filter({ guild_id: guildId }, '-created_date', 200).catch(() => []),
+    backend.entities.GuildBankTransaction.filter({ guild_id: guildId }, '-created_date', 50).catch(() => []),
   ]);
   if (!guild) return null;
   const pooled = calculatePooledWinRate(members);
@@ -128,7 +128,7 @@ export async function loadGuildDetail(guildId) {
 
 /** Create a new guild with the current user as founding leader. */
 export async function createGuild({ name, tag, description, faction, join_policy }) {
-  const me = await base44.auth.me();
+  const me = await backend.auth.me();
   if (!me?.email) throw new Error('You must be signed in to create a guild.');
 
   const existing = await getMyMembership();
@@ -143,7 +143,7 @@ export async function createGuild({ name, tag, description, faction, join_policy
   const cleanTag = tag.trim().toUpperCase();
 
   // Name + tag uniqueness check (active guilds only).
-  const all = await base44.entities.Guild.list('-created_date', 500).catch(() => []);
+  const all = await backend.entities.Guild.list('-created_date', 500).catch(() => []);
   if (all.some((g) => !g.is_archived && g.name?.toLowerCase() === cleanName.toLowerCase())) {
     throw new Error('A guild with that name already exists.');
   }
@@ -151,7 +151,7 @@ export async function createGuild({ name, tag, description, faction, join_policy
     throw new Error('A guild with that tag already exists.');
   }
 
-  const guild = await base44.entities.Guild.create({
+  const guild = await backend.entities.Guild.create({
     name: cleanName,
     tag: cleanTag,
     description: description?.trim() || '',
@@ -166,7 +166,7 @@ export async function createGuild({ name, tag, description, faction, join_policy
     unlocked_cosmetics: ['banner_bronze'],
   });
 
-  await base44.entities.GuildMembership.create({
+  await backend.entities.GuildMembership.create({
     guild_id: guild.id,
     guild_name: guild.name,
     user_email: me.email,
@@ -181,13 +181,13 @@ export async function createGuild({ name, tag, description, faction, join_policy
 
 /** Join an open or request-based guild. */
 export async function joinGuild(guildId) {
-  const me = await base44.auth.me();
+  const me = await backend.auth.me();
   if (!me?.email) throw new Error('You must be signed in to join a guild.');
 
   const existing = await getMyMembership();
   if (existing) throw new Error('You are already in a guild. Leave it first.');
 
-  const guild = await base44.entities.Guild.list('-created_date', 500)
+  const guild = await backend.entities.Guild.list('-created_date', 500)
     .then((all) => all.find((g) => g.id === guildId))
     .catch(() => null);
   if (!guild || guild.is_archived) throw new Error('Guild not found.');
@@ -195,7 +195,7 @@ export async function joinGuild(guildId) {
   if ((guild.member_count || 0) >= (guild.max_members || 50)) throw new Error('Guild is full.');
 
   const status = guild.join_policy === 'request' ? 'pending' : 'active';
-  const membership = await base44.entities.GuildMembership.create({
+  const membership = await backend.entities.GuildMembership.create({
     guild_id: guild.id,
     guild_name: guild.name,
     user_email: me.email,
@@ -206,7 +206,7 @@ export async function joinGuild(guildId) {
   });
 
   if (status === 'active') {
-    await base44.entities.Guild.update(guild.id, {
+    await backend.entities.Guild.update(guild.id, {
       member_count: (guild.member_count || 0) + 1,
     }).catch(() => null);
   }
@@ -215,13 +215,13 @@ export async function joinGuild(guildId) {
 
 /** Leave the current user's guild (leader transfer or guild archive). */
 export async function leaveGuild() {
-  const me = await base44.auth.me();
+  const me = await backend.auth.me();
   const membership = await getMyMembership();
   if (!membership) throw new Error('You are not in a guild.');
 
-  await base44.entities.GuildMembership.update(membership.id, { status: 'left' }).catch(() => null);
+  await backend.entities.GuildMembership.update(membership.id, { status: 'left' }).catch(() => null);
 
-  const guild = await base44.entities.Guild.list('-created_date', 500)
+  const guild = await backend.entities.Guild.list('-created_date', 500)
     .then((all) => all.find((g) => g.id === membership.guild_id))
     .catch(() => null);
   if (!guild) return;
@@ -230,26 +230,26 @@ export async function leaveGuild() {
 
   // If the leader leaves, hand the crown to the next active member, or archive.
   if (guild.leader_email === me.email) {
-    const others = await base44.entities.GuildMembership.filter(
+    const others = await backend.entities.GuildMembership.filter(
       { guild_id: guild.id, status: 'active' },
       'created_date',
       50,
     ).catch(() => []);
     const heir = others.find((m) => m.user_email !== me.email);
     if (heir) {
-      await base44.entities.Guild.update(guild.id, {
+      await backend.entities.Guild.update(guild.id, {
         leader_email: heir.user_email,
         member_count: Math.max(0, remaining),
       }).catch(() => null);
-      await base44.entities.GuildMembership.update(heir.id, { role: 'leader' }).catch(() => null);
+      await backend.entities.GuildMembership.update(heir.id, { role: 'leader' }).catch(() => null);
     } else {
-      await base44.entities.Guild.update(guild.id, {
+      await backend.entities.Guild.update(guild.id, {
         is_archived: true,
         member_count: 0,
       }).catch(() => null);
     }
   } else {
-    await base44.entities.Guild.update(guild.id, {
+    await backend.entities.Guild.update(guild.id, {
       member_count: Math.max(0, remaining),
     }).catch(() => null);
   }
@@ -264,7 +264,7 @@ export async function donateToGuildBank(guildId, amount, note = '') {
   const value = Math.floor(Number(amount));
   if (!value || value <= 0) throw new Error('Donation must be a positive amount.');
 
-  const me = await base44.auth.me();
+  const me = await backend.auth.me();
   const membership = await getMyMembership();
   if (!membership || membership.guild_id !== guildId) {
     throw new Error('You can only donate to your own guild.');
@@ -273,7 +273,7 @@ export async function donateToGuildBank(guildId, amount, note = '') {
   // Deduct from user (validates balance, writes audit log).
   const newGold = await deductGold(value, `Donation to guild bank`, { guild_id: guildId });
 
-  const guild = await base44.entities.Guild.list('-created_date', 500)
+  const guild = await backend.entities.Guild.list('-created_date', 500)
     .then((all) => all.find((g) => g.id === guildId))
     .catch(() => null);
   if (!guild) throw new Error('Guild not found.');
@@ -281,16 +281,16 @@ export async function donateToGuildBank(guildId, amount, note = '') {
   const newBalance = (guild.bank_balance || 0) + value;
   const newTotal = (guild.total_donated || 0) + value;
 
-  await base44.entities.Guild.update(guildId, {
+  await backend.entities.Guild.update(guildId, {
     bank_balance: newBalance,
     total_donated: newTotal,
   }).catch(() => null);
 
-  await base44.entities.GuildMembership.update(membership.id, {
+  await backend.entities.GuildMembership.update(membership.id, {
     gold_donated: (membership.gold_donated || 0) + value,
   }).catch(() => null);
 
-  await base44.entities.GuildBankTransaction.create({
+  await backend.entities.GuildBankTransaction.create({
     guild_id: guildId,
     user_email: me.email,
     display_name: membership.display_name || me.full_name || me.email,
@@ -314,8 +314,8 @@ export async function withdrawFromGuildBank(guildId, amount, note = '') {
   const value = Math.floor(Number(amount));
   if (!value || value <= 0) throw new Error('Withdrawal must be a positive amount.');
 
-  const me = await base44.auth.me();
-  const guild = await base44.entities.Guild.list('-created_date', 500)
+  const me = await backend.auth.me();
+  const guild = await backend.entities.Guild.list('-created_date', 500)
     .then((all) => all.find((g) => g.id === guildId))
     .catch(() => null);
   if (!guild) throw new Error('Guild not found.');
@@ -323,10 +323,10 @@ export async function withdrawFromGuildBank(guildId, amount, note = '') {
   if ((guild.bank_balance || 0) < value) throw new Error('Insufficient bank balance.');
 
   const newBalance = (guild.bank_balance || 0) - value;
-  await base44.entities.Guild.update(guildId, { bank_balance: newBalance }).catch(() => null);
+  await backend.entities.Guild.update(guildId, { bank_balance: newBalance }).catch(() => null);
   const newGold = await awardGold(value, `Guild bank withdrawal`, { guild_id: guildId });
 
-  await base44.entities.GuildBankTransaction.create({
+  await backend.entities.GuildBankTransaction.create({
     guild_id: guildId,
     user_email: me.email,
     display_name: me.full_name || me.email,
@@ -357,7 +357,7 @@ export async function refreshGuildRank(guildId) {
     guild.rank_points !== rankPoints ||
     newlyUnlocked.length > 0
   ) {
-    await base44.entities.Guild.update(guildId, {
+    await backend.entities.Guild.update(guildId, {
       guild_rank: rank.id,
       rank_points: rankPoints,
       unlocked_cosmetics: [...unlocked],
@@ -375,7 +375,7 @@ export async function recordGuildBattleResult(won) {
   try {
     const membership = await getMyMembership();
     if (!membership) return;
-    await base44.entities.GuildMembership.update(membership.id, {
+    await backend.entities.GuildMembership.update(membership.id, {
       wins_contributed: (membership.wins_contributed || 0) + (won ? 1 : 0),
       losses_contributed: (membership.losses_contributed || 0) + (won ? 0 : 1),
     });

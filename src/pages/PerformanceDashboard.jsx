@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Activity, AlertCircle, CheckCircle, TrendingUp, RefreshCw } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const SERVICES = [
@@ -44,8 +44,8 @@ export default function PerformanceDashboard({ embedded = false }) {
 
   const load = async () => {
     const [metrics, logs] = await Promise.all([
-      base44.entities.PerformanceMetric.list('-timestamp', 200),
-      base44.entities.AuditLog.filter({ severity: 'warning' }, '-created_date', 50)
+      backend.entities.PerformanceMetric.list('-timestamp', 200),
+      backend.entities.AuditLog.filter({ severity: 'warning' }, '-created_date', 50)
         .catch(() => []),
     ]);
     setRawMetrics(metrics);

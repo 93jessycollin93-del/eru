@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FlaskConical, Play, PauseCircle, Trophy, BarChart3 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { getVariantMetrics, getWinningVariant } from './telegramExperimentUtils';
 
 const DEFAULT_FORM = {
@@ -28,8 +28,8 @@ export default function TelegramABTestingPanel({ bot, sessions = [] }) {
   const load = async () => {
     if (!bot?.id) return;
     const [experimentRows, runRows] = await Promise.all([
-      base44.entities.TelegramBotExperiment.filter({ bot_id: bot.id }, '-updated_date', 20),
-      base44.entities.TelegramBotExperimentRun.filter({ bot_id: bot.id }, '-created_date', 400),
+      backend.entities.TelegramBotExperiment.filter({ bot_id: bot.id }, '-updated_date', 20),
+      backend.entities.TelegramBotExperimentRun.filter({ bot_id: bot.id }, '-created_date', 400),
     ]);
     setExperiments(experimentRows);
     setRuns(runRows);
@@ -46,7 +46,7 @@ export default function TelegramABTestingPanel({ bot, sessions = [] }) {
   const createExperiment = async () => {
     if (!bot?.id) return;
     setSaving(true);
-    await base44.entities.TelegramBotExperiment.create({
+    await backend.entities.TelegramBotExperiment.create({
       ...form,
       bot_id: bot.id,
       bot_name: bot.name,
@@ -66,13 +66,13 @@ export default function TelegramABTestingPanel({ bot, sessions = [] }) {
       payload.winner_declared_at = new Date().toISOString();
 
       if (experiment.auto_deploy_winner && winning.winner !== 'none') {
-        await base44.entities.TelegramBot.update(bot.id, {
+        await backend.entities.TelegramBot.update(bot.id, {
           system_prompt: winning.winner === 'a' ? experiment.variant_a_prompt : experiment.variant_b_prompt
         });
       }
     }
 
-    await base44.entities.TelegramBotExperiment.update(experiment.id, payload);
+    await backend.entities.TelegramBotExperiment.update(experiment.id, payload);
     load();
   };
 
@@ -87,7 +87,7 @@ export default function TelegramABTestingPanel({ bot, sessions = [] }) {
     ];
 
     for (const variant of variants) {
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await backend.integrations.Core.InvokeLLM({
         prompt: `You are a Telegram bot.
 System prompt:\n${variant.prompt}\n\nUser message:\n${sampleText}\n\nWrite a concise Telegram-ready reply that aims for ${activeExperiment.optimization_metric === 'conversion_rate' ? 'conversion' : 'engagement'}.`
       });
@@ -96,7 +96,7 @@ System prompt:\n${variant.prompt}\n\nUser message:\n${sampleText}\n\nWrite a con
       const converted = conversionKeywords.some((keyword) => output.toLowerCase().includes(String(keyword).toLowerCase()));
       const engaged = output.length > 120 || /\?|next step|option|choose|reply/i.test(output);
 
-      await base44.entities.TelegramBotExperimentRun.create({
+      await backend.entities.TelegramBotExperimentRun.create({
         experiment_id: activeExperiment.id,
         bot_id: bot.id,
         variant: variant.key,

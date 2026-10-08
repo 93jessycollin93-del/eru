@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { X, Loader2, Upload, Bot as BotIcon, Save } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import * as store from '@/lib/botStudioStore';
 
 const DEFAULTS = {
@@ -16,7 +16,7 @@ const DEFAULTS = {
   tools_enabled: false,
 };
 
-/** BotEditor — create/edit a bot. Avatar uploaded via Base44 file storage. */
+/** BotEditor — create/edit a bot. Avatar uploaded via the backend's file storage. */
 export default function BotEditor({ bot, pods = [], models = [], onSave, onClose }) {
   const [form, setForm] = useState({ ...DEFAULTS, ...(bot || {}) });
   const [uploading, setUploading] = useState(false);
@@ -34,7 +34,7 @@ export default function BotEditor({ bot, pods = [], models = [], onSave, onClose
     setUploading(true);
     setError('');
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await backend.integrations.Core.UploadFile({ file });
       setField('avatar_image_url', file_url);
     } catch {
       setError('Avatar upload failed. Check your connection and try again.');

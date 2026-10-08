@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { GitBranch, RotateCcw, Rocket, ExternalLink, ShieldCheck, Send } from 'lucide-react';
 
 const ENVIRONMENTS = ['draft', 'staging', 'live'];
@@ -52,8 +52,8 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
 
   const load = async () => {
     const [deploymentRows, versionRows] = await Promise.all([
-      base44.entities.BotDeployment.list('-created_date', 100),
-      base44.entities.BotVersion.list('-created_date', 200),
+      backend.entities.BotDeployment.list('-created_date', 100),
+      backend.entities.BotVersion.list('-created_date', 200),
     ]);
     setDeployments(deploymentRows);
     setVersions(versionRows);
@@ -82,7 +82,7 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
     setDeploying(true);
 
     const nextAssignments = targetPages.length > 0 ? targetPages : (activeBot.page_assignments || []);
-    await base44.entities.UserBot.update(activeBot.id, {
+    await backend.entities.UserBot.update(activeBot.id, {
       page_assignments: nextAssignments,
       deployment_environment: targetEnvironment,
       status: 'active',
@@ -91,7 +91,7 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
       deployment_state: 'deployment',
     });
 
-    await base44.entities.BotDeployment.create({
+    await backend.entities.BotDeployment.create({
       bot_id: activeBot.id,
       bot_name: activeBot.name,
       source_version_id: latestVersion?.id || '',
@@ -126,7 +126,7 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
       return;
     }
 
-    await base44.entities.UserBot.update(activeBot.id, {
+    await backend.entities.UserBot.update(activeBot.id, {
       instructions: version.instructions,
       personality: version.personality,
       response_style: version.response_style,
@@ -137,7 +137,7 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
       deployment_environment: deployment.target_environment || 'draft',
     });
 
-    await base44.entities.BotDeployment.create({
+    await backend.entities.BotDeployment.create({
       bot_id: activeBot.id,
       bot_name: activeBot.name,
       source_version_id: version.id,

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronRight, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function ComplianceCenter() {
   const { currentUser } = useAuth();
@@ -39,7 +39,7 @@ export default function ComplianceCenter() {
   const handleDeleteMyData = async () => {
     setDeleting(true);
     try {
-      await base44.functions.invoke('deleteMyData', {});
+      await backend.functions.invoke('deleteMyData', {});
       alert('Your data has been deleted. You will be logged out.');
       window.location.href = '/';
     } catch (err) {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FlaskConical, Play, Plus, Paperclip, X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { invokeSelectedModel } from './modelRouting';
 
 const EMPTY_CASE = {
@@ -14,7 +14,7 @@ const EMPTY_CASE = {
 };
 
 async function scoreSimilarity(expectedOutput, actualOutput, inputFileNames = []) {
-  const response = await base44.integrations.Core.InvokeLLM({
+  const response = await backend.integrations.Core.InvokeLLM({
     prompt: `You are grading a bot response.
 Expected output:\n${expectedOutput}\n\nActual output:\n${actualOutput}\n\nSupporting visual or document inputs used by the bot: ${inputFileNames.length > 0 ? inputFileNames.join(', ') : 'None'}\n\nScore the semantic similarity from 0 to 1, where 1 means the actual output fully satisfies the expected output in meaning and logic based on the provided text and any referenced visual/document inputs. Return a short reason.`,
     response_json_schema: {
@@ -39,8 +39,8 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
 
   const load = async () => {
     const [caseRows, runRows] = await Promise.all([
-      base44.entities.BotTestCase.list('-created_date', 200),
-      base44.entities.BotTestRun.list('-created_date', 300),
+      backend.entities.BotTestCase.list('-created_date', 200),
+      backend.entities.BotTestRun.list('-created_date', 300),
     ]);
     setTestCases(caseRows);
     setTestRuns(runRows);
@@ -55,10 +55,10 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
     if (!bot) return;
     setSaving(true);
     const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
-      const response = await base44.integrations.Core.UploadFile({ file });
+      const response = await backend.integrations.Core.UploadFile({ file });
       return { url: response.file_url, name: file.name };
     }));
-    await base44.entities.BotTestCase.create({
+    await backend.entities.BotTestCase.create({
       ...form,
       bot_name: bot.name,
       uses_external_data: (bot.data_sources || []).length > 0,
@@ -95,7 +95,7 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
       const regressionFlag = !!previousForCase && similarity < (previousForCase.similarity_score || 0) - 0.1;
       const regressionReason = regressionFlag ? `Similarity dropped from ${previousForCase.similarity_score} to ${similarity}. ${scored.reason}` : '';
 
-      await base44.entities.BotTestRun.create({
+      await backend.entities.BotTestRun.create({
         bot_id: bot.id,
         bot_name: bot.name,
         test_case_id: testCase.id,
@@ -184,7 +184,7 @@ export default function BotTestingSuite({ bots, globalPolicy }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-foreground">{bot.name}</p>
-                <p className="text-[11px] text-muted-foreground">{caseCount} test cases · {passRate}% latest pass rate · {(bot.api_label || bot.model_name || bot.model_provider || 'base44')}</p>
+                <p className="text-[11px] text-muted-foreground">{caseCount} test cases · {passRate}% latest pass rate · {(bot.api_label || bot.model_name || bot.model_provider || 'builtin')}</p>
               </div>
               <button onClick={() => runTests(bot.id)} disabled={caseCount === 0 || runningBotId === bot.id} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary disabled:opacity-40">
                 <Play className="w-3.5 h-3.5" /> {runningBotId === bot.id ? 'Running...' : 'Run tests'}

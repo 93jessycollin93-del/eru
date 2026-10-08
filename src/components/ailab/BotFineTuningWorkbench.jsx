@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BrainCircuit, Database, FlaskConical, RefreshCcw, Tag, Upload } from 'lucide-react';
 
 const EMPTY_LABELS = {
@@ -37,10 +37,10 @@ export default function BotFineTuningWorkbench({ bots = [], globalPolicy }) {
     }
 
     const [chunkRows, semanticRows, caseRows, runRows] = await Promise.all([
-      base44.entities.BotMemoryChunk.filter({ bot_id: botId }, '-updated_date', 100).catch(() => []),
-      base44.entities.BotSemanticMemory.filter({ bot_id: botId }, '-updated_date', 100).catch(() => []),
-      base44.entities.BotTestCase.filter({ bot_id: botId }, '-updated_date', 100).catch(() => []),
-      base44.entities.BotTestRun.filter({ bot_id: botId }, '-updated_date', 200).catch(() => []),
+      backend.entities.BotMemoryChunk.filter({ bot_id: botId }, '-updated_date', 100).catch(() => []),
+      backend.entities.BotSemanticMemory.filter({ bot_id: botId }, '-updated_date', 100).catch(() => []),
+      backend.entities.BotTestCase.filter({ bot_id: botId }, '-updated_date', 100).catch(() => []),
+      backend.entities.BotTestRun.filter({ bot_id: botId }, '-updated_date', 200).catch(() => []),
     ]);
 
     setChunks(chunkRows || []);
@@ -75,8 +75,8 @@ export default function BotFineTuningWorkbench({ bots = [], globalPolicy }) {
   const uploadDataset = async () => {
     if (!selectedBot || !datasetFile) return;
     setUploading(true);
-    const uploaded = await base44.integrations.Core.UploadFile({ file: datasetFile });
-    await base44.entities.BotSemanticMemory.create({
+    const uploaded = await backend.integrations.Core.UploadFile({ file: datasetFile });
+    await backend.entities.BotSemanticMemory.create({
       source_type: 'bot_memory_chunk',
       source_id: `dataset_${Date.now()}`,
       bot_id: selectedBot.id,
@@ -102,13 +102,13 @@ export default function BotFineTuningWorkbench({ bots = [], globalPolicy }) {
     if (!selectedChunk) return;
     setSavingLabels(true);
     await Promise.all([
-      base44.entities.BotMemoryChunk.update(selectedChunk.id, {
+      backend.entities.BotMemoryChunk.update(selectedChunk.id, {
         memory_category: chunkLabels.memory_category,
         keywords: chunkLabels.keywords.split(',').map((item) => item.trim()).filter(Boolean),
         quality_score: Number(chunkLabels.quality_score),
         retrieval_score: Number(chunkLabels.retrieval_score),
       }),
-      base44.entities.BotSemanticMemory.create({
+      backend.entities.BotSemanticMemory.create({
         source_type: 'bot_memory_chunk',
         source_id: selectedChunk.id,
         bot_id: selectedChunk.bot_id,
@@ -136,8 +136,8 @@ export default function BotFineTuningWorkbench({ bots = [], globalPolicy }) {
 
     for (const testCase of testCases.filter((item) => item.is_active !== false)) {
       const prompt = `You are ${selectedBot.name}. ${selectedBot.instructions || ''}\nPersonality: ${selectedBot.personality || 'helpful'}\nResponse style: ${selectedBot.response_style || 'detailed'}\n${globalPolicy?.is_active ? `Global instructions: ${globalPolicy.shared_instructions || 'None'}` : ''}\n\nUser: ${testCase.input}\n\n${selectedBot.name}:`;
-      const actualOutput = await base44.integrations.Core.InvokeLLM({ prompt });
-      const graded = await base44.integrations.Core.InvokeLLM({
+      const actualOutput = await backend.integrations.Core.InvokeLLM({ prompt });
+      const graded = await backend.integrations.Core.InvokeLLM({
         prompt: `Expected output:\n${testCase.expected_output}\n\nActual output:\n${actualOutput}\n\nReturn semantic similarity from 0 to 1 and a short reason.`,
         response_json_schema: {
           type: 'object',
@@ -149,7 +149,7 @@ export default function BotFineTuningWorkbench({ bots = [], globalPolicy }) {
         }
       });
       const similarity = Number(graded.similarity_score || 0);
-      await base44.entities.BotTestRun.create({
+      await backend.entities.BotTestRun.create({
         bot_id: selectedBot.id,
         bot_name: selectedBot.name,
         test_case_id: testCase.id,

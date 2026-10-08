@@ -1,6 +1,6 @@
 /* Cybernetic67 service worker — app-shell precache + runtime caching.
  * Makes the app load and run with no network. Does NOT cache cross-origin
- * API responses (Ollama / Base44) so live data is never served stale. */
+ * API responses (Ollama / backend) so live data is never served stale. */
 const SHELL = ['/', '/index.html', '/manifest.json'];
 const CACHE = 'c67-shell-v1';
 const RUNTIME = 'c67-runtime-v1';
@@ -24,7 +24,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Never cache cross-origin / API calls (Ollama, Base44, uploads).
+  // Never cache cross-origin / API calls (Ollama, backend, uploads).
   if (url.origin !== self.location.origin) return;
 
   // Navigation requests: network-first, fall back to cached shell (offline).

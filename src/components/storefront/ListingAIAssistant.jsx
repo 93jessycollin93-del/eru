@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Sparkles, Loader2, Wand2, CheckCircle2, BadgeDollarSign } from 'lucide-react';
 
 export default function ListingAIAssistant({ form, onApply }) {
@@ -10,7 +10,7 @@ export default function ListingAIAssistant({ form, onApply }) {
 
   const handleGenerate = async () => {
     setLoading(true);
-    const response = await base44.functions.invoke('generateListingCopy', {
+    const response = await backend.functions.invoke('generateListingCopy', {
       prompt,
       assetType: form.asset_type,
       saleMode: form.sale_mode,

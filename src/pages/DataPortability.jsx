@@ -4,7 +4,7 @@ import {
   ArrowLeft, Download, Upload, FileJson, Check, AlertCircle, Loader2,
   Database, Boxes, FileDown, FileUp, X,
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const EXPORTABLE_ENTITIES = [
   { name: 'JackieSaved', label: 'Saved Assets', desc: 'Snippets, code, prompts' },
@@ -43,7 +43,7 @@ export default function DataPortability() {
       await Promise.all(
         EXPORTABLE_ENTITIES.map(async (e) => {
           try {
-            const records = await base44.entities[e.name].list('-created_date', 500);
+            const records = await backend.entities[e.name].list('-created_date', 500);
             next[e.name] = records.length;
           } catch {
             next[e.name] = 0;
@@ -83,7 +83,7 @@ export default function DataPortability() {
       };
       for (const name of selected) {
         setExportStatus(`Exporting ${name}…`);
-        const records = await base44.entities[name].list('-created_date', 500);
+        const records = await backend.entities[name].list('-created_date', 500);
         bundle.entities[name] = records.map(stripBuiltins);
       }
       const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
@@ -141,13 +141,13 @@ export default function DataPortability() {
     const results = [];
     for (const [name, records] of Object.entries(importPreview.data.entities)) {
       if (!Array.isArray(records) || records.length === 0) continue;
-      if (!base44.entities[name]) {
+      if (!backend.entities[name]) {
         results.push({ entity: name, status: 'skipped', message: 'Unknown entity type' });
         continue;
       }
       try {
         const cleaned = records.map(stripBuiltins);
-        const created = await base44.entities[name].bulkCreate(cleaned);
+        const created = await backend.entities[name].bulkCreate(cleaned);
         results.push({ entity: name, status: 'ok', count: created.length });
       } catch (err) {
         results.push({ entity: name, status: 'error', message: (err.message || 'Failed').slice(0, 120) });
@@ -162,7 +162,7 @@ export default function DataPortability() {
     await Promise.all(
       EXPORTABLE_ENTITIES.map(async (e) => {
         try {
-          const recs = await base44.entities[e.name].list('-created_date', 500);
+          const recs = await backend.entities[e.name].list('-created_date', 500);
           next[e.name] = recs.length;
         } catch { next[e.name] = 0; }
       })

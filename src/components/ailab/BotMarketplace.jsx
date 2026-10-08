@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Star, Download, MessageSquare, Search, Send, X, Filter, Tag, Bot, Sparkles, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 
 const ROLE_EMOJI = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', custom: '⚙️' };
@@ -158,8 +158,8 @@ export default function BotMarketplace({ onInstalled, compact = false, showPageL
   const load = async () => {
     setLoading(true);
     const [b, r] = await Promise.all([
-      base44.entities.UserBot.filter({ is_public: true }, '-usage_count', 100),
-      base44.entities.BotRating.list('-created_date', 300),
+      backend.entities.UserBot.filter({ is_public: true }, '-usage_count', 100),
+      backend.entities.BotRating.list('-created_date', 300),
     ]);
     setBots(b || []);
     setRatings(r || []);
@@ -169,7 +169,7 @@ export default function BotMarketplace({ onInstalled, compact = false, showPageL
   useEffect(() => { load(); }, []);
 
   const install = async (bot) => {
-    await base44.entities.UserBot.create({
+    await backend.entities.UserBot.create({
       name: `${bot.name} (Clone)`,
       description: bot.description,
       role: bot.role,
@@ -192,7 +192,7 @@ export default function BotMarketplace({ onInstalled, compact = false, showPageL
   };
 
   const rate = async (bot, rating, comment) => {
-    await base44.entities.BotRating.create({
+    await backend.entities.BotRating.create({
       bot_id: bot.id,
       bot_name: bot.name,
       rating,

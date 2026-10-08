@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Loader2, Plus, RefreshCw, Save, Settings2, TerminalSquare, Copy, Trash2, BarChart3 } from 'lucide-react';
 import BotFlowBuilder from './BotFlowBuilder';
 import TelegramBotAnalytics from './TelegramBotAnalytics';
@@ -64,7 +64,7 @@ export default function TelegramBotDashboard() {
 
   const load = async () => {
     setLoading(true);
-    const response = await base44.functions.invoke('listTelegramBotDashboard', {});
+    const response = await backend.functions.invoke('listTelegramBotDashboard', {});
     setData(response.data || { bots: [], messages: [], logs: [], sessions: [], comparisons: [] });
     setLoading(false);
   };
@@ -72,7 +72,7 @@ export default function TelegramBotDashboard() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    base44.entities.UserBot.list('-updated_date', 100).then(setLabBots).catch(() => setLabBots([]));
+    backend.entities.UserBot.list('-updated_date', 100).then(setLabBots).catch(() => setLabBots([]));
   }, []);
 
   const selectedBot = useMemo(
@@ -137,7 +137,7 @@ export default function TelegramBotDashboard() {
       setKnowledgeState({ uploading: false, items: [] });
       return;
     }
-    base44.entities.KnowledgeBaseDocument.filter({ status: 'active' }, '-updated_date', 50)
+    backend.entities.KnowledgeBaseDocument.filter({ status: 'active' }, '-updated_date', 50)
       .then((rows) => {
         const linked = (rows || [])
           .filter((item) => (item.linked_bot_ids || []).includes(selectedBot.id))
@@ -150,7 +150,7 @@ export default function TelegramBotDashboard() {
 
   const saveSessionContext = async (session, contextOverride) => {
     setSavingContext(true);
-    await base44.entities.TelegramBotSession.update(session.id, {
+    await backend.entities.TelegramBotSession.update(session.id, {
       context_override: contextOverride,
       memory_summary: contextOverride || session.memory_summary || ''
     });
@@ -160,7 +160,7 @@ export default function TelegramBotDashboard() {
 
   const purgeSessionHistory = async (session) => {
     setPurgingHistory(true);
-    await base44.entities.TelegramBotSession.update(session.id, {
+    await backend.entities.TelegramBotSession.update(session.id, {
       swarm_history: [],
       context_override: '',
       memory_summary: '',
@@ -193,7 +193,7 @@ export default function TelegramBotDashboard() {
   };
 
   const deleteSelectedBots = async () => {
-    await Promise.all(selectedBotIds.map((id) => base44.entities.TelegramBot.delete(id)));
+    await Promise.all(selectedBotIds.map((id) => backend.entities.TelegramBot.delete(id)));
     setSelectedBotIds([]);
     await load();
   };
@@ -201,7 +201,7 @@ export default function TelegramBotDashboard() {
   const bulkActivateSelected = async () => {
     await Promise.all(selectedBotIds.map((id) => {
       const bot = data.bots.find((item) => item.id === id);
-      return base44.functions.invoke('manageTelegramWebhook', {
+      return backend.functions.invoke('manageTelegramWebhook', {
         botId: id,
         botToken: bot?.bot_token,
         action: 'activate'
@@ -213,7 +213,7 @@ export default function TelegramBotDashboard() {
 
   const createBot = async () => {
     setSaving(true);
-    const created = await base44.entities.TelegramBot.create({
+    const created = await backend.entities.TelegramBot.create({
       ...form,
       system_prompt: [
         form.system_prompt,
@@ -254,7 +254,7 @@ export default function TelegramBotDashboard() {
   const updateBot = async () => {
     if (!selectedBot) return;
     setSaving(true);
-    await base44.entities.TelegramBot.update(selectedBot.id, {
+    await backend.entities.TelegramBot.update(selectedBot.id, {
       ...form,
       system_prompt: [
         form.system_prompt,
@@ -289,7 +289,7 @@ export default function TelegramBotDashboard() {
     if (!selectedBot) return;
     setVerifying(true);
     try {
-      const response = await base44.functions.invoke('manageTelegramWebhook', {
+      const response = await backend.functions.invoke('manageTelegramWebhook', {
         botId: selectedBot.id,
         botToken: form.bot_token?.trim() || selectedBot.bot_token,
         action: 'verify'
@@ -306,7 +306,7 @@ export default function TelegramBotDashboard() {
     if (!selectedBot) return;
     setRegistering(true);
     try {
-      const response = await base44.functions.invoke('manageTelegramWebhook', {
+      const response = await backend.functions.invoke('manageTelegramWebhook', {
         botId: selectedBot.id,
         botToken: form.bot_token?.trim() || selectedBot.bot_token,
         action: 'activate'
@@ -323,7 +323,7 @@ export default function TelegramBotDashboard() {
     if (!selectedBot) return;
     setToggling(true);
     try {
-      const response = await base44.functions.invoke('manageTelegramWebhook', {
+      const response = await backend.functions.invoke('manageTelegramWebhook', {
         botId: selectedBot.id,
         botToken: form.bot_token?.trim() || selectedBot.bot_token,
         action: selectedBot.status === 'active' ? 'offline' : 'activate'
@@ -338,7 +338,7 @@ export default function TelegramBotDashboard() {
 
   const cloneBot = async (bot) => {
     const { id, created_date, updated_date, created_by, ...copyData } = bot;
-    const created = await base44.entities.TelegramBot.create({
+    const created = await backend.entities.TelegramBot.create({
       ...copyData,
       name: `${bot.name} Copy`,
       status: 'draft',
@@ -349,7 +349,7 @@ export default function TelegramBotDashboard() {
   };
 
   const cloneSpecialistBot = async (bot) => {
-    const created = await base44.entities.UserBot.create({
+    const created = await backend.entities.UserBot.create({
       name: `${bot.name} Variant`,
       description: bot.description || '',
       role: bot.role || 'custom',
@@ -361,7 +361,7 @@ export default function TelegramBotDashboard() {
       is_public: false,
       connected_bot_ids: [],
       handoff_instructions: bot.handoff_instructions || '',
-      model_provider: bot.model_provider || 'base44',
+      model_provider: bot.model_provider || 'builtin',
       model_name: bot.model_name || '',
       prompt_template_id: bot.prompt_template_id || '',
       prompt_template_name: bot.prompt_template_name || '',
@@ -381,8 +381,8 @@ export default function TelegramBotDashboard() {
     const file = event.target.files?.[0];
     if (!file || !selectedBot?.id) return;
     setKnowledgeState((prev) => ({ ...prev, uploading: true }));
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    const response = await base44.functions.invoke('ingestTelegramBotKnowledge', {
+    const { file_url } = await backend.integrations.Core.UploadFile({ file });
+    const response = await backend.functions.invoke('ingestTelegramBotKnowledge', {
       botId: selectedBot.id,
       sourceType: 'file',
       fileUrl: file_url,
@@ -408,7 +408,7 @@ export default function TelegramBotDashboard() {
     const url = window.prompt('Paste a URL to use as training context');
     if (!url) return;
     setKnowledgeState((prev) => ({ ...prev, uploading: true }));
-    const response = await base44.functions.invoke('ingestTelegramBotKnowledge', {
+    const response = await backend.functions.invoke('ingestTelegramBotKnowledge', {
       botId: selectedBot.id,
       sourceType: 'url',
       url,
@@ -427,7 +427,7 @@ export default function TelegramBotDashboard() {
   };
 
   const deleteBot = async (botId) => {
-    await base44.entities.TelegramBot.delete(botId);
+    await backend.entities.TelegramBot.delete(botId);
     setSelectedBotId(null);
     await load();
   };
@@ -436,10 +436,10 @@ export default function TelegramBotDashboard() {
     const bots = data.bots || [];
     if (!bots.length) return;
     if (action === 'activate') {
-      await Promise.all(bots.map((bot) => base44.entities.TelegramBot.update(bot.id, { status: 'active' })));
+      await Promise.all(bots.map((bot) => backend.entities.TelegramBot.update(bot.id, { status: 'active' })));
     }
     if (action === 'offline') {
-      await Promise.all(bots.map((bot) => base44.entities.TelegramBot.update(bot.id, { status: 'offline' })));
+      await Promise.all(bots.map((bot) => backend.entities.TelegramBot.update(bot.id, { status: 'offline' })));
     }
     await load();
   };

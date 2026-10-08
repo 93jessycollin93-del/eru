@@ -2,10 +2,10 @@
  * Wires the shared `jackyClient` to Eru's platform.
  *
  * `jackyClient.ts` is byte-identical in all four fleet repos, so it carries no
- * knowledge of Base44. This file is the seam: it hands the client an invoker
- * that routes every engine call through the `jackyProxy` serverless function,
- * which holds the engine URL and token in Base44 secrets and inherits Base44
- * auth. See `base44/functions/jackyProxy/entry.ts`.
+ * knowledge of any hosting platform. This file is the seam: it hands the
+ * client an invoker that routes every engine call through the `jackyProxy`
+ * server function, which holds the engine URL and token as server secrets.
+ * With no backend connected, that call fails and callers fall back.
  *
  * Import once, as early as possible — `src/main.jsx` or `src/App.jsx`:
  *
@@ -14,7 +14,7 @@
  * Idempotent, so a stray second import is harmless.
  */
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { jackyClient } from '@/lib/jackyClient';
 
 let wired = false;
@@ -29,7 +29,7 @@ export function bootstrapJacky() {
     // `status` spelling JackyLive uses and normalizes both.
     let raw;
     try {
-      raw = await base44.functions.invoke('jackyProxy', {
+      raw = await backend.functions.invoke('jackyProxy', {
         path,
         method: init.method,
         body: init.body,
@@ -45,7 +45,7 @@ export function bootstrapJacky() {
 
     if (raw?.error) throw new Error(raw.error.message || 'jackyProxy invoke failed');
 
-    // Unwrap to the engine payload. Base44 may hand back the function body
+    // Unwrap to the engine payload. The backend may hand back the function body
     // directly or nested under `data`, and the function itself answers with a
     // { ok, status, data } envelope — so peel at most two layers, the same way
     // JackyLive.jsx does.

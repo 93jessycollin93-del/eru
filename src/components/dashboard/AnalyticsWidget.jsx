@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Lightbulb, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useDashboardEvents } from '@/context/DashboardEventsContext';
 
 const COLORS = ['#00e676', '#2196f3', '#7c4dff', '#ff9800', '#e91e63'];
@@ -17,7 +17,7 @@ export default function AnalyticsWidget() {
 
   useEffect(() => {
     fetchAnalytics();
-    const unsubscribe = base44.entities.FeatureAnalytics.subscribe((event) => {
+    const unsubscribe = backend.entities.FeatureAnalytics.subscribe((event) => {
       if (event.type === 'create') {
         setAnalytics((prev) => [event.data, ...prev].slice(0, 10));
       } else if (event.type === 'update') {
@@ -49,13 +49,13 @@ export default function AnalyticsWidget() {
 
   const fetchAnalytics = async () => {
     try {
-      const user = await base44.auth.me();
+      const user = await backend.auth.me();
       if (!user) {
         setLoading(false);
         return;
       }
 
-      const data = await base44.entities.FeatureAnalytics.filter(
+      const data = await backend.entities.FeatureAnalytics.filter(
         { created_by: user.email },
         '-interaction_count',
         10
@@ -73,7 +73,7 @@ export default function AnalyticsWidget() {
     if (loadingRecs) return;
     setLoadingRecs(true);
     try {
-      const response = await base44.functions.invoke('generateSmartRecommendations', {});
+      const response = await backend.functions.invoke('generateSmartRecommendations', {});
       setRecommendations(response.data?.recommendations || []);
     } catch (error) {
       console.error('Recommendation error:', error);

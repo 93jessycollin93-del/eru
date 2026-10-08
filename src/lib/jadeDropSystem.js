@@ -1,10 +1,10 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * BALANCED JADE ECONOMY DROP SYSTEM
  *
  * The authoritative roll + grant runs in the `executeJadeDrop` backend
- * function (see base44/functions/executeJadeDrop). `executeSafeJadeDrop` below
+ * function (see the executeJadeDrop server function). `executeSafeJadeDrop` below
  * is a thin client wrapper that invokes it. `generateJadeDrop` is kept only as
  * a CLIENT-SIDE PREVIEW helper for UI — it must never be used to grant an
  * asset, since the browser-side result is not trusted.
@@ -109,7 +109,7 @@ export function generateJadeDrop() {
  * @param dropContext Optional context (activity type, etc)
  */
 export async function executeSafeJadeDrop(userId, orderId, dropContext = {}) {
-  const res = await base44.functions.invoke('executeJadeDrop', { orderId, dropContext });
+  const res = await backend.functions.invoke('executeJadeDrop', { orderId, dropContext });
   const data = res?.data ?? res;
   if (!data?.ok) {
     throw new Error(`❌ JADE DROP FAILED: ${data?.error || 'unknown error'}`);

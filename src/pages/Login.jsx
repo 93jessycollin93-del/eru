@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
 const PROVIDERS = [
@@ -66,7 +66,7 @@ export default function Login() {
     if (!email || !password) { setError('Please enter your email and password.'); return; }
     setLoading(true);
     try {
-      await base44.auth.loginViaEmailPassword(email, password);
+      await backend.auth.loginViaEmailPassword(email, password);
       window.location.href = '/';
     } catch (err) {
       setError(err?.message || 'Invalid email or password.');
@@ -79,7 +79,7 @@ export default function Login() {
     setError('');
     setProviderLoading(providerId);
     try {
-      await base44.auth.loginWithProvider(providerId, '/');
+      await backend.auth.loginWithProvider(providerId, '/');
     } catch (err) {
       setError(err?.message || `${providerId} login failed.`);
       setProviderLoading(null);

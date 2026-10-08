@@ -1,12 +1,12 @@
 // JackyLive — native Eru surface for the real Jacky engine (Fleet Parity Wave 2).
 //
 // Reads live GPU/CPU/RAM telemetry + routing verdict via the Wave 1 `jackyProxy`
-// Base44 function (which forwards to JACKY_API_BASE/api/* server-side) and routes
+// server function (which forwards to JACKY_API_BASE/api/* server-side) and routes
 // orders through /api/ask. Falls back to a labelled DEMO when the backend isn't
 // linked (JACKY_API_BASE secret unset / unreachable).
 import { useEffect, useRef, useState } from 'react';
 import { Radio, Thermometer, Cpu, Activity, Zap, Send, Users } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Progress } from '@/components/ui/progress';
 const HARD_STOP = 75;
 
 function unwrap(raw) {
-  // Base44 invoke may return the function body directly or wrapped as { data: body }.
+  // The backend invoke may return the function body directly or wrapped as { data: body }.
   let env = raw;
   if (env && env.data && (env.data.ok !== undefined || env.data.error !== undefined || env.data.data !== undefined)) {
     env = env.data;
@@ -25,7 +25,7 @@ function unwrap(raw) {
 }
 
 async function callJacky(path, method = 'GET', body) {
-  const raw = await base44.functions.invoke('jackyProxy', { path, method, body });
+  const raw = await backend.functions.invoke('jackyProxy', { path, method, body });
   const env = unwrap(raw);
   if (env.error) throw new Error(env.detail || env.error);
   if (env.ok === false) throw new Error(`jacky ${path} → HTTP ${env.status || '??'}`);

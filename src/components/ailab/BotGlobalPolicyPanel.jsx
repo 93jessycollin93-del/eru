@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ShieldCheck, Save } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const DEFAULT_POLICY = {
   name: 'Default Global Policy',
@@ -21,7 +21,7 @@ export default function BotGlobalPolicyPanel() {
   const [savedAt, setSavedAt] = useState(null);
 
   useEffect(() => {
-    base44.entities.BotGlobalPolicy.list('-created_date', 1)
+    backend.entities.BotGlobalPolicy.list('-created_date', 1)
       .then((rows) => {
         if (rows?.[0]) {
           setPolicy({ ...DEFAULT_POLICY, ...rows[0] });
@@ -49,9 +49,9 @@ export default function BotGlobalPolicyPanel() {
     try {
       const payload = buildPayload();
       if (policyId) {
-        await base44.entities.BotGlobalPolicy.update(policyId, payload);
+        await backend.entities.BotGlobalPolicy.update(policyId, payload);
       } else {
-        const created = await base44.entities.BotGlobalPolicy.create(payload);
+        const created = await backend.entities.BotGlobalPolicy.create(payload);
         setPolicyId(created.id);
       }
       setSavedAt(new Date());

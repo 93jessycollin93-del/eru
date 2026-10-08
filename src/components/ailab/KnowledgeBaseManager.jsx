@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BookOpen, Upload, FileText, HelpCircle, Search, Trash2, Link2, Sparkles } from 'lucide-react';
 
 function tokenize(text) {
@@ -48,7 +48,7 @@ export default function KnowledgeBaseManager({ bots = [] }) {
 
   const loadDocuments = async () => {
     setLoading(true);
-    const rows = await base44.entities.KnowledgeBaseDocument.list('-updated_date', 200);
+    const rows = await backend.entities.KnowledgeBaseDocument.list('-updated_date', 200);
     setDocuments(rows || []);
     setLoading(false);
   };
@@ -68,7 +68,7 @@ export default function KnowledgeBaseManager({ bots = [] }) {
     const keywords = normalizeKeywords(textForm.keywords);
     const searchText = [textForm.title, textForm.content, ...keywords].filter(Boolean).join(' ').toLowerCase();
     const retrievalTerms = tokenize(searchText);
-    await base44.entities.KnowledgeBaseDocument.create({
+    await backend.entities.KnowledgeBaseDocument.create({
       title: textForm.title,
       source_type: 'text',
       content: textForm.content,
@@ -101,7 +101,7 @@ export default function KnowledgeBaseManager({ bots = [] }) {
     const faqText = cleanItems.map((item) => `${item.question} ${item.answer}`).join(' ');
     const searchText = [faqForm.title, faqText, ...keywords].filter(Boolean).join(' ').toLowerCase();
     const retrievalTerms = tokenize(searchText);
-    await base44.entities.KnowledgeBaseDocument.create({
+    await backend.entities.KnowledgeBaseDocument.create({
       title: faqForm.title,
       source_type: 'faq',
       faq_items: cleanItems,
@@ -120,11 +120,11 @@ export default function KnowledgeBaseManager({ bots = [] }) {
     const file = event.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await backend.integrations.Core.UploadFile({ file });
     const title = file.name.replace(/\.[^.]+$/, '');
     const searchText = [title, file.name, file.type].filter(Boolean).join(' ').toLowerCase();
     const retrievalTerms = tokenize(searchText);
-    await base44.entities.KnowledgeBaseDocument.create({
+    await backend.entities.KnowledgeBaseDocument.create({
       title,
       source_type: 'document',
       file_name: file.name,
@@ -143,14 +143,14 @@ export default function KnowledgeBaseManager({ bots = [] }) {
   };
 
   const deleteDocument = async (id) => {
-    await base44.entities.KnowledgeBaseDocument.delete(id);
+    await backend.entities.KnowledgeBaseDocument.delete(id);
     loadDocuments();
   };
 
   const runSemanticPreview = async () => {
     if (!semanticQuery.trim()) return;
     setSemanticLoading(true);
-    const response = await base44.functions.invoke('retrieveKnowledgeBaseContext', { query: semanticQuery, limit: 5 });
+    const response = await backend.functions.invoke('retrieveKnowledgeBaseContext', { query: semanticQuery, limit: 5 });
     const preview = (response.data?.results || []).map((item) => ({
       id: item.id,
       title: item.title,

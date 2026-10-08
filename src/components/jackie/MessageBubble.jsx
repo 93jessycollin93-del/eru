@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Bot, Bookmark, Copy, PenLine, Check, Download, Loader2, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import AIEditBar from './AIEditBar';
 import CodePreviewPanel from './CodePreviewPanel';
 import CodeDiffPanel from './CodeDiffPanel';
@@ -61,7 +61,7 @@ export default function MessageBubble({ message, onSave, onRefine, onInject }) {
   const handleAIEdit = async (action) => {
     if (!extractedCode) return;
     setBusy(true);
-    const response = await base44.integrations.Core.InvokeLLM({ prompt: buildPrompt(action) });
+    const response = await backend.integrations.Core.InvokeLLM({ prompt: buildPrompt(action) });
     if (action === 'explain' || action === 'preview') {
       setExplanation(response);
     } else {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BrainCircuit, CheckSquare, Loader2, MessageSquareShare, Square, Users, GitBranch } from 'lucide-react';
 import SpeechToTextInput from './SpeechToTextInput.jsx';
 import CollaborationLiveRoom from './CollaborationLiveRoom.jsx';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { analyzeNetworkImprovements, createDecisionPlan, resolveFindingConflicts } from './orchestrationDecisioning';
 
 export default function BotCollaborationWorkspace({ bots }) {
@@ -19,7 +19,7 @@ export default function BotCollaborationWorkspace({ bots }) {
   const selectedBots = useMemo(() => bots.filter((bot) => selectedBotIds.includes(bot.id)), [bots, selectedBotIds]);
 
   const loadSessions = async () => {
-    const rows = await base44.entities.BotCollaborationSession.list('-created_date', 12);
+    const rows = await backend.entities.BotCollaborationSession.list('-created_date', 12);
     setSessions(rows);
   };
 
@@ -63,7 +63,7 @@ export default function BotCollaborationWorkspace({ bots }) {
         const dependencyFinding = findings.find((entry) => entry.bot_id === dependencyId);
         return dependencyFinding ? `${dependencyFinding.bot_name}: ${dependencyFinding.finding}` : null;
       }).filter(Boolean).join('\n');
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await backend.integrations.Core.InvokeLLM({
         prompt: `You are ${bot.name}. ${bot.instructions || ''}
 Role: ${bot.role}
 Task goal: ${goal}
@@ -80,7 +80,7 @@ Produce your best finding for the team. Be concrete, useful, and concise.`
     for (const reviewer of selectedBots) {
       const peerSummary = findings.filter((item) => item.bot_id !== reviewer.id).map((item) => `${item.bot_name}: ${item.finding}`).join('\n\n');
       const currentGuidance = guidanceNotes.length > 0 ? `\nUser guidance to consider:\n${guidanceNotes.map((note) => `- ${note}`).join('\n')}` : '';
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await backend.integrations.Core.InvokeLLM({
         prompt: `You are ${reviewer.name}. ${reviewer.instructions || ''}
 Goal: ${goal}
 Other bots shared these findings:
@@ -98,7 +98,7 @@ Give short peer feedback that improves quality, catches gaps, and increases accu
 
     const conflictResolution = await resolveFindingConflicts({ goal, findings, feedback });
 
-    const finalOutput = await base44.integrations.Core.InvokeLLM({
+    const finalOutput = await backend.integrations.Core.InvokeLLM({
       prompt: `Synthesize this collaborative bot work into one final answer.
 Goal: ${goal}
 Delegation plan:
@@ -150,7 +150,7 @@ Return the best final answer with clear sections: Summary, Key Findings, Recomme
       network_insights: networkInsights,
     };
 
-    await base44.entities.BotCollaborationSession.create(payload);
+    await backend.entities.BotCollaborationSession.create(payload);
     setResult(payload);
     setTitle('');
     setGoal('');

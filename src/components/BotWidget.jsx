@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Send, ChevronDown, Zap, Globe, GripVertical } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { getCachedOrFetch } from '@/lib/metadataCache';
 
 const ROLE_ICONS = { assistant: '🤖', trader: '📈', game_helper: '🎮', social: '💬', security: '🛡️', custom: '⚡' };
@@ -48,7 +48,7 @@ export default function BotWidget({ prefs, updateWidget }) {
         const allBots = await getCachedOrFetch({
           key: 'bot_widget_user_bots',
           maxAgeMs: 5 * 60 * 1000,
-          fetcher: () => base44.entities.UserBot.list('-created_date', 100).catch(() => [])
+          fetcher: () => backend.entities.UserBot.list('-created_date', 100).catch(() => [])
         });
         applyBotState(allBots || []);
       } catch (error) {
@@ -83,14 +83,14 @@ export default function BotWidget({ prefs, updateWidget }) {
     let consultResult = '';
     if (connectedBots.length > 0 && bot.handoff_instructions) {
       // Ask the primary bot if it needs to delegate
-      const delegateCheck = await base44.integrations.Core.InvokeLLM({
+      const delegateCheck = await backend.integrations.Core.InvokeLLM({
         prompt: `You are ${bot.name}. Handoff rules: ${bot.handoff_instructions}\nConnected bots: ${connectedBots.map(b => `${b.name} (${b.role}): ${b.description}`).join(', ')}\n\nUser asked: "${userMsg}"\n\nShould you delegate this to one of the connected bots? Reply with ONLY the bot name to delegate to, or "none" if you handle it yourself.`,
       });
       const delegateTo = connectedBots.find(b => delegateCheck.toLowerCase().includes(b.name.toLowerCase()));
       if (delegateTo) {
         setConsulting(delegateTo.name);
         await new Promise(r => setTimeout(r, 800));
-        const subResp = await base44.integrations.Core.InvokeLLM({
+        const subResp = await backend.integrations.Core.InvokeLLM({
           prompt: `You are ${delegateTo.name}. ${delegateTo.instructions || ''}\nPersonality: ${delegateTo.personality || 'helpful'}\nResponse style: ${delegateTo.response_style || 'detailed'}\n\nUser: ${userMsg}\n\n${delegateTo.name}:`,
         });
         consultResult = `[Delegated to ${delegateTo.name}]: ${subResp}`;
@@ -98,7 +98,7 @@ export default function BotWidget({ prefs, updateWidget }) {
       }
     }
 
-    const ragResponse = await base44.functions.invoke('retrieveKnowledgeBaseContext', { query: userMsg, botId: bot.id, limit: 5 }).catch(() => ({ data: { results: [], context: '' } }));
+    const ragResponse = await backend.functions.invoke('retrieveKnowledgeBaseContext', { query: userMsg, botId: bot.id, limit: 5 }).catch(() => ({ data: { results: [], context: '' } }));
     const knowledgeContext = ragResponse.data?.context || '';
     const sourceGuardrail = knowledgeContext
       ? `Primary knowledge base context:\n${knowledgeContext}\n\nUse the knowledge base as the primary source of truth. If the answer is not in these sources, say so clearly before using any general knowledge.`
@@ -108,7 +108,7 @@ export default function BotWidget({ prefs, updateWidget }) {
       ? `You are ${bot.name}. ${bot.instructions || ''}\n${sourceGuardrail}\nA connected bot provided this: ${consultResult}\nSummarize and present this to the user helpfully.\n\nUser original question: ${userMsg}\n\n${bot.name}:`
       : `You are ${bot.name}. ${bot.instructions || ''}\nPersonality: ${bot.personality || 'helpful'}\nResponse style: ${bot.response_style || 'detailed'}\nContext: User is on the page "${pathname}".\n${sourceGuardrail}\n\nUser: ${userMsg}\n\n${bot.name}:`;
 
-    const res = await base44.integrations.Core.InvokeLLM({
+    const res = await backend.integrations.Core.InvokeLLM({
       prompt,
       ...(webSearch ? { add_context_from_internet: true, model: 'gemini_3_flash' } : {}),
     });
@@ -117,7 +117,7 @@ export default function BotWidget({ prefs, updateWidget }) {
     // Award XP silently
     const newXp = (bot.xp || 0) + 10;
     const newLevel = Math.min(10, Math.floor(newXp / 100) + 1);
-    await base44.entities.UserBot.update(bot.id, {
+    await backend.entities.UserBot.update(bot.id, {
       xp: newXp, level: newLevel,
       usage_count: (bot.usage_count || 0) + 1,
       last_interaction: new Date().toISOString(),

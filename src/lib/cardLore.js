@@ -13,7 +13,7 @@
  *   - Excavation Events (packs)         → ExcavationEvent entity
  */
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 // ---------------------------------------------------------------------------
 // Signal origins / lore tags — narrative palette for excavation events.
@@ -172,7 +172,7 @@ export async function createCardWithLore(seed, opts = {}) {
       },
     );
   }
-  return base44.entities.Card.create(profile).catch(() => null);
+  return backend.entities.Card.create(profile).catch(() => null);
 }
 
 // ---------------------------------------------------------------------------
@@ -200,12 +200,12 @@ let pressureCache = null;
 
 export async function fetchPressure(force = false) {
   if (pressureCache && !force) return pressureCache;
-  const me = await base44.auth.me().catch(() => null);
+  const me = await backend.auth.me().catch(() => null);
   if (!me?.email) return null;
-  const rows = await base44.entities.RealityPressure.filter({ user_email: me.email }, '-updated_date', 1).catch(() => []);
+  const rows = await backend.entities.RealityPressure.filter({ user_email: me.email }, '-updated_date', 1).catch(() => []);
   let row = rows?.[0];
   if (!row) {
-    row = await base44.entities.RealityPressure.create({ user_email: me.email, pressure: 0, phase: 'calm' }).catch(() => null);
+    row = await backend.entities.RealityPressure.create({ user_email: me.email, pressure: 0, phase: 'calm' }).catch(() => null);
   }
   pressureCache = row;
   return row;
@@ -223,7 +223,7 @@ export async function bumpPressure({ amount = 4, summary = 'High-power card acti
   if (!row?.id) return null;
   const next = Math.max(0, Math.min(100, (row.pressure || 0) + amount));
   const phase = phaseFor(next).id;
-  const updated = await base44.entities.RealityPressure.update(row.id, {
+  const updated = await backend.entities.RealityPressure.update(row.id, {
     pressure: next,
     phase,
     high_power_uses: (row.high_power_uses || 0) + 1,

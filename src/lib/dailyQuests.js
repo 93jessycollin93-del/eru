@@ -12,7 +12,7 @@
 //   reportQuestEvent('card_acquired',  { rarity })                // new card obtained
 //   reportQuestEvent('level_up',       {})                        // card leveled up
 // ----------------------------------------------------------------------------
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { awardGold } from '@/lib/economyApi';
 
 // ─── Templates ───────────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ export async function ensureDailyQuests(userEmail) {
   if (!userEmail) return [];
   const dateKey = todayKey();
 
-  const existing = await base44.entities.DailyQuest.filter(
+  const existing = await backend.entities.DailyQuest.filter(
     { user_email: userEmail, quest_date: dateKey },
     '-created_date',
     50,
@@ -182,7 +182,7 @@ export async function ensureDailyQuests(userEmail) {
   const picks = pickDailyTemplates(userEmail, dateKey, 3);
   const created = await Promise.all(
     picks.map((t) =>
-      base44.entities.DailyQuest.create({
+      backend.entities.DailyQuest.create({
         user_email: userEmail,
         quest_date: dateKey,
         template_id: t.id,
@@ -214,11 +214,11 @@ export async function ensureDailyQuests(userEmail) {
 export async function reportQuestEvent(eventType, payload = {}, amount = 1) {
   if (!eventType || amount <= 0) return;
   let me;
-  try { me = await base44.auth.me(); } catch { return; }
+  try { me = await backend.auth.me(); } catch { return; }
   if (!me?.email) return;
 
   const dateKey = todayKey();
-  const quests = await base44.entities.DailyQuest.filter(
+  const quests = await backend.entities.DailyQuest.filter(
     { user_email: me.email, quest_date: dateKey, event_type: eventType },
     '-created_date',
     20,
@@ -236,7 +236,7 @@ export async function reportQuestEvent(eventType, payload = {}, amount = 1) {
     const next = Math.min(q.goal, (q.progress || 0) + amount);
     const completed = next >= q.goal;
     updates.push(
-      base44.entities.DailyQuest.update(q.id, {
+      backend.entities.DailyQuest.update(q.id, {
         progress: next,
         status: completed ? 'completed' : 'active',
         completed_at: completed ? new Date().toISOString() : undefined,
@@ -255,7 +255,7 @@ export async function reportQuestEvent(eventType, payload = {}, amount = 1) {
  * return their existing record without re-awarding.
  */
 export async function claimQuest(questId) {
-  const all = await base44.entities.DailyQuest.list('-created_date', 50).catch(() => []);
+  const all = await backend.entities.DailyQuest.list('-created_date', 50).catch(() => []);
   const quest = all.find((q) => q.id === questId);
   if (!quest) return { ok: false, error: 'Quest not found.' };
   if (quest.status !== 'completed') return { ok: false, error: 'Quest is not complete yet.' };
@@ -271,7 +271,7 @@ export async function claimQuest(questId) {
     return { ok: false, error: 'Reward could not be granted.' };
   }
 
-  await base44.entities.DailyQuest.update(quest.id, {
+  await backend.entities.DailyQuest.update(quest.id, {
     status: 'claimed',
     claimed_at: new Date().toISOString(),
   }).catch(() => null);

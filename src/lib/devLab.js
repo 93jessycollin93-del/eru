@@ -4,7 +4,7 @@
 // real provider is connected, callers can swap in AI-sourced text and set
 // `source: "ai_generated"` on the resulting record.
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export const GOLDEN_RULES = [
   {
@@ -221,7 +221,7 @@ export function buildManualPatch({ task, plan }) {
  */
 export async function logDevAudit({ actor, action, targetType, targetId, details, severity = 'info' }) {
   try {
-    await base44.entities.DevAuditLog.create({
+    await backend.entities.DevAuditLog.create({
       actor: actor || 'unknown',
       action,
       target_type: targetType,

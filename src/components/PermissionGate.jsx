@@ -1,6 +1,6 @@
 import { ShieldAlert, LogIn } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * <PermissionGate allow={(user) => isAdmin(user)}>...</PermissionGate>
@@ -37,7 +37,7 @@ export default function PermissionGate({
           <p className="text-sm font-semibold text-foreground">Sign in required</p>
           <p className="text-xs text-muted-foreground">Please sign in to continue.</p>
           <button
-            onClick={() => base44.auth.redirectToLogin(window.location.href)}
+            onClick={() => backend.auth.redirectToLogin(window.location.href)}
             className="w-full rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold"
           >
             Sign in

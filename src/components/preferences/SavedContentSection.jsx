@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark, Pin, MessageSquareQuote, ChevronRight, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * SavedContentSection
@@ -49,9 +49,9 @@ export default function SavedContentSection({ userEmail }) {
       }
       setLoading(true);
       const [saved, pinned, notes] = await Promise.all([
-        base44.entities.JackieSaved?.filter?.({ created_by: userEmail }, '-created_date', 200).catch(() => []) || [],
-        base44.entities.PinnedCard?.filter?.({ created_by: userEmail }, '-created_date', 200).catch(() => []) || [],
-        base44.entities.Note?.filter?.({ created_by: userEmail }, '-created_date', 200).catch(() => []) || [],
+        backend.entities.JackieSaved?.filter?.({ created_by: userEmail }, '-created_date', 200).catch(() => []) || [],
+        backend.entities.PinnedCard?.filter?.({ created_by: userEmail }, '-created_date', 200).catch(() => []) || [],
+        backend.entities.Note?.filter?.({ created_by: userEmail }, '-created_date', 200).catch(() => []) || [],
       ]);
       if (!mounted) return;
       setCounts({

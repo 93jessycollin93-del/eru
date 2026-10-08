@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Check, Layers, Sparkles, X, Globe2, FileText, Component } from 'lucide-react';
 import { useTheme, BG_ENVS } from '@/context/ThemeContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * SkinPicker
@@ -153,9 +153,9 @@ export default function SkinPicker({ open, onClose, defaultScope, defaultEnv }) 
       );
 
       if (existing) {
-        await base44.entities.CustomThemeSetting.update(existing.id, payload);
+        await backend.entities.CustomThemeSetting.update(existing.id, payload);
       } else {
-        await base44.entities.CustomThemeSetting.create(payload);
+        await backend.entities.CustomThemeSetting.create(payload);
       }
       await reloadCustomThemes();
       onClose?.();
@@ -175,7 +175,7 @@ export default function SkinPicker({ open, onClose, defaultScope, defaultEnv }) 
         (item) => item.scope_type === scopeType && (item.scope_key || '') === (scopeKeyForSave || ''),
       );
       if (existing) {
-        await base44.entities.CustomThemeSetting.delete(existing.id);
+        await backend.entities.CustomThemeSetting.delete(existing.id);
         if (scopeType === 'global') setBg('none');
         await reloadCustomThemes();
       }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import SquadPerformanceDashboard from '../components/ailab/SquadPerformanceDashboard';
 
 export default function SquadPerformance() {
@@ -7,7 +7,7 @@ export default function SquadPerformance() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.BotSquad.list('-updated_date', 100).then((rows) => {
+    backend.entities.BotSquad.list('-updated_date', 100).then((rows) => {
       setSquads(rows || []);
       setLoading(false);
     });

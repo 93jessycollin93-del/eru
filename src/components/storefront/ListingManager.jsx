@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Edit2, Pause, Play, Trash2 } from 'lucide-react';
 import ListingEditor from './ListingEditor';
 import ConditionBadge from './ConditionBadge';
@@ -23,14 +23,14 @@ export default function ListingManager({ assetType, title = 'My Listings' }) {
   const [editing, setEditing] = useState(null);
 
   const load = async () => {
-    const data = await base44.entities.StorefrontListing.filter({ asset_type: assetType }, '-created_date', 50);
+    const data = await backend.entities.StorefrontListing.filter({ asset_type: assetType }, '-created_date', 50);
     setListings((data || []).filter((listing) => listing.created_by));
   };
 
   useEffect(() => { load(); }, [assetType]);
 
   const saveEdit = async (values) => {
-    await base44.entities.StorefrontListing.update(editing.id, {
+    await backend.entities.StorefrontListing.update(editing.id, {
       ...values,
       title: values.title,
       description: values.description,
@@ -50,12 +50,12 @@ export default function ListingManager({ assetType, title = 'My Listings' }) {
   };
 
   const toggleStatus = async (listing) => {
-    await base44.entities.StorefrontListing.update(listing.id, { status: listing.status === 'active' ? 'paused' : 'active' });
+    await backend.entities.StorefrontListing.update(listing.id, { status: listing.status === 'active' ? 'paused' : 'active' });
     load();
   };
 
   const removeListing = async (id) => {
-    await base44.entities.StorefrontListing.delete(id);
+    await backend.entities.StorefrontListing.delete(id);
     load();
   };
 

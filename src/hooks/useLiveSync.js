@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const WS_URL = 'wss://stream.binance.com:9443/stream?streams=btcusdt@ticker/ethusdt@ticker/solusdt@ticker/bnbusdt@ticker/xrpusdt@ticker/dogeusdt@ticker';
 const WS_SYMBOL_MAP = {
@@ -145,7 +145,7 @@ export function useRealtimeEntityList(entityName, options = {}) {
       if (isLoadingRef.current) return;
       if (!force && now - lastLoadRef.current < 5000) return;
 
-      const sdk = base44.entities[entityName];
+      const sdk = backend.entities[entityName];
       if (!sdk) {
         if (!isMounted) return;
         setData([]);
@@ -179,7 +179,7 @@ export function useRealtimeEntityList(entityName, options = {}) {
       timeoutRef.current = setTimeout(() => { load().catch(() => {}); }, 1500);
     };
 
-    const sdk = base44.entities[entityName];
+    const sdk = backend.entities[entityName];
     if (!sdk) {
       setData([]);
       setLoading(false);
@@ -208,8 +208,8 @@ export function useRealtimeAgentStatus(bots = []) {
   useEffect(() => {
     const buildStatus = async () => {
       const [automations, improvements] = await Promise.all([
-        base44.entities.BotAutomation.list('-updated_date', 100),
-        base44.entities.BotImprovement.list('-created_date', 100),
+        backend.entities.BotAutomation.list('-updated_date', 100),
+        backend.entities.BotImprovement.list('-created_date', 100),
       ]);
 
       const next = {};
@@ -232,8 +232,8 @@ export function useRealtimeAgentStatus(bots = []) {
 
     const safeBuild = () => buildStatus().catch(() => {});
     safeBuild();
-    const unsubscribeAutomation = base44.entities.BotAutomation.subscribe(safeBuild);
-    const unsubscribeImprovement = base44.entities.BotImprovement.subscribe(safeBuild);
+    const unsubscribeAutomation = backend.entities.BotAutomation.subscribe(safeBuild);
+    const unsubscribeImprovement = backend.entities.BotImprovement.subscribe(safeBuild);
 
     return () => {
       unsubscribeAutomation?.();

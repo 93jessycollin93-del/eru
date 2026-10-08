@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { PencilLine, UsersRound } from 'lucide-react';
 
 const DASHBOARD_KEY = 'main-dashboard';
@@ -31,7 +31,7 @@ export default function SharedDashboardCollabBar() {
   };
 
   const syncLayout = async () => {
-    const me = await base44.auth.me();
+    const me = await backend.auth.me();
     if (!me) return;
     const panels = loadPanels();
     const payload = {
@@ -43,11 +43,11 @@ export default function SharedDashboardCollabBar() {
       last_edited_at: new Date().toISOString(),
     };
 
-    const existing = await base44.entities.SharedDashboardState.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 1);
+    const existing = await backend.entities.SharedDashboardState.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 1);
     if (existing?.[0]) {
-      await base44.entities.SharedDashboardState.update(existing[0].id, payload);
+      await backend.entities.SharedDashboardState.update(existing[0].id, payload);
     } else {
-      await base44.entities.SharedDashboardState.create(payload);
+      await backend.entities.SharedDashboardState.create(payload);
     }
     setSaved(true);
     window.clearTimeout(saveTimerRef.current);
@@ -60,7 +60,7 @@ export default function SharedDashboardCollabBar() {
 
     const start = async () => {
       try {
-        const existing = await base44.entities.SharedDashboardState.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 1);
+        const existing = await backend.entities.SharedDashboardState.filter({ dashboard_key: DASHBOARD_KEY }, '-updated_date', 1);
         if (!isMounted) return;
         applyStateToStorage(existing?.[0]);
       } catch (error) {
@@ -69,7 +69,7 @@ export default function SharedDashboardCollabBar() {
         }
       }
 
-      unsubscribe = base44.entities.SharedDashboardState.subscribe((event) => {
+      unsubscribe = backend.entities.SharedDashboardState.subscribe((event) => {
         if (event?.data?.dashboard_key !== DASHBOARD_KEY) return;
         if (event.type === 'delete') return;
         applyStateToStorage(event.data);

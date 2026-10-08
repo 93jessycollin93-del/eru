@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { AlertTriangle, Brain, Gauge, HeartHandshake, ShieldAlert, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, CartesianGrid, LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -65,9 +65,9 @@ export default function BotPerformanceAnalyticsPanel({ bots }) {
 
   const load = async () => {
     const [ratingRows, runRows, metricRows] = await Promise.all([
-      base44.entities.BotRating.list('-created_date', 300),
-      base44.entities.BotTestRun.list('-created_date', 400),
-      base44.entities.PerformanceMetric.list('-created_date', 300),
+      backend.entities.BotRating.list('-created_date', 300),
+      backend.entities.BotTestRun.list('-created_date', 400),
+      backend.entities.PerformanceMetric.list('-created_date', 300),
     ]);
     setRatings(ratingRows);
     setTestRuns(runRows);
@@ -102,7 +102,7 @@ export default function BotPerformanceAnalyticsPanel({ bots }) {
 
   const generateInsights = async () => {
     setLoadingInsight(true);
-    const response = await base44.integrations.Core.InvokeLLM({
+    const response = await backend.integrations.Core.InvokeLLM({
       prompt: `You are an AI performance analyst for a bot operations dashboard.
 
 Analyze these bot performance metrics and provide concise operational guidance.

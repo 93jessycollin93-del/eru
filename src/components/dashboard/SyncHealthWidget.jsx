@@ -35,7 +35,7 @@ function relTime(iso) {
  * SyncHealthWidget — at-a-glance dashboard card for connection + sync health.
  * Three honest rows:
  *   1. Device  — live online/offline (navigator.onLine)
- *   2. Cloud   — local data → Base44 cloud, with a live progress bar while
+ *   2. Cloud   — local data → backend cloud, with a live progress bar while
  *                flushing the offline write queue
  *   3. GitHub  — repo → app freshness (advances on each platform deploy)
  */

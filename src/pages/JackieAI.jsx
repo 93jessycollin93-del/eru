@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, FlaskConical, Key, Send, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import JackieHeader from '../components/jackie/JackieHeader';
 import ConversationSidebar from '../components/jackie/ConversationSidebar.jsx';
 import MessageBubble from '../components/jackie/MessageBubble';
@@ -93,7 +93,7 @@ const MODES = [
 
 export default function JackieAI() {
   const navigate = useNavigate();
-  const jackieProgressEntity = base44.entities?.JackieProgress || null;
+  const jackieProgressEntity = backend.entities?.JackieProgress || null;
   const [messages, setMessages] = useState([]);
   const [thinkMode, setThinkMode] = useState('default');
   const [userBots, setUserBots] = useState([]);
@@ -105,7 +105,7 @@ export default function JackieAI() {
   const [tab, setTab] = useState('main');
   const [showCommands, setShowCommands] = useState(false);
   const [showChats, setShowChats] = useState(false);
-  const [modelProvider, setModelProvider] = useState(() => { try { return localStorage.getItem('jackie_model_provider') || 'base44'; } catch { return 'base44'; } });
+  const [modelProvider, setModelProvider] = useState(() => { try { return localStorage.getItem('jackie_model_provider') || 'builtin'; } catch { return 'builtin'; } });
   const [modelName, setModelName] = useState(() => { try { return localStorage.getItem('jackie_model_name') || ''; } catch { return ''; } });
   const [showModelConnector, setShowModelConnector] = useState(false);
   const [workingContext, setWorkingContext] = useState('');
@@ -150,13 +150,13 @@ export default function JackieAI() {
     getCachedOrFetch({
       key: 'jackie_user_bots',
       maxAgeMs: 5 * 60 * 1000,
-      fetcher: () => base44.entities.UserBot.list('-created_date', 20).catch(() => [])
+      fetcher: () => backend.entities.UserBot.list('-created_date', 20).catch(() => [])
     }).then((bots) => setUserBots(bots || [])).catch(() => {});
 
     getCachedOrFetch({
       key: 'jackie_active_api_keys',
       maxAgeMs: 2 * 60 * 1000,
-      fetcher: () => base44.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).catch(() => [])
+      fetcher: () => backend.entities.ApiKey.filter({ status: 'active' }, '-created_date', 50).catch(() => [])
     }).then((keys) => {
       setApiKeyCount(keys.length);
       const hasBotWeb = keys.some(k => (k.permissions || []).includes('bot:websearch'));
@@ -287,9 +287,9 @@ export default function JackieAI() {
     setLoading(true);
 
     const [profiles, chunks, memories] = await Promise.all([
-      base44.entities.BotMemoryProfile.list('-updated_date', 20).catch(() => []),
-      base44.entities.BotMemoryChunk.list('-updated_date', 40).catch(() => []),
-      base44.entities.BotMemory.list('-updated_date', 80).catch(() => [])
+      backend.entities.BotMemoryProfile.list('-updated_date', 20).catch(() => []),
+      backend.entities.BotMemoryChunk.list('-updated_date', 40).catch(() => []),
+      backend.entities.BotMemory.list('-updated_date', 80).catch(() => [])
     ]);
 
     const relevantFacts = selectRelevantMemoryFacts({
@@ -310,7 +310,7 @@ export default function JackieAI() {
       });
     } else {
       const prompt = buildPrompt(msg || 'Analyze the attached files.', relevantFacts);
-      response = await base44.integrations.Core.InvokeLLM({
+      response = await backend.integrations.Core.InvokeLLM({
         prompt,
         ...(fileUrls.length > 0 ? { file_urls: fileUrls } : {}),
       });
@@ -401,7 +401,7 @@ export default function JackieAI() {
     let createdBot = null;
 
     if (foundryPreview.bot) {
-      createdBot = await base44.entities.UserBot.create(foundryPreview.bot);
+      createdBot = await backend.entities.UserBot.create(foundryPreview.bot);
       setUserBots(prev => {
         const nextBots = [createdBot, ...prev].slice(0, 20);
         writeCachedValue('jackie_user_bots', nextBots);
@@ -415,7 +415,7 @@ export default function JackieAI() {
       const enc = new TextEncoder().encode(raw);
       const buf = await crypto.subtle.digest('SHA-256', enc);
       const hashed = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      await base44.entities.ApiKey.create({
+      await backend.entities.ApiKey.create({
         name: foundryPreview.apiKey.name,
         hashed_key: hashed,
         key_prefix: raw.slice(0, 15) + '...',
@@ -440,7 +440,7 @@ export default function JackieAI() {
 
   const handleSave = async (content) => {
     const tagMap = { code: 'code', visual: 'ui', builder: 'system', chat: 'general' };
-    await base44.entities.JackieSaved.create({
+    await backend.entities.JackieSaved.create({
       title: content.slice(0, 60),
       content,
       tag: tagMap[mode] || 'general',

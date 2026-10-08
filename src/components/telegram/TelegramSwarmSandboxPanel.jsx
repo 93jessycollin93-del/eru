@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { FlaskConical, Loader2, Send, Sparkles } from 'lucide-react';
 
 export default function TelegramSwarmSandboxPanel({ bot, sessions = [] }) {
@@ -17,7 +17,7 @@ export default function TelegramSwarmSandboxPanel({ bot, sessions = [] }) {
     setLoading(true);
     setResult(null);
     try {
-      const response = await base44.functions.invoke('simulateTelegramSwarm', {
+      const response = await backend.functions.invoke('simulateTelegramSwarm', {
         botId: bot.id,
         incomingText: message,
         userLabel,

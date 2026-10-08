@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Layers3, Save, RefreshCcw } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { applyRootVariables } from '@/lib/themeEngine';
@@ -149,9 +149,9 @@ export default function AdvancedThemeStudio() {
     };
 
     if (editingThemeId) {
-      await base44.entities.CustomThemeSetting.update(editingThemeId, payload);
+      await backend.entities.CustomThemeSetting.update(editingThemeId, payload);
     } else {
-      const created = await base44.entities.CustomThemeSetting.create(payload);
+      const created = await backend.entities.CustomThemeSetting.create(payload);
       setEditingThemeId(created.id);
     }
     await reloadCustomThemes();
@@ -189,7 +189,7 @@ export default function AdvancedThemeStudio() {
   const resetScopeToGlobal = async () => {
     const activeTheme = customThemes.find((item) => item.scope_type === 'page' && item.scope_key === location.pathname);
     if (activeTheme) {
-      await base44.entities.CustomThemeSetting.delete(activeTheme.id);
+      await backend.entities.CustomThemeSetting.delete(activeTheme.id);
       await reloadCustomThemes();
     }
     setStatus('Reset to global');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bell, CheckCheck } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 function NotificationItem({ notification, onRead }) {
   return (
@@ -24,7 +24,7 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     loadNotifications().catch(() => {});
-    const unsubscribe = base44.entities.AppNotification.subscribe((event) => {
+    const unsubscribe = backend.entities.AppNotification.subscribe((event) => {
       if (event.type === 'create') {
         setNotifications((prev) => [event.data, ...prev.filter((item) => item.id !== event.id)].slice(0, 50));
       } else if (event.type === 'update') {
@@ -38,7 +38,7 @@ export default function NotificationCenter() {
 
   const loadNotifications = async () => {
     try {
-      const data = await base44.entities.AppNotification.list('-created_date', 50);
+      const data = await backend.entities.AppNotification.list('-created_date', 50);
       setNotifications(data || []);
     } catch (error) {
       if (error?.status !== 429) {
@@ -49,14 +49,14 @@ export default function NotificationCenter() {
 
   const markAsRead = async (id) => {
     setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, is_read: true } : item));
-    await base44.entities.AppNotification.update(id, { is_read: true }).catch(() => {});
+    await backend.entities.AppNotification.update(id, { is_read: true }).catch(() => {});
   };
 
   const markAllAsRead = async () => {
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
     if (unreadIds.length === 0) return;
     setNotifications((prev) => prev.map((item) => unreadIds.includes(item.id) ? { ...item, is_read: true } : item));
-    await Promise.allSettled(unreadIds.map((id) => base44.entities.AppNotification.update(id, { is_read: true })));
+    await Promise.allSettled(unreadIds.map((id) => backend.entities.AppNotification.update(id, { is_read: true })));
   };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;

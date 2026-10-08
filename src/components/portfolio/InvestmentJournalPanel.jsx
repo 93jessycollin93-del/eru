@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NotebookPen, Plus } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const EMPTY_ENTRY = {
   title: '',
@@ -19,7 +19,7 @@ export default function InvestmentJournalPanel() {
   const [showForm, setShowForm] = useState(false);
 
   const loadEntries = async () => {
-    const data = await base44.entities.InvestmentJournalEntry.list('-created_date', 50);
+    const data = await backend.entities.InvestmentJournalEntry.list('-created_date', 50);
     setEntries(data || []);
   };
 
@@ -29,7 +29,7 @@ export default function InvestmentJournalPanel() {
 
   const saveEntry = async () => {
     if (!form.title.trim()) return;
-    await base44.entities.InvestmentJournalEntry.create({
+    await backend.entities.InvestmentJournalEntry.create({
       ...form,
       tags: form.tags ? form.tags.split(',').map((item) => item.trim()).filter(Boolean) : [],
     });

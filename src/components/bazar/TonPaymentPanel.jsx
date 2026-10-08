@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Coins, Copy, ExternalLink, Loader2, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { TON_RECEIVING_ADDRESS } from '@/lib/tonConfig';
 import { buildTonTransferUrl, buildTonkeeperUniversalUrl, copyToClipboard } from '@/lib/tonPayment';
 
@@ -43,7 +43,7 @@ export default function TonPaymentPanel({ amountTon, paymentRef, transactionId, 
     setVerifying(true);
     setStatus(null);
     try {
-      const res = await base44.functions.invoke('verifyTonPayment', {
+      const res = await backend.functions.invoke('verifyTonPayment', {
         transactionId,
         paymentRef,
         expectedTon: Number(amountTon),

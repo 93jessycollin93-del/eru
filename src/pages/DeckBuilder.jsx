@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, Plus, Trash2, Save, Edit3, X, Sword, Loader2, AlertTriangle, CheckCircle2, Bot } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { STARTER_CARDS, ELEMENT_COLORS } from '@/components/cards/StarterCards';
 import CardDisplay from '@/components/cards/CardDisplay';
 import BattleView from '@/components/cards/BattleView';
@@ -40,8 +40,8 @@ export default function DeckBuilder() {
   const loadAll = async () => {
     setLoading(true);
     const [owned, savedDecks] = await Promise.all([
-      base44.entities.Card.list('-created_date', 200),
-      base44.entities.PlayerDeck.list('-updated_date', 50).catch(() => []),
+      backend.entities.Card.list('-created_date', 200),
+      backend.entities.PlayerDeck.list('-updated_date', 50).catch(() => []),
     ]);
     // Same card pool the rest of the app uses: owned cards + starter pool fallback.
     const ownedNames = new Set(owned.map((c) => c.name));
@@ -110,14 +110,14 @@ export default function DeckBuilder() {
     };
     try {
       if (editing.id) {
-        await base44.entities.PlayerDeck.update(editing.id, payload);
+        await backend.entities.PlayerDeck.update(editing.id, payload);
       } else {
-        await base44.entities.PlayerDeck.create(payload);
+        await backend.entities.PlayerDeck.create(payload);
       }
       // If marking active, demote others.
       if (editing.is_active) {
         const others = decks.filter((d) => d.id !== editing.id && d.is_active);
-        await Promise.all(others.map((d) => base44.entities.PlayerDeck.update(d.id, { is_active: false }).catch(() => null)));
+        await Promise.all(others.map((d) => backend.entities.PlayerDeck.update(d.id, { is_active: false }).catch(() => null)));
       }
       showToast(editing.id ? 'Deck updated' : 'Deck saved');
       setEditing(null);
@@ -129,15 +129,15 @@ export default function DeckBuilder() {
 
   const deleteDeck = async (deck) => {
     if (!deck?.id) return;
-    await base44.entities.PlayerDeck.delete(deck.id).catch(() => null);
+    await backend.entities.PlayerDeck.delete(deck.id).catch(() => null);
     showToast('Deck deleted');
     await loadAll();
   };
 
   const setActive = async (deck) => {
-    await base44.entities.PlayerDeck.update(deck.id, { is_active: true });
+    await backend.entities.PlayerDeck.update(deck.id, { is_active: true });
     const others = decks.filter((d) => d.id !== deck.id && d.is_active);
-    await Promise.all(others.map((d) => base44.entities.PlayerDeck.update(d.id, { is_active: false }).catch(() => null)));
+    await Promise.all(others.map((d) => backend.entities.PlayerDeck.update(d.id, { is_active: false }).catch(() => null)));
     await loadAll();
   };
 

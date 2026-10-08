@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Layers3, Search, Download, Gauge, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function TieredMemoryPanel({ bots }) {
   const [memories, setMemories] = useState([]);
@@ -13,9 +13,9 @@ export default function TieredMemoryPanel({ bots }) {
 
   const load = async () => {
     const [memoryRows, chunkRows, profileRows] = await Promise.all([
-      base44.entities.BotMemory.list('-created_date', 300),
-      base44.entities.BotMemoryChunk.list('-created_date', 200),
-      base44.entities.BotMemoryProfile.list('-updated_date', 200),
+      backend.entities.BotMemory.list('-created_date', 300),
+      backend.entities.BotMemoryChunk.list('-created_date', 200),
+      backend.entities.BotMemoryProfile.list('-updated_date', 200),
     ]);
     setMemories(memoryRows);
     setChunks(chunkRows);
@@ -34,7 +34,7 @@ export default function TieredMemoryPanel({ bots }) {
   const handleArchive = async () => {
     if (selectedBot === 'all') return;
     setArchiving(true);
-    await base44.functions.invoke('archiveBotMemory', { botId: selectedBot });
+    await backend.functions.invoke('archiveBotMemory', { botId: selectedBot });
     await load();
     setArchiving(false);
   };
@@ -44,7 +44,7 @@ export default function TieredMemoryPanel({ bots }) {
 
   const handleRefreshProfiles = async () => {
     setRefreshingProfiles(true);
-    await base44.functions.invoke('summarizeInactiveBotMemory', { inactivityHours: 999999, chunkSize: 20 });
+    await backend.functions.invoke('summarizeInactiveBotMemory', { inactivityHours: 999999, chunkSize: 20 });
     await load();
     setRefreshingProfiles(false);
   };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import BottomSheet from '../mobile/BottomSheet';
 
 /**
@@ -21,9 +21,9 @@ export default function DeleteAccountButton() {
     setSubmitting(true);
     setError('');
     try {
-      await base44.functions.invoke('deleteMyData', {});
+      await backend.functions.invoke('deleteMyData', {});
       // Backend deleted the user — log out and reload.
-      try { await base44.auth.logout('/'); } catch { window.location.assign('/'); }
+      try { await backend.auth.logout('/'); } catch { window.location.assign('/'); }
     } catch (err) {
       setError(err?.message || 'Account deletion failed. Please try again.');
       setSubmitting(false);

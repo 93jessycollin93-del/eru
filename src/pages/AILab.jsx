@@ -36,7 +36,7 @@ import BotDataSourcesPanel from '../components/ailab/BotDataSourcesPanel';
 import KnowledgeBaseManager from '../components/ailab/KnowledgeBaseManager';
 import { invokeSelectedModel, renderPromptTemplate } from '../components/ailab/modelRouting';
 import { runRegressionSuite } from '../components/ailab/regressionTesting';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import MobileSelect from '../components/mobile/MobileSelect';
 
 const ROLES = [
@@ -74,7 +74,7 @@ const PAGE_OPTIONS = [
 
 const PROGRAMMING_MEMORY_PROMPT = "This bot has access to Jackie's permanent core programming memory with both master and per-language knowledge for Python, JavaScript, Java, C++, C#, Ruby, Go, Swift, Kotlin, PHP, C, Rust, Assembly, Bash/Shell, Perl, R, MATLAB, TypeScript, HTML/CSS, Haskell, Scala, Erlang, SQL, Dart, and Lua. Use that knowledge by default for coding, complex task execution, teaching, comparing languages, debugging, refactoring, architecture decisions, and multi-step technical problem solving. When a request involves software or systems work, proactively apply this knowledge instead of waiting to be asked.";
 
-const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '', model_provider: 'base44', model_name: '', api_label: '', prompt_template_id: '', prompt_template_name: '', prompt_template_values: {}, data_sources: [] };
+const BLANK = { name: '', description: '', role: 'assistant', personality: '', instructions: PROGRAMMING_MEMORY_PROMPT, response_style: 'detailed', memory_enabled: true, is_public: false, status: 'active', page_assignments: [], connected_bot_ids: [], handoff_instructions: '', model_provider: 'builtin', model_name: '', api_label: '', prompt_template_id: '', prompt_template_name: '', prompt_template_values: {}, data_sources: [] };
 
 const downloadJson = (filename, data) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -110,14 +110,14 @@ export default function AILab() {
 
   useEffect(() => {
     loadBots();
-    base44.entities.BotSquad.list('-updated_date', 100).then(setSquads).catch(() => {});
-    base44.entities.BotGlobalPolicy.list('-created_date', 1).then((rows) => setGlobalPolicy(rows?.[0] || null)).catch(() => {});
-    base44.entities.PromptTemplate.list('-updated_date', 100).then(setPromptTemplates).catch(() => {});
+    backend.entities.BotSquad.list('-updated_date', 100).then(setSquads).catch(() => {});
+    backend.entities.BotGlobalPolicy.list('-created_date', 1).then((rows) => setGlobalPolicy(rows?.[0] || null)).catch(() => {});
+    backend.entities.PromptTemplate.list('-updated_date', 100).then(setPromptTemplates).catch(() => {});
   }, []);
 
   const loadBots = async () => {
     setLoading(true);
-    const data = await base44.entities.UserBot.list('-created_date', 100);
+    const data = await backend.entities.UserBot.list('-created_date', 100);
     setBots(data);
     setLoading(false);
   };
@@ -126,10 +126,10 @@ export default function AILab() {
     if (!form.name) return;
     let savedBot;
     if (editId) {
-      await base44.entities.UserBot.update(editId, form);
+      await backend.entities.UserBot.update(editId, form);
       savedBot = { ...bots.find((bot) => bot.id === editId), ...form, id: editId };
     } else {
-      savedBot = await base44.entities.UserBot.create(form);
+      savedBot = await backend.entities.UserBot.create(form);
     }
     if (savedBot?.id) {
       await runRegressionSuite({ bot: savedBot, instructions: savedBot.instructions || '', globalPolicy });
@@ -138,7 +138,7 @@ export default function AILab() {
   };
 
   const del = async (id) => {
-    await base44.entities.UserBot.delete(id);
+    await backend.entities.UserBot.delete(id);
     loadBots();
   };
 
@@ -155,7 +155,7 @@ export default function AILab() {
     if (selectedBots.length === 0) return;
 
     if (bulkAction === 'delete') {
-      await Promise.all(selectedBots.map((bot) => base44.entities.UserBot.delete(bot.id)));
+      await Promise.all(selectedBots.map((bot) => backend.entities.UserBot.delete(bot.id)));
     } else {
       const updates = {
         publish: { is_public: true },
@@ -163,7 +163,7 @@ export default function AILab() {
         activate: { status: 'active' },
         pause: { status: 'paused' },
       };
-      await Promise.all(selectedBots.map((bot) => base44.entities.UserBot.update(bot.id, updates[bulkAction])));
+      await Promise.all(selectedBots.map((bot) => backend.entities.UserBot.update(bot.id, updates[bulkAction])));
     }
 
     setSelectedBotIds([]);
@@ -171,13 +171,13 @@ export default function AILab() {
   };
 
   const startEdit = (bot) => {
-    setForm({ name: bot.name, description: bot.description || '', role: bot.role, personality: bot.personality || '', instructions: bot.instructions || PROGRAMMING_MEMORY_PROMPT, response_style: bot.response_style || 'detailed', memory_enabled: bot.memory_enabled !== false, is_public: !!bot.is_public, status: bot.status || 'active', model_provider: bot.model_provider || 'base44', model_name: bot.model_name || '', api_label: bot.api_label || '', prompt_template_id: bot.prompt_template_id || '', prompt_template_values: bot.prompt_template_values || {}, data_sources: bot.data_sources || [] });
+    setForm({ name: bot.name, description: bot.description || '', role: bot.role, personality: bot.personality || '', instructions: bot.instructions || PROGRAMMING_MEMORY_PROMPT, response_style: bot.response_style || 'detailed', memory_enabled: bot.memory_enabled !== false, is_public: !!bot.is_public, status: bot.status || 'active', model_provider: bot.model_provider || 'builtin', model_name: bot.model_name || '', api_label: bot.api_label || '', prompt_template_id: bot.prompt_template_id || '', prompt_template_values: bot.prompt_template_values || {}, data_sources: bot.data_sources || [] });
     setEditId(bot.id);
     setTab('build');
   };
 
   const duplicate = async (bot) => {
-    await base44.entities.UserBot.create({ ...bot, name: bot.name + ' (copy)', id: undefined });
+    await backend.entities.UserBot.create({ ...bot, name: bot.name + ' (copy)', id: undefined });
     loadBots();
   };
 
@@ -190,7 +190,7 @@ export default function AILab() {
   };
 
   const saveBotAsAsset = async (bot) => {
-    await base44.entities.JackieSaved.create({
+    await backend.entities.JackieSaved.create({
       title: bot.name,
       content: JSON.stringify(bot, null, 2),
       tag: 'bot',
@@ -208,7 +208,7 @@ export default function AILab() {
     if ((newLevel >= 5 || newUsage >= 10) && !caps.includes('web_search')) newCaps.push('web_search');
     if ((newLevel >= 7 || newUsage >= 20) && !caps.includes('code_execution')) newCaps.push('code_execution');
     if ((newLevel >= 10 || newUsage >= 30) && !caps.includes('auto_schedule')) newCaps.push('auto_schedule');
-    await base44.entities.UserBot.update(bot.id, {
+    await backend.entities.UserBot.update(bot.id, {
       xp: newXp, level: newLevel, usage_count: newUsage,
       unlocked_capabilities: newCaps, last_interaction: new Date().toISOString()
     });

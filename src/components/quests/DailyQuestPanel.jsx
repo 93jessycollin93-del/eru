@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Coins, CheckCircle2, Loader2, Sparkles, Target, AlertTriangle, RefreshCcw } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { ensureDailyQuests, claimQuest, summarizeQuests } from '@/lib/dailyQuests';
 
 /**
@@ -24,7 +24,7 @@ export default function DailyQuestPanel({ onGoldChange, compact = false }) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const me = await base44.auth.me();
+      const me = await backend.auth.me();
       const list = await ensureDailyQuests(me?.email);
       setQuests(list || []);
     } catch (err) {

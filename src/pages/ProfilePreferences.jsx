@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { User2, Bot, MessageSquare, Sparkles, Bell, Save, CheckCircle2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import BadgeShowcase from '@/components/profile/BadgeShowcase';
 import ReputationSnapshot from '@/components/profile/ReputationSnapshot';
@@ -59,7 +59,7 @@ export default function ProfilePreferences() {
     const loadRewards = async () => {
       if (!currentUser?.email) return;
       setLoadingRewards(true);
-      const rows = await base44.entities.CollectorRewardProfile
+      const rows = await backend.entities.CollectorRewardProfile
         .filter({ user_email: currentUser.email }, '-updated_date', 1)
         .catch(() => []);
       if (mounted) {
@@ -74,7 +74,7 @@ export default function ProfilePreferences() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await base44.auth.updateMe({
+      await backend.auth.updateMe({
         display_name: displayName.trim(),
         bot_preferences: botPrefs,
       });

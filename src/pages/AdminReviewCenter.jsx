@@ -14,7 +14,7 @@ import {
   getPortalUrl,
   setPortalUrlOverride,
 } from '@/lib/externalPortals';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * Admin Review Center
@@ -53,7 +53,7 @@ function ReviewCenterInner() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const rows = await base44.entities.StorefrontCustomization
+      const rows = await backend.entities.StorefrontCustomization
         .filter({ needs_owner_review: true })
         .catch(() => []);
       if (!cancelled) setFlaggedStorefronts(rows || []);

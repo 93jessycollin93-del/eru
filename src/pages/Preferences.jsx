@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Save, CheckCircle2, SlidersHorizontal } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import DisplayPreferencesSection from '@/components/preferences/DisplayPreferencesSection';
 import SavedContentSection from '@/components/preferences/SavedContentSection';
@@ -17,7 +17,7 @@ import TelegramConnectSection from '@/components/preferences/TelegramConnectSect
  *   3. Payment currency defaults — persisted on the user record
  *
  * Display prefs persist immediately (ThemeContext handles localStorage).
- * Payment prefs are saved explicitly via base44.auth.updateMe to avoid
+ * Payment prefs are saved explicitly via backend.auth.updateMe to avoid
  * accidental overwrites mid-edit.
  */
 const DEFAULT_PAYMENT_PREFS = {
@@ -43,7 +43,7 @@ export default function Preferences() {
   const handleSavePayment = async () => {
     setSaving(true);
     try {
-      await base44.auth.updateMe({ payment_preferences: paymentPrefs });
+      await backend.auth.updateMe({ payment_preferences: paymentPrefs });
       setSavedAt(Date.now());
     } finally {
       setSaving(false);

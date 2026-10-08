@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart2, Users, Zap, TrendingUp, Award } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import SwarmCycleAnalyticsDashboard from './SwarmCycleAnalyticsDashboard';
 
@@ -12,8 +12,8 @@ export default function LabAnalytics({ bots }) {
   useEffect(() => {
     const load = async () => {
       const [m, i] = await Promise.all([
-        base44.entities.BotMemory.list('-created_date', 500),
-        base44.entities.BotImprovement.list('-created_date', 50),
+        backend.entities.BotMemory.list('-created_date', 500),
+        backend.entities.BotImprovement.list('-created_date', 50),
       ]);
       setMemories(m);
       setImprovements(i);

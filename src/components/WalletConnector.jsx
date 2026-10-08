@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Wallet, Loader } from 'lucide-react';
 
 export default function WalletConnector({ onConnected }) {
@@ -28,7 +28,7 @@ export default function WalletConnector({ onConnected }) {
       const chainId = parseInt(await window.ethereum.request({ method: 'eth_chainId' }), 16);
 
       // Save to database
-      const wallet = await base44.entities.ConnectedWallet.create({
+      const wallet = await backend.entities.ConnectedWallet.create({
         user_email: currentUser.email,
         wallet_address: address,
         chain_id: chainId,
@@ -40,7 +40,7 @@ export default function WalletConnector({ onConnected }) {
       setWalletAddress(address);
 
       // Fetch holdings
-      await base44.functions.invoke('fetchWalletHoldings', {
+      await backend.functions.invoke('fetchWalletHoldings', {
         walletAddress: address,
         chainId,
         walletId: wallet.id,

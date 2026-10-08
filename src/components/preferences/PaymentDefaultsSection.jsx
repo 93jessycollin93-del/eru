@@ -5,7 +5,7 @@ import { Coins, Wallet } from 'lucide-react';
  * ----------------------------------------------------------------------------
  * Lets the user pick their default payment currency and fallback method for
  * checkout flows (escrow, marketplace, bazar). Pure controlled UI — parent
- * persists `payment_preferences` on the user record via base44.auth.updateMe.
+ * persists `payment_preferences` on the user record via backend.auth.updateMe.
  *
  * Props:
  *  - prefs    { default_currency, fallback_method, auto_confirm_under }

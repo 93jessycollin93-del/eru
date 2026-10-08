@@ -1,15 +1,15 @@
 import { Pause, Play, Trash2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function AgentTaskList({ tasks = [], onChanged }) {
   const toggleStatus = async (task) => {
     const nextStatus = task.status === 'active' ? 'paused' : 'active';
-    await base44.entities.AgentTask.update(task.id, { status: nextStatus });
+    await backend.entities.AgentTask.update(task.id, { status: nextStatus });
     onChanged?.();
   };
 
   const removeTask = async (taskId) => {
-    await base44.entities.AgentTask.delete(taskId);
+    await backend.entities.AgentTask.delete(taskId);
     onChanged?.();
   };
 

@@ -31,7 +31,6 @@ const AI_PLATFORMS = [
   { id: 'mistral', name: 'Mistral Large', color: '#e879f9', company: 'Mistral', input: 2, output: 6, category: 'Balanced' },
   // Vibe coding tools
   { id: 'cursor', name: 'Cursor Pro', color: '#38bdf8', company: 'Vibe Coding', input: 20, output: 20, category: 'Vibe Coding', monthly: 20 },
-  { id: 'base44', name: 'Base44', color: '#00e676', company: 'Vibe Coding', input: 0, output: 0, category: 'Vibe Coding', monthly: 29 },
   { id: 'lovable', name: 'Lovable', color: '#f472b6', company: 'Vibe Coding', input: 0, output: 0, category: 'Vibe Coding', monthly: 25 },
   { id: 'bolt', name: 'Bolt.new', color: '#818cf8', company: 'Vibe Coding', input: 0, output: 0, category: 'Vibe Coding', monthly: 20 },
   { id: 'windsurf', name: 'Windsurf', color: '#22d3ee', company: 'Vibe Coding', input: 0, output: 0, category: 'Vibe Coding', monthly: 15 },

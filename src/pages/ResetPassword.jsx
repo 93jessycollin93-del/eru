@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function ResetPassword() {
@@ -21,7 +21,7 @@ export default function ResetPassword() {
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     setLoading(true);
     try {
-      await base44.auth.resetPassword({ resetToken, newPassword: password });
+      await backend.auth.resetPassword({ resetToken, newPassword: password });
       setDone(true);
     } catch (err) {
       setError(err?.message || 'Reset failed. The link may have expired.');

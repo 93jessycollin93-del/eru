@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { MessageSquare, Star } from 'lucide-react';
 
 export default function FeedbackPanel({ onSubmitted }) {
@@ -8,7 +8,7 @@ export default function FeedbackPanel({ onSubmitted }) {
 
   const submit = async () => {
     if (!form.title.trim() || !form.message.trim()) return;
-    await base44.entities.JackieFeedback.create({
+    await backend.entities.JackieFeedback.create({
       ...form,
       context: 'jackie_ai'
     });

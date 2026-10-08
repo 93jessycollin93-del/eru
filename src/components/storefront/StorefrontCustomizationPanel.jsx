@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Save, Eye, EyeOff, Image as ImageIcon, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { isSafeImageUrl } from '@/lib/safeUrl';
 import { logAuditEvent } from '@/lib/auditEvents';
@@ -59,7 +59,7 @@ export default function StorefrontCustomizationPanel({ storeSlug, ownerEmail, on
     let cancelled = false;
     (async () => {
       if (!storeSlug) return;
-      const rows = await base44.entities.StorefrontCustomization
+      const rows = await backend.entities.StorefrontCustomization
         .filter({ store_slug: storeSlug })
         .catch(() => []);
       if (cancelled) return;
@@ -106,9 +106,9 @@ export default function StorefrontCustomizationPanel({ storeSlug, ownerEmail, on
         owner_email: effectiveOwner,
       };
       if (record?.id) {
-        await base44.entities.StorefrontCustomization.update(record.id, payload);
+        await backend.entities.StorefrontCustomization.update(record.id, payload);
       } else {
-        const created = await base44.entities.StorefrontCustomization.create(payload);
+        const created = await backend.entities.StorefrontCustomization.create(payload);
         setRecord(created);
       }
       logAuditEvent(user, {

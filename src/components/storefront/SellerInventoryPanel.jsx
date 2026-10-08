@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Edit2, Pause, Play, Trash2, X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import ListingEditor from './ListingEditor';
 
 /**
@@ -25,7 +25,7 @@ export default function SellerInventoryPanel({ listings = [], onChanged }) {
     if (!editing) return;
     setBusyId(editing.id);
     try {
-      await base44.entities.StorefrontListing.update(editing.id, {
+      await backend.entities.StorefrontListing.update(editing.id, {
         ...values,
         currency: values.crypto_currency,
       });
@@ -39,7 +39,7 @@ export default function SellerInventoryPanel({ listings = [], onChanged }) {
   const togglePause = async (listing) => {
     setBusyId(listing.id);
     try {
-      await base44.entities.StorefrontListing.update(listing.id, {
+      await backend.entities.StorefrontListing.update(listing.id, {
         status: listing.status === 'active' ? 'paused' : 'active',
       });
       refresh();
@@ -52,7 +52,7 @@ export default function SellerInventoryPanel({ listings = [], onChanged }) {
     if (!confirm(`Remove "${listing.title}"? This cannot be undone.`)) return;
     setBusyId(listing.id);
     try {
-      await base44.entities.StorefrontListing.delete(listing.id);
+      await backend.entities.StorefrontListing.delete(listing.id);
       refresh();
     } finally {
       setBusyId(null);

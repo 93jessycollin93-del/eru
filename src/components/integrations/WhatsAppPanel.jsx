@@ -3,7 +3,7 @@ import { MessageCircle, ShieldAlert, Inbox, Send, FileText, Copy, CheckCircle2, 
 import IntegrationStatusBadge from './IntegrationStatusBadge';
 import { STATUS } from '@/lib/integrationRegistry';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * WhatsAppPanel — flagship integration setup. Two paths:
@@ -226,7 +226,7 @@ function OutgoingComposer({ disabled, provider, isAdmin }) {
     if (disabled || !to || !text || !isAdmin) return;
     setSending(true); setResult(null);
     try {
-      const res = await base44.functions.invoke('whatsappSendMessage', { provider, to, text });
+      const res = await backend.functions.invoke('whatsappSendMessage', { provider, to, text });
       setResult(res?.data?.error ? { error: res.data.error } : { ok: true });
       if (!res?.data?.error) setText('');
     } catch (e) {

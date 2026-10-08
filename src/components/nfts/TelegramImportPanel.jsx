@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Bot, Link2, RefreshCw, Upload, CheckCircle2 } from 'lucide-react';
 
 const EXAMPLE_PAYLOAD = `[
@@ -24,7 +24,7 @@ export default function TelegramImportPanel({ onImported }) {
 
   const loadAccount = async () => {
     setLoading(true);
-    const rows = await base44.entities.TelegramAccount?.list?.('-updated_date', 20).catch(() => []);
+    const rows = await backend.entities.TelegramAccount?.list?.('-updated_date', 20).catch(() => []);
     setAccount((rows || [])[0] || null);
     setLoading(false);
   };
@@ -35,7 +35,7 @@ export default function TelegramImportPanel({ onImported }) {
 
   const generateCode = async () => {
     setGenerating(true);
-    const response = await base44.functions.invoke('generateTelegramLinkCode', {});
+    const response = await backend.functions.invoke('generateTelegramLinkCode', {});
     setLinkCode(response.data?.link_code || '');
     setMessage('Link code ready. Send /link plus the code in your Telegram bot chat.');
     await loadAccount();
@@ -45,7 +45,7 @@ export default function TelegramImportPanel({ onImported }) {
   const importManual = async () => {
     setImporting(true);
     const parsed = JSON.parse(manualJson);
-    const response = await base44.functions.invoke('importTelegramNfts', {
+    const response = await backend.functions.invoke('importTelegramNfts', {
       nfts: parsed,
       source: 'manual'
     });

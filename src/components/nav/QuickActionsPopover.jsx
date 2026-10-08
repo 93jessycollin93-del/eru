@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Plus, CheckSquare, FolderOpen, NotebookPen, X } from 'lucide-react';
 
 /**
  * QuickActionsPopover
  * ----------------------------------------------------------------------------
  * Same business logic as the legacy FloatingQuickActions (create Task /
- * Project / Note via base44 entities), but presented as a nav-anchored
+ * Project / Note via backend entities), but presented as a nav-anchored
  * popover instead of a free-floating bubble. Triggered by a nav button
  * exposing the Plus icon.
  * --------------------------------------------------------------------------*/
@@ -16,19 +16,19 @@ const ACTIONS = [
     id: 'task',
     label: 'New Task',
     icon: CheckSquare,
-    create: () => base44.entities.Task.create({ title: 'New Task', status: 'todo', priority: 'medium' }),
+    create: () => backend.entities.Task.create({ title: 'New Task', status: 'todo', priority: 'medium' }),
   },
   {
     id: 'project',
     label: 'New Project',
     icon: FolderOpen,
-    create: () => base44.entities.Project.create({ name: 'New Project', status: 'planned' }),
+    create: () => backend.entities.Project.create({ name: 'New Project', status: 'planned' }),
   },
   {
     id: 'note',
     label: 'New Note',
     icon: NotebookPen,
-    create: () => base44.entities.JackieSaved.create({ title: 'Quick Note', content: 'New note', tag: 'general', asset_type: 'text' }),
+    create: () => backend.entities.JackieSaved.create({ title: 'Quick Note', content: 'New note', tag: 'general', asset_type: 'text' }),
   },
 ];
 

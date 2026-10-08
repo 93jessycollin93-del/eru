@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { Hammer, Rocket, Star, Globe, Zap, ArrowRight, Circle } from 'lucide-react';
 
@@ -112,8 +112,8 @@ export default function Pipeline() {
   const load = async () => {
     setLoading(true);
     const [b, a] = await Promise.all([
-      base44.entities.UserBot.list('-created_date', 50),
-      base44.entities.JackieSaved.list('-created_date', 30),
+      backend.entities.UserBot.list('-created_date', 50),
+      backend.entities.JackieSaved.list('-created_date', 30),
     ]);
     setBots(b);
     setAssets(a);
@@ -122,18 +122,18 @@ export default function Pipeline() {
 
   const advanceBot = async (bot, currentStage) => {
     if (currentStage === 'build') {
-      await base44.entities.UserBot.update(bot.id, { status: 'active' });
+      await backend.entities.UserBot.update(bot.id, { status: 'active' });
     } else if (currentStage === 'deploy') {
-      await base44.entities.UserBot.update(bot.id, { is_public: true });
+      await backend.entities.UserBot.update(bot.id, { is_public: true });
     }
     load();
   };
 
   const retractBot = async (bot, currentStage) => {
     if (currentStage === 'showcase') {
-      await base44.entities.UserBot.update(bot.id, { is_public: false });
+      await backend.entities.UserBot.update(bot.id, { is_public: false });
     } else if (currentStage === 'deploy') {
-      await base44.entities.UserBot.update(bot.id, { status: 'inactive' });
+      await backend.entities.UserBot.update(bot.id, { status: 'inactive' });
     }
     load();
   };

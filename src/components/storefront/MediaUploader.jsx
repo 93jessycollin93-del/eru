@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { ImagePlus, Upload, Loader2, Trash2, Video } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * MediaUploader
@@ -8,7 +8,7 @@ import { base44 } from '@/api/base44Client';
  * Compact, reusable uploader for storefront listings. Handles:
  *   • Picking files (image or video) from the device — works in
  *     Telegram Mini App / mobile browsers via native <input type="file">.
- *   • Uploading them through base44.integrations.Core.UploadFile.
+ *   • Uploading them through backend.integrations.Core.UploadFile.
  *   • Pasting an existing media URL (kept for backwards-compat).
  *   • Previewing each item, including videos.
  *   • Removing individual items.
@@ -47,7 +47,7 @@ export default function MediaUploader({ urls = [], onChange, max = 6 }) {
           setError(`${file.name} is over ${MAX_SIZE_MB}MB — skipped.`);
           continue;
         }
-        const res = await base44.integrations.Core.UploadFile({ file });
+        const res = await backend.integrations.Core.UploadFile({ file });
         if (res?.file_url) uploaded.push(res.file_url);
       }
       if (uploaded.length) update([...urls, ...uploaded]);

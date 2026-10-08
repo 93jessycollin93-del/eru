@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const EMPTY_TASK = {
   name: '',
@@ -25,7 +25,7 @@ export default function AgentTaskBuilder({ bots = [], onCreated }) {
   const saveTask = async () => {
     if (!form.name || !form.bot_id) return;
     setSaving(true);
-    await base44.entities.AgentTask.create({
+    await backend.entities.AgentTask.create({
       name: form.name,
       description: form.description,
       bot_id: form.bot_id,

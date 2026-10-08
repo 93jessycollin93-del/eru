@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BookOpen, Check, Loader2, Plus, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -20,7 +20,7 @@ export default function TelegramKnowledgeLinkPanel({ bot }) {
   const loadDocs = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.KnowledgeBaseDocument.list('-updated_date', 200);
+      const list = await backend.entities.KnowledgeBaseDocument.list('-updated_date', 200);
       setDocs(list || []);
     } catch {
       setDocs([]);
@@ -42,7 +42,7 @@ export default function TelegramKnowledgeLinkPanel({ bot }) {
       const next = linked
         ? (doc.linked_bot_ids || []).filter((id) => id !== bot.id)
         : [...(doc.linked_bot_ids || []), bot.id];
-      await base44.entities.KnowledgeBaseDocument.update(doc.id, { linked_bot_ids: next });
+      await backend.entities.KnowledgeBaseDocument.update(doc.id, { linked_bot_ids: next });
       setDocs((prev) => prev.map((d) => d.id === doc.id ? { ...d, linked_bot_ids: next } : d));
     } catch { /* keep UI stable */ }
     setSavingId(null);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link2, Sparkles, Wifi, WifiOff, RefreshCw, Smartphone, ExternalLink } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import {
   LOCAL_PROVIDERS,
   isLocalProvider,
@@ -13,7 +13,7 @@ const HUGGING_FACE_CONNECTOR_ID = '69d912f9261810057ced4675';
 const HUGGING_FACE_DEFAULT_MODEL = 'mistralai/Mistral-7B-Instruct-v0.3';
 
 const PROVIDERS = [
-  { value: 'base44', label: 'Base44 AI', models: ['automatic'] },
+  { value: 'builtin', label: 'Built-in AI', models: ['automatic'] },
   { value: 'openai', label: 'OpenAI', models: ['gpt-4o-mini', 'gpt-5-mini'] },
   { value: 'anthropic', label: 'Anthropic', models: ['claude-3-5-sonnet', 'claude-3-5-haiku'] },
   { value: 'huggingface_builder', label: 'Hugging Face (builder key)', models: ['mistralai/Mistral-7B-Instruct-v0.3', 'meta-llama/Meta-Llama-3-8B-Instruct'] },
@@ -69,7 +69,7 @@ export default function ModelProviderPanel({ value, onChange }) {
 
   const checkConnection = async () => {
     try {
-      await base44.functions.invoke('invokeExternalModel', { provider: 'huggingface_user', model: HUGGING_FACE_DEFAULT_MODEL, prompt: 'Hello' });
+      await backend.functions.invoke('invokeExternalModel', { provider: 'huggingface_user', model: HUGGING_FACE_DEFAULT_MODEL, prompt: 'Hello' });
       setAuthed(true);
     } catch {
       setAuthed(false);
@@ -77,14 +77,14 @@ export default function ModelProviderPanel({ value, onChange }) {
   };
 
   useEffect(() => {
-    base44.auth.isAuthenticated().then(async (isAuthenticated) => {
+    backend.auth.isAuthenticated().then(async (isAuthenticated) => {
       if (!isAuthenticated) return;
       await checkConnection();
     });
   }, []);
 
   const handleConnect = async () => {
-    const url = await base44.connectors.connectAppUser(HUGGING_FACE_CONNECTOR_ID);
+    const url = await backend.connectors.connectAppUser(HUGGING_FACE_CONNECTOR_ID);
     const popup = window.open(url, '_blank');
     const timer = setInterval(async () => {
       if (!popup || popup.closed) {
@@ -102,7 +102,7 @@ export default function ModelProviderPanel({ value, onChange }) {
       </div>
 
       <select
-        value={value.model_provider || 'base44'}
+        value={value.model_provider || 'builtin'}
         onChange={(e) => onChange({ model_provider: e.target.value, model_name: PROVIDERS.find((item) => item.value === e.target.value)?.models?.[0] || '' })}
         className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none"
       >

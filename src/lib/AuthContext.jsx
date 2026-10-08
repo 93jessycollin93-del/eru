@@ -1,8 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { syncCollectorRewardProfile } from '@/lib/collectorRewards';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
 
@@ -10,140 +8,42 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
-  useEffect(() => {
-    checkAppState();
-  }, []);
-
-  const checkAppState = async () => {
+  // Ask the backend client who is signed in. With no backend connected this
+  // resolves to "signed out", and the app renders as a guest.
+  const checkUserAuth = useCallback(async () => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
     try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-        }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        const status = appError?.status;
-        const reason = appError?.data?.extra_data?.reason;
-        const message = appError?.message || 'Failed to load app';
-
-        console.error('App state check failed:', {
-          status,
-          reason,
-          message,
-        });
-        
-        // Handle app-level errors
-        if (status === 403 && reason) {
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-      }
-    } catch (error) {
-      const message = error?.message || 'An unexpected error occurred';
-      console.error('Unexpected error:', { message });
-      setAuthError({
-        type: 'unknown',
-        message
-      });
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-    }
-  };
-
-  const checkUserAuth = async () => {
-    try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      const currentUser = await backend.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
       if (currentUser?.email) {
         syncCollectorRewardProfile(currentUser.email).catch(() => null);
       }
-      setIsLoadingAuth(false);
-    } catch (error) {
-      const status = error?.status;
-      const message = error?.message || 'Authentication check failed';
-
-      console.error('User auth check failed:', {
-        status,
-        message,
-      });
-      setIsLoadingAuth(false);
+    } catch {
+      setUser(null);
       setIsAuthenticated(false);
-      
-      // If user auth fails, it might be an expired token
-      if (status === 401 || status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
+    } finally {
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkUserAuth();
+  }, [checkUserAuth]);
 
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
+    backend.auth.logout(shouldRedirect ? '/' : undefined);
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    backend.auth.redirectToLogin();
   };
 
   // Session timeout: 30 minutes of inactivity
@@ -188,16 +88,18 @@ export const AuthProvider = ({ children }) => {
   }, [isAuthenticated, resetSessionTimeout]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
       isLoadingAuth,
-      isLoadingPublicSettings,
+      isLoadingPublicSettings: false,
+      authChecked,
       authError,
-      appPublicSettings,
+      appPublicSettings: null,
       logout,
       navigateToLogin,
-      checkAppState,
+      checkAppState: checkUserAuth,
+      checkUserAuth,
       currentUser: user
     }}>
       {children}

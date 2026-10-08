@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { enforcePaymentGate } from '@/lib/paymentGuards';
 
 /**
@@ -23,8 +23,8 @@ export async function grantJade(userId, jadeId, transactionId, price) {
   }
 
   // Transfer jade to user
-  const jade = await base44.entities.JadeAsset.read(jadeId);
-  await base44.entities.JadeAsset.update(jadeId, {
+  const jade = await backend.entities.JadeAsset.read(jadeId);
+  await backend.entities.JadeAsset.update(jadeId, {
     ownership_timeline: [
       ...(jade.ownership_timeline || []),
       { owner: userId, acquired_at: new Date().toISOString() },
@@ -46,7 +46,7 @@ export async function grantNFT(userId, nftId, transactionId, price) {
   }
 
   // Ownership transfer logic — update your NFT entity
-  // Example: await base44.entities.NFT.update(nftId, { owner: userId });
+  // Example: await backend.entities.NFT.update(nftId, { owner: userId });
 
   return { success: true, nftId, transactionId };
 }
@@ -62,8 +62,8 @@ export async function grantCard(userId, cardId, transactionId, price) {
   }
 
   // Ownership transfer logic
-  const card = await base44.entities.Card.read(cardId);
-  await base44.entities.Card.update(cardId, {
+  const card = await backend.entities.Card.read(cardId);
+  await backend.entities.Card.update(cardId, {
     quantity: (card.quantity || 1) + 1,
   });
 
@@ -96,9 +96,9 @@ export async function grantCurrency(userId, amount, transactionId) {
   }
 
   // Update user balance
-  const user = await base44.auth.me();
+  const user = await backend.auth.me();
   const currentBalance = user.balance || 0;
-  await base44.auth.updateMe({ balance: currentBalance + amount });
+  await backend.auth.updateMe({ balance: currentBalance + amount });
 
   return { success: true, amount, transactionId };
 }

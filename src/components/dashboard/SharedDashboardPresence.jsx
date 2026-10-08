@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Users } from 'lucide-react';
 import { maskEmail } from '@/lib/privacy';
 
@@ -39,16 +39,16 @@ export default function SharedDashboardPresence() {
     };
 
     const safeListSessions = async () => {
-      const data = await base44.entities.SharedDashboardSession.filter({ dashboard_key: DASHBOARD_KEY }, undefined, 20);
+      const data = await backend.entities.SharedDashboardSession.filter({ dashboard_key: DASHBOARD_KEY }, undefined, 20);
       applySessions(data);
     };
 
     const boot = async () => {
-      const me = await base44.auth.me();
+      const me = await backend.auth.me();
       if (!me || !mounted) return;
       setUser(me);
 
-      const existing = await base44.entities.SharedDashboardSession.filter({
+      const existing = await backend.entities.SharedDashboardSession.filter({
         dashboard_key: DASHBOARD_KEY,
         user_email: me.email,
       }, undefined, 1);
@@ -65,14 +65,14 @@ export default function SharedDashboardPresence() {
 
       let record = existing?.[0];
       record = record
-        ? await base44.entities.SharedDashboardSession.update(record.id, payload)
-        : await base44.entities.SharedDashboardSession.create(payload);
+        ? await backend.entities.SharedDashboardSession.update(record.id, payload)
+        : await backend.entities.SharedDashboardSession.create(payload);
 
       if (!mounted) return;
       localSessionId = record.id;
 
       await safeListSessions();
-      unsubscribe = base44.entities.SharedDashboardSession.subscribe((event) => {
+      unsubscribe = backend.entities.SharedDashboardSession.subscribe((event) => {
         setSessions((current) => {
           const now = Date.now();
           return mergeSessionEvent(current, event).filter((item) => now - new Date(item.last_seen_at || item.updated_date).getTime() < 120000);
@@ -80,7 +80,7 @@ export default function SharedDashboardPresence() {
       });
 
       heartbeat = window.setInterval(() => {
-        base44.entities.SharedDashboardSession.update(record.id, {
+        backend.entities.SharedDashboardSession.update(record.id, {
           status: 'active',
           current_widget: 'overview',
           last_seen_at: new Date().toISOString(),
@@ -95,7 +95,7 @@ export default function SharedDashboardPresence() {
       if (unsubscribe) unsubscribe();
       if (heartbeat) window.clearInterval(heartbeat);
       if (localSessionId) {
-        base44.entities.SharedDashboardSession.update(localSessionId, {
+        backend.entities.SharedDashboardSession.update(localSessionId, {
           status: 'idle',
           last_seen_at: new Date().toISOString(),
         }).catch(() => {});

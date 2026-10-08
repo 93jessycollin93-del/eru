@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Network, Search } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const COLORS = [
   'bg-primary/15 text-primary border-primary/20',
@@ -15,7 +15,7 @@ export default function KnowledgeMap({ bots }) {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    base44.entities.BotMemoryChunk.list('-created_date', 300).then(setChunks).catch(() => {});
+    backend.entities.BotMemoryChunk.list('-created_date', 300).then(setChunks).catch(() => {});
   }, []);
 
   const botNameMap = useMemo(() => Object.fromEntries((bots || []).map((bot) => [bot.id, bot.name])), [bots]);

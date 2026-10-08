@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { ArrowUpRight, ArrowDownLeft, Copy, ExternalLink, Calendar } from 'lucide-react';
 
 // Mock transaction data
@@ -65,7 +65,7 @@ export default function TransactionHistory() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const w = await base44.entities.ConnectedWallet.filter(
+      const w = await backend.entities.ConnectedWallet.filter(
         { user_email: currentUser.email },
         '-created_date',
         100

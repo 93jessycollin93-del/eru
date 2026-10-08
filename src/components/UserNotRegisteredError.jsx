@@ -1,5 +1,5 @@
 import { ShieldAlert, LogIn, RefreshCw } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * UserNotRegisteredError
@@ -10,8 +10,8 @@ import { base44 } from '@/api/base44Client';
  * --------------------------------------------------------------------------*/
 export default function UserNotRegisteredError() {
   const handleRelogin = () => {
-    try { base44.auth.logout(); } catch {}
-    try { base44.auth.redirectToLogin(window.location.href); } catch {}
+    try { backend.auth.logout(); } catch {}
+    try { backend.auth.redirectToLogin(window.location.href); } catch {}
   };
 
   const handleRetry = () => window.location.reload();

@@ -9,7 +9,7 @@
  *
  * This module now intentionally has NO secrets and NO HMAC validation in
  * the browser. The real implementation lives in:
- *   base44/functions/validatePaymentWebhook/entry.ts
+ *   the validatePaymentWebhook server function
  *
  * The remaining helpers (timestamp window, replay cache) are kept because
  * they're harmless and may still be useful as a pre-filter on inbound
@@ -27,7 +27,7 @@ const PROCESSED_WEBHOOKS = new Set(); // In-memory replay cache (use Redis in pr
 export function validateWebhookSignature() {
   throw new Error(
     'webhookValidator.validateWebhookSignature is server-only. ' +
-    'Call base44.functions.invoke("validatePaymentWebhook", ...) instead — ' +
+    'Call backend.functions.invoke("validatePaymentWebhook", ...) instead — ' +
     'the browser must never see the HMAC secret.',
   );
 }
@@ -76,7 +76,7 @@ export function validateWebhook() {
     valid: false,
     errors: [
       'Client-side webhook validation removed for security. ' +
-      'Invoke base44.functions.invoke("validatePaymentWebhook", { provider, signature, rawBody, timestamp, idempotencyKey }) on the server instead.',
+      'Invoke backend.functions.invoke("validatePaymentWebhook", { provider, signature, rawBody, timestamp, idempotencyKey }) on the server instead.',
     ],
   };
 }

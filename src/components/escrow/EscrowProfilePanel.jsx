@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Clock3, HandCoins, PlusCircle, ShieldAlert, Wallet } from 'lucide-react';
 import EscrowStatusTimeline from '@/components/escrow/EscrowStatusTimeline';
 import { getEscrowStatusMeta, getNextEscrowPatch } from '@/lib/escrowStateMachine';
@@ -35,7 +35,7 @@ export default function EscrowProfilePanel({ userEmail = '', compact = false }) 
   const [saving, setSaving] = useState(false);
 
   const loadEscrows = async () => {
-    const rows = await base44.entities.Escrow.list('-updated_date', 100).catch(() => []);
+    const rows = await backend.entities.Escrow.list('-updated_date', 100).catch(() => []);
     setEscrows((rows || []).filter((item) => item.buyer_email === userEmail || item.seller_email === userEmail));
   };
 
@@ -53,7 +53,7 @@ export default function EscrowProfilePanel({ userEmail = '', compact = false }) 
   const createEscrow = async () => {
     if (!form.seller_email || !form.buyer_email || !form.asset_id || !form.price) return;
     setSaving(true);
-    await base44.entities.Escrow.create({
+    await backend.entities.Escrow.create({
       ...form,
       listing_id: form.listing_id || `manual_${Date.now()}`,
       price: Number(form.price)
@@ -65,7 +65,7 @@ export default function EscrowProfilePanel({ userEmail = '', compact = false }) 
   };
 
   const updateEscrow = async (escrowId, data) => {
-    await base44.entities.Escrow.update(escrowId, data);
+    await backend.entities.Escrow.update(escrowId, data);
     loadEscrows();
   };
 

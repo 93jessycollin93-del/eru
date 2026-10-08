@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Pin, Plus, Bot, X, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 
 const COLOR_MAP = {
@@ -25,7 +25,7 @@ export default function PinnedCards({ bots }) {
 
   const load = async () => {
     setLoading(true);
-    const data = await base44.entities.PinnedCard.list('-created_date', 50);
+    const data = await backend.entities.PinnedCard.list('-created_date', 50);
     setCards(data);
     setLoading(false);
   };
@@ -35,17 +35,17 @@ export default function PinnedCards({ bots }) {
   const save = async () => {
     if (!form.title || !form.content) return;
     const bot = bots?.find(b => b.id === form.bot_id);
-    await base44.entities.PinnedCard.create({ ...form, bot_name: bot?.name || '', user_email: currentUser?.email });
+    await backend.entities.PinnedCard.create({ ...form, bot_name: bot?.name || '', user_email: currentUser?.email });
     setForm(BLANK); setShowForm(false); load();
   };
 
-  const del = async (id) => { await base44.entities.PinnedCard.delete(id); load(); };
+  const del = async (id) => { await backend.entities.PinnedCard.delete(id); load(); };
 
   const generateInsight = async () => {
     const bot = bots?.find(b => b.id === form.bot_id);
     if (!bot || !form.title) return;
     setGenerating(true);
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await backend.integrations.Core.InvokeLLM({
       prompt: `You are ${bot.name}. ${bot.instructions || ''}\n\nGenerate a concise, insightful ${form.card_type} about: "${form.title}". Be specific and useful. Max 3 sentences.`,
       add_context_from_internet: true,
       model: 'gemini_3_flash',

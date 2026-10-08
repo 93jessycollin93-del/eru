@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import RoleGate from '@/components/RoleGate';
 import BlockchainMetrics from '@/components/BlockchainMetrics';
 import { BarChart3, Target, AlertCircle, Plus } from 'lucide-react';
@@ -23,7 +23,7 @@ export default function BlockchainAnalytics() {
       setLoading(true);
 
       // Fetch portfolio weightings
-      const w = await base44.entities.PortfolioWeighting.filter(
+      const w = await backend.entities.PortfolioWeighting.filter(
         { user_email: currentUser.email, is_active: true },
         null,
         100
@@ -31,7 +31,7 @@ export default function BlockchainAnalytics() {
       setWeightings(w || []);
 
       // Fetch rebalancing suggestions
-      const s = await base44.entities.RebalancingSuggestion.filter(
+      const s = await backend.entities.RebalancingSuggestion.filter(
         { user_email: currentUser.email, status: 'pending' },
         '-created_date',
         50
@@ -46,7 +46,7 @@ export default function BlockchainAnalytics() {
 
   const executeSuggestion = async (suggestionId) => {
     try {
-      await base44.entities.RebalancingSuggestion.update(suggestionId, {
+      await backend.entities.RebalancingSuggestion.update(suggestionId, {
         status: 'executed',
         executed_date: new Date().toISOString(),
       });
@@ -58,7 +58,7 @@ export default function BlockchainAnalytics() {
 
   const dismissSuggestion = async (suggestionId) => {
     try {
-      await base44.entities.RebalancingSuggestion.update(suggestionId, {
+      await backend.entities.RebalancingSuggestion.update(suggestionId, {
         status: 'dismissed',
       });
       setSuggestions(suggestions.filter((s) => s.id !== suggestionId));

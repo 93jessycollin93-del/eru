@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
 import { createCardWithLore } from '@/lib/cardLore';
 import CardDisplay from './CardDisplay';
@@ -38,7 +38,7 @@ export default function Marketplace({ gold, onGoldChange }) {
 
   useEffect(() => {
     loadAll();
-    base44.auth.me().then(u => setUser(u)).catch(() => {});
+    backend.auth.me().then(u => setUser(u)).catch(() => {});
   }, []);
 
   const showToast = (msg, type = 'success') => {
@@ -48,12 +48,12 @@ export default function Marketplace({ gold, onGoldChange }) {
 
   const loadAll = async () => {
     setLoading(true);
-    const me = await base44.auth.me().catch(() => null);
+    const me = await backend.auth.me().catch(() => null);
     const [all, cards, proposals, userRows] = await Promise.all([
-      base44.entities.CardListing.filter({ status: 'active' }, '-created_date', 50),
-      base44.entities.Card.list('-created_date', 100),
-      base44.entities.CardTradeProposal.list('-created_date', 100).catch(() => []),
-      base44.entities.User.list().catch(() => []),
+      backend.entities.CardListing.filter({ status: 'active' }, '-created_date', 50),
+      backend.entities.Card.list('-created_date', 100),
+      backend.entities.CardTradeProposal.list('-created_date', 100).catch(() => []),
+      backend.entities.User.list().catch(() => []),
     ]);
     setListings(all.filter(l => l.seller_email !== me?.email));
     setMyListings(all.filter(l => l.seller_email === me?.email));
@@ -71,8 +71,8 @@ export default function Marketplace({ gold, onGoldChange }) {
     if (gold < totalCost) { showToast(`Need ${totalCost}g listing fee`, 'error'); return; }
 
     setPosting(true);
-    const me = await base44.auth.me().catch(() => null);
-    await base44.entities.CardListing.create({
+    const me = await backend.auth.me().catch(() => null);
+    await backend.entities.CardListing.create({
       card_name: selectedCard.name,
       card_data: selectedCard,
       price_gold: price,
@@ -93,11 +93,11 @@ export default function Marketplace({ gold, onGoldChange }) {
   const buyCard = async (listing) => {
     if (gold < listing.price_gold) { showToast('Not enough gold!', 'error'); return; }
     setBuying(listing.id);
-    const me = await base44.auth.me();
+    const me = await backend.auth.me();
     const escrow = await initiateEscrow(listing.id, listing.seller_email, me.email, listing.card_entity_id, 'card', listing.price_gold, 'GOLD');
     await holdFundsInEscrow(escrow.id, me.email, listing.price_gold);
     await confirmAndTransferAsset(escrow.id, { ...escrow, asset_type: 'card', price: listing.price_gold, buyer_email: me.email, listing_id: listing.id });
-    await base44.entities.CardListing.update(listing.id, { status: 'sold' });
+    await backend.entities.CardListing.update(listing.id, { status: 'sold' });
     onGoldChange(gold - listing.price_gold);
     showToast(`Bought ${listing.card_name} for ${listing.price_gold}g through escrow!`);
     setBuying(null);
@@ -105,13 +105,13 @@ export default function Marketplace({ gold, onGoldChange }) {
   };
 
   const cancelListing = async (listing) => {
-    await base44.entities.CardListing.update(listing.id, { status: 'cancelled' });
+    await backend.entities.CardListing.update(listing.id, { status: 'cancelled' });
     showToast('Listing cancelled');
     await loadAll();
   };
 
   // Edit a card listing's price. Soft-edit only — keeps status and audit
-  // trail intact. Ownership is enforced by Base44 entity rules; the UI
+  // trail intact. Ownership is enforced by the backend's access rules; the UI
   // gate below only shows Edit on the seller's own listings (myListings).
   const startEditListing = (listing) => {
     setEditingListingId(listing.id);
@@ -125,7 +125,7 @@ export default function Marketplace({ gold, onGoldChange }) {
     const next = parseInt(editingListingPrice);
     if (!next || next < 1) { showToast('Enter a valid price', 'error'); return; }
     if (next === listing.price_gold) { cancelEditListing(); return; }
-    await base44.entities.CardListing.update(listing.id, { price_gold: next });
+    await backend.entities.CardListing.update(listing.id, { price_gold: next });
     showToast(`Price updated to ${next}g`);
     cancelEditListing();
     await loadAll();
@@ -142,7 +142,7 @@ export default function Marketplace({ gold, onGoldChange }) {
       return;
     }
 
-    await base44.entities.CardTradeProposal.create({
+    await backend.entities.CardTradeProposal.create({
       proposer_email: user.email,
       recipient_email: tradeRecipient,
       proposal_type: tradeType,
@@ -176,7 +176,7 @@ export default function Marketplace({ gold, onGoldChange }) {
       const escrow = await initiateEscrow(proposal.id, proposal.proposer_email, user.email, proposal.offered_card_id, 'card', proposal.sale_price_gold, 'GOLD');
       await holdFundsInEscrow(escrow.id, user.email, proposal.sale_price_gold);
       await confirmAndTransferAsset(escrow.id, { ...escrow, asset_type: 'card', price: proposal.sale_price_gold, buyer_email: user.email, listing_id: proposal.id });
-      await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed', escrow_id: escrow.id, escrow_status: 'completed' });
+      await backend.entities.CardTradeProposal.update(proposal.id, { status: 'completed', escrow_id: escrow.id, escrow_status: 'completed' });
       onGoldChange(gold - proposal.sale_price_gold);
       showToast('Direct purchase completed through escrow');
     } else {
@@ -198,7 +198,7 @@ export default function Marketplace({ gold, onGoldChange }) {
         actor: user?.email,
         metadata: { proposal_id: proposal.id, kind: 'swap_out' },
       });
-      await base44.entities.CardTradeProposal.update(proposal.id, { status: 'completed' });
+      await backend.entities.CardTradeProposal.update(proposal.id, { status: 'completed' });
       showToast('Swap completed');
     }
     setProposalActionId(null);
@@ -207,7 +207,7 @@ export default function Marketplace({ gold, onGoldChange }) {
 
   const declineProposal = async (proposal) => {
     setProposalActionId(proposal.id);
-    await base44.entities.CardTradeProposal.update(proposal.id, { status: 'declined' });
+    await backend.entities.CardTradeProposal.update(proposal.id, { status: 'declined' });
     setProposalActionId(null);
     showToast('Trade proposal declined');
     await loadAll();

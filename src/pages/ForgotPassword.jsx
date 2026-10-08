@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Mail, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function ForgotPassword() {
@@ -11,7 +11,7 @@ export default function ForgotPassword() {
     e.preventDefault();
     setLoading(true);
     try {
-      await base44.auth.resetPasswordRequest(email);
+      await backend.auth.resetPasswordRequest(email);
     } catch {}
     // Always show success regardless of response
     setSent(true);

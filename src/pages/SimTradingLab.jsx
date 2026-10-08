@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Bot, Plus, Trash2, TrendingUp, TrendingDown, Loader2, AlertTriangle, Rocket } from 'lucide-react';
 import { STRATEGIES, ASSET_PRESETS, simulateBot } from '@/lib/simEngine';
 
@@ -9,9 +9,9 @@ const randSeed = () => Math.floor(Math.random() * 1_000_000_000);
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 const pct = (n) => `${Number(n || 0) >= 0 ? '+' : ''}${Number(n || 0).toFixed(1)}%`;
 
-// The SimBot entity is created in the Base44 Builder; guard until it exists so
+// The SimBot entity may not exist on the backend yet; guard until it does so
 // the page shows a friendly "setting up" state instead of throwing.
-const botLabReady = () => typeof base44?.entities?.SimBot?.list === 'function';
+const botLabReady = () => typeof backend?.entities?.SimBot?.list === 'function';
 
 // Tiny inline equity sparkline (no chart dependency in the bundle).
 function Sparkline({ data = [], up }) {
@@ -51,8 +51,8 @@ export default function SimTradingLab() {
     }
     setSetupPending(false);
     try {
-      const meRes = await base44.auth.me();
-      const rows = await base44.entities.SimBot.list('-created_date', 200);
+      const meRes = await backend.auth.me();
+      const rows = await backend.entities.SimBot.list('-created_date', 200);
       setMe(meRes);
       setBots((rows || []).filter((b) => b.created_by === meRes.email));
     } catch (err) {
@@ -69,7 +69,7 @@ export default function SimTradingLab() {
     const seed = randSeed();
     const config = { windowDays: 20, thresholdPct: 5, cadenceDays: 7, targetAllocation: 0.6 };
     const r = simulateBot({ strategy: strat, asset: assetSym, startBalance: balance, horizonDays: horizon, seed, config });
-    const created = await base44.entities.SimBot.create({
+    const created = await backend.entities.SimBot.create({
       name: botName,
       strategy: strat,
       asset_symbol: assetSym,
@@ -141,7 +141,7 @@ export default function SimTradingLab() {
     if (busy) return;
     setBusy(true);
     try {
-      await base44.entities.SimBot.delete(id);
+      await backend.entities.SimBot.delete(id);
       setBots((prev) => prev.filter((b) => b.id !== id));
     } catch (err) {
       console.error('Delete failed:', err);

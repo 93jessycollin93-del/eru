@@ -1,6 +1,6 @@
 /**
  * offlineDb — IndexedDB wrapper for the Bot Studio offline cache + write queue.
- * Four caches (bots, chats, messages, pods) mirror Base44 entities so the
+ * Four caches (bots, chats, messages, pods) mirror backend entities so the
  * studio is fully readable offline; a queue holds pending writes flushed on
  * reconnect. All ops are promise-based and degrade to no-ops if IDB is blocked.
  */

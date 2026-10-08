@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Send, Users, Loader2, AlertCircle, Gem, Paperclip, X } from 'lucide-react';
@@ -20,12 +20,12 @@ const JADE_COLOR_LABEL = {
 const jadeLabel = (j) =>
   `${JADE_COLOR_LABEL[j.color_type] || 'Jade'} · ${j.volume_kg ?? '?'}kg · ${j.composite_score ?? 0}%`;
 
-// The Community entities are created in the Base44 Builder; until they exist,
-// `base44.entities.X` is undefined. Guard so the page shows a friendly
+// The Community entities may not exist on the backend yet; until they do,
+// `backend.entities.X` is undefined. Guard so the page shows a friendly
 // "setting up" state instead of throwing.
 const COMMUNITY_ENTITIES = ['CommunityPost', 'CommunityPostReaction', 'CommunityPostComment'];
 const communityReady = () =>
-  COMMUNITY_ENTITIES.every((n) => typeof base44?.entities?.[n]?.list === 'function');
+  COMMUNITY_ENTITIES.every((n) => typeof backend?.entities?.[n]?.list === 'function');
 
 export default function Community() {
   const [me, setMe] = useState(null);
@@ -58,12 +58,12 @@ export default function Community() {
     }
     setSetupPending(false);
     try {
-      const meRes = await base44.auth.me();
+      const meRes = await backend.auth.me();
       // Reads are gated by RLS to public rows (+ the caller's own).
       const [postRows, reactionRows, commentRows] = await Promise.all([
-        base44.entities.CommunityPost.list('-created_date', 100),
-        base44.entities.CommunityPostReaction.list('-created_date', 1000),
-        base44.entities.CommunityPostComment.list('-created_date', 1000),
+        backend.entities.CommunityPost.list('-created_date', 100),
+        backend.entities.CommunityPostReaction.list('-created_date', 1000),
+        backend.entities.CommunityPostComment.list('-created_date', 1000),
       ]);
       setMe(meRes);
       setPosts(postRows || []);
@@ -108,7 +108,7 @@ export default function Community() {
     if (myJades !== null || jadesLoading || !me?.email) return;
     setJadesLoading(true);
     try {
-      const rows = await base44.entities.JadeAsset.list('-created_date', 100);
+      const rows = await backend.entities.JadeAsset.list('-created_date', 100);
       setMyJades((rows || []).filter((j) => j.created_by === me.email));
     } catch (err) {
       console.error('Could not load your jade:', err);
@@ -132,7 +132,7 @@ export default function Community() {
             is_public: true,
           }
         : { body: text, post_type: 'text', is_public: true };
-      const created = await base44.entities.CommunityPost.create(payload);
+      const created = await backend.entities.CommunityPost.create(payload);
       // Prepend optimistically so it shows immediately even before a reload.
       setPosts((prev) => [
         { ...payload, ...created, created_by: me?.email, created_date: new Date().toISOString() },
@@ -155,10 +155,10 @@ export default function Community() {
     const existing = myReactionFor(postId);
     try {
       if (existing) {
-        await base44.entities.CommunityPostReaction.delete(existing.id);
+        await backend.entities.CommunityPostReaction.delete(existing.id);
         setReactions((prev) => prev.filter((r) => r.id !== existing.id));
       } else {
-        const created = await base44.entities.CommunityPostReaction.create({
+        const created = await backend.entities.CommunityPostReaction.create({
           post_id: postId,
           reaction: 'like',
           is_public: true,
@@ -186,7 +186,7 @@ export default function Community() {
     if (!text || busyPost) return;
     setBusyPost(postId);
     try {
-      const created = await base44.entities.CommunityPostComment.create({
+      const created = await backend.entities.CommunityPostComment.create({
         post_id: postId,
         body: text,
         is_public: true,

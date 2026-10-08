@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useQuery } from '@tanstack/react-query';
 
 const NODES = [
@@ -20,7 +20,7 @@ const EDGES = [
 export default function MotherboardMap() {
   const { data: progress = [] } = useQuery({
     queryKey: ['userProgress'],
-    queryFn: () => base44.entities.UserProgress.list(),
+    queryFn: () => backend.entities.UserProgress.list(),
   });
 
   const completedChapters = new Set(

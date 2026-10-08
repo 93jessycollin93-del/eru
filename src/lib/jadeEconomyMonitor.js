@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * JADE ECONOMY STABILITY MONITOR
@@ -30,7 +30,7 @@ const CHECK_INTERVAL_HOURS = 24;
  */
 export async function calculateTotalJadeSupply() {
   // Fetch all Jade assets in economy
-  const allAssets = await base44.entities.JadeAsset.list('-created_date', 1000);
+  const allAssets = await backend.entities.JadeAsset.list('-created_date', 1000);
 
   if (!allAssets || allAssets.length === 0) {
     return 0;
@@ -65,7 +65,7 @@ export async function checkEconomyHealth() {
     ECONOMY_STATE.adjustedProbabilities.HIGH_RARE -= 0.012;
     ECONOMY_STATE.adjustedProbabilities.LEGENDARY -= 0.008;
 
-    await base44.entities.EconomyAuditLog.create({
+    await backend.entities.EconomyAuditLog.create({
       action: 'economy_adjustment',
       status: 'success',
       reason: `Supply growth (${growth}kg) exceeded threshold. Shifted probabilities to BASE/MID.`,
@@ -116,7 +116,7 @@ export async function resetEconomyState() {
   ECONOMY_STATE.lastCheckDate = new Date();
   ECONOMY_STATE.totalSupply = await calculateTotalJadeSupply();
 
-  await base44.entities.EconomyAuditLog.create({
+  await backend.entities.EconomyAuditLog.create({
     action: 'admin_override',
     status: 'success',
     reason: 'Economy state manually reset to baseline',
@@ -130,7 +130,7 @@ export async function resetEconomyState() {
  */
 export async function getEconomyStats() {
   const totalSupply = await calculateTotalJadeSupply();
-  const allAssets = await base44.entities.JadeAsset.list('-created_date', 1000);
+  const allAssets = await backend.entities.JadeAsset.list('-created_date', 1000);
 
   // Count assets by tier
   const tiers = {

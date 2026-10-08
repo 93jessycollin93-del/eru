@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LayoutTemplate, Save } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import WebsiteGeneratorLivePreview from './WebsiteGeneratorLivePreview';
 import WebsiteGeneratorSectionActions from './WebsiteGeneratorSectionActions';
 import WebsiteGeneratorThemeControls from './WebsiteGeneratorThemeControls';
@@ -211,7 +211,7 @@ export default function WebsiteGeneratorEditor({ project, onSaved }) {
   const regenerateSection = async () => {
     if (!project?.id || !activeSection || !activePage) return;
     setRegenerating(true);
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await backend.integrations.Core.InvokeLLM({
       prompt: `Regenerate one reusable website section for an ERU website generator project.
 Project name: ${project.name}
 Project description: ${project.description}
@@ -247,7 +247,7 @@ Current items: ${(activeSection.items || []).join(', ')}`,
   const handleSave = async () => {
     if (!project?.id || !draft) return;
     setSaving(true);
-    await base44.entities.WebsiteGeneratorProject.update(project.id, {
+    await backend.entities.WebsiteGeneratorProject.update(project.id, {
       site_blueprint: draft.site_blueprint,
       generated_copy: draft.generated_copy,
       theme_settings: draft.theme_settings,

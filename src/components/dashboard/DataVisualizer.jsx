@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   RadialBarChart, RadialBar, XAxis, Tooltip, ResponsiveContainer
@@ -31,10 +31,10 @@ export default function DataVisualizer() {
   const load = async () => {
     setLoading(true);
     const [prog, rep, b, a] = await Promise.all([
-      base44.entities.UserProgress.list('-updated_date', 50),
-      base44.entities.Reputation.list('-created_date', 1),
-      base44.entities.UserBot.list('-created_date', 20),
-      base44.entities.JackieSaved.list('-created_date', 30),
+      backend.entities.UserProgress.list('-updated_date', 50),
+      backend.entities.Reputation.list('-created_date', 1),
+      backend.entities.UserBot.list('-created_date', 20),
+      backend.entities.JackieSaved.list('-created_date', 30),
     ]);
     setProgress(prog);
     setReputation(rep[0] || null);

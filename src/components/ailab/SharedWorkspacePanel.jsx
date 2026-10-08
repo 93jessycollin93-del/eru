@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BookOpenText, MessageSquare, Users, Database, Plus, Save } from 'lucide-react';
 
 const EMPTY_WORKSPACE = { name: '', description: '', member_emails: [], linked_bot_ids: [], linked_prompt_template_ids: [] };
@@ -18,10 +18,10 @@ export default function SharedWorkspacePanel({ bots, promptTemplates }) {
 
   const load = async () => {
     const [workspaceRows, knowledgeRows, commentRows, user] = await Promise.all([
-      base44.entities.SharedBotWorkspace.list('-updated_date', 100),
-      base44.entities.SharedKnowledgeBase.list('-updated_date', 200),
-      base44.entities.PromptTemplateComment.list('-updated_date', 200),
-      base44.auth.me()
+      backend.entities.SharedBotWorkspace.list('-updated_date', 100),
+      backend.entities.SharedKnowledgeBase.list('-updated_date', 200),
+      backend.entities.PromptTemplateComment.list('-updated_date', 200),
+      backend.auth.me()
     ]);
     setWorkspaces(workspaceRows || []);
     setKnowledgeEntries(knowledgeRows || []);
@@ -40,7 +40,7 @@ export default function SharedWorkspacePanel({ bots, promptTemplates }) {
 
   const createWorkspace = async () => {
     if (!workspaceForm.name.trim() || !me?.email) return;
-    await base44.entities.SharedBotWorkspace.create({
+    await backend.entities.SharedBotWorkspace.create({
       ...workspaceForm,
       owner_email: me.email,
       member_emails: workspaceForm.member_emails,
@@ -52,7 +52,7 @@ export default function SharedWorkspacePanel({ bots, promptTemplates }) {
 
   const saveKnowledge = async () => {
     if (!selectedWorkspaceId || !knowledgeForm.title.trim() || !knowledgeForm.content.trim()) return;
-    await base44.entities.SharedKnowledgeBase.create({
+    await backend.entities.SharedKnowledgeBase.create({
       workspace_id: selectedWorkspaceId,
       title: knowledgeForm.title,
       category: knowledgeForm.category,
@@ -67,7 +67,7 @@ export default function SharedWorkspacePanel({ bots, promptTemplates }) {
 
   const saveComment = async () => {
     if (!selectedWorkspaceId || !commentForm.template_id || !commentForm.comment_text.trim()) return;
-    await base44.entities.PromptTemplateComment.create({
+    await backend.entities.PromptTemplateComment.create({
       workspace_id: selectedWorkspaceId,
       template_id: commentForm.template_id,
       comment_text: commentForm.comment_text,
@@ -80,7 +80,7 @@ export default function SharedWorkspacePanel({ bots, promptTemplates }) {
   };
 
   const toggleCommentStatus = async (comment) => {
-    await base44.entities.PromptTemplateComment.update(comment.id, {
+    await backend.entities.PromptTemplateComment.update(comment.id, {
       status: comment.status === 'resolved' ? 'open' : 'resolved'
     });
     load();

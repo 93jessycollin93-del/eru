@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Send, Loader2, CheckCircle2, Copy } from 'lucide-react';
 
 export default function TelegramConnectSection() {
@@ -10,8 +10,8 @@ export default function TelegramConnectSection() {
 
   const loadAccount = async () => {
     setLoading(true);
-    const me = await base44.auth.me();
-    const rows = await base44.entities.TelegramAccount.filter({ user_email: me.email }, '-updated_date', 1);
+    const me = await backend.auth.me();
+    const rows = await backend.entities.TelegramAccount.filter({ user_email: me.email }, '-updated_date', 1);
     setAccount(rows?.[0] || null);
     setLoading(false);
   };
@@ -20,7 +20,7 @@ export default function TelegramConnectSection() {
 
   const generateLink = async () => {
     setLinking(true);
-    const response = await base44.functions.invoke('generateTelegramLinkCode', {});
+    const response = await backend.functions.invoke('generateTelegramLinkCode', {});
     setAccount(response.data?.account || null);
     if (response.data?.deep_link_url) {
       window.open(response.data.deep_link_url, '_blank');

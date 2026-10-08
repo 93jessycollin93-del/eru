@@ -9,7 +9,7 @@
 // route through these helpers. If a real source is missing, helpers return a
 // state object with a label — never a number pretending to be a price.
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 // ---- Public constants -----------------------------------------------------
 
@@ -71,7 +71,7 @@ export function setZeroFakeDataMode(nextMode, { actorEmail, actorRole } = {}) {
   const value = nextMode === 'off' ? 'off' : 'on';
   try { localStorage.setItem(MODE_KEY, value); } catch { /* quota */ }
   // Audit best-effort, never blocks.
-  base44.entities.PricingAuditLog?.create?.({
+  backend.entities.PricingAuditLog?.create?.({
     source: 'system',
     source_type: 'unknown',
     request_status: 'ok',
@@ -175,7 +175,7 @@ export function isHighConfidence(candidate, threshold = DEFAULT_CONFIDENCE_THRES
 
 export async function logPricingAudit(payload) {
   try {
-    await base44.entities.PricingAuditLog.create({
+    await backend.entities.PricingAuditLog.create({
       source:           payload.source || 'unknown',
       source_type:      payload.sourceType || 'unknown',
       request_status:   payload.requestStatus || 'no_data',

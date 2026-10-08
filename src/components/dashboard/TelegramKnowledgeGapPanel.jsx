@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { AlertTriangle, BookPlus, Bot } from 'lucide-react';
 
 export default function TelegramKnowledgeGapPanel({ gaps = [], bots = [] }) {
@@ -13,7 +13,7 @@ export default function TelegramKnowledgeGapPanel({ gaps = [], bots = [] }) {
 
   const addPrompt = async (gap) => {
     const content = `Topic: ${gap.suggested_topic}\n\nUser question gap: ${gap.user_question}\n\nSuggested keywords: ${(gap.suggested_keywords || []).join(', ')}`;
-    await base44.entities.KnowledgeBaseDocument.create({
+    await backend.entities.KnowledgeBaseDocument.create({
       title: gap.title,
       source_type: 'text',
       content,
@@ -21,7 +21,7 @@ export default function TelegramKnowledgeGapPanel({ gaps = [], bots = [] }) {
       linked_bot_ids: [gap.bot_id],
       status: 'active'
     });
-    await base44.entities.TelegramKnowledgeGap.update(gap.id, { status: 'resolved' });
+    await backend.entities.TelegramKnowledgeGap.update(gap.id, { status: 'resolved' });
   };
 
   return (

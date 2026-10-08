@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { initiateEscrow, holdFundsInEscrow, confirmAndTransferAsset } from '@/lib/economyApi';
 import { ShoppingCart, Tag, Lock, AlertCircle, CheckCircle2, X } from 'lucide-react';
@@ -21,7 +21,7 @@ export default function MarketplaceTrading() {
   const loadListings = async () => {
     try {
       setLoading(true);
-      const allListings = await base44.entities.StorefrontListing.filter(
+      const allListings = await backend.entities.StorefrontListing.filter(
         { status: 'active' },
         '-created_date',
         100
@@ -29,7 +29,7 @@ export default function MarketplaceTrading() {
       setListings(allListings);
 
       if (currentUser?.email) {
-        const owned = await base44.entities.StorefrontListing.filter(
+        const owned = await backend.entities.StorefrontListing.filter(
           { created_by: currentUser.email },
           '-created_date',
           50
@@ -46,7 +46,7 @@ export default function MarketplaceTrading() {
   const handleCreateListing = async (assetType, assetId, title, price) => {
     try {
       setCreatingListing(true);
-      const listing = await base44.entities.StorefrontListing.create({
+      const listing = await backend.entities.StorefrontListing.create({
         asset_id: assetId,
         asset_type: assetType,
         title,
@@ -89,7 +89,7 @@ export default function MarketplaceTrading() {
       await confirmAndTransferAsset(escrow.id, escrow);
 
       // Mark listing as sold
-      await base44.entities.StorefrontListing.update(listing.id, { status: 'sold' });
+      await backend.entities.StorefrontListing.update(listing.id, { status: 'sold' });
 
       alert('Purchase completed! Asset transferred to your inventory.');
       setSelectedListing(null);
@@ -102,7 +102,7 @@ export default function MarketplaceTrading() {
 
   const handleCancelListing = async (listingId) => {
     try {
-      await base44.entities.StorefrontListing.update(listingId, { status: 'cancelled' });
+      await backend.entities.StorefrontListing.update(listingId, { status: 'cancelled' });
       setMyListings(myListings.filter(l => l.id !== listingId));
     } catch (err) {
       console.error('Failed to cancel listing:', err);

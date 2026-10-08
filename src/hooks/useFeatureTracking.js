@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export function useFeatureTracking(featureName) {
   const startTimeRef = useRef(Date.now());
@@ -19,11 +19,11 @@ export function useFeatureTracking(featureName) {
 
 export async function trackFeatureInteraction(featureName, type = 'view', timeSpent = 0) {
   try {
-    const user = await base44.auth.me();
+    const user = await backend.auth.me();
     if (!user) return;
 
     // Find existing record
-    const existing = await base44.entities.FeatureAnalytics.filter({
+    const existing = await backend.entities.FeatureAnalytics.filter({
       feature_name: featureName,
       interaction_type: type,
       created_by: user.email
@@ -32,14 +32,14 @@ export async function trackFeatureInteraction(featureName, type = 'view', timeSp
     if (existing.length > 0) {
       // Update existing
       const record = existing[0];
-      await base44.entities.FeatureAnalytics.update(record.id, {
+      await backend.entities.FeatureAnalytics.update(record.id, {
         interaction_count: (record.interaction_count || 0) + 1,
         time_spent_seconds: (record.time_spent_seconds || 0) + timeSpent,
         last_interacted: new Date().toISOString()
       });
     } else {
       // Create new
-      await base44.entities.FeatureAnalytics.create({
+      await backend.entities.FeatureAnalytics.create({
         feature_name: featureName,
         interaction_type: type,
         interaction_count: 1,

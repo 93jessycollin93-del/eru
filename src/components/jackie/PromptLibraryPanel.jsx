@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BookText, Plus, Search, Star, Trash2, ArrowRight, Save } from 'lucide-react';
 
 const BLANK = {
@@ -20,7 +20,7 @@ export default function PromptLibraryPanel({ onInject, onAppend }) {
 
   const loadItems = async () => {
     setLoading(true);
-    const rows = await base44.entities.JackieSaved.filter({ tag: 'prompt' }, '-updated_date', 100);
+    const rows = await backend.entities.JackieSaved.filter({ tag: 'prompt' }, '-updated_date', 100);
     setItems(rows);
     setLoading(false);
   };
@@ -40,7 +40,7 @@ export default function PromptLibraryPanel({ onInject, onAppend }) {
 
   const savePrompt = async () => {
     if (!form.content.trim()) return;
-    await base44.entities.JackieSaved.create({
+    await backend.entities.JackieSaved.create({
       ...form,
       title: form.title.trim() || form.content.trim().slice(0, 48),
     });
@@ -50,12 +50,12 @@ export default function PromptLibraryPanel({ onInject, onAppend }) {
   };
 
   const togglePin = async (item) => {
-    await base44.entities.JackieSaved.update(item.id, { pinned: !item.pinned });
+    await backend.entities.JackieSaved.update(item.id, { pinned: !item.pinned });
     loadItems();
   };
 
   const removePrompt = async (id) => {
-    await base44.entities.JackieSaved.delete(id);
+    await backend.entities.JackieSaved.delete(id);
     loadItems();
   };
 

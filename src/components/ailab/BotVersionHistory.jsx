@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { History, Save, RotateCcw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import BotVersionComparator from './BotVersionComparator';
 
@@ -17,7 +17,7 @@ export default function BotVersionHistory({ bots, onRollback }) {
 
   const load = async () => {
     setLoading(true);
-    const data = await base44.entities.BotVersion.list('-created_date', 100);
+    const data = await backend.entities.BotVersion.list('-created_date', 100);
     setVersions(data);
     setLoading(false);
   };
@@ -26,7 +26,7 @@ export default function BotVersionHistory({ bots, onRollback }) {
 
   const saveVersion = async (bot) => {
     setSaving(bot.id);
-    await base44.entities.BotVersion.create({
+    await backend.entities.BotVersion.create({
       bot_id: bot.id,
       bot_name: bot.name,
       version_label: versionLabel || `v${new Date().toLocaleDateString('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
@@ -49,7 +49,7 @@ export default function BotVersionHistory({ bots, onRollback }) {
   const rollback = async (version) => {
     const bot = bots?.find(b => b.id === version.bot_id);
     if (!bot) return;
-    await base44.entities.UserBot.update(bot.id, {
+    await backend.entities.UserBot.update(bot.id, {
       instructions: version.instructions,
       personality: version.personality,
       response_style: version.response_style,
@@ -57,7 +57,7 @@ export default function BotVersionHistory({ bots, onRollback }) {
       prompt_template_id: version.prompt_template_id || '',
       prompt_template_values: version.prompt_template_values || {},
     });
-    await base44.entities.BotDeployment.create({
+    await backend.entities.BotDeployment.create({
       bot_id: bot.id,
       bot_name: bot.name,
       source_version_id: version.id,
@@ -75,7 +75,7 @@ export default function BotVersionHistory({ bots, onRollback }) {
     load();
   };
 
-  const del = async (id) => { await base44.entities.BotVersion.delete(id); load(); };
+  const del = async (id) => { await backend.entities.BotVersion.delete(id); load(); };
 
   const filtered = selectedBot === 'all' ? versions : versions.filter(v => v.bot_id === selectedBot);
 

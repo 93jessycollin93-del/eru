@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { StickyNote, Plus, Pin, PinOff, Trash2, Share2, X, Search, Save, Users, Check, Globe } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -48,7 +48,7 @@ export default function NotesPanel({ open, onClose }) {
   const load = async () => {
     setLoading(true);
     try {
-      const rows = await base44.entities.Note.list('-updated_date', 200);
+      const rows = await backend.entities.Note.list('-updated_date', 200);
       setNotes(rows || []);
     } catch {
       setNotes([]);
@@ -86,7 +86,7 @@ export default function NotesPanel({ open, onClose }) {
   const createNew = async () => {
     setSaving(true);
     try {
-      const created = await base44.entities.Note.create({ title: 'Untitled note', body: '', color: 'default' });
+      const created = await backend.entities.Note.create({ title: 'Untitled note', body: '', color: 'default' });
       setNotes((prev) => [created, ...prev]);
       setActiveId(created.id);
     } finally {
@@ -98,7 +98,7 @@ export default function NotesPanel({ open, onClose }) {
     if (!active) return;
     setSaving(true);
     try {
-      const updated = await base44.entities.Note.update(active.id, {
+      const updated = await backend.entities.Note.update(active.id, {
         title: draft.title || 'Untitled note',
         body: draft.body || '',
         color: draft.color || 'default',
@@ -110,12 +110,12 @@ export default function NotesPanel({ open, onClose }) {
   };
 
   const togglePin = async (note) => {
-    const updated = await base44.entities.Note.update(note.id, { pinned: !note.pinned });
+    const updated = await backend.entities.Note.update(note.id, { pinned: !note.pinned });
     setNotes((prev) => prev.map((n) => (n.id === note.id ? { ...n, ...updated } : n)));
   };
 
   const deleteNote = async (note) => {
-    await base44.entities.Note.delete(note.id);
+    await backend.entities.Note.delete(note.id);
     setNotes((prev) => prev.filter((n) => n.id !== note.id));
     if (activeId === note.id) setActiveId(null);
   };
@@ -124,7 +124,7 @@ export default function NotesPanel({ open, onClose }) {
     if (!active || !shareInput.trim()) return;
     const email = shareInput.trim().toLowerCase();
     const next = Array.from(new Set([...(active.shared_with || []), email]));
-    const updated = await base44.entities.Note.update(active.id, { shared_with: next });
+    const updated = await backend.entities.Note.update(active.id, { shared_with: next });
     setNotes((prev) => prev.map((n) => (n.id === active.id ? { ...n, ...updated } : n)));
     setShareInput('');
   };
@@ -132,13 +132,13 @@ export default function NotesPanel({ open, onClose }) {
   const removeShare = async (email) => {
     if (!active) return;
     const next = (active.shared_with || []).filter((e) => e !== email);
-    const updated = await base44.entities.Note.update(active.id, { shared_with: next });
+    const updated = await backend.entities.Note.update(active.id, { shared_with: next });
     setNotes((prev) => prev.map((n) => (n.id === active.id ? { ...n, ...updated } : n)));
   };
 
   const togglePublic = async () => {
     if (!active) return;
-    const updated = await base44.entities.Note.update(active.id, { is_public: !active.is_public });
+    const updated = await backend.entities.Note.update(active.id, { is_public: !active.is_public });
     setNotes((prev) => prev.map((n) => (n.id === active.id ? { ...n, ...updated } : n)));
   };
 

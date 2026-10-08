@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { MessageSquare, Save, Pencil, Trash2, Check, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 const BLANK_FORM = { title: '' };
@@ -16,7 +16,7 @@ export default function ConversationSidebar({ messages, onLoadConversation, onNe
 
   const loadConversations = async () => {
     setLoading(true);
-    const rows = await base44.entities.JackieSaved.filter({ tag: 'conversation' }, '-updated_date', 100);
+    const rows = await backend.entities.JackieSaved.filter({ tag: 'conversation' }, '-updated_date', 100);
     setConversations(rows);
     setLoading(false);
   };
@@ -27,7 +27,7 @@ export default function ConversationSidebar({ messages, onLoadConversation, onNe
 
   const saveConversation = async () => {
     if (!messages?.length) return;
-    await base44.entities.JackieSaved.create({
+    await backend.entities.JackieSaved.create({
       title: draftTitle.trim() || `Chat ${new Date().toLocaleString()}`,
       content: currentTranscript,
       tag: 'conversation',
@@ -40,14 +40,14 @@ export default function ConversationSidebar({ messages, onLoadConversation, onNe
 
   const renameConversation = async (id) => {
     if (!editingTitle.trim()) return;
-    await base44.entities.JackieSaved.update(id, { title: editingTitle.trim() });
+    await backend.entities.JackieSaved.update(id, { title: editingTitle.trim() });
     setEditingId(null);
     setEditingTitle('');
     loadConversations();
   };
 
   const deleteConversation = async (id) => {
-    await base44.entities.JackieSaved.delete(id);
+    await backend.entities.JackieSaved.delete(id);
     loadConversations();
   };
 

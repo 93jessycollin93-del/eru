@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pickaxe, Radio, Sparkles, Lock, X, Coins } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { awardGold, fetchUserGold } from '@/lib/economyApi';
 import { EXCAVATION_PACKS, bumpPressure, isHighPowerCard, createCardWithLore } from '@/lib/cardLore';
 import { STARTER_CARDS, RARITY_STYLES } from './StarterCards';
@@ -97,10 +97,10 @@ export default function ExcavationPackPanel({ gold = 0, onGoldChange, ownedCards
       }
 
       // Create the ExcavationEvent record.
-      const me = await base44.auth.me().catch(() => null);
+      const me = await backend.auth.me().catch(() => null);
       let stabilityDrift = 0;
       created.forEach((c) => { if (isHighPowerCard(c)) stabilityDrift += 3; });
-      await base44.entities.ExcavationEvent.create({
+      await backend.entities.ExcavationEvent.create({
         user_email: me?.email,
         pack_name: pack.name,
         origin: pack.origin,

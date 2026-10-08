@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { BookCopy, RotateCcw, Save, Sparkles, Trash2, Wand2, Loader2 } from 'lucide-react';
 import { invokeSelectedModel } from './modelRouting';
 
@@ -21,8 +21,8 @@ export default function PromptLibraryPanel({ bots, onBotsUpdated }) {
 
   const load = async () => {
     const [templateRows, versionRows] = await Promise.all([
-      base44.entities.PromptTemplate.list('-updated_date', 100),
-      base44.entities.PromptTemplateVersion.list('-created_date', 200),
+      backend.entities.PromptTemplate.list('-updated_date', 100),
+      backend.entities.PromptTemplateVersion.list('-created_date', 200),
     ]);
     setTemplates(templateRows);
     setVersions(versionRows);
@@ -42,12 +42,12 @@ export default function PromptLibraryPanel({ bots, onBotsUpdated }) {
 
   const saveTemplate = async () => {
     if (!form.name.trim() || !form.content.trim()) return;
-    const created = await base44.entities.PromptTemplate.create({
+    const created = await backend.entities.PromptTemplate.create({
       ...form,
       current_version: 1,
       is_active: true,
     });
-    await base44.entities.PromptTemplateVersion.create({
+    await backend.entities.PromptTemplateVersion.create({
       template_id: created.id,
       template_name: form.name,
       version_number: 1,
@@ -61,7 +61,7 @@ export default function PromptLibraryPanel({ bots, onBotsUpdated }) {
 
   const saveNewVersion = async (template) => {
     const nextVersion = (template.current_version || 1) + 1;
-    await base44.entities.PromptTemplateVersion.create({
+    await backend.entities.PromptTemplateVersion.create({
       template_id: template.id,
       template_name: template.name,
       version_number: nextVersion,
@@ -69,12 +69,12 @@ export default function PromptLibraryPanel({ bots, onBotsUpdated }) {
       variables: template.variables || [],
       notes: `Saved from library on version ${nextVersion}`,
     });
-    await base44.entities.PromptTemplate.update(template.id, { current_version: nextVersion });
+    await backend.entities.PromptTemplate.update(template.id, { current_version: nextVersion });
     load();
   };
 
   const rollbackVersion = async (version) => {
-    await base44.entities.PromptTemplate.update(version.template_id, {
+    await backend.entities.PromptTemplate.update(version.template_id, {
       content: version.content,
       variables: version.variables,
       current_version: version.version_number,
@@ -83,7 +83,7 @@ export default function PromptLibraryPanel({ bots, onBotsUpdated }) {
   };
 
   const removeTemplate = async (id) => {
-    await base44.entities.PromptTemplate.delete(id);
+    await backend.entities.PromptTemplate.delete(id);
     setSelectedTemplateId('');
     load();
   };
@@ -106,19 +106,19 @@ Current variables: ${JSON.stringify(selectedTemplate.variables || [])}
 Linked bot role: ${primaryBot?.role || 'assistant'}
 Linked bot personality: ${primaryBot?.personality || 'None'}
 Linked bot instructions: ${primaryBot?.instructions || 'None'}
-Linked bot model provider: ${primaryBot?.model_provider || 'base44'}
+Linked bot model provider: ${primaryBot?.model_provider || 'builtin'}
 Linked bot model: ${primaryBot?.model_name || 'automatic'}
 
 Improve the template for clarity, stronger behavioral alignment, and better prompt effectiveness while preserving the original intent.`;
 
     try {
       const response = await invokeSelectedModel({
-        provider: primaryBot?.model_provider || 'base44',
+        provider: primaryBot?.model_provider || 'builtin',
         model: primaryBot?.model_name || 'automatic',
         prompt,
       });
       const parsed = JSON.parse(response.trim().slice(response.indexOf('{'), response.lastIndexOf('}') + 1));
-      await base44.entities.PromptTemplate.update(selectedTemplate.id, {
+      await backend.entities.PromptTemplate.update(selectedTemplate.id, {
         content: parsed.content || selectedTemplate.content,
         description: parsed.description || selectedTemplate.description,
       });

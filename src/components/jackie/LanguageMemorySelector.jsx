@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BrainCircuit, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function LanguageMemorySelector({ selectedMemoryId, onSelect, onApplyReference }) {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    base44.entities.ProgrammingLanguageMemory.list('-memory_priority', 100).then(setItems).catch(() => {});
+    backend.entities.ProgrammingLanguageMemory.list('-memory_priority', 100).then(setItems).catch(() => {});
   }, []);
 
   const filtered = useMemo(() => items.filter((item) => {

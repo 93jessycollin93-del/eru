@@ -9,7 +9,7 @@ import {
 } from '@/lib/localModelProviders';
 
 const PROVIDER_OPTIONS = [
-  { value: 'base44', label: 'Base44 AI', desc: 'Built-in cloud' },
+  { value: 'builtin', label: 'Built-in AI', desc: 'Built-in cloud' },
   { value: 'ollama', label: 'Ollama', desc: 'localhost:11434' },
   { value: 'lmstudio', label: 'LM Studio', desc: 'localhost:1234' },
   { value: 'bionic', label: 'Bionic', desc: 'LM Studio agent' },
@@ -162,7 +162,7 @@ export default function LocalModelConnector({ open, onClose, provider, model, on
         {!isLocal && (
           <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground">
             <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>Using Base44's built-in AI — no configuration needed.</span>
+            <span>Using the built-in AI (works once a backend is connected).</span>
           </div>
         )}
       </div>

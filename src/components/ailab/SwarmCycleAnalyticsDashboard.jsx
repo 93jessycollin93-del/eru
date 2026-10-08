@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, RefreshCcw, Star, Users2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import {
   ResponsiveContainer,
   LineChart,
@@ -52,7 +52,7 @@ export default function SwarmCycleAnalyticsDashboard() {
 
   useEffect(() => {
     const load = async () => {
-      const rows = await base44.entities.BotImprovement.list('-created_date', 80).catch(() => []);
+      const rows = await backend.entities.BotImprovement.list('-created_date', 80).catch(() => []);
       setImprovements(rows || []);
       setLoading(false);
     };

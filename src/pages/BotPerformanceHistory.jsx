@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Activity, Bot, Clock3, TrendingUp } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -38,9 +38,9 @@ export default function BotPerformanceHistory() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.UserBot.list('-updated_date', 100),
-      base44.entities.BotTestRun.list('-created_date', 500),
-      base44.entities.BotMemoryChunk.list('-created_date', 500).catch(() => []),
+      backend.entities.UserBot.list('-updated_date', 100),
+      backend.entities.BotTestRun.list('-created_date', 500),
+      backend.entities.BotMemoryChunk.list('-created_date', 500).catch(() => []),
     ]).then(([botRows, runRows, memoryRows]) => {
       setBots(botRows || []);
       setTestRuns(runRows || []);

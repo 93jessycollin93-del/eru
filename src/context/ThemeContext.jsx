@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { applyRootVariables, mergeThemeSettings } from '@/lib/themeEngine';
 
 // ─── BACKGROUND ENVIRONMENTS ─────────────────────────────────────────────────
@@ -216,11 +216,11 @@ export function ThemeProvider({ children }) {
   }, [colorMode, primaryHue, bgHue, cardHue, borderHue, primarySat, primaryLight]);
 
   const reloadCustomThemes = useCallback(async () => {
-    if (!base44?.entities?.CustomThemeSetting?.list) {
+    if (!backend?.entities?.CustomThemeSetting?.list) {
       setCustomThemes([]);
       return;
     }
-    const rows = await base44.entities.CustomThemeSetting.list('-updated_date', 200).catch(() => []);
+    const rows = await backend.entities.CustomThemeSetting.list('-updated_date', 200).catch(() => []);
     setCustomThemes(Array.isArray(rows) ? rows.filter((item) => item?.is_active !== false) : []);
   }, []);
 

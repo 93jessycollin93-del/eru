@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Store } from 'lucide-react';
 import SellerDashboardSummary from '@/components/storefront/SellerDashboardSummary';
 import SellerOrderTable from '@/components/storefront/SellerOrderTable';
@@ -14,11 +14,11 @@ export default function SellerDashboard() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const me = await base44.auth.me();
+    const me = await backend.auth.me();
     const [listingRows, orderRows, escrowRows] = await Promise.all([
-      base44.entities.StorefrontListing.list('-updated_date', 200),
-      base44.entities.Order.list('-created_date', 200),
-      base44.entities.Escrow.list('-updated_date', 200).catch(() => []),
+      backend.entities.StorefrontListing.list('-updated_date', 200),
+      backend.entities.Order.list('-created_date', 200),
+      backend.entities.Escrow.list('-updated_date', 200).catch(() => []),
     ]);
 
     const sellerListings = (listingRows || []).filter((item) => item.created_by === me.email);

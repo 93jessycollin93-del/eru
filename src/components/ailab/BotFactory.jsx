@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Wand2, Copy, Save, Loader2, Download } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import ModelProviderPanel from './ModelProviderPanel';
 import { invokeSelectedModel } from './modelRouting';
 
@@ -43,7 +43,7 @@ export default function BotFactory({ onSaveBot }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [modelConfig, setModelConfig] = useState({ provider: 'base44', model: '', api_label: '' });
+  const [modelConfig, setModelConfig] = useState({ provider: 'builtin', model: '', api_label: '' });
 
   const generate = async () => {
     if (!prompt.trim()) return;
@@ -83,7 +83,7 @@ Return ONLY a JSON object with these fields:
 
   const saveBot = async () => {
     if (!result) return;
-    await base44.entities.UserBot.create({
+    await backend.entities.UserBot.create({
       name: result.name,
       description: result.description,
       role: result.role || 'assistant',

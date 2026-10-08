@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Database, Search } from 'lucide-react';
 import SquadKnowledgeMetrics from './SquadKnowledgeMetrics';
 import SquadKnowledgeRecordCard from './SquadKnowledgeRecordCard';
@@ -34,7 +34,7 @@ export default function SquadKnowledgePanel({ knowledgeItems, search, setSearch,
 
   const handleSave = async () => {
     if (!editingId) return;
-    await base44.entities.SquadKnowledge.update(editingId, {
+    await backend.entities.SquadKnowledge.update(editingId, {
       goal: draft.goal,
       source_squad_name: draft.source_squad_name,
       result_summary: draft.result_summary,
@@ -45,7 +45,7 @@ export default function SquadKnowledgePanel({ knowledgeItems, search, setSearch,
   };
 
   const handleDelete = async (entryId) => {
-    await base44.entities.SquadKnowledge.delete(entryId);
+    await backend.entities.SquadKnowledge.delete(entryId);
     if (editingId === entryId) setEditingId(null);
     onRefresh?.();
   };

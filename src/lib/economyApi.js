@@ -4,7 +4,7 @@
  * Removes reliance on localStorage and client-side state mutations
  */
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 // ─── GOLD MANAGEMENT ─────────────────────────────────────────────────────────
 
@@ -13,7 +13,7 @@ import { base44 } from '@/api/base44Client';
  */
 export const fetchUserGold = async () => {
   try {
-    const user = await base44.auth.me();
+    const user = await backend.auth.me();
     // Store gold on User entity as custom attribute
     return user.gold || 0;
   } catch (err) {
@@ -28,14 +28,14 @@ export const fetchUserGold = async () => {
  */
 export const awardGold = async (amount, reason, metadata = {}) => {
   try {
-    const user = await base44.auth.me();
+    const user = await backend.auth.me();
     const newGold = (user.gold || 0) + amount;
     
     // Update user gold
-    await base44.auth.updateMe({ gold: newGold });
+    await backend.auth.updateMe({ gold: newGold });
 
     // Log transaction
-    await base44.entities.EconomyAuditLog.create({
+    await backend.entities.EconomyAuditLog.create({
       action: 'gold_awarded',
       user_email: user.email,
       amount,
@@ -57,7 +57,7 @@ export const awardGold = async (amount, reason, metadata = {}) => {
  */
 export const deductGold = async (amount, reason, metadata = {}) => {
   try {
-    const user = await base44.auth.me();
+    const user = await backend.auth.me();
     const currentGold = user.gold || 0;
 
     if (currentGold < amount) {
@@ -65,9 +65,9 @@ export const deductGold = async (amount, reason, metadata = {}) => {
     }
 
     const newGold = currentGold - amount;
-    await base44.auth.updateMe({ gold: newGold });
+    await backend.auth.updateMe({ gold: newGold });
 
-    await base44.entities.EconomyAuditLog.create({
+    await backend.entities.EconomyAuditLog.create({
       action: 'gold_deducted',
       user_email: user.email,
       amount,
@@ -90,13 +90,13 @@ export const deductGold = async (amount, reason, metadata = {}) => {
  */
 export const awardXP = async (amount, reason, metadata = {}) => {
   try {
-    const user = await base44.auth.me();
+    const user = await backend.auth.me();
     const newXP = (user.xp || 0) + amount;
     const newLevel = Math.floor(newXP / 100) + 1;
 
-    await base44.auth.updateMe({ xp: newXP, level: newLevel });
+    await backend.auth.updateMe({ xp: newXP, level: newLevel });
 
-    await base44.entities.EconomyAuditLog.create({
+    await backend.entities.EconomyAuditLog.create({
       action: 'xp_awarded',
       user_email: user.email,
       amount,
@@ -120,7 +120,7 @@ export const awardXP = async (amount, reason, metadata = {}) => {
  */
 export const initiateEscrow = async (listingId, sellerEmail, buyerEmail, assetId, assetType, price, currency = 'GOLD') => {
   try {
-    const escrow = await base44.entities.Escrow.create({
+    const escrow = await backend.entities.Escrow.create({
       listing_id: listingId || 'direct_trade',
       seller_email: sellerEmail,
       buyer_email: buyerEmail,
@@ -132,7 +132,7 @@ export const initiateEscrow = async (listingId, sellerEmail, buyerEmail, assetId
     });
 
     // Log escrow initiation
-    await base44.entities.EconomyAuditLog.create({
+    await backend.entities.EconomyAuditLog.create({
       action: 'escrow_initiated',
       user_email: buyerEmail,
       amount: price,
@@ -157,7 +157,7 @@ export const holdFundsInEscrow = async (escrowId, buyerEmail, amount) => {
     await deductGold(amount, `Escrow hold for transaction ${escrowId}`, { escrow_id: escrowId });
 
     // Update escrow status
-    await base44.entities.Escrow.update(escrowId, {
+    await backend.entities.Escrow.update(escrowId, {
       status: 'funds_held',
       funds_held_at: new Date().toISOString()
     });
@@ -175,14 +175,14 @@ export const holdFundsInEscrow = async (escrowId, buyerEmail, amount) => {
 export const confirmAndTransferAsset = async (escrowId, escrow) => {
   try {
     // Mark payment confirmed
-    await base44.entities.Escrow.update(escrowId, {
+    await backend.entities.Escrow.update(escrowId, {
       status: 'payment_confirmed',
       payment_verified_at: new Date().toISOString()
     });
 
     // Transfer asset to buyer (entity-specific logic)
     if (escrow.asset_type === 'card') {
-      const card = await base44.entities.Card.read(escrow.asset_id);
+      const card = await backend.entities.Card.read(escrow.asset_id);
       // Append an ownership entry to the card's lore historical_log so the
       // narrative survives the transfer. Non-fatal if the helper fails.
       let nextLog = Array.isArray(card?.historical_log) ? card.historical_log : [];
@@ -195,13 +195,13 @@ export const confirmAndTransferAsset = async (escrowId, escrow) => {
           metadata: { escrow_id: escrowId, price: escrow.price },
         });
       } catch { /* non-fatal */ }
-      await base44.entities.Card.update(escrow.asset_id, {
+      await backend.entities.Card.update(escrow.asset_id, {
         created_by: escrow.buyer_email,
         historical_log: nextLog,
       });
     } else if (escrow.asset_type === 'jade') {
-      const jade = await base44.entities.JadeAsset.read(escrow.asset_id);
-      await base44.entities.JadeAsset.update(escrow.asset_id, {
+      const jade = await backend.entities.JadeAsset.read(escrow.asset_id);
+      await backend.entities.JadeAsset.update(escrow.asset_id, {
         created_by: escrow.buyer_email
       });
     }
@@ -213,7 +213,7 @@ export const confirmAndTransferAsset = async (escrowId, escrow) => {
     });
 
     // Finalize escrow
-    await base44.entities.Escrow.update(escrowId, {
+    await backend.entities.Escrow.update(escrowId, {
       status: 'completed',
       completed_at: new Date().toISOString()
     });
@@ -239,12 +239,12 @@ export const cancelEscrow = async (escrowId, escrow, reason = '') => {
     }
 
     // Cancel listing
-    await base44.entities.StorefrontListing.update(escrow.listing_id, {
+    await backend.entities.StorefrontListing.update(escrow.listing_id, {
       status: 'cancelled'
     });
 
     // Update escrow
-    await base44.entities.Escrow.update(escrowId, {
+    await backend.entities.Escrow.update(escrowId, {
       status: 'cancelled',
       completed_at: new Date().toISOString()
     });
@@ -261,12 +261,12 @@ export const cancelEscrow = async (escrowId, escrow, reason = '') => {
  */
 export const fetchTransactionHistory = async (userEmail, limit = 50) => {
   try {
-    const asSeller = await base44.entities.Escrow.filter(
+    const asSeller = await backend.entities.Escrow.filter(
       { seller_email: userEmail },
       '-created_date',
       limit
     );
-    const asBuyer = await base44.entities.Escrow.filter(
+    const asBuyer = await backend.entities.Escrow.filter(
       { buyer_email: userEmail },
       '-created_date',
       limit
@@ -290,7 +290,7 @@ export const fetchTransactionHistory = async (userEmail, limit = 50) => {
  */
 export const fetchEconomyAuditLog = async (limit = 100) => {
   try {
-    const logs = await base44.entities.EconomyAuditLog.list('-created_date', limit);
+    const logs = await backend.entities.EconomyAuditLog.list('-created_date', limit);
     return logs;
   } catch (err) {
     console.error('Failed to fetch audit log:', err);

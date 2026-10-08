@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * Permission definitions
@@ -89,7 +89,7 @@ export async function hasPermission(user, permission) {
 
   // Check custom role permissions
   try {
-    const assignment = await base44.entities.RoleAssignment.filter(
+    const assignment = await backend.entities.RoleAssignment.filter(
       {
         user_email: user.email,
         is_active: true,
@@ -107,7 +107,7 @@ export async function hasPermission(user, permission) {
       }
 
       // Fetch role details
-      const customRole = await base44.entities.CustomRole.filter(
+      const customRole = await backend.entities.CustomRole.filter(
         { id: role.custom_role_id },
         null,
         1
@@ -138,7 +138,7 @@ export async function getUserRole(user) {
 
   // Check custom role assignment
   try {
-    const assignment = await base44.entities.RoleAssignment.filter(
+    const assignment = await backend.entities.RoleAssignment.filter(
       {
         user_email: user.email,
         is_active: true,

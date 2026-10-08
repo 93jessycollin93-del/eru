@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import WalletConnector from '@/components/WalletConnector';
 import MFAVerification from '@/components/MFAVerification';
 import { Wallet, Trash2, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
@@ -24,7 +24,7 @@ export default function WalletManager() {
   const fetchWallets = async () => {
     try {
       setLoading(true);
-      const w = await base44.entities.ConnectedWallet.filter(
+      const w = await backend.entities.ConnectedWallet.filter(
         { user_email: currentUser.email },
         '-created_date',
         100
@@ -33,7 +33,7 @@ export default function WalletManager() {
 
       // Fetch holdings for each wallet
       for (const wallet of w || []) {
-        const h = await base44.entities.WalletHolding.filter(
+        const h = await backend.entities.WalletHolding.filter(
           { wallet_id: wallet.id },
           '-value_usd',
           100
@@ -42,7 +42,7 @@ export default function WalletManager() {
       }
 
       // Fetch security alerts
-      const a = await base44.entities.SecurityAlert.filter(
+      const a = await backend.entities.SecurityAlert.filter(
         { user_email: currentUser.email, is_resolved: false },
         '-created_date',
         100
@@ -59,24 +59,24 @@ export default function WalletManager() {
     setSyncing(walletId);
     try {
       // Clear old holdings
-      const oldHoldings = await base44.entities.WalletHolding.filter(
+      const oldHoldings = await backend.entities.WalletHolding.filter(
         { wallet_id: walletId },
         null,
         1000
       );
       for (const h of oldHoldings || []) {
-        await base44.entities.WalletHolding.delete(h.id);
+        await backend.entities.WalletHolding.delete(h.id);
       }
 
       // Fetch new
-      await base44.functions.invoke('fetchWalletHoldings', {
+      await backend.functions.invoke('fetchWalletHoldings', {
         walletAddress: address,
         chainId,
         walletId,
       });
 
       // Detect suspicious activity
-      await base44.functions.invoke('detectWalletSuspiciousActivity', {
+      await backend.functions.invoke('detectWalletSuspiciousActivity', {
         walletId,
         userEmail: currentUser.email,
       });
@@ -99,11 +99,11 @@ export default function WalletManager() {
 
     try {
       if (mfaPendingAction.action === 'disconnect') {
-        await base44.entities.ConnectedWallet.delete(mfaPendingAction.walletId);
+        await backend.entities.ConnectedWallet.delete(mfaPendingAction.walletId);
         setWallets(wallets.filter((w) => w.id !== mfaPendingAction.walletId));
       } else if (mfaPendingAction.action === 'setPrimary') {
         // Update primary wallet
-        const updated = await base44.entities.ConnectedWallet.update(
+        const updated = await backend.entities.ConnectedWallet.update(
           mfaPendingAction.walletId,
           { is_primary: true }
         );

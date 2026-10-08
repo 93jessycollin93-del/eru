@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Activity, Clock, AlertTriangle, Search } from 'lucide-react';
 
 export default function SecurityDashboard() {
@@ -31,7 +31,7 @@ export default function SecurityDashboard() {
         query.user_email = searchEmail;
       }
 
-      const data = await base44.entities.SecurityAuditLog.filter(
+      const data = await backend.entities.SecurityAuditLog.filter(
         query,
         '-created_date',
         100

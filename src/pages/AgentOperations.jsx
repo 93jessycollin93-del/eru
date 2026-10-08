@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Cpu, AlertTriangle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import AgentTaskBuilder from '@/components/ailab/AgentTaskBuilder';
 import AgentTaskList from '@/components/ailab/AgentTaskList';
 import AgentActivityDashboard from '@/components/ailab/AgentActivityDashboard';
@@ -13,9 +13,9 @@ export default function AgentOperations() {
   const [entitiesAvailable, setEntitiesAvailable] = useState(true);
 
   const loadData = async () => {
-    const botRows = await base44.entities.UserBot.list('-updated_date', 100).catch(() => []);
-    const taskRows = await base44.entities.AgentTask.list('-updated_date', 100).catch(() => null);
-    const runRows = await base44.entities.AgentTaskRun.list('-created_date', 100).catch(() => null);
+    const botRows = await backend.entities.UserBot.list('-updated_date', 100).catch(() => []);
+    const taskRows = await backend.entities.AgentTask.list('-updated_date', 100).catch(() => null);
+    const runRows = await backend.entities.AgentTaskRun.list('-created_date', 100).catch(() => null);
 
     setBots(botRows || []);
 

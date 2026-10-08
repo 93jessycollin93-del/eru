@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Network, Save, Trash2, Plus, Play, Users, Crown, Sparkles, Wand2, Bot, Zap, Route, BarChart3, ExternalLink, CopyPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SquadAnalyticsPanel from './SquadAnalyticsPanel.jsx';
@@ -124,9 +124,9 @@ export default function SquadBoard({ bots }) {
   const loadSquads = async () => {
     setLoading(true);
     const [rows, knowledge, templateRows] = await Promise.all([
-      base44.entities.BotSquad.list('-updated_date', 100),
-      base44.entities.SquadKnowledge.list('-updated_date', 100),
-      base44.entities.SquadTemplate.list('-updated_date', 100),
+      backend.entities.BotSquad.list('-updated_date', 100),
+      backend.entities.SquadKnowledge.list('-updated_date', 100),
+      backend.entities.SquadTemplate.list('-updated_date', 100),
     ]);
     setSquads(rows);
     setKnowledgeItems(knowledge);
@@ -415,9 +415,9 @@ export default function SquadBoard({ bots }) {
     setSaveError('');
     try {
       if (editingId) {
-        await base44.entities.BotSquad.update(editingId, payload);
+        await backend.entities.BotSquad.update(editingId, payload);
       } else {
-        await base44.entities.BotSquad.create(payload);
+        await backend.entities.BotSquad.create(payload);
       }
       await loadSquads();
       resetForm();
@@ -474,7 +474,7 @@ export default function SquadBoard({ bots }) {
   };
 
   const deleteSquad = async (id) => {
-    await base44.entities.BotSquad.delete(id);
+    await backend.entities.BotSquad.delete(id);
     if (editingId === id) resetForm();
     await loadSquads();
   };
@@ -484,7 +484,7 @@ export default function SquadBoard({ bots }) {
   };
 
   const saveAsTemplate = async (squad) => {
-    await base44.entities.SquadTemplate.create({
+    await backend.entities.SquadTemplate.create({
       name: `${squad.name} template`,
       description: squad.description || '',
       source_squad_id: squad.id,
@@ -628,7 +628,7 @@ export default function SquadBoard({ bots }) {
         groupLoad[routedGroup.id] = (groupLoad[routedGroup.id] || 0) + 1;
       }
 
-      const stepResult = await base44.integrations.Core.InvokeLLM({
+      const stepResult = await backend.integrations.Core.InvokeLLM({
         prompt: `You are ${assignedBot.name}. ${assignedBot.instructions || ''}
 Personality: ${assignedBot.personality || 'helpful'}
 Shared squad context: ${squad.shared_context || 'None'}
@@ -655,7 +655,7 @@ Provide a concise specialist response for this step.`
       successfulBotIds.push(assignedBot.id);
     }
 
-    const finalResponse = await base44.integrations.Core.InvokeLLM({
+    const finalResponse = await backend.integrations.Core.InvokeLLM({
       prompt: `You are ${masterBot?.name || 'the master bot'}. ${masterBot?.instructions || ''}
 Shared squad context: ${squad.shared_context || 'None'}
 Cross-department request: ${task}
@@ -688,7 +688,7 @@ Create a final coordinated answer with these sections: Executive Summary, Depart
       ...((squad.execution_history || []).slice(0, 9)),
     ];
 
-    const generatedTags = await base44.integrations.Core.InvokeLLM({
+    const generatedTags = await backend.integrations.Core.InvokeLLM({
       prompt: `Analyze this squad run result and extract search-friendly metadata.
 
 Goal: ${task}
@@ -732,8 +732,8 @@ Prefer practical business/search terms and avoid vague words.`,
     ];
 
     await Promise.all([
-      base44.entities.BotSquad.update(squad.id, { execution_history: updatedHistory, memory_pool: updatedMemoryPool }),
-      base44.entities.SquadKnowledge.create({
+      backend.entities.BotSquad.update(squad.id, { execution_history: updatedHistory, memory_pool: updatedMemoryPool }),
+      backend.entities.SquadKnowledge.create({
         source_squad_id: squad.id,
         source_squad_name: squad.name,
         goal: task,
@@ -747,7 +747,7 @@ Prefer practical business/search terms and avoid vague words.`,
     ]);
 
     if (squad.delivery_enabled && (squad.delivery_targets || []).length > 0) {
-      await base44.functions.invoke('deliverSquadOutput', {
+      await backend.functions.invoke('deliverSquadOutput', {
         squadId: squad.id,
         squadName: squad.name,
         goal: task,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
 export default function Register() {
@@ -21,7 +21,7 @@ export default function Register() {
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
+      await backend.auth.register({ email, password });
       setStep('otp');
     } catch (err) {
       setError(err?.message || 'Registration failed. Please try again.');
@@ -36,8 +36,8 @@ export default function Register() {
     if (!otp) { setError('Please enter the verification code.'); return; }
     setLoading(true);
     try {
-      const res = await base44.auth.verifyOtp({ email, otpCode: otp });
-      base44.auth.setToken(res.access_token);
+      const res = await backend.auth.verifyOtp({ email, otpCode: otp });
+      backend.auth.setToken(res.access_token);
       window.location.href = '/';
     } catch (err) {
       setError(err?.message || 'Invalid code. Please try again.');
@@ -49,7 +49,7 @@ export default function Register() {
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     try {
-      await base44.auth.resendOtp(email);
+      await backend.auth.resendOtp(email);
       setResendCooldown(30);
       const t = setInterval(() => setResendCooldown(v => { if (v <= 1) { clearInterval(t); return 0; } return v - 1; }), 1000);
     } catch {}
@@ -58,7 +58,7 @@ export default function Register() {
   const handleProvider = async (providerId) => {
     setError('');
     try {
-      await base44.auth.loginWithProvider(providerId, '/');
+      await backend.auth.loginWithProvider(providerId, '/');
     } catch (err) {
       setError(err?.message || `${providerId} login failed.`);
     }

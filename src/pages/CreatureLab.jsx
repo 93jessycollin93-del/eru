@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { ELEMENT_COLORS, RARITY_STYLES } from '../components/cards/StarterCards';
 import CardDisplay from '../components/cards/CardDisplay';
 import { FlaskConical, Plus, Dna, Zap, Loader2, Sparkles, Flame } from 'lucide-react';
@@ -59,8 +59,8 @@ export default function CreatureLab() {
   const load = async () => {
     setLoading(true);
     const [creatureList, cardList] = await Promise.all([
-      base44.entities.Creature.list('-created_date', 50),
-      base44.entities.Card.list('-created_date', 200),
+      backend.entities.Creature.list('-created_date', 50),
+      backend.entities.Card.list('-created_date', 200),
     ]);
     setCreatures(creatureList);
     setCards(cardList);
@@ -72,7 +72,7 @@ export default function CreatureLab() {
     setCreating(true);
     const rarityStats = { common: [2, 2], rare: [3, 3], epic: [5, 4], legendary: [7, 5] };
     const [pb, gb] = rarityStats[form.rarity];
-    await base44.entities.Creature.create({
+    await backend.entities.Creature.create({
       name: form.name,
       element: form.element,
       rarity: form.rarity,
@@ -103,14 +103,14 @@ export default function CreatureLab() {
     const cardData = breedCard(parent1, parent2);
     await new Promise(r => setTimeout(r, 1200));
 
-    const savedCard = await base44.entities.Card.create({
+    const savedCard = await backend.entities.Card.create({
       ...cardData,
       quantity: 1,
       creature_id: parent1.id,
       source_creature_ids: [parent1.id, parent2.id],
     });
-    await base44.entities.Creature.update(parent1.id, { breed_count: (parent1.breed_count || 0) + 1, bred_card_id: savedCard.id });
-    await base44.entities.Creature.update(parent2.id, { breed_count: (parent2.breed_count || 0) + 1 });
+    await backend.entities.Creature.update(parent1.id, { breed_count: (parent1.breed_count || 0) + 1, bred_card_id: savedCard.id });
+    await backend.entities.Creature.update(parent2.id, { breed_count: (parent2.breed_count || 0) + 1 });
 
     setBreedResult(savedCard);
     setTransmuteResult(null);
@@ -153,7 +153,7 @@ export default function CreatureLab() {
     const powerBoost = upgradedRarity === 'legendary' ? 3 : 2;
     const guardBoost = upgradedRarity === 'legendary' ? 2 : 1;
 
-    const forgedCard = await base44.entities.Card.create({
+    const forgedCard = await backend.entities.Card.create({
       ...baseCard,
       id: undefined,
       name: `${baseCard.name} Ascended`,
@@ -168,7 +168,7 @@ export default function CreatureLab() {
       flavor_text: `Forged through transmutation from ${TRANSMUTE_REQUIREMENT} sacrificed cards.`,
     });
 
-    await Promise.all(sourceCards.map((card) => base44.entities.Card.delete(card.id)));
+    await Promise.all(sourceCards.map((card) => backend.entities.Card.delete(card.id)));
 
     setTransmuteResult(forgedCard);
     setBreedResult(null);

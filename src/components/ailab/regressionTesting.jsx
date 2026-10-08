@@ -1,8 +1,8 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { invokeSelectedModel } from './modelRouting';
 
 export async function scoreSimilarity(expectedOutput, actualOutput, inputFileNames = []) {
-  return await base44.integrations.Core.InvokeLLM({
+  return await backend.integrations.Core.InvokeLLM({
     prompt: `You are grading a bot response.\nExpected output:\n${expectedOutput}\n\nActual output:\n${actualOutput}\n\nSupporting visual or document inputs used by the bot: ${inputFileNames.length > 0 ? inputFileNames.join(', ') : 'None'}\n\nScore the semantic similarity from 0 to 1, where 1 means the actual output fully satisfies the expected output in meaning and logic based on the provided text and any referenced visual/document inputs. Return a short reason.`,
     response_json_schema: {
       type: 'object',
@@ -27,7 +27,7 @@ export function buildRegressionPrompt(bot, instructions, input, globalPolicy, in
 }
 
 export async function runRegressionSuite({ bot, instructions, globalPolicy }) {
-  const cases = await base44.entities.BotTestCase.filter({ bot_id: bot.id }, '-created_date', 100);
+  const cases = await backend.entities.BotTestCase.filter({ bot_id: bot.id }, '-created_date', 100);
   const activeCases = cases.filter((item) => item.is_active !== false);
   const runGroup = `regression_${Date.now()}`;
   const results = [];
@@ -57,7 +57,7 @@ export async function runRegressionSuite({ bot, instructions, globalPolicy }) {
       input_file_names: testCase.input_file_names || [],
     };
 
-    await base44.entities.BotTestRun.create(run);
+    await backend.entities.BotTestRun.create(run);
     results.push(run);
   }
 

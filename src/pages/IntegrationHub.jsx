@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plug, ArrowLeft, MessageCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useRealtimeEntityList } from '@/hooks/useLiveSync';
 
 import {
@@ -55,7 +55,7 @@ export default function IntegrationHub() {
   // Try to read the public APP_BASE_URL once for webhook URL hints. We never
   // surface secret values — APP_BASE_URL is non-sensitive.
   useEffect(() => {
-    base44.functions.invoke('checkEditorPackageUpdates', {}).catch(() => null); // warm
+    backend.functions.invoke('checkEditorPackageUpdates', {}).catch(() => null); // warm
     // The platform doesn't expose secrets to the browser. The admin can set
     // a public base URL hint in localStorage for nicer copy/paste. Otherwise
     // we show a clear placeholder.

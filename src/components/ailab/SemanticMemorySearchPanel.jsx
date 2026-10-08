@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Brain, Search } from 'lucide-react';
 
 export default function SemanticMemorySearchPanel({ bots }) {
@@ -11,7 +11,7 @@ export default function SemanticMemorySearchPanel({ bots }) {
   const handleSearch = async () => {
     if (!query.trim()) return;
     setSearching(true);
-    const response = await base44.functions.invoke('searchBotSemanticMemory', {
+    const response = await backend.functions.invoke('searchBotSemanticMemory', {
       query,
       botId: selectedBot === 'all' ? undefined : selectedBot,
       limit: 10,

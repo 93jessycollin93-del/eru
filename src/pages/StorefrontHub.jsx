@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import {
   Store, Plus, Plug, AlertCircle, CheckCircle2,
@@ -502,8 +502,8 @@ export default function StorefrontHub() {
   const load = async () => {
     setLoading(true);
     const [l, c] = await Promise.all([
-      base44.entities.StorefrontListing.list('-created_date', 50),
-      base44.entities.MarketConnector.list('-created_date', 50).catch(() => []),
+      backend.entities.StorefrontListing.list('-created_date', 50),
+      backend.entities.MarketConnector.list('-created_date', 50).catch(() => []),
     ]);
     setListings(l);
     setConnectors(c);
@@ -531,7 +531,7 @@ export default function StorefrontHub() {
       });
       return;
     }
-    const created = await base44.entities.MarketConnector.create({
+    const created = await backend.entities.MarketConnector.create({
       ...data,
       price_adjustment_type: 'none',
       price_adjustment_value: 0,
@@ -554,7 +554,7 @@ export default function StorefrontHub() {
       logAuditEvent(currentUser, { action: 'connector.toggle', target_type: 'MarketConnector', target_id: c.id, status: 'denied', reason: 'missing_admin_permission' });
       return;
     }
-    await base44.entities.MarketConnector.update(c.id, { is_enabled: !c.is_enabled, status: !c.is_enabled ? 'pending_auth' : 'inactive' });
+    await backend.entities.MarketConnector.update(c.id, { is_enabled: !c.is_enabled, status: !c.is_enabled ? 'pending_auth' : 'inactive' });
     logAuditEvent(currentUser, { action: 'connector.toggle', target_type: 'MarketConnector', target_id: c.id, before: { is_enabled: c.is_enabled }, after: { is_enabled: !c.is_enabled } });
     load();
   };
@@ -564,7 +564,7 @@ export default function StorefrontHub() {
       logAuditEvent(currentUser, { action: 'connector.delete', target_type: 'MarketConnector', target_id: c.id, status: 'denied', reason: 'missing_admin_permission' });
       return;
     }
-    await base44.entities.MarketConnector.delete(c.id);
+    await backend.entities.MarketConnector.delete(c.id);
     logAuditEvent(currentUser, { action: 'connector.delete', target_type: 'MarketConnector', target_id: c.id });
     load();
   };
@@ -575,7 +575,7 @@ export default function StorefrontHub() {
       logAuditEvent(currentUser, { action: 'listing.create', target_type: 'StorefrontListing', status: 'failure', reason: draftCheck.reason });
       return;
     }
-    const created = await base44.entities.StorefrontListing.create(data);
+    const created = await backend.entities.StorefrontListing.create(data);
     logAuditEvent(currentUser, { action: 'listing.create', target_type: 'StorefrontListing', target_id: created?.id, after: { title: data.title, base_price: data.base_price, currency: data.currency } });
     setShowCreateListing(false);
     load();
@@ -592,7 +592,7 @@ export default function StorefrontHub() {
       logAuditEvent(currentUser, { action: 'listing.update', target_type: 'StorefrontListing', target_id: editingListing?.id, status: 'failure', reason: draftCheck.reason });
       return;
     }
-    await base44.entities.StorefrontListing.update(editingListing.id, {
+    await backend.entities.StorefrontListing.update(editingListing.id, {
       ...data,
       currency: data.crypto_currency,
     });
@@ -609,7 +609,7 @@ export default function StorefrontHub() {
       return;
     }
     const nextStatus = listing.status === 'active' ? 'paused' : 'active';
-    await base44.entities.StorefrontListing.update(listing.id, { status: nextStatus });
+    await backend.entities.StorefrontListing.update(listing.id, { status: nextStatus });
     logAuditEvent(currentUser, { action: 'listing.toggle_pause', target_type: 'StorefrontListing', target_id: listing.id, before: { status: listing.status }, after: { status: nextStatus } });
     load();
   };
@@ -622,13 +622,13 @@ export default function StorefrontHub() {
       return;
     }
     if (!confirm(`Delete "${listing.title}"? This cannot be undone.`)) return;
-    await base44.entities.StorefrontListing.delete(listing.id);
+    await backend.entities.StorefrontListing.delete(listing.id);
     logAuditEvent(currentUser, { action: 'listing.delete', target_type: 'StorefrontListing', target_id: listing.id, before: { title: listing.title, status: listing.status } });
     load();
   };
 
   const handleSaveSyndication = async (items) => {
-    await base44.entities.StorefrontListing.update(syndicationListing.id, {
+    await backend.entities.StorefrontListing.update(syndicationListing.id, {
       external_syndications: items.map((item) => ({
         ...item,
         sync_status: item.enabled ? (connectors.find((connector) => connector.id === item.connector_id)?.is_enabled ? 'pending' : 'not_connected') : 'not_connected',
@@ -640,7 +640,7 @@ export default function StorefrontHub() {
 
   const handleRunSync = async (listingId) => {
     setSyncingListingId(listingId);
-    await base44.functions.invoke('runMarketplaceSyndication', { listingId });
+    await backend.functions.invoke('runMarketplaceSyndication', { listingId });
     setSyncingListingId(null);
     load();
   };
@@ -678,7 +678,7 @@ export default function StorefrontHub() {
         }
       }
       try {
-        await base44.entities.StorefrontListing.update(id, { external_syndications: updated });
+        await backend.entities.StorefrontListing.update(id, { external_syndications: updated });
         pushed++;
       } catch {
         failed++;

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Upload, Camera, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * ScanCapture — image upload entry point. Uses the existing UploadFile
@@ -29,7 +29,7 @@ export default function ScanCapture({ onUploaded, busy }) {
         bitmap.close?.();
       } catch { /* not all browsers / files */ }
 
-      const res = await base44.integrations.Core.UploadFile({ file });
+      const res = await backend.integrations.Core.UploadFile({ file });
       onUploaded?.({ image_url: res.file_url, image_meta: meta });
     } catch (e) {
       setError(e?.message || 'Upload failed.');

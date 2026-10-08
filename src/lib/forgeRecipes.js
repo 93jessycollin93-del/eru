@@ -12,7 +12,7 @@
 // Recipes consume cards (best-effort delete) and create the reward via
 // createCardWithLore so provenance + history stay consistent.
 // ----------------------------------------------------------------------------
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { STARTER_CARDS } from '@/components/cards/StarterCards';
 import { createCardWithLore } from '@/lib/cardLore';
 
@@ -196,12 +196,12 @@ export async function runRecipeCraft(recipe, ownedCards) {
 
   // Stamp provenance — reuse `is_transmuted` + `transmuted_from_card_ids` so
   // existing UI badges that detect forged cards keep working.
-  await base44.entities.Card.update(created.id, {
+  await backend.entities.Card.update(created.id, {
     is_transmuted: true,
     transmuted_from_card_ids: consumedIds,
   }).catch(() => null);
 
-  await Promise.all(consumedIds.map((id) => base44.entities.Card.delete(id).catch(() => null)));
+  await Promise.all(consumedIds.map((id) => backend.entities.Card.delete(id).catch(() => null)));
 
   return { ok: true, card: { ...created, is_transmuted: true, transmuted_from_card_ids: consumedIds }, recipe };
 }

@@ -137,7 +137,7 @@ export const DEFAULT_SCENARIOS = [
     description: 'POST {botId:<victim>, system_prompt:"<phishing>"} as any logged-in user',
     expected_defense: 'auth_required',
     simulated_result: 'blocked',
-    evidence: 'PATCHED: base44/functions/updateTelegramBot/entry.ts now fetches the bot and 403s if bot.created_by !== user.email && user.role !== "admin".',
+    evidence: 'PATCHED: the updateTelegramBot server function now fetches the bot and 403s if bot.created_by !== user.email && user.role !== "admin".',
     fix: 'Patched. Verify the redteam live_runner once wired up.',
   },
   {
@@ -146,7 +146,7 @@ export const DEFAULT_SCENARIOS = [
     description: 'Use victim\'s OAuth tokens to read/write their Sheets/Salesforce',
     expected_defense: 'auth_required',
     simulated_result: 'blocked',
-    evidence: 'PATCHED: base44/functions/botExternalDataAccess/entry.ts now 403s if bot.created_by !== user.email before getConnection runs.',
+    evidence: 'PATCHED: the botExternalDataAccess server function now 403s if bot.created_by !== user.email before getConnection runs.',
     fix: 'Patched. Note: invokeExternalModel/entry.ts:75 still forwards user-supplied botId — confirm it goes through the patched handler.',
   },
   {
@@ -156,7 +156,7 @@ export const DEFAULT_SCENARIOS = [
     expected_defense: 'auth_required',
     simulated_result: 'blocked',
     evidence: 'PATCHED: calculateRebalancing/entry.ts now requires auth.me() + userEmail === user.email (or admin). monitorRebalancing/entry.ts requires admin OR a SCHEDULER_TOKEN header — set the env var or update the scheduler caller.',
-    fix: 'Patched. ACTION FOR USER: set SCHEDULER_TOKEN env var and pass it as x-scheduler-token from the daily-rebalance scheduler config in Base44.',
+    fix: 'Patched. ACTION FOR USER: set SCHEDULER_TOKEN env var and pass it as x-scheduler-token from the daily-rebalance scheduler config.',
   },
   {
     id: 'D4', commander_id: 'RC-AUTH',
@@ -184,8 +184,8 @@ export const DEFAULT_SCENARIOS = [
     description: 'Extract VITE_*_WEBHOOK_SECRET from JS bundle, forge signed payment webhook',
     expected_defense: 'reject',
     simulated_result: 'blocked',
-    evidence: 'PATCHED: src/lib/webhookValidator.js no longer reads any VITE_*_WEBHOOK_SECRET; validateWebhookSignature now throws and validateWebhook returns valid:false. Real HMAC validation lives in base44/functions/validatePaymentWebhook/entry.ts which reads STRIPE_WEBHOOK_SECRET / CRYPTO_WEBHOOK_SECRET / WALLET_WEBHOOK_SECRET via Deno.env.get(). ACTION FOR USER: set those env vars in Base44 before enabling payment flows.',
-    fix: 'Patched. Configure STRIPE_WEBHOOK_SECRET / CRYPTO_WEBHOOK_SECRET / WALLET_WEBHOOK_SECRET in Base44 env.',
+    evidence: 'PATCHED: src/lib/webhookValidator.js no longer reads any VITE_*_WEBHOOK_SECRET; validateWebhookSignature now throws and validateWebhook returns valid:false. Real HMAC validation lives in the validatePaymentWebhook server function which reads STRIPE_WEBHOOK_SECRET / CRYPTO_WEBHOOK_SECRET / WALLET_WEBHOOK_SECRET via Deno.env.get(). ACTION FOR USER: set those env vars in the server environment before enabling payment flows.',
+    fix: 'Patched. Configure STRIPE_WEBHOOK_SECRET / CRYPTO_WEBHOOK_SECRET / WALLET_WEBHOOK_SECRET in server environment.',
   },
   {
     id: 'E3', commander_id: 'RC-ABUSE',
@@ -193,8 +193,8 @@ export const DEFAULT_SCENARIOS = [
     description: 'PII master key shipped to browser; decrypts every user\'s phone/SSN',
     expected_defense: 'reject',
     simulated_result: 'blocked',
-    evidence: 'PATCHED: src/lib/encryption.js no longer reads VITE_ENCRYPTION_KEY; all four exports (encryptData/decryptData/encryptUserPII/decryptUserPII) now throw with a pointer to the server function. Real implementation in base44/functions/encryptUserPII/entry.ts uses AES-GCM with PII_ENCRYPTION_KEY from Deno.env.get(). ACTION FOR USER: set PII_ENCRYPTION_KEY (32-byte hex) in Base44 env before any PII flows resume.',
-    fix: 'Patched. Configure PII_ENCRYPTION_KEY in Base44 env (32-byte hex string).',
+    evidence: 'PATCHED: src/lib/encryption.js no longer reads VITE_ENCRYPTION_KEY; all four exports (encryptData/decryptData/encryptUserPII/decryptUserPII) now throw with a pointer to the server function. Real implementation in the encryptUserPII server function uses AES-GCM with PII_ENCRYPTION_KEY from Deno.env.get(). ACTION FOR USER: set PII_ENCRYPTION_KEY (32-byte hex) in server environment before any PII flows resume.',
+    fix: 'Patched. Configure PII_ENCRYPTION_KEY in server environment (32-byte hex string).',
   },
   {
     id: 'E4', commander_id: 'RC-ABUSE',

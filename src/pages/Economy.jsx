@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import EconomyContractStatus from '@/components/economy/EconomyContractStatus';
@@ -66,22 +66,22 @@ export default function Economy() {
   const loadData = async () => {
     setLoading(true);
     setError('');
-    const connectedWallets = await base44.entities.ConnectedWallet.filter({ user_email: currentUser.email }, '-created_date', 50);
+    const connectedWallets = await backend.entities.ConnectedWallet.filter({ user_email: currentUser.email }, '-created_date', 50);
     setWallets(connectedWallets || []);
 
     if ((connectedWallets || []).length > 0) {
       const primary = (connectedWallets || []).find((wallet) => wallet.is_primary) || connectedWallets[0];
-      const tokenRows = await base44.entities.WalletHolding.filter({ wallet_id: primary.id }, '-updated_date', 100);
+      const tokenRows = await backend.entities.WalletHolding.filter({ wallet_id: primary.id }, '-updated_date', 100);
       setHoldings(tokenRows || []);
 
-      const txRows = await base44.entities.EconomyAuditLog
+      const txRows = await backend.entities.EconomyAuditLog
         ? []
         : [];
       void txRows;
     }
 
-    const txEntities = await base44.entities.Transaction.filter({ buyer_email: currentUser.email }, '-created_date', 50);
-    const sellerTx = await base44.entities.Transaction.filter({ seller_email: currentUser.email }, '-created_date', 50);
+    const txEntities = await backend.entities.Transaction.filter({ buyer_email: currentUser.email }, '-created_date', 50);
+    const sellerTx = await backend.entities.Transaction.filter({ seller_email: currentUser.email }, '-created_date', 50);
     const normalized = [...(txEntities || []), ...(sellerTx || [])]
       .filter((item) => item.currency === (config?.token_symbol || item.currency) || item.asset_type === 'currency')
       .map((item) => ({
@@ -142,7 +142,7 @@ export default function Economy() {
         params: [{ from, to: config.token_contract_address, data }]
       });
 
-      await base44.entities.Transaction.create({
+      await backend.entities.Transaction.create({
         order_id: `token-transfer-${Date.now()}`,
         asset_type: 'currency',
         asset_id: config.token_contract_address,

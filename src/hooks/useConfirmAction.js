@@ -13,7 +13,7 @@ import { useState, useCallback } from 'react';
  *     description: 'This cannot be undone.',
  *     tone: 'danger',
  *     confirmLabel: 'Delete',
- *     onConfirm: async () => { await base44.entities.X.delete(id); },
+ *     onConfirm: async () => { await backend.entities.X.delete(id); },
  *   })}>Delete</button>
  *
  *   <ConfirmDialog

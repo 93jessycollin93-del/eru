@@ -1,10 +1,10 @@
 /**
  * botStudioStore — single data-access layer for the Offline AI Studio.
  * ----------------------------------------------------------------------------
- * Mirrors the mediaLibrary pattern: UI never touches the Base44 SDK directly.
+ * Mirrors the mediaLibrary pattern: UI never touches the backend client directly.
  *
  * Strategy:
- *  - Online: writes go to Base44 (cloud) AND the IndexedDB cache (source of
+ *  - Online: writes go to the backend (cloud) AND the IndexedDB cache (source of
  *    truth for the UI). Reads come from cache; pullCloud() refreshes cache.
  *  - Offline: writes go to cache + a queue; flushQueue() replays them to the
  *    cloud on reconnect. Temp ids are reconciled when the cloud create lands.
@@ -12,7 +12,7 @@
  * This makes the studio fully usable offline and fully persisted online.
  */
 
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import * as idb from './offlineDb';
 
 const SCHEMA = [
@@ -39,7 +39,7 @@ export async function pullCloud() {
   const results = {};
   await Promise.all(
     SCHEMA.map(async (s) => {
-      const rows = await base44.entities[s.entity].list(s.sort, 1000).catch(() => []);
+      const rows = await backend.entities[s.entity].list(s.sort, 1000).catch(() => []);
       results[s.key] = rows || [];
       await idb.idbClear(s.key);
       await idb.idbBulkPut(s.key, rows || []);
@@ -64,7 +64,7 @@ export async function flushQueue() {
     if (!s) continue;
     try {
       if (op.type === 'create') {
-        const created = await base44.entities[s.entity].create(op.data);
+        const created = await backend.entities[s.entity].create(op.data);
         const cached = await idb.idbGet(op.store, op.tempId);
         if (cached) {
           await idb.idbDelete(op.store, op.tempId);
@@ -87,9 +87,9 @@ export async function flushQueue() {
           }
         }
       } else if (op.type === 'update') {
-        await base44.entities[s.entity].update(op.id, op.data);
+        await backend.entities[s.entity].update(op.id, op.data);
       } else if (op.type === 'delete') {
-        await base44.entities[s.entity].delete(op.id);
+        await backend.entities[s.entity].delete(op.id);
       }
       await idb.idbDelete('queue', op.id);
     } catch (err) {
@@ -113,7 +113,7 @@ export async function createRow(store, data) {
   const s = cfg(store);
   if (online()) {
     try {
-      const created = await base44.entities[s.entity].create(data);
+      const created = await backend.entities[s.entity].create(data);
       await idb.idbPut(store, created);
       return created;
     } catch {
@@ -141,7 +141,7 @@ export async function updateRow(store, id, patch) {
   }
   if (online()) {
     try {
-      await base44.entities[s.entity].update(id, patch);
+      await backend.entities[s.entity].update(id, patch);
     } catch {
       await queueOp({ id, store, type: 'update', data: patch, ts: Date.now() });
     }
@@ -158,7 +158,7 @@ export async function deleteRow(store, id) {
   const s = cfg(store);
   if (online()) {
     try {
-      await base44.entities[s.entity].delete(id);
+      await backend.entities[s.entity].delete(id);
     } catch {
       await queueOp({ id, store, type: 'delete', data: null, ts: Date.now() });
     }

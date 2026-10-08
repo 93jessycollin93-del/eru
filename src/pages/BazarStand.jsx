@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Store, Coins, Gem, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import BazarBalanceCard from '@/components/bazar/BazarBalanceCard';
 import BazarProductCard from '@/components/bazar/BazarProductCard';
 import BazarCheckoutDialog, { priceInGold } from '@/components/bazar/BazarCheckoutDialog';
@@ -115,8 +115,8 @@ export default function BazarStand() {
     const load = async () => {
       setLoading(true);
       const [me, rows] = await Promise.all([
-        base44.auth.me(),
-        base44.entities.BazarProduct.list('sort_order', 100).catch(() => []),
+        backend.auth.me(),
+        backend.entities.BazarProduct.list('sort_order', 100).catch(() => []),
       ]);
       setUserState({ gold: me?.gold || 0, jadeite: me?.jadeite || 0, bonus_cards: me?.bonus_cards || 0 });
       setProducts(rows?.length ? rows.filter((item) => item.is_active !== false) : DEFAULT_PRODUCTS);
@@ -145,7 +145,7 @@ export default function BazarStand() {
     if (!checkoutProduct) return { ok: false, message: 'No product selected.' };
     setBuyingId(checkoutProduct.title);
 
-    const me = await base44.auth.me();
+    const me = await backend.auth.me();
     const product = checkoutProduct;
     const orderId = `bazar_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const priceUsd = Number(product.price_usd || 0);
@@ -169,7 +169,7 @@ export default function BazarStand() {
         if ((me?.gold || 0) < walletCost) throw new Error('Insufficient wallet balance.');
 
         const goldAfterDebit = (me.gold || 0) - walletCost;
-        await base44.auth.updateMe({ gold: goldAfterDebit });
+        await backend.auth.updateMe({ gold: goldAfterDebit });
 
         await markPendingVerification(transactionId, priceUsd);
         await verifyTransaction(transactionId, { settlement: 'wallet', gold_charged: walletCost });
@@ -187,13 +187,13 @@ export default function BazarStand() {
       if (method === 'crypto') {
         const paymentRef = generateTonPaymentRef();
         const amountTon = Number((priceUsd / FALLBACK_TON_USD).toFixed(4));
-        await base44.entities.Transaction.update(transactionId, {
+        await backend.entities.Transaction.update(transactionId, {
           metadata: { chain: 'ton', network: 'mainnet', payment_ref: paymentRef, amount_ton: amountTon },
         }).catch(() => null);
         tonPayment = { transactionId, paymentRef, amountTon };
       }
 
-      await base44.entities.EconomyAuditLog.create({
+      await backend.entities.EconomyAuditLog.create({
         action: 'bazar_purchase_pending',
         user_email: me?.email,
         amount: priceUsd,
@@ -225,7 +225,7 @@ export default function BazarStand() {
    * we already enforced above.
    */
   const grantBazarRewards = async ({ product, transactionId, orderId, walletGoldOverride }) => {
-    const me = await base44.auth.me();
+    const me = await backend.auth.me();
     const rewardGold = Number(product.rewards?.gold || product.gold_amount || 0);
     const rewardJadeite = Number(product.rewards?.jadeite || product.jadeite_amount || 0);
     const bonusCards = 1;
@@ -235,8 +235,8 @@ export default function BazarStand() {
     const nextJadeite = (me?.jadeite || 0) + rewardJadeite;
     const nextBonusCards = (me?.bonus_cards || 0) + bonusCards;
 
-    await base44.auth.updateMe({ gold: nextGold, jadeite: nextJadeite, bonus_cards: nextBonusCards });
-    await base44.entities.EconomyAuditLog.create({
+    await backend.auth.updateMe({ gold: nextGold, jadeite: nextJadeite, bonus_cards: nextBonusCards });
+    await backend.entities.EconomyAuditLog.create({
       action: 'bazar_purchase',
       user_email: me?.email,
       amount: Number(product.price_usd || 0),

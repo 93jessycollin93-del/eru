@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * ANTI-EXPLOIT GUARDS FOR JADE DROP SYSTEM
@@ -16,7 +16,7 @@ import { base44 } from '@/api/base44Client';
  * Each order gets exactly ONE Jade asset, never rerolled
  */
 export async function preventRerollExploit(orderId) {
-  const orders = await base44.entities.Order.filter(
+  const orders = await backend.entities.Order.filter(
     { id: orderId },
     '-created_date',
     1
@@ -119,7 +119,7 @@ export function preventBonusStacking(userId, bonusType = 'daily') {
  * Once Jade asset created, verify it matches drop parameters
  */
 export async function verifyJadeAssetMatchesDrop(jadeAssetId, expectedDrop) {
-  const asset = await base44.entities.JadeAsset.read(jadeAssetId);
+  const asset = await backend.entities.JadeAsset.read(jadeAssetId);
 
   if (!asset) {
     throw new Error('❌ GUARD: Jade asset not found after creation');
@@ -146,7 +146,7 @@ export async function verifyJadeAssetMatchesDrop(jadeAssetId, expectedDrop) {
  * Double-check order status before any grant
  */
 export async function verifyOrderBeforeGrant(orderId) {
-  const orders = await base44.entities.Order.filter(
+  const orders = await backend.entities.Order.filter(
     { id: orderId },
     '-created_date',
     1
@@ -184,7 +184,7 @@ export async function verifyOrderBeforeGrant(orderId) {
  * Flag unusual drop patterns for admin review
  */
 export async function detectEconomicAnomalies(userId, drop) {
-  const userDrops = await base44.entities.EconomyAuditLog.filter(
+  const userDrops = await backend.entities.EconomyAuditLog.filter(
     { user_email: userId, action: 'asset_granted', asset_type: 'jade' },
     '-created_date',
     100
@@ -214,7 +214,7 @@ export async function detectEconomicAnomalies(userId, drop) {
 
   if (anomalies.length > 0) {
     // Log for admin review
-    await base44.entities.EconomyAuditLog.create({
+    await backend.entities.EconomyAuditLog.create({
       action: 'inconsistency_detected',
       user_email: userId,
       status: 'manual_review_required',

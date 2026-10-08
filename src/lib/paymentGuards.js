@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * PAYMENT VERIFICATION GUARDS
@@ -25,7 +25,7 @@ export async function verifyPaymentBeforeGrant(orderId, paidAmount, expectedPric
   }
 
   // Rule: Look up transaction record
-  const transactions = await base44.entities.Transaction.filter(
+  const transactions = await backend.entities.Transaction.filter(
     { order_id: orderId },
     '-created_date',
     1
@@ -70,7 +70,7 @@ export async function verifyPaymentBeforeGrant(orderId, paidAmount, expectedPric
  * @returns {Promise<string>} transactionId
  */
 export async function createPendingTransaction(orderData) {
-  const txn = await base44.entities.Transaction.create({
+  const txn = await backend.entities.Transaction.create({
     order_id: orderData.orderId,
     asset_type: orderData.assetType,
     asset_id: orderData.assetId,
@@ -89,7 +89,7 @@ export async function createPendingTransaction(orderData) {
  * Mark transaction as pending verification (payment submitted, awaiting confirmation)
  */
 export async function markPendingVerification(transactionId, paidAmount) {
-  await base44.entities.Transaction.update(transactionId, {
+  await backend.entities.Transaction.update(transactionId, {
     amount: paidAmount,
     status: 'pending_verification',
   });
@@ -101,7 +101,7 @@ export async function markPendingVerification(transactionId, paidAmount) {
  * @param {object} metadata - proof data (hash, receipt, etc)
  */
 export async function verifyTransaction(transactionId, metadata = {}) {
-  await base44.entities.Transaction.update(transactionId, {
+  await backend.entities.Transaction.update(transactionId, {
     status: 'verified',
     verified_at: new Date().toISOString(),
     verified_by: 'system',
@@ -113,7 +113,7 @@ export async function verifyTransaction(transactionId, metadata = {}) {
  * Mark transaction as failed
  */
 export async function failTransaction(transactionId, reason) {
-  await base44.entities.Transaction.update(transactionId, {
+  await backend.entities.Transaction.update(transactionId, {
     status: 'failed',
     failure_reason: reason,
   });
@@ -123,7 +123,7 @@ export async function failTransaction(transactionId, reason) {
  * Get transaction by ID with full validation
  */
 export async function getTransactionWithValidation(transactionId) {
-  const txns = await base44.entities.Transaction.filter(
+  const txns = await backend.entities.Transaction.filter(
     { id: transactionId },
     '-created_date',
     1

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, BookOpen } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import LorePopularityChart from '@/components/insights/LorePopularityChart';
 import ExtractionTrendChart from '@/components/insights/ExtractionTrendChart';
@@ -27,8 +27,8 @@ export default function LoreInsights() {
       if (!currentUser?.email) return;
       setLoading(true);
       const [c, e] = await Promise.all([
-        base44.entities.Card.filter({ created_by: currentUser.email }, '-created_date', 500).catch(() => []),
-        base44.entities.ExcavationEvent.filter({ user_email: currentUser.email }, '-created_date', 200).catch(() => []),
+        backend.entities.Card.filter({ created_by: currentUser.email }, '-created_date', 500).catch(() => []),
+        backend.entities.ExcavationEvent.filter({ user_email: currentUser.email }, '-created_date', 200).catch(() => []),
       ]);
       if (!mounted) return;
       setCards(c || []);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Brain, Cpu, Gauge, Zap } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 function estimateResource(bot) {
   return Math.min(100, 20 + ((bot.usage_count || 0) * 2) + ((bot.connected_bot_ids || []).length * 8));
@@ -17,7 +17,7 @@ export default function BotResourceManagementPanel({ bots, onBotsUpdated }) {
   const [autoTrigger, setAutoTrigger] = useState(true);
 
   const load = async () => {
-    const rows = await base44.entities.BotResourceSnapshot.list('-created_date', 500);
+    const rows = await backend.entities.BotResourceSnapshot.list('-created_date', 500);
     setSnapshots(rows);
   };
 
@@ -38,7 +38,7 @@ export default function BotResourceManagementPanel({ bots, onBotsUpdated }) {
         if (recommendation.action === 'memory_boost') upgradeAction = autoTrigger ? 'trigger_memory_boost' : 'suggest_memory_boost';
         if (recommendation.action === 'processing_power') upgradeAction = autoTrigger ? 'trigger_processing_power' : 'suggest_processing_power';
 
-        await base44.entities.BotResourceSnapshot.create({
+        await backend.entities.BotResourceSnapshot.create({
           bot_id: bot.id,
           bot_name: bot.name,
           resource_utilization: resourceUtilization,
@@ -51,7 +51,7 @@ export default function BotResourceManagementPanel({ bots, onBotsUpdated }) {
           const currentCaps = bot.unlocked_capabilities || [];
           const upgradeCapability = recommendation.action === 'memory_boost' ? 'memory_boost' : 'processing_power';
           if (!currentCaps.includes(upgradeCapability)) {
-            await base44.entities.UserBot.update(bot.id, {
+            await backend.entities.UserBot.update(bot.id, {
               unlocked_capabilities: [...currentCaps, upgradeCapability],
             });
           }
@@ -82,7 +82,7 @@ export default function BotResourceManagementPanel({ bots, onBotsUpdated }) {
     const currentCaps = bot.unlocked_capabilities || [];
     const capability = action === 'memory_boost' ? 'memory_boost' : 'processing_power';
     if (currentCaps.includes(capability)) return;
-    await base44.entities.UserBot.update(bot.id, {
+    await backend.entities.UserBot.update(bot.id, {
       unlocked_capabilities: [...currentCaps, capability],
     });
     onBotsUpdated?.();

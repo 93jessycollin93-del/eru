@@ -4,7 +4,7 @@ export default function ExternalAISettingsPanel({ value, onChange }) {
   return (
     <ModelProviderPanel
       value={{
-        model_provider: value.provider || 'base44',
+        model_provider: value.provider || 'builtin',
         model_name: value.model || '',
         api_label: value.api_label || '',
       }}

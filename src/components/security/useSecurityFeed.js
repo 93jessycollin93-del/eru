@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const SEVERITY_RANK = { info: 0, caution: 1, warning: 2, critical: 3 };
 const SOURCE_LABELS = {
@@ -143,11 +143,11 @@ export function useSecurityFeed({ live = true, intervalMs = 10000, windowLimit =
   const load = useCallback(async () => {
     try {
       const [audit, alert, risk, botflag, integrity] = await Promise.all([
-        safeFetch(() => base44.entities.SecurityAuditLog?.list?.('-created_date', windowLimit)),
-        safeFetch(() => base44.entities.CommandAlert?.list?.('-created_date', windowLimit)),
-        safeFetch(() => base44.entities.RiskReport?.list?.('-created_date', windowLimit)),
-        safeFetch(() => base44.entities.BotFarmRiskFlag?.list?.('-created_date', windowLimit)),
-        safeFetch(() => base44.entities.IntegrityReport?.list?.('-created_date', windowLimit)),
+        safeFetch(() => backend.entities.SecurityAuditLog?.list?.('-created_date', windowLimit)),
+        safeFetch(() => backend.entities.CommandAlert?.list?.('-created_date', windowLimit)),
+        safeFetch(() => backend.entities.RiskReport?.list?.('-created_date', windowLimit)),
+        safeFetch(() => backend.entities.BotFarmRiskFlag?.list?.('-created_date', windowLimit)),
+        safeFetch(() => backend.entities.IntegrityReport?.list?.('-created_date', windowLimit)),
       ]);
 
       const merged = [
@@ -198,9 +198,9 @@ export function useSecurityFeed({ live = true, intervalMs = 10000, windowLimit =
     const payload = statusFor ? { ...extra, status: statusFor } : { ...extra };
 
     const target = {
-      alert: base44.entities.CommandAlert,
-      risk: base44.entities.RiskReport,
-      botflag: base44.entities.BotFarmRiskFlag,
+      alert: backend.entities.CommandAlert,
+      risk: backend.entities.RiskReport,
+      botflag: backend.entities.BotFarmRiskFlag,
     }[event.source];
 
     if (!target?.update) throw new Error(`${event.source} is not writable`);
@@ -209,7 +209,7 @@ export function useSecurityFeed({ live = true, intervalMs = 10000, windowLimit =
 
     // Write an audit breadcrumb for the action — best-effort, never fatal.
     try {
-      await base44.entities.SecurityAuditLog?.create?.({
+      await backend.entities.SecurityAuditLog?.create?.({
         event_type: `soc_action_${action}`,
         severity: 'info',
         status: 'success',

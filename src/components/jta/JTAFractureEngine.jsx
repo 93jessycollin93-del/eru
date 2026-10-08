@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Zap, AlertTriangle, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 // Fracture Rules:
 // - Min volume to fracture: > 0.5 kg
@@ -35,14 +35,14 @@ export default function JTAFractureEngine({ jade, onDone }) {
       metadata: { coins_minted: coinsToMint, fracture_number: newFractureCount, resonance_bonus: resonanceBonus },
     }];
 
-    await base44.entities.JadeAsset.update(jade.id, {
+    await backend.entities.JadeAsset.update(jade.id, {
       lifecycle_state: isLast ? 'shattered' : jade.lifecycle_state,
       crafted_form: isLast ? 'dust' : 'fragment',
       fracture_count: newFractureCount,
       jade_coins_minted: (jade.jade_coins_minted || 0) + coinsToMint,
       resonance_history: newHistory,
     });
-    await base44.entities.JadeTransaction.create({
+    await backend.entities.JadeTransaction.create({
       jade_asset_id: jade.id,
       transaction_type: 'fracture',
       jade_coins_amount: coinsToMint,

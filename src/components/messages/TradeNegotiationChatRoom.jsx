@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Send, ShoppingCart, ShieldCheck, HandCoins, AlertTriangle } from 'lucide-react';
 
 export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
@@ -15,8 +15,8 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
   const isBuyer = currentUserEmail === chat.buyer_email;
 
   const loadEscrow = async () => {
-    if (!base44.entities?.Escrow) return;
-    const rows = await base44.entities.Escrow.filter({ listing_id: chat.post_id }, '-updated_date', 10);
+    if (!backend.entities?.Escrow) return;
+    const rows = await backend.entities.Escrow.filter({ listing_id: chat.post_id }, '-updated_date', 10);
     const match = (rows || []).find((item) => item.buyer_email === chat.buyer_email && item.seller_email === chat.seller_email && item.asset_id === chat.asset_id);
     setEscrow(match || null);
   };
@@ -26,8 +26,8 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
   }, [chat.id]);
 
   useEffect(() => {
-    if (!base44.entities?.Escrow) return;
-    const unsubscribe = base44.entities.Escrow.subscribe(() => loadEscrow());
+    if (!backend.entities?.Escrow) return;
+    const unsubscribe = backend.entities.Escrow.subscribe(() => loadEscrow());
     return unsubscribe;
   }, [chat.id]);
 
@@ -40,7 +40,7 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
   }, [escrow]);
 
   const handleSend = async () => {
-    if (!draft.trim() || !base44.entities?.TradeNegotiationChat) return;
+    if (!draft.trim() || !backend.entities?.TradeNegotiationChat) return;
     setSending(true);
     try {
       const nextMessages = [
@@ -53,7 +53,7 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
           created_at: new Date().toISOString(),
         },
       ];
-      await base44.entities.TradeNegotiationChat.update(chat.id, {
+      await backend.entities.TradeNegotiationChat.update(chat.id, {
         messages: nextMessages,
         last_message: draft.trim(),
       });
@@ -64,10 +64,10 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
   };
 
   const handleMoveToOrder = async () => {
-    if (!base44.entities?.Order || !base44.entities?.TradeNegotiationChat) return;
+    if (!backend.entities?.Order || !backend.entities?.TradeNegotiationChat) return;
     setCreatingOrder(true);
     try {
-      const order = await base44.entities.Order.create({
+      const order = await backend.entities.Order.create({
         order_number: `NEG-${Date.now()}`,
         buyer_email: chat.buyer_email,
         asset_type: chat.asset_type === 'listing' ? 'item' : chat.asset_type,
@@ -83,7 +83,7 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
           escrow_id: escrow?.id || null,
         },
       });
-      await base44.entities.TradeNegotiationChat.update(chat.id, {
+      await backend.entities.TradeNegotiationChat.update(chat.id, {
         status: 'moved_to_order',
         linked_order_id: order.id,
       });
@@ -93,10 +93,10 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
   };
 
   const handleCreateEscrow = async () => {
-    if (!base44.entities?.Escrow || !escrowPrice) return;
+    if (!backend.entities?.Escrow || !escrowPrice) return;
     setCreatingEscrow(true);
     try {
-      const created = await base44.entities.Escrow.create({
+      const created = await backend.entities.Escrow.create({
         listing_id: chat.post_id,
         seller_email: chat.seller_email,
         buyer_email: chat.buyer_email,
@@ -116,10 +116,10 @@ export default function TradeNegotiationChatRoom({ chat, currentUserEmail }) {
   };
 
   const updateEscrow = async (data) => {
-    if (!escrow?.id || !base44.entities?.Escrow) return;
+    if (!escrow?.id || !backend.entities?.Escrow) return;
     setUpdatingEscrow(true);
     try {
-      await base44.entities.Escrow.update(escrow.id, data);
+      await backend.entities.Escrow.update(escrow.id, data);
       await loadEscrow();
     } finally {
       setUpdatingEscrow(false);

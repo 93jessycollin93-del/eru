@@ -15,7 +15,7 @@
 //    consistent with every other card source. The burned cards are deleted
 //    (or quantity-decremented if quantity > 1 in the future — kept simple now).
 // ----------------------------------------------------------------------------
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { STARTER_CARDS, RARITY_STYLES } from '@/components/cards/StarterCards';
 import { createCardWithLore } from '@/lib/cardLore';
 
@@ -133,13 +133,13 @@ export async function runTransmutation(burnedCards) {
   if (!created) return { ok: false, error: 'Failed to forge new card.' };
 
   // Stamp provenance fields on the freshly-created card.
-  await base44.entities.Card.update(created.id, {
+  await backend.entities.Card.update(created.id, {
     is_transmuted: true,
     transmuted_from_card_ids: burnedIds,
   }).catch(() => null);
 
   // Delete burned cards (best-effort; failures don't block the reward).
-  await Promise.all(burnedIds.map((id) => base44.entities.Card.delete(id).catch(() => null)));
+  await Promise.all(burnedIds.map((id) => backend.entities.Card.delete(id).catch(() => null)));
 
   return { ok: true, card: { ...created, is_transmuted: true, transmuted_from_card_ids: burnedIds }, sourceRarity: rarity, targetRarity: target };
 }

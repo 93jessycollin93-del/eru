@@ -141,7 +141,7 @@ function findVisibleAttrs(src) {
 }
 
 // Detect lines that already use t('...') — for reporting coverage.
-// Matches both t('foo') and t('foo', anything...) so we count Base44's
+// Matches both t('foo') and t('foo', anything...) so we count the app's
 // extended signature t('key', undefined, 'fallback') correctly.
 function countTCalls(src) {
   return (src.match(/\bt\(\s*['"][^'"]+['"]/g) || []).length;

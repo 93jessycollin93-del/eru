@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Users, Save, CheckCircle2, Loader2, Shield, Zap, Compass, MessageCircle, Cpu, Github, Rocket, ToggleLeft, ToggleRight } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const GITHUB_INSTRUCTION_PREFIX =
   'This agent has full GitHub access via the authorized OAuth connector. It can read and write repositories, issues, pull requests, commits, branches, releases, and Actions workflows on behalf of the owner. Always use this access proactively when tasks involve code, repositories, or developer workflows.';
@@ -137,7 +137,7 @@ function AgentCard({ archetype, index, cardRef }) {
     page_assignments: [],
     connected_bot_ids: [],
     handoff_instructions: '',
-    model_provider: 'base44',
+    model_provider: 'builtin',
     model_name: '',
     api_label: '',
     prompt_template_id: '',
@@ -162,7 +162,7 @@ function AgentCard({ archetype, index, cardRef }) {
     setSaving(true);
     setError('');
     try {
-      await base44.entities.UserBot.create(buildPayload(form, githubEnabled));
+      await backend.entities.UserBot.create(buildPayload(form, githubEnabled));
       setSaved(true);
     } catch {
       setError('Save failed — check your connection and try again.');
@@ -315,7 +315,7 @@ export default function TeamBuilder() {
 
     const results = await Promise.allSettled(
       toSave.map(({ form, githubEnabled }) =>
-        base44.entities.UserBot.create(buildPayload(form, githubEnabled))
+        backend.entities.UserBot.create(buildPayload(form, githubEnabled))
       )
     );
 

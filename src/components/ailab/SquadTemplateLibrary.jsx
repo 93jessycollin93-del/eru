@@ -1,9 +1,9 @@
 import { CopyPlus, Library, Network, Sparkles, Trash2, Users } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export default function SquadTemplateLibrary({ templates, starterTemplates = [], onClone, onApplyStarter, onRefresh }) {
   const removeTemplate = async (templateId) => {
-    await base44.entities.SquadTemplate.delete(templateId);
+    await backend.entities.SquadTemplate.delete(templateId);
     onRefresh?.();
   };
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Coins, Gem, Plus, Edit2, Trash2, Pause, Play, X, Save, ShieldAlert } from 'lucide-react';
 
 // Admin-only CRUD UI for the BazarProduct catalog.
@@ -95,7 +95,7 @@ export default function AdminBazarProducts() {
     setLoading(true);
     setError(null);
     try {
-      const data = await base44.entities.BazarProduct.list('sort_order', 200);
+      const data = await backend.entities.BazarProduct.list('sort_order', 200);
       setProducts(data || []);
     } catch (err) {
       setError(err?.message || 'Failed to load products');
@@ -109,7 +109,7 @@ export default function AdminBazarProducts() {
   const handleCreate = async (data) => {
     setBusyId('new');
     try {
-      await base44.entities.BazarProduct.create(data);
+      await backend.entities.BazarProduct.create(data);
       setEditing(null);
       await load();
     } catch (err) {
@@ -123,7 +123,7 @@ export default function AdminBazarProducts() {
     if (!editing?.id) return;
     setBusyId(editing.id);
     try {
-      await base44.entities.BazarProduct.update(editing.id, data);
+      await backend.entities.BazarProduct.update(editing.id, data);
       setEditing(null);
       await load();
     } catch (err) {
@@ -136,7 +136,7 @@ export default function AdminBazarProducts() {
   const handleToggleActive = async (product) => {
     setBusyId(product.id);
     try {
-      await base44.entities.BazarProduct.update(product.id, { is_active: !product.is_active });
+      await backend.entities.BazarProduct.update(product.id, { is_active: !product.is_active });
       await load();
     } catch (err) {
       setError(err?.message || 'Toggle failed');
@@ -149,7 +149,7 @@ export default function AdminBazarProducts() {
     if (!confirm(`Delete "${product.title}"? This cannot be undone.`)) return;
     setBusyId(product.id);
     try {
-      await base44.entities.BazarProduct.delete(product.id);
+      await backend.entities.BazarProduct.delete(product.id);
       await load();
     } catch (err) {
       setError(err?.message || 'Delete failed');

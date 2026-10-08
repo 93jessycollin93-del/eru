@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Brain, Network, Search } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const NODE_STYLES = [
   'border-primary/20 bg-primary/10 text-primary',
@@ -20,7 +20,7 @@ export default function BotMemoryChunkRelationshipMap({ bots = [] }) {
   const [selectedBot, setSelectedBot] = useState('all');
 
   useEffect(() => {
-    base44.entities.BotMemoryChunk.list('-created_date', 300).then(setChunks).catch(() => {});
+    backend.entities.BotMemoryChunk.list('-created_date', 300).then(setChunks).catch(() => {});
   }, []);
 
   const botNameMap = useMemo(() => Object.fromEntries(bots.map((bot) => [bot.id, bot.name])), [bots]);

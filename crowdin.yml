@@ -10,7 +10,7 @@
 #      Chinese Simplified (zh-CN), Russian (ru). Add others later as needed.
 #   2. Generate a personal access token at https://crowdin.com/settings#api-key
 #      with project read/write scope. Store it as CROWDIN_PERSONAL_TOKEN env
-#      var (or in Base44's secret manager — never commit it).
+#      var (or in your secret manager — never commit it).
 #   3. Note the project_id from the URL of your project.
 #   4. (Optional) Install the Crowdin GitHub integration so PRs auto-open
 #      when translators finish a string set.

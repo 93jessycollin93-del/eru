@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import CardWinsChart from '@/components/progress/CardWinsChart';
 import StabilityTrendChart from '@/components/progress/StabilityTrendChart';
@@ -32,10 +32,10 @@ export default function PlayerProgress() {
       if (!currentUser?.email) return;
       setLoading(true);
       const [b, c, l, t] = await Promise.all([
-        base44.entities.CardBattleHistory.filter({ created_by: currentUser.email }, '-created_date', 200).catch(() => []),
-        base44.entities.Card.filter({ created_by: currentUser.email }, '-created_date', 300).catch(() => []),
-        base44.entities.CardListing.filter({ created_by: currentUser.email }, '-created_date', 200).catch(() => []),
-        base44.entities.Transaction.filter({ buyer_email: currentUser.email }, '-created_date', 200).catch(() => []),
+        backend.entities.CardBattleHistory.filter({ created_by: currentUser.email }, '-created_date', 200).catch(() => []),
+        backend.entities.Card.filter({ created_by: currentUser.email }, '-created_date', 300).catch(() => []),
+        backend.entities.CardListing.filter({ created_by: currentUser.email }, '-created_date', 200).catch(() => []),
+        backend.entities.Transaction.filter({ buyer_email: currentUser.email }, '-created_date', 200).catch(() => []),
       ]);
       if (!mounted) return;
       setBattles(b || []);

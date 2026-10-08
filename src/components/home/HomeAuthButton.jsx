@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { LogIn, LogOut, User } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * HomeAuthButton — top-right sign in / sign out control, like most apps.
  * Checks auth state on mount, shows the user's name (when available) and a
  * Sign out button, or a Sign in button for guests. Pure auth UI — no other
- * business logic. Login/logout are handled entirely by the Base44 platform.
+ * business logic. Login/logout are handled by the backend client (src/api/backend.js).
  */
 export default function HomeAuthButton() {
   const [user, setUser] = useState(null);
@@ -14,7 +14,7 @@ export default function HomeAuthButton() {
 
   useEffect(() => {
     let mounted = true;
-    base44.auth
+    backend.auth
       .me()
       .then((me) => mounted && setUser(me))
       .catch(() => mounted && setUser(null))
@@ -37,7 +37,7 @@ export default function HomeAuthButton() {
           <span className="max-w-[120px] truncate">{name}</span>
         </span>
         <button
-          onClick={() => base44.auth.logout()}
+          onClick={() => backend.auth.logout()}
           className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/60 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
         >
           <LogOut className="h-3.5 w-3.5" />
@@ -49,7 +49,7 @@ export default function HomeAuthButton() {
 
   return (
     <button
-      onClick={() => base44.auth.redirectToLogin()}
+      onClick={() => backend.auth.redirectToLogin()}
       className="eru-neon-cta inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold"
     >
       <LogIn className="h-3.5 w-3.5" />

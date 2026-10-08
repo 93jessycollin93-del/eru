@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { FolderOpen, Search, Pin, Trash2, Copy, PenLine, Code, Layout, Bot, Zap, FileText, Check, ArrowRight, Download } from 'lucide-react';
 
 const TAG_ICONS = { code: Code, ui: Layout, system: Zap, bot: Bot, strategy: Zap, prompt: FileText, general: FileText };
@@ -17,19 +17,19 @@ export default function AssetManager({ onInject }) {
 
   const load = async () => {
     setLoading(true);
-    const items = await base44.entities.JackieSaved.list('-created_date', 50);
+    const items = await backend.entities.JackieSaved.list('-created_date', 50);
     setAssets(items);
     setLoading(false);
   };
 
-  const del = async (id) => { await base44.entities.JackieSaved.delete(id); load(); };
-  const togglePin = async (a) => { await base44.entities.JackieSaved.update(a.id, { pinned: !a.pinned }); load(); };
+  const del = async (id) => { await backend.entities.JackieSaved.delete(id); load(); };
+  const togglePin = async (a) => { await backend.entities.JackieSaved.update(a.id, { pinned: !a.pinned }); load(); };
   const rename = async (id) => {
-    if (editTitle.trim()) await base44.entities.JackieSaved.update(id, { title: editTitle });
+    if (editTitle.trim()) await backend.entities.JackieSaved.update(id, { title: editTitle });
     setEditId(null); load();
   };
   const duplicate = async (a) => {
-    await base44.entities.JackieSaved.create({ title: (a.title || 'Asset') + ' (copy)', content: a.content, tag: a.tag, asset_type: a.asset_type });
+    await backend.entities.JackieSaved.create({ title: (a.title || 'Asset') + ' (copy)', content: a.content, tag: a.tag, asset_type: a.asset_type });
     load();
   };
 

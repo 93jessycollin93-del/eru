@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ScanLine, History, Settings, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import {
   getZeroFakeDataMode,
   getPricingProviderStatus,
@@ -61,7 +61,7 @@ export default function CardScanner() {
   // ---- Scanner flow -------------------------------------------------------
   const handleImageUploaded = async ({ image_url, image_meta }) => {
     setBusy(true);
-    const row = await base44.entities.CardScanSession.create({
+    const row = await backend.entities.CardScanSession.create({
       image_url,
       image_meta,
       status: 'created',
@@ -78,7 +78,7 @@ export default function CardScanner() {
     // candidate results. When a real source is wired, this is where you'd
     // call the identification backend function.
     if (!anyProviderConnected) {
-      await base44.entities.CardScanSession.update(row.id, { status: 'needs_review' });
+      await backend.entities.CardScanSession.update(row.id, { status: 'needs_review' });
       setSession((s) => ({ ...s, status: 'needs_review' }));
     }
     setBusy(false);
@@ -86,7 +86,7 @@ export default function CardScanner() {
 
   const handleSelectCandidate = async (candidateId) => {
     if (!session?.id) return;
-    const updated = await base44.entities.CardScanSession.update(session.id, {
+    const updated = await backend.entities.CardScanSession.update(session.id, {
       selected_candidate_id: candidateId,
     });
     setSession((s) => ({ ...s, ...updated }));
@@ -95,7 +95,7 @@ export default function CardScanner() {
   const handleConditionChange = async ({ condition, grade }) => {
     setConditionState({ condition, grade });
     if (!session?.id) return;
-    await base44.entities.CardScanSession.update(session.id, {
+    await backend.entities.CardScanSession.update(session.id, {
       selected_condition: condition,
       selected_grade: condition === 'graded' ? grade : '',
     });
@@ -125,7 +125,7 @@ export default function CardScanner() {
     };
     const nextResults = [...(session.pricing_results || []), entry];
     setSession((s) => ({ ...s, pricing_results: nextResults }));
-    base44.entities.CardScanSession.update(session.id, { pricing_results: nextResults }).catch(() => null);
+    backend.entities.CardScanSession.update(session.id, { pricing_results: nextResults }).catch(() => null);
     logPricingAudit({
       scanId: session.id,
       source: 'manual_owner',

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import {
   Key, Plus, X, Copy, Check, AlertTriangle, Trash2, Crown,
   Zap, Eye, BookOpen, Rocket, Star, Shield, Bot, Activity, Globe,
@@ -207,8 +207,8 @@ export default function APIKeys() {
   const load = async () => {
     setLoading(true);
     const [k, b] = await Promise.all([
-      base44.entities.ApiKey.list('-created_date', 50),
-      base44.entities.UserBot.filter({ status: 'active' }, '-created_date', 50),
+      backend.entities.ApiKey.list('-created_date', 50),
+      backend.entities.UserBot.filter({ status: 'active' }, '-created_date', 50),
     ]);
     setKeys(k);
     setBots(b);
@@ -228,7 +228,7 @@ export default function APIKeys() {
     if (!form.name.trim() || scopes.length === 0) return;
     const raw = generateRawKey();
     const hashed = await hashKey(raw);
-    await base44.entities.ApiKey.create({
+    await backend.entities.ApiKey.create({
       name: form.name.trim(),
       hashed_key: hashed,
       key_prefix: raw.slice(0, 15) + '...',
@@ -244,18 +244,18 @@ export default function APIKeys() {
 
   const revokeKey = async (k) => {
     setRevoking(k.id);
-    await base44.entities.ApiKey.update(k.id, { status: 'revoked' });
+    await backend.entities.ApiKey.update(k.id, { status: 'revoked' });
     setRevoking(null);
     load();
   };
 
   const reactivateKey = async (k) => {
-    await base44.entities.ApiKey.update(k.id, { status: 'active' });
+    await backend.entities.ApiKey.update(k.id, { status: 'active' });
     load();
   };
 
   const deleteKey = async (id) => {
-    await base44.entities.ApiKey.delete(id);
+    await backend.entities.ApiKey.delete(id);
     load();
   };
 

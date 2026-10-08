@@ -1,7 +1,7 @@
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 export async function createDecisionPlan({ goal, bots, userGuidance = [] }) {
-  const response = await base44.integrations.Core.InvokeLLM({
+  const response = await backend.integrations.Core.InvokeLLM({
     prompt: `You are an AI orchestration director for a connected bot network.
 Goal: ${goal}
 Bots: ${bots.map((bot) => `${bot.id} | ${bot.name} | role=${bot.role} | personality=${bot.personality || 'none'} | instructions=${bot.instructions || 'none'} | handoff=${bot.handoff_instructions || 'none'} | connected=${(bot.connected_bot_ids || []).length}`).join('\n')}
@@ -73,7 +73,7 @@ Rules:
 }
 
 export async function resolveFindingConflicts({ goal, findings, feedback }) {
-  const response = await base44.integrations.Core.InvokeLLM({
+  const response = await backend.integrations.Core.InvokeLLM({
     prompt: `You are a collaboration conflict resolver.
 Goal: ${goal}
 Findings:\n${findings.map((item) => `${item.bot_name}: ${item.finding}`).join('\n\n')}
@@ -98,7 +98,7 @@ Return JSON with:
 }
 
 export async function analyzeNetworkImprovements({ bots, result }) {
-  const response = await base44.integrations.Core.InvokeLLM({
+  const response = await backend.integrations.Core.InvokeLLM({
     prompt: `You are an AI collaboration efficiency analyst.
 Bots in network:\n${bots.map((bot) => `${bot.name} | role=${bot.role} | connected=${(bot.connected_bot_ids || []).join(', ') || 'none'} | handoff=${bot.handoff_instructions || 'none'}`).join('\n')}
 Recent collaboration result:\n${JSON.stringify(result, null, 2)}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Star, Download, MessageSquare, Search, Send, X, Sparkles, Briefcase, Blocks, Bot, ArrowUpDown, TrendingUp, Globe, Lock, Upload, ShoppingCart, RefreshCcw } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 import BotMarketplaceTradeSheet from './BotMarketplaceTradeSheet';
 import { ALL_MARKET_CURRENCIES, DEFAULT_PRICE_OPTIONS } from './botMarketplaceCurrencies';
@@ -186,9 +186,9 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
   const load = async () => {
     setLoading(true);
     const [b, r, mine] = await Promise.all([
-      base44.entities.UserBot.filter({ is_public: true }, '-usage_count', 100),
-      base44.entities.BotRating.list('-created_date', 300),
-      currentUser?.email ? base44.entities.UserBot.filter({ created_by: currentUser.email }, '-created_date', 50) : Promise.resolve([]),
+      backend.entities.UserBot.filter({ is_public: true }, '-usage_count', 100),
+      backend.entities.BotRating.list('-created_date', 300),
+      currentUser?.email ? backend.entities.UserBot.filter({ created_by: currentUser.email }, '-created_date', 50) : Promise.resolve([]),
     ]);
     setBots(b || []);
     setRatings(r || []);
@@ -201,7 +201,7 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
   const install = async (bot) => {
     const existingNames = new Set(myBots.map((item) => item.name));
     const clonedName = existingNames.has(`${bot.name} (Clone)`) ? `${bot.name} (Clone ${Date.now().toString().slice(-4)})` : `${bot.name} (Clone)`;
-    await base44.entities.UserBot.create({
+    await backend.entities.UserBot.create({
       name: clonedName,
       description: bot.description,
       role: bot.role,
@@ -218,7 +218,7 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
       xp: 0,
       level: 1,
     });
-    await base44.entities.UserBot.update(bot.id, { usage_count: (bot.usage_count || 0) + 1 });
+    await backend.entities.UserBot.update(bot.id, { usage_count: (bot.usage_count || 0) + 1 });
     setToast(`✅ "${bot.name}" installed to your AI Lab.`);
     setTimeout(() => setToast(''), 3000);
     onInstalled?.();
@@ -228,15 +228,15 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
   const rate = async (bot, rating, comment) => {
     const existing = ratings.find((item) => item.bot_id === bot.id && item.created_by === currentUser?.email);
     if (existing) {
-      await base44.entities.BotRating.update(existing.id, { rating, comment, user_email: currentUser?.email, bot_name: bot.name });
+      await backend.entities.BotRating.update(existing.id, { rating, comment, user_email: currentUser?.email, bot_name: bot.name });
     } else {
-      await base44.entities.BotRating.create({ bot_id: bot.id, bot_name: bot.name, rating, comment, user_email: currentUser?.email });
+      await backend.entities.BotRating.create({ bot_id: bot.id, bot_name: bot.name, rating, comment, user_email: currentUser?.email });
     }
     load();
   };
 
   const togglePublish = async (bot) => {
-    await base44.entities.UserBot.update(bot.id, { is_public: !bot.is_public });
+    await backend.entities.UserBot.update(bot.id, { is_public: !bot.is_public });
     setToast(bot.is_public ? `🔒 "${bot.name}" removed from marketplace.` : `🌍 "${bot.name}" published to marketplace.`);
     setTimeout(() => setToast(''), 3000);
     load();
@@ -262,7 +262,7 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
       ...DEFAULT_PRICE_OPTIONS,
     ])).filter(Boolean);
 
-    await base44.entities.UserBot.update(bot.id, {
+    await backend.entities.UserBot.update(bot.id, {
       marketplace_sale_mode: marketForm.marketplace_sale_mode,
       marketplace_price: marketForm.marketplace_price ? Number(marketForm.marketplace_price) : undefined,
       marketplace_currency: marketForm.marketplace_currency,
@@ -297,7 +297,7 @@ export default function DiscoverMarketplace({ onInstalled, embedded = false }) {
       return;
     }
 
-    await base44.entities.Order.create({
+    await backend.entities.Order.create({
       order_number: `BOT-${Date.now()}`,
       buyer_email: currentUser.email,
       asset_type: 'bot',

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { fetchUserGold, awardGold } from '@/lib/economyApi';
 import { STARTER_CARDS, ELEMENT_COLORS } from '../components/cards/StarterCards';
 import { DECK_MODE_OPTIONS, DEFAULT_DECK_MODE, buildDeckModeSummary, calculateDeckStrength, getFairMatchScore, getMinimumDeckForMode, normalizeDeckMode } from '../components/cards/deckModes';
@@ -109,7 +109,7 @@ export default function CardArena() {
 
   const loadCards = async () => {
     setLoading(true);
-    const owned = await base44.entities.Card.list('-created_date', 100);
+    const owned = await backend.entities.Card.list('-created_date', 100);
     const ownedIds = new Set(owned.map(c => c.name));
     const starters = STARTER_CARDS.filter(c => !ownedIds.has(c.name));
     setCards([...owned, ...starters]);
@@ -123,7 +123,7 @@ export default function CardArena() {
   };
 
   const loadArenaUsers = async () => {
-    const users = await base44.entities.User.list().catch(() => []);
+    const users = await backend.entities.User.list().catch(() => []);
     setArenaUsers(users || []);
   };
 
@@ -150,8 +150,8 @@ export default function CardArena() {
   }));
 
   const loadPlayerProfile = async () => {
-    const me = await base44.auth.me();
-    const profiles = await base44.entities.CardPlayerProfile.list('-created_date', 20);
+    const me = await backend.auth.me();
+    const profiles = await backend.entities.CardPlayerProfile.list('-created_date', 20);
     const existing = profiles.find((profile) => profile.user_email === me.email);
     if (existing) {
       setPlayerProfile(existing);
@@ -159,7 +159,7 @@ export default function CardArena() {
       return;
     }
 
-    const created = await base44.entities.CardPlayerProfile.create({
+    const created = await backend.entities.CardPlayerProfile.create({
       user_email: me.email,
       display_name: me.full_name || me.email.split('@')[0],
       collection_strength: collectionStrength,
@@ -170,9 +170,9 @@ export default function CardArena() {
   };
 
   const loadQueueState = async () => {
-    const me = await base44.auth.me();
-    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 100);
-    const roomRows = await base44.entities.CardMatchmakingRoom.list('-created_date', 100);
+    const me = await backend.auth.me();
+    const queueRows = await backend.entities.CardMatchmakingQueue.list('-created_date', 100);
+    const roomRows = await backend.entities.CardMatchmakingRoom.list('-created_date', 100);
     setQueueEntry(queueRows.find((row) => row.user_email === me.email && ['searching', 'open_challenge', 'invited', 'matched'].includes(row.status)) || null);
     setOpenChallenges(queueRows.filter((row) => row.status === 'open_challenge' && row.user_email !== me.email));
     setMatchRoom(roomRows.find((room) => [room.player_one_email, room.player_two_email, room.player_three_email, room.player_four_email].includes(me.email) && room.status !== 'completed') || null);
@@ -180,7 +180,7 @@ export default function CardArena() {
 
   const loadBattleHistory = async () => {
     setHistoryLoading(true);
-    const history = await base44.entities.CardBattleHistory.list('-created_date', 50);
+    const history = await backend.entities.CardBattleHistory.list('-created_date', 50);
     setBattleHistory(history);
     setSelectedBattle((prev) => prev || history[0] || null);
     setHistoryLoading(false);
@@ -191,7 +191,7 @@ export default function CardArena() {
     const eloDelta = battleMode === 'pvp_ladder' ? (won ? 18 : -14) : battleMode === 'pvp_duo' ? (won ? 14 : -10) : battleMode === 'jackie_ai' ? (won ? 8 : -5) : 0;
     const eloAfter = Math.max(800, eloBefore + eloDelta);
 
-    const saved = await base44.entities.CardBattleHistory.create({
+    const saved = await backend.entities.CardBattleHistory.create({
       mode: battleMode,
       result: won ? 'win' : 'loss',
       opponent_name: activeOpponentName || currentRound?.name || round?.name,
@@ -230,8 +230,8 @@ export default function CardArena() {
     }));
 
     await Promise.all([
-      ...usageRows.map((row) => base44.entities.CardUsageHistory.create(row)),
-      playerProfile ? base44.entities.CardPlayerProfile.update(playerProfile.id, {
+      ...usageRows.map((row) => backend.entities.CardUsageHistory.create(row)),
+      playerProfile ? backend.entities.CardPlayerProfile.update(playerProfile.id, {
         elo_rating: eloAfter,
         collection_strength: collectionStrength,
         matches_played: (playerProfile.matches_played || 0) + 1,
@@ -243,14 +243,14 @@ export default function CardArena() {
         ai_campaign_level_unlocked: battleMode === 'ai_campaign' && won ? Math.min(100, Math.max(playerProfile.ai_campaign_level_unlocked || 1, campaignLevel + 1)) : (playerProfile.ai_campaign_level_unlocked || 1),
         favorite_deck_power: deckStrength,
       }).then(async () => {
-        const refreshed = await base44.entities.CardPlayerProfile.list('-created_date', 20);
-        const me = await base44.auth.me();
+        const refreshed = await backend.entities.CardPlayerProfile.list('-created_date', 20);
+        const me = await backend.auth.me();
         const current = refreshed.find((profile) => profile.user_email === me.email) || null;
         setPlayerProfile(current);
         setCampaignLevel(current?.ai_campaign_level_unlocked || 1);
       }) : Promise.resolve(),
-      matchRoom?.id ? base44.entities.CardMatchmakingRoom.update(matchRoom.id, { status: 'completed', winner_email: won ? (await base44.auth.me()).email : matchRoom.player_two_email || 'jackie_ai' }) : Promise.resolve(),
-      queueEntry?.id ? base44.entities.CardMatchmakingQueue.update(queueEntry.id, { status: 'cancelled' }) : Promise.resolve(),
+      matchRoom?.id ? backend.entities.CardMatchmakingRoom.update(matchRoom.id, { status: 'completed', winner_email: won ? (await backend.auth.me()).email : matchRoom.player_two_email || 'jackie_ai' }) : Promise.resolve(),
+      queueEntry?.id ? backend.entities.CardMatchmakingQueue.update(queueEntry.id, { status: 'cancelled' }) : Promise.resolve(),
     ]);
 
     setQueueEntry(null);
@@ -269,26 +269,26 @@ export default function CardArena() {
   };
 
   const copyTopPlayerDeck = async () => {
-    const profiles = await base44.entities.CardPlayerProfile.list('-updated_date', 100);
+    const profiles = await backend.entities.CardPlayerProfile.list('-updated_date', 100);
     const topPlayer = [...profiles].sort((a, b) => (b.elo_rating || 0) - (a.elo_rating || 0)).find((profile) => profile.user_email !== playerProfile?.user_email);
     if (!topPlayer) return;
 
-    const history = await base44.entities.CardBattleHistory.list('-created_date', 200);
+    const history = await backend.entities.CardBattleHistory.list('-created_date', 200);
     const bestMatch = history.find((match) => match.created_by === topPlayer.user_email && (match.player_deck_snapshot || []).length > 0);
     if (!bestMatch) return;
 
     setCopyingDeck(true);
     const copiedDeck = hydrateDeckSnapshot((bestMatch.player_deck_snapshot || []).slice(0, normalizedDeckMode));
     setDeck(copiedDeck);
-    await base44.entities.PlayerDeck.create({
+    await backend.entities.PlayerDeck.create({
       name: `${topPlayer.display_name || 'Top Player'} copied deck`,
       card_ids: copiedDeck.map((card) => card.id),
       is_active: true,
       wins: 0,
       losses: 0,
     }).catch(() => null);
-    await base44.entities.SocialStrategyPost.create({
-      author_email: playerProfile?.user_email || (await base44.auth.me()).email,
+    await backend.entities.SocialStrategyPost.create({
+      author_email: playerProfile?.user_email || (await backend.auth.me()).email,
       author_name: playerProfile?.display_name || 'Arena Player',
       post_type: 'deck_copy',
       title: `Copied ${topPlayer.display_name || 'top player'} deck`,
@@ -353,8 +353,8 @@ export default function CardArena() {
   };
 
   const findPvpMatch = async () => {
-    const me = await base44.auth.me();
-    const queueRows = await base44.entities.CardMatchmakingQueue.list('-created_date', 100);
+    const me = await backend.auth.me();
+    const queueRows = await backend.entities.CardMatchmakingQueue.list('-created_date', 100);
     const activeRows = queueRows.filter((row) => row.status === 'searching' && row.user_email !== me.email && normalizeDeckMode(row.deck_mode) === normalizedDeckMode && Number(row.team_size || 1) === teamSize && row.queue_mode === queueMode);
     const myElo = playerProfile?.elo_rating || 1000;
     const bestMatch = activeRows
@@ -373,7 +373,7 @@ export default function CardArena() {
       }))
       .sort((a, b) => a.score - b.score)[0];
 
-    const myQueue = await base44.entities.CardMatchmakingQueue.create({
+    const myQueue = await backend.entities.CardMatchmakingQueue.create({
       user_email: me.email,
       display_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
       elo_rating: myElo,
@@ -389,7 +389,7 @@ export default function CardArena() {
 
     if (bestMatch?.row) {
       const roomKey = `room-${Date.now()}`;
-      const room = await base44.entities.CardMatchmakingRoom.create({
+      const room = await backend.entities.CardMatchmakingRoom.create({
         room_key: roomKey,
         mode: queueMode,
         status: 'ready',
@@ -407,8 +407,8 @@ export default function CardArena() {
         player_two_deck_snapshot: bestMatch.row.deck_snapshot || [],
       });
       await Promise.all([
-        base44.entities.CardMatchmakingQueue.update(myQueue.id, { status: 'matched', matched_opponent_email: bestMatch.row.user_email, matched_room_key: roomKey }),
-        base44.entities.CardMatchmakingQueue.update(bestMatch.row.id, { status: 'matched', matched_opponent_email: me.email, matched_room_key: roomKey }),
+        backend.entities.CardMatchmakingQueue.update(myQueue.id, { status: 'matched', matched_opponent_email: bestMatch.row.user_email, matched_room_key: roomKey }),
+        backend.entities.CardMatchmakingQueue.update(bestMatch.row.id, { status: 'matched', matched_opponent_email: me.email, matched_room_key: roomKey }),
       ]);
       setMatchRoom(room);
       setBattleMode(queueMode);
@@ -429,8 +429,8 @@ export default function CardArena() {
   };
 
   const createOpenChallenge = async () => {
-    const me = await base44.auth.me();
-    const challenge = await base44.entities.CardMatchmakingQueue.create({
+    const me = await backend.auth.me();
+    const challenge = await backend.entities.CardMatchmakingQueue.create({
       user_email: me.email,
       display_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
       elo_rating: playerProfile?.elo_rating || 1000,
@@ -448,8 +448,8 @@ export default function CardArena() {
   };
 
   const inviteSpecificPlayer = async (targetUser) => {
-    const me = await base44.auth.me();
-    const challenge = await base44.entities.CardMatchmakingQueue.create({
+    const me = await backend.auth.me();
+    const challenge = await backend.entities.CardMatchmakingQueue.create({
       user_email: me.email,
       display_name: playerProfile?.display_name || me.full_name || me.email.split('@')[0],
       elo_rating: playerProfile?.elo_rating || 1000,
@@ -503,7 +503,7 @@ export default function CardArena() {
       // 1) append a battle entry to each owned card's historical log
       await Promise.all(playedDeck
         .filter((c) => c?.id && !String(c.id).startsWith('s') && !String(c.id).startsWith('ai_'))
-        .map((c) => base44.entities.Card.update(c.id, {
+        .map((c) => backend.entities.Card.update(c.id, {
           historical_log: appendLogEntry(c, {
             event_type: 'battle',
             summary: `${won ? 'Victory' : 'Defeat'} vs ${opponent}`,

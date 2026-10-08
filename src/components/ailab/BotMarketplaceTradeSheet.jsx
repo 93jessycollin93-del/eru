@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { ALL_MARKET_CURRENCIES, CRYPTO_CURRENCIES } from './botMarketplaceCurrencies';
 
 export default function BotMarketplaceTradeSheet({ bot, myBots, currentUser, onClose, onSubmitted }) {
@@ -22,7 +22,7 @@ export default function BotMarketplaceTradeSheet({ bot, myBots, currentUser, onC
   const submit = async () => {
     setSubmitting(true);
     const offeredBots = offerableBots.filter((item) => selectedBotIds.includes(item.id));
-    await base44.entities.BotTradeProposal.create({
+    await backend.entities.BotTradeProposal.create({
       listing_bot_id: bot.id,
       listing_bot_name: bot.name,
       seller_email: bot.created_by,

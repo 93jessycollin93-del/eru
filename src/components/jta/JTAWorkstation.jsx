@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Hammer, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const FORMS = [
   { id: 'jewelry',   label: 'Jewelry',   minKg: 0.1,  maxKg: 2 },
@@ -66,8 +66,8 @@ export default function JTAWorkstation({ jade, onDone }) {
       historical_resonance_score: (jade.historical_resonance_score || 0) + avgPrecision,
     };
 
-    await base44.entities.JadeAsset.update(jade.id, updates);
-    await base44.entities.JadeTransaction.create({
+    await backend.entities.JadeAsset.update(jade.id, updates);
+    await backend.entities.JadeTransaction.create({
       jade_asset_id: jade.id,
       transaction_type: 'craft',
       precision_achieved: avgPrecision,
@@ -89,7 +89,7 @@ export default function JTAWorkstation({ jade, onDone }) {
       actor: 'user',
       metadata: {},
     }];
-    await base44.entities.JadeAsset.update(jade.id, {
+    await backend.entities.JadeAsset.update(jade.id, {
       crafted_form: 'raw_block',
       lifecycle_state: 'raw',
       precision_score: 0,
@@ -97,7 +97,7 @@ export default function JTAWorkstation({ jade, onDone }) {
       masterwork_buff: null,
       resonance_history: newHistory,
     });
-    await base44.entities.JadeTransaction.create({
+    await backend.entities.JadeTransaction.create({
       jade_asset_id: jade.id,
       transaction_type: 'blueprint_reset',
       notes: 'Blueprint reset — returned to raw block',

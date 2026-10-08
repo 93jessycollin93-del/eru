@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { invokeSelectedModel } from './modelRouting';
 import { BarChart3, CheckCircle2, FlaskConical, Save, Sparkles, Upload, BrainCircuit, Eye } from 'lucide-react';
 import BotDeploymentPipelinePanel from './BotDeploymentPipelinePanel';
@@ -37,7 +37,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     }
 
     setCandidateInstructions(selectedBot.instructions || '');
-    base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 20).then((rows) => {
+    backend.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 20).then((rows) => {
       setGoldens(rows);
     });
     setResults([]);
@@ -46,7 +46,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
 
   const addGolden = async () => {
     if (!selectedBot || !form.title || !form.input || !form.expected_output) return;
-    await base44.entities.BotTestCase.create({
+    await backend.entities.BotTestCase.create({
       bot_id: selectedBot.id,
       bot_name: selectedBot.name,
       title: form.title,
@@ -55,9 +55,9 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
       min_similarity_score: Number(form.min_similarity_score),
       is_active: true,
     });
-    const rows = await base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 20);
+    const rows = await backend.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 20);
     setGoldens(rows);
-    await base44.functions.invoke('syncTrainingToSquadMemory', {
+    await backend.functions.invoke('syncTrainingToSquadMemory', {
       data: {
         bot_id: selectedBot.id,
         bot_name: selectedBot.name,
@@ -129,8 +129,8 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     })).filter((item) => item.input && item.expected_output);
 
     if (records.length > 0) {
-      await base44.entities.BotTestCase.bulkCreate(records);
-      await Promise.all(records.slice(0, 20).map((record) => base44.entities.BotMemory.create({
+      await backend.entities.BotTestCase.bulkCreate(records);
+      await Promise.all(records.slice(0, 20).map((record) => backend.entities.BotMemory.create({
         bot_id: selectedBot.id,
         user_email: selectedBot.created_by,
         role: 'system',
@@ -142,7 +142,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
         source_type: 'imported',
         is_pinned: true
       })));
-      const rows = await base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 100);
+      const rows = await backend.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 100);
       setGoldens(rows);
     }
     setUploading(false);
@@ -152,7 +152,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
   const generateInsights = async () => {
     if (!selectedBot || !candidateInstructions.trim()) return;
     setGeneratingInsights(true);
-    const response = await base44.functions.invoke('generateBotTrainingInsights', {
+    const response = await backend.functions.invoke('generateBotTrainingInsights', {
       bot: selectedBot,
       currentInstructions: selectedBot.instructions || '',
       candidateInstructions,
@@ -165,7 +165,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
 
   const importGeneratedTests = async () => {
     if (!selectedBot || !insights?.generated_test_cases?.length) return;
-    await base44.entities.BotTestCase.bulkCreate(
+    await backend.entities.BotTestCase.bulkCreate(
       insights.generated_test_cases.map((item) => ({
         bot_id: selectedBot.id,
         bot_name: selectedBot.name,
@@ -176,14 +176,14 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
         is_active: true,
       }))
     );
-    const rows = await base44.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 50);
+    const rows = await backend.entities.BotTestCase.filter({ bot_id: selectedBot.id }, '-created_date', 50);
     setGoldens(rows);
   };
 
   const publishChanges = async () => {
     if (!selectedBot) return;
     setPublishing(true);
-    await base44.entities.BotVersion.create({
+    await backend.entities.BotVersion.create({
       bot_id: selectedBot.id,
       bot_name: selectedBot.name,
       version_label: `Pre-training ${new Date().toLocaleString()}`,
@@ -194,8 +194,8 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
       notes: 'Auto-snapshot before Bot Training publish',
       user_email: selectedBot.created_by,
     });
-    await base44.entities.UserBot.update(selectedBot.id, { instructions: candidateInstructions });
-    await base44.entities.BotMemory.create({
+    await backend.entities.UserBot.update(selectedBot.id, { instructions: candidateInstructions });
+    await backend.entities.BotMemory.create({
       bot_id: selectedBot.id,
       user_email: selectedBot.created_by,
       role: 'system',
@@ -217,8 +217,8 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     setTrainingOnHistory(true);
 
     const [savedConversations, feedbackRows] = await Promise.all([
-      base44.entities.JackieSaved.filter({ tag: 'conversation' }, '-updated_date', 30).catch(() => []),
-      base44.entities.JackieFeedback?.list?.('-updated_date', 30).catch(() => []) || Promise.resolve([])
+      backend.entities.JackieSaved.filter({ tag: 'conversation' }, '-updated_date', 30).catch(() => []),
+      backend.entities.JackieFeedback?.list?.('-updated_date', 30).catch(() => []) || Promise.resolve([])
     ]);
 
     const conversationSamples = (savedConversations || []).slice(0, 12).map((item) => {
@@ -232,7 +232,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
 
     const feedbackSamples = (feedbackRows || []).map((item) => JSON.stringify(item)).slice(0, 12);
 
-    const historySummary = await base44.integrations.Core.InvokeLLM({
+    const historySummary = await backend.integrations.Core.InvokeLLM({
       prompt: `You are improving an AI bot's system instructions from past successful history and user feedback.\n\nBot name: ${selectedBot.name}\nBot role: ${selectedBot.role}\nCurrent instructions:\n${selectedBot.instructions || ''}\n\nConversation history samples:\n${conversationSamples.join('\n\n---\n\n') || 'No conversation samples available.'}\n\nUser feedback samples:\n${feedbackSamples.join('\n\n---\n\n') || 'No feedback samples available.'}\n\nTask:\n1. Infer the most effective response patterns, tone, structure, and behavior.\n2. Write a concise training summary titled \"Optimal Response Summary\".\n3. Then write a second section titled \"Instruction Injection\" containing instruction text ready to append into the bot system instructions.\n4. Keep it practical, specific, and compact.`
     });
 
@@ -240,7 +240,7 @@ export default function BotTrainingPanel({ bots, globalPolicy, onBotsUpdated }) 
     setCandidateInstructions(injectedInstructions);
     setLatestTrainingSummary('History-trained instruction summary generated');
 
-    await base44.entities.BotMemory.create({
+    await backend.entities.BotMemory.create({
       bot_id: selectedBot.id,
       user_email: selectedBot.created_by,
       role: 'system',

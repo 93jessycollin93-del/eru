@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Bell, ChevronRight, Lock, AlertTriangle, ExternalLink,
+import { FileText, Bell, ChevronRight, Lock, AlertTriangle,
   Blocks, Fingerprint, Activity, ClipboardList, Volume2, Scale, Send, Globe,
-  Copy, CheckCircle2, Sparkles, SlidersHorizontal, User2, Database,
+  Sparkles, SlidersHorizontal, User2, Database,
 } from 'lucide-react';
 import BiometricAuth from '../components/BiometricAuth';
 import SoundSettings from '../components/SoundSettings';
@@ -27,103 +27,14 @@ import { useLanguage, LANGUAGES } from '@/context/LanguageContext';
  *   4. Security & privacy        (legal docs, biometric, audit, compliance)
  *   5. Sound & haptics           (inline)
  *   6. Telegram                  (inline sheet)
- *   7. Domain (advanced)         (inline)
- *   8. Admin tools               (admin role only)
+ *   7. Admin tools               (admin role only)
  *
- * Removed: SECTIONS placeholder rows that linked nowhere, the embedded
- * Base44ThemeEditor (now reachable via Visual Engine), and the duplicate
+ * Removed: SECTIONS placeholder rows that linked nowhere, the custom-domain
+ * card (it pointed DNS at the old hosting provider), the embedded
+ * theme editor (now reachable via Visual Engine), and the duplicate
  * "Risk Warning" tile (already inside Legal Documents → Non-Liability).
  */
 
-// ─── Domain card (kept — works inline, no theme dep) ─────────────────────────
-function DomainRecordRow({ label, value }) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        <p className="truncate text-xs text-foreground">{value}</p>
-      </div>
-      <button onClick={handleCopy} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
-        {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
-      </button>
-    </div>
-  );
-}
-
-function DomainSettingsCard() {
-  const [open, setOpen] = useState(false);
-  const [domain, setDomain] = useState('');
-  const cleanedDomain = useMemo(() => domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''), [domain]);
-  const hostLabel = useMemo(() => {
-    if (!cleanedDomain) return 'www';
-    if (cleanedDomain.startsWith('www.')) return 'www';
-    const parts = cleanedDomain.split('.');
-    return parts.length > 2 ? parts[0] : 'www';
-  }, [cleanedDomain]);
-  const isSubdomain = useMemo(() => cleanedDomain.split('.').filter(Boolean).length > 2 && !cleanedDomain.startsWith('www.'), [cleanedDomain]);
-
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="w-full flex items-center px-4 py-3.5 gap-3 hover:bg-secondary/40 transition-colors">
-        <Globe className="w-4 h-4 text-muted-foreground" />
-        <span className="flex-1 text-sm text-left">Custom domain</span>
-        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-      </button>
-    );
-  }
-
-  return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5">
-          <Globe className="w-4 h-4 text-primary" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">Custom Domain</p>
-          <p className="mt-1 text-xs text-muted-foreground">Connect your own domain and point it to your hosted site with the DNS records below.</p>
-        </div>
-        <button onClick={() => setOpen(false)} className="text-xs text-muted-foreground">Close</button>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-foreground">Your domain</label>
-        <input
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-          placeholder="example.com or app.example.com"
-          className="w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none"
-        />
-      </div>
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
-        <p className="text-xs font-semibold text-foreground">DNS setup</p>
-        {isSubdomain ? (
-          <>
-            <DomainRecordRow label="Type" value="CNAME" />
-            <DomainRecordRow label="Name / Host" value={hostLabel} />
-            <DomainRecordRow label="Value / Target" value="base44.onrender.com" />
-          </>
-        ) : (
-          <>
-            <DomainRecordRow label="Root domain (@)" value="Use ANAME or ALIAS to base44.onrender.com if your DNS provider supports it" />
-            <DomainRecordRow label="Fallback A record" value="216.24.57.1" />
-            <DomainRecordRow label="www CNAME" value="www → base44.onrender.com" />
-          </>
-        )}
-      </div>
-      <div className="flex items-start gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-[11px] text-muted-foreground">
-        <ExternalLink className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-        <p>DNS changes can take up to 48–72 hours to fully propagate. SSL is issued automatically after verification.</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Legal docs sheet (kept) ─────────────────────────────────────────────────
 function LegalDocsSheet({ onClose }) {
   const [tab, setTab] = useState('disclaimer');
   return (
@@ -346,11 +257,6 @@ export default function Settings() {
             </button>
           )}
         </section>
-
-        {/* Advanced */}
-        <GroupCard title="Advanced">
-          <DomainSettingsCard />
-        </GroupCard>
 
         {/* Escrow profile (kept — useful summary) */}
         <EscrowProfilePanel userEmail={currentUser?.email || ''} compact />

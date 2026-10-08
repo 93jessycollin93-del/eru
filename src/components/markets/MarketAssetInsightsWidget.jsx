@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Radio, Sparkles, Loader2, Layers } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 /**
  * MarketAssetInsightsWidget
@@ -43,8 +43,8 @@ export default function MarketAssetInsightsWidget({ limit = 200 }) {
     const load = async () => {
       setLoading(true);
       const [ev, cd] = await Promise.all([
-        base44.entities.ExcavationEvent.list('-created_date', limit).catch(() => []),
-        base44.entities.Card.list('-created_date', limit).catch(() => []),
+        backend.entities.ExcavationEvent.list('-created_date', limit).catch(() => []),
+        backend.entities.Card.list('-created_date', limit).catch(() => []),
       ]);
       if (!mounted) return;
       setEvents(ev || []);

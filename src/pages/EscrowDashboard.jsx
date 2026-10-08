@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { AlertTriangle, CheckCircle2, Gavel, ShieldCheck, Wallet } from 'lucide-react';
 import EscrowStatusTimeline from '@/components/escrow/EscrowStatusTimeline';
 import { getEscrowStatusMeta, getNextEscrowPatch } from '@/lib/escrowStateMachine';
@@ -21,8 +21,8 @@ export default function EscrowDashboard() {
   const [busyId, setBusyId] = useState(null);
 
   const load = async () => {
-    const me = await base44.auth.me();
-    const rows = await base44.entities.Escrow.list('-updated_date', 200).catch(() => []);
+    const me = await backend.auth.me();
+    const rows = await backend.entities.Escrow.list('-updated_date', 200).catch(() => []);
     setUser(me);
     setEscrows((rows || []).filter((item) => item.buyer_email === me.email || item.seller_email === me.email));
     setLoading(false);
@@ -31,8 +31,8 @@ export default function EscrowDashboard() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    if (!base44.entities?.Escrow) return;
-    const unsubscribe = base44.entities.Escrow.subscribe(() => load());
+    if (!backend.entities?.Escrow) return;
+    const unsubscribe = backend.entities.Escrow.subscribe(() => load());
     return unsubscribe;
   }, []);
 
@@ -51,7 +51,7 @@ export default function EscrowDashboard() {
 
   const updateEscrow = async (escrow, action) => {
     setBusyId(escrow.id);
-    await base44.entities.Escrow.update(escrow.id, getNextEscrowPatch(escrow, action, user?.email));
+    await backend.entities.Escrow.update(escrow.id, getNextEscrowPatch(escrow, action, user?.email));
     setBusyId(null);
     load();
   };
@@ -60,7 +60,7 @@ export default function EscrowDashboard() {
     const reason = window.prompt('What issue should be reviewed?');
     if (!reason) return;
     setBusyId(escrow.id);
-    await base44.entities.Escrow.update(escrow.id, {
+    await backend.entities.Escrow.update(escrow.id, {
       dispute_opened_by: user?.email,
       dispute_reason: reason,
       status: 'disputed',

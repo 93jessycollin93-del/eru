@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, Loader2, FileText, CheckSquare, User, ExternalLink } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 
 const TYPE_ICONS = {
   file: FileText,
@@ -87,7 +87,7 @@ export default function GlobalSearch({ open, onClose }) {
     setLoading(true);
     setSearched(true);
     try {
-      const res = await base44.functions.invoke('globalSearch', { query: q });
+      const res = await backend.functions.invoke('globalSearch', { query: q });
       setResults(res.data?.results || []);
     } catch {
       setResults([]);

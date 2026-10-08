@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { MessageSquare, Send, CheckCircle2 } from 'lucide-react';
 
 const DASHBOARD_KEY = 'main-dashboard';
@@ -29,7 +29,7 @@ export default function SharedDashboardComments() {
 
     const load = async () => {
       try {
-        const data = await base44.entities.SharedDashboardComment.filter({ dashboard_key: DASHBOARD_KEY }, '-created_date', 20);
+        const data = await backend.entities.SharedDashboardComment.filter({ dashboard_key: DASHBOARD_KEY }, '-created_date', 20);
         if (mounted) setComments(sortComments(data || []));
       } catch (error) {
         if (error?.status !== 429) {
@@ -39,7 +39,7 @@ export default function SharedDashboardComments() {
     };
 
     load().catch(() => {});
-    const unsubscribe = base44.entities.SharedDashboardComment.subscribe((event) => {
+    const unsubscribe = backend.entities.SharedDashboardComment.subscribe((event) => {
       if (event.type === 'delete') {
         setComments((prev) => prev.filter((item) => item.id !== event.id));
         return;
@@ -59,7 +59,7 @@ export default function SharedDashboardComments() {
   const submitComment = async () => {
     if (!commentText.trim()) return;
     setSubmitting(true);
-    await base44.entities.SharedDashboardComment.create({
+    await backend.entities.SharedDashboardComment.create({
       dashboard_key: DASHBOARD_KEY,
       widget_id: widgetId,
       widget_label: selectedWidget?.label || 'Dashboard Widget',
@@ -73,7 +73,7 @@ export default function SharedDashboardComments() {
   };
 
   const resolveComment = async (comment) => {
-    await base44.entities.SharedDashboardComment.update(comment.id, { status: 'resolved' });
+    await backend.entities.SharedDashboardComment.update(comment.id, { status: 'resolved' });
   };
 
   return (

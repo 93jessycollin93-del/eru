@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { Bot, Database, Mail, MessageCircle, Play, Save, Trash2, Workflow } from 'lucide-react';
 
 const NODE_LIBRARY = [
@@ -107,7 +107,7 @@ export default function WorkflowCanvasBuilder({ bots = [] }) {
   const selectedTask = useMemo(() => tasks.find((task) => task.id === selectedTaskId) || null, [tasks, selectedTaskId]);
 
   const loadTasks = async () => {
-    const rows = await base44.entities.AgentTask.list('-updated_date', 100).catch(() => []);
+    const rows = await backend.entities.AgentTask.list('-updated_date', 100).catch(() => []);
     setTasks(rows || []);
   };
 
@@ -167,9 +167,9 @@ export default function WorkflowCanvasBuilder({ bots = [] }) {
     };
 
     if (selectedTaskId) {
-      await base44.entities.AgentTask.update(selectedTaskId, payload);
+      await backend.entities.AgentTask.update(selectedTaskId, payload);
     } else {
-      const created = await base44.entities.AgentTask.create(payload);
+      const created = await backend.entities.AgentTask.create(payload);
       setSelectedTaskId(created.id);
     }
     setSaving(false);
@@ -180,7 +180,7 @@ export default function WorkflowCanvasBuilder({ bots = [] }) {
     if (nodes.length === 0) return;
     setRunning(true);
     const summary = nodes.map((node, index) => `${index + 1}. ${node.type} · ${node.title}`).join(' → ');
-    await base44.entities.AgentTaskRun.create({
+    await backend.entities.AgentTaskRun.create({
       task_id: selectedTaskId || `draft_${Date.now()}`,
       task_name: workflowName || 'Workflow canvas draft',
       bot_id: nodes.find((node) => node.type === 'bot')?.bot_id || '',

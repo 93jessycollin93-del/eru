@@ -37,7 +37,7 @@ export default function BotInstructionArchitect({ form, selectedTemplate, onAppl
     if (form.model_provider === 'anthropic') return 'Anthropic';
     if (form.model_provider === 'huggingface_builder') return 'Hugging Face builder model';
     if (form.model_provider === 'huggingface_user') return 'Hugging Face user model';
-    return 'Base44 AI';
+    return 'Built-in AI';
   }, [form.model_provider]);
 
   const canRun = mode === 'generate' ? !!goal.trim() : !!(form.instructions || form.personality || form.description || form.prompt_template_name);
@@ -51,7 +51,7 @@ export default function BotInstructionArchitect({ form, selectedTemplate, onAppl
     const prompt = `You are an AI Bot Instruction Architect helping design a bot's core directives.
 Use the selected model provider and model as the stylistic and capability context for your recommendations.
 
-Selected model provider: ${form.model_provider || 'base44'}
+Selected model provider: ${form.model_provider || 'builtin'}
 Selected model: ${form.model_name || 'automatic'}
 Current bot role: ${form.role || 'assistant'}
 Current response style: ${form.response_style || 'detailed'}
@@ -87,7 +87,7 @@ Rules:
 
     try {
       const response = await invokeSelectedModel({
-        provider: form.model_provider || 'base44',
+        provider: form.model_provider || 'builtin',
         model: form.model_name || 'automatic',
         prompt,
       });

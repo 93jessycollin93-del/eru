@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ClipboardList, Search, Filter, Shield, CreditCard, Key, Link, Database, Settings, LogIn, Fingerprint, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import { base44 } from '@/api/base44Client';
+import { backend } from '@/api/backend';
 import { useAuth } from '@/lib/AuthContext';
 
 const TYPE_CONFIG = {
@@ -149,7 +149,7 @@ export default function ActivityAuditLog() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const dbLogs = await base44.entities.AuditLog.list('-created_date', 100);
+      const dbLogs = await backend.entities.AuditLog.list('-created_date', 100);
       setLogs(dbLogs);
       setLoading(false);
     };
