@@ -27,6 +27,9 @@ import { COUNTY, TOWN, gameDate } from "../sim/computerContent";
 import type { GameStatus, HudMessage, HudState } from "./types";
 import { ColliderWorld } from "./world/colliders";
 import { Environment } from "./world/environment";
+import { PostFX, type Quality } from "./render/postfx";
+import { SkyDome } from "./render/sky";
+import { TextureLibrary } from "./render/textures";
 import { Terrain } from "./world/terrain";
 import { generateTown, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
 import { generateVegetation } from "./world/vegetation";
@@ -100,6 +103,14 @@ export class Game {
   private gridWasOn = true;
   private batteryTimer = 0;
   private location: string | null = null;
+  private textures: TextureLibrary;
+  private post: PostFX;
+  private sky = new SkyDome();
+  private quality: Quality;
+  private qualityChosen: boolean;
+  private perfTime = 0;
+  private perfFrames = 0;
+  private perfChecked = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -115,6 +126,12 @@ export class Game {
 
     this.input = new Input(canvas);
     this.env = new Environment(this.scene);
+    this.textures = new TextureLibrary(this.renderer);
+    this.scene.add(this.sky.mesh);
+    const saved = loadQuality();
+    this.qualityChosen = saved !== null;
+    this.quality = saved ?? "high";
+    this.post = new PostFX(this.renderer, this.scene, this.camera, this.quality);
 
     this.flashlight = new THREE.SpotLight("#fff4d6", 0, 45, 0.45, 0.5, 1);
     this.scene.add(this.flashlight, this.flashlight.target);
@@ -144,9 +161,9 @@ export class Game {
 
   private buildWorld() {
     const rng = mulberry32(WORLD_SEED);
-    this.terrain = new Terrain(rng);
+    this.terrain = new Terrain(rng, this.textures);
     this.scene.add(this.terrain.mesh);
-    this.town = generateTown(rng, this.terrain, this.colliders);
+    this.town = generateTown(rng, this.terrain, this.colliders, this.textures);
     this.scene.add(this.town.group);
     this.scene.add(generateVegetation(rng, this.terrain, this.colliders, this.town.occupied));
   }
@@ -168,7 +185,21 @@ export class Game {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.post?.setSize(w, h, this.renderer.getPixelRatio());
   };
+
+  /** Graphics quality: "high" adds ambient occlusion and bloom. */
+  setQuality(q: Quality) {
+    this.quality = q;
+    this.qualityChosen = true;
+    this.post.setQuality(q);
+    try {
+      localStorage.setItem(QUALITY_KEY, q);
+    } catch {
+      // Storage unavailable; the choice lasts for this session only.
+    }
+    this.emitHud();
+  }
 
   // ------------------------------------------------------- public controls
 
@@ -540,7 +571,10 @@ export class Game {
       this.player.model.fall(1);
     }
 
-    this.renderer.render(this.scene, this.camera);
+    const day = this.env.daylight(this.status === "menu" || this.status === "loading" ? 17.6 * 60 : this.minutes % 1440);
+    this.sky.update(this.env.skyColor, this.env.sunDir, day, this.camera);
+    this.post.render(dt, this.status === "playing" ? bloodPercent(this.player.body) : 100);
+    this.watchPerformance(dt);
 
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
@@ -612,6 +646,22 @@ export class Game {
     }
     const now = performance.now();
     this.messages = this.messages.filter((m) => (m as HudMessage & { until: number }).until > now);
+  }
+
+  /** If the first seconds of play run slowly on High, drop to Low once. */
+  private watchPerformance(dt: number) {
+    if (this.perfChecked || this.status !== "playing" || this.qualityChosen || this.quality === "low") return;
+    this.perfTime += dt;
+    this.perfFrames++;
+    if (this.perfTime > 8) {
+      this.perfChecked = true;
+      const fps = this.perfFrames / this.perfTime;
+      if (fps < 32) {
+        this.quality = "low";
+        this.post.setQuality("low");
+        this.message("Graphics set to Low for smoother play. You can change this in the pause menu.", "info");
+      }
+    }
   }
 
   private updateElectricity(dt: number) {
@@ -1198,6 +1248,7 @@ export class Game {
       location: this.location,
       gridOn: this.terrain ? this.gridOn() : true,
       townName: `${TOWN}, ${COUNTY}`,
+      quality: this.quality,
       inventory: this.inventory.map((s) => ({ ...s })),
       carryWeight: this.carryWeight(),
       maxWeight: MAX_WEIGHT,
@@ -1218,6 +1269,17 @@ export class Game {
   }
 }
 
+
+const QUALITY_KEY = "zombie-survival:quality";
+
+function loadQuality(): Quality | null {
+  try {
+    const v = localStorage.getItem(QUALITY_KEY);
+    return v === "high" || v === "low" ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Input stand-in used while menus are open: the player stands still. */
 const NO_INPUT = {

@@ -5,6 +5,7 @@ interface OverlayProps {
   hud: HudState;
   onStart: () => void;
   onResume: () => void;
+  onQuality: (q: "low" | "high") => void;
 }
 
 const CONTROLS: [string, string][] = [
@@ -54,7 +55,25 @@ const survivedText = (minutes: number) => {
   return parts.join(", ");
 };
 
-const Overlay = ({ hud, onStart, onResume }: OverlayProps) => {
+const QualityToggle = ({ value, onChange }: { value: "low" | "high"; onChange: (q: "low" | "high") => void }) => (
+  <div className="mt-6 flex items-center gap-3 text-sm uppercase tracking-[0.15em] text-stone-400">
+    Graphics
+    {(["high", "low"] as const).map((q) => (
+      <button
+        key={q}
+        onClick={() => onChange(q)}
+        aria-pressed={value === q}
+        className={`rounded-sm px-3 py-1 font-semibold ring-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+          value === q ? "bg-stone-200 text-black ring-stone-200" : "text-stone-300 ring-white/20 hover:bg-white/10"
+        }`}
+      >
+        {q}
+      </button>
+    ))}
+  </div>
+);
+
+const Overlay = ({ hud, onStart, onResume, onQuality }: OverlayProps) => {
   if (hud.status === "playing") {
     // Mouse was released (e.g. Esc closed a menu): one click recaptures it.
     if (!hud.locked && !hud.inventoryOpen && !hud.container && !hud.computer && !hud.reading) {
@@ -80,7 +99,7 @@ const Overlay = ({ hud, onStart, onResume }: OverlayProps) => {
         {hud.status === "menu" && (
           <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
             <div className="max-w-xl">
-              <p className="mb-3 text-sm uppercase tracking-[0.35em] text-stone-400">Knox Valley · Day 1</p>
+              <p className="mb-3 text-sm uppercase tracking-[0.35em] text-stone-400">Coldwater, Marlow County · Day 1</p>
               <h1 className="font-display text-7xl font-black uppercase leading-[0.85] text-stone-100 sm:text-8xl">
                 Zombie
                 <br />
@@ -93,6 +112,7 @@ const Overlay = ({ hud, onStart, onResume }: OverlayProps) => {
               <div className="mt-8">
                 <Button onClick={onStart}>Begin</Button>
               </div>
+              <QualityToggle value={hud.quality} onChange={onQuality} />
             </div>
             <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
               <Controls />
@@ -108,6 +128,7 @@ const Overlay = ({ hud, onStart, onResume }: OverlayProps) => {
               <div className="mt-8">
                 <Button onClick={onResume}>Resume</Button>
               </div>
+              <QualityToggle value={hud.quality} onChange={onQuality} />
             </div>
             <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
               <Controls />

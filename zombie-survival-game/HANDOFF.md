@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: session 3 in progress — computers done, graphics pass next (2026-10-09)_
+_Last updated: end of session 3 — computers + Tarkov-style graphics pass (2026-10-09)_
 
 ## The project
 
@@ -71,7 +71,10 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/game/world/terrain.ts` | Simplex heightmap. The town (radius 120) is flat at y = 0 |
 | `src/game/world/vegetation.ts` | Instanced trees and bushes |
 | `src/game/world/environment.ts` | Sun, hemisphere light, fog, day/night (`daylight()` 0..1) |
-| `src/game/world/builder.ts` | Merges static geometry per material to keep draw calls low |
+| `src/game/world/builder.ts` | Merges static geometry per material; `material(color, opts, surface)` attaches procedural maps and projects world-space UVs |
+| `src/game/render/textures.ts` | `TextureLibrary`: procedural seamless surface maps (4D-noise torus sampling) |
+| `src/game/render/postfx.ts` | `PostFX`: EffectComposer chain and the Tarkov-style grade shader; `setQuality("high" or "low")` |
+| `src/game/render/sky.ts` | `SkyDome`: overcast gradient sky that follows the camera |
 | `src/game/audio.ts` | All sounds synthesised with WebAudio (no audio files) |
 | `src/game/input.ts` | Keyboard/mouse with per-frame "pressed" edges |
 | `src/components/` | React HUD (stat bars, moodles, sleep screen), Inventory + HealthPanel (body diagram, per-wound bandaging), Overlay (menu, pause, death, "you got back up") |
@@ -91,7 +94,12 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - Notes are readable items.
 - The HUD shows the street address when you're inside a building.
 - Verified by 12 shell tests and a real-keyboard browser test (login via the note's password → mail → stash address).
-- **Remaining for session 3:** the Tarkov-style graphics pass.
+- **Graphics pass is done:**
+  - `render/textures.ts` generates seamless procedural textures (plaster with grime streaks, concrete slabs, brick, cracked asphalt, wood planks, roofing, worn metal, ground, fabric) as albedo, normal and roughness maps.
+  - `MeshBuilder` box-projects world-space UVs.
+  - `render/postfx.ts`: RenderPass → GTAO → bloom → OutputPass → grade (desaturated, split-toned, contrast, vignette, grain, fringing). Saturation drains with blood loss.
+  - `render/sky.ts` adds an overcast gradient dome.
+  - Quality setting High/Low is in the menu and pause screen, stored in localStorage. The game drops to Low automatically if the first 8 s run below 32 fps and the player never chose a quality.
 
 **Session 2 (body simulation) is complete and pushed.**
 - Added `src/sim/body.ts`, `climate.ts` and the tests.
@@ -119,7 +127,7 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 
 1. Try `add_repo` with owner `yyb84ycgt6-oss` and repo `zombie-survival-game`. If it works, copy the folder's contents to that repo's root (the history can start fresh), push, and update this file. If it fails, keep working on the `eru` branch.
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
-3. Follow the ROADMAP order: next is **session 3, doors, windows and barricades** (then saving, which should serialise `BodyState` and the world). Put any new rules (door health, barricade strength, noise) in `src/sim/`. Characters and animation is now session 7.
+3. **Recommended next: characters and animation (roadmap session 7, pulled forward).** The blocky people are now the biggest gap against the Tarkov look. `raw.githubusercontent.com` is reachable, so look for CC0 rigged glTF characters hosted on GitHub. Then do doors, windows and barricades (session 3b) and saving. Put any new rules in `src/sim/`.
 4. (Old note, kept for session 7) **Characters and animation**: Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.
 5. Before ending: run `npm test` and `npm run build`, commit, push, update the artifact, and update this file.
 6. Asset hosts: `raw.githubusercontent.com` is reachable from the container; `quaternius.com`, `kenney.nl`, `polyhaven.org` and jsDelivr's `/gh/` are blocked by the network proxy.

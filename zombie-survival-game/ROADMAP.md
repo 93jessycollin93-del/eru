@@ -46,7 +46,7 @@ Each session below is roughly one working session. The order can change based on
 - Animation blending: idle, walk, run, crouch, melee swings, aim, hit reactions, death
 - Zombie variety in clothing and body type
 
-## Session 3: Usable computers + Tarkov-style graphics pass (owner request)
+## Session 3: Usable computers + Tarkov-style graphics pass (owner request) ✅
 - Computers in police stations, shops and houses (laptops): boot, log in, a real shell (`ls`, `cd`, `cat`, `grep`, pipes, `mail`, programs), with lore and gameplay leads (supply caches, power-grid status)
 - Electricity: the grid fails on a set day; laptops have batteries
 - Street addresses for every building

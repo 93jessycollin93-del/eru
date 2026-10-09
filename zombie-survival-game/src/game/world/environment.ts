@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 const lerpColor = (a: THREE.Color, b: THREE.Color, t: number, out: THREE.Color) => out.copy(a).lerp(b, t);
 
-const SKY_DAY = new THREE.Color("#9aa7ad");
+const SKY_DAY = new THREE.Color("#8d979b");
 const SKY_DUSK = new THREE.Color("#7a5a4e");
 const SKY_NIGHT = new THREE.Color("#0b0f16");
 
@@ -10,7 +10,9 @@ const SKY_NIGHT = new THREE.Color("#0b0f16");
 export class Environment {
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
-  private skyColor = new THREE.Color();
+  readonly skyColor = new THREE.Color();
+  /** Direction towards the sun (or moon at night). */
+  readonly sunDir = new THREE.Vector3(0, 1, 0);
   private fog: THREE.FogExp2;
 
   constructor(scene: THREE.Scene) {
@@ -59,6 +61,7 @@ export class Environment {
       ? new THREE.Vector3(Math.cos(angle) * 80, Math.max(12, Math.sin(angle) * 90), 35)
       : new THREE.Vector3(-30, 70, -40);
     this.sun.position.copy(focus).add(dir);
+    this.sunDir.copy(dir).normalize();
     this.sun.target.position.copy(focus);
     this.sun.intensity = isDay ? 0.3 + light * 2.0 : 0.35;
     this.sun.color.set(isDay ? (dusk > 0.3 ? "#ffb98a" : "#fff1dc") : "#7d8fb3");
@@ -72,6 +75,6 @@ export class Environment {
     else lerpColor(SKY_DUSK, SKY_DAY, (light - 0.5) * 2, this.skyColor);
 
     this.fog.color.copy(this.skyColor);
-    this.fog.density = 0.011 + (1 - light) * 0.016;
+    this.fog.density = 0.0075 + (1 - light) * 0.018;
   }
 }

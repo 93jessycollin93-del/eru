@@ -16,7 +16,7 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 | Attack / shoot | Left click |
 | Aim | Right click (hold) |
 | Reload | R |
-| Search a container | E |
+| Search a container / use a computer | E |
 | Inventory and health | Tab |
 | Bandage worst wound | B |
 | Sleep / get up | Z |
@@ -31,6 +31,7 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 - **Look everywhere.** Kitchens have food, fridges have drinks, bedrooms hide bandages and sometimes a gun. The police station and hardware stores have weapons.
 - **Your body is simulated.** Zombie hits leave scratches, lacerations or bites on a specific body part. Deep wounds bleed until you bandage them, and losing about 2 litres of blood kills you. Leg wounds slow you down; arm wounds weaken your swings and shake your aim.
 - **Bites are a death sentence.** Like Project Zomboid, there is no cure. Scratches and lacerations can infect you too. The infection is silent at first, then you feel queasy, then feverish, and then you come back as one of them.
+- **Computers work.** Police terminals, shop tills and family laptops boot into a real command line (`help`, `ls`, `cd`, `cat`, `grep`, `mail`, pipes, Tab completion). Passwords are written on notes hidden in the same building. Read the mail: some of it tells you where help was left behind. Desktops need mains power, and the grid fails a few days in; laptops run on battery.
 - **Nights are cold.** Stay indoors after dark. Rest when you're tired (Z), but never with zombies nearby.
 - **Watch your weight.** Carrying more than 20 kg slows you down and stops you sprinting.
 
@@ -44,6 +45,8 @@ src/
     body.ts            Blood, wounds, infection, temperature, fatigue, pain, panic, moodles
     body.test.ts       Tests for the body rules (npm test)
     climate.ts         Air temperature by time of day and shelter
+    computer.ts        Virtual filesystem and Unix-like shell for in-game computers
+    computerContent.ts Generated files, mail and programs for each computer
     items.ts           Item definitions and loot tables
     rng.ts             Seeded random numbers
   game/
@@ -54,6 +57,10 @@ src/
       player.ts        Movement, stamina, survival stats, third-person camera
       zombie.ts        Zombie senses and behaviour
       humanoid.ts      Low-poly character model with procedural animation
+    render/
+      textures.ts      Procedural surface textures (albedo, normal, roughness)
+      postfx.ts        Ambient occlusion, bloom, Tarkov-style colour grade and grain
+      sky.ts           Overcast sky dome
     world/
       terrain.ts       Heightmap terrain (the town area is flat)
       town.ts          Procedural town: roads, buildings with interiors, cars, loot

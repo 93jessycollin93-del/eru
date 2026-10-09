@@ -74,6 +74,7 @@ export interface HudState {
   location: string | null;
   gridOn: boolean;
   townName: string;
+  quality: "low" | "high";
   inventory: ItemStack[];
   carryWeight: number;
   maxWeight: number;

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createNoise2D } from "simplex-noise";
+import type { TextureLibrary } from "../render/textures";
 
 export const WORLD_HALF = 300;
 /** Radius around the origin that is kept flat for the town. */
@@ -15,7 +16,7 @@ export class Terrain {
   private noise: (x: number, y: number) => number;
   private detail: (x: number, y: number) => number;
 
-  constructor(rng: () => number) {
+  constructor(rng: () => number, textures?: TextureLibrary) {
     this.noise = createNoise2D(rng);
     this.detail = createNoise2D(rng);
 
@@ -49,10 +50,20 @@ export class Terrain {
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
 
-    this.mesh = new THREE.Mesh(
-      geo,
-      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }),
-    );
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
+    if (textures) {
+      // Ground detail repeats every few metres across the whole map.
+      const maps = textures.get("ground");
+      const repeat = size / maps.tile;
+      mat.map = maps.map.clone();
+      mat.normalMap = maps.normalMap.clone();
+      for (const t of [mat.map, mat.normalMap]) {
+        t.repeat.set(repeat, repeat);
+        t.needsUpdate = true;
+      }
+      mat.normalScale.set(1.2, 1.2);
+    }
+    this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.receiveShadow = true;
   }
 

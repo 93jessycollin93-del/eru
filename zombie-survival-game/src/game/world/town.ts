@@ -3,6 +3,7 @@ import { createComputerState, type ComputerState } from "../../sim/computer";
 import { houseLaptop, policeComputer, storeComputer, type TownFacts } from "../../sim/computerContent";
 import { makeStack, type ItemStack } from "../../sim/items";
 import { mulberry32, pick, range } from "../../sim/rng";
+import type { TextureLibrary } from "../render/textures";
 import { MeshBuilder } from "./builder";
 import type { ColliderWorld } from "./colliders";
 import { WORLD_HALF, type Terrain } from "./terrain";
@@ -71,7 +72,8 @@ export interface TownData {
 
 export type BuildingType = "house" | "store" | "hardware" | "police";
 
-const WALL_COLORS = ["#c9c2b0", "#b8ad8f", "#9a5b45", "#8c9396", "#c4b48a", "#a7a28f", "#7f8a7a"];
+const WALL_COLORS = ["#c9c2b0", "#b8ad8f", "#9a5b45", "#8c9396", "#c4b48a", "#a7a28f", "#7f8a7a", "#86503f"];
+const BRICK_COLORS = new Set(["#9a5b45", "#86503f"]);
 const ROOF_COLORS = ["#3b3a38", "#4a3a32", "#2f3437", "#45403a"];
 const CAR_COLORS = ["#5b6770", "#6d4a3a", "#3e4d3f", "#8b8a83", "#2f3a4a", "#7a3b33"];
 const WALL_H = 3.0;
@@ -86,8 +88,8 @@ interface Opening {
   t: number;
 }
 
-export function generateTown(rng: () => number, terrain: Terrain, colliders: ColliderWorld): TownData {
-  const mb = new MeshBuilder();
+export function generateTown(rng: () => number, terrain: Terrain, colliders: ColliderWorld, textures?: TextureLibrary): TownData {
+  const mb = new MeshBuilder(textures);
   const containers: LootContainer[] = [];
   const spawnPoints: THREE.Vector3[] = [];
   const occupied: Rect[] = [];
@@ -100,8 +102,8 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   const pendingComputers: { b: Building; spot: Omit<ComputerSpot, "state" | "address" | "initialBattery">; contentType: BuildingType }[] = [];
   const crateBuilders = new Map<Building, () => LootContainer>();
 
-  const asphalt = mb.material("#2c2d2e", { roughness: 0.95 });
-  const sidewalk = mb.material("#6e6c66");
+  const asphalt = mb.material("#3a3b3c", { roughness: 0.95 }, "asphalt");
+  const sidewalk = mb.material("#7d7a73", {}, "concrete");
   const paint = mb.material("#b9b29a", { roughness: 0.8 });
 
   // ---------- roads ----------
@@ -184,14 +186,14 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     const building: Building = { address, type, rect, containers: [] };
     buildings.push(building);
     const wallColor = type === "police" ? "#7d8790" : pick(rng, WALL_COLORS);
-    const wallMat = mb.material(wallColor);
-    const innerMat = mb.material(type === "house" ? "#b7ae9c" : "#a9aaa5");
-    const roofMat = mb.material(pick(rng, ROOF_COLORS));
-    const floorMat = mb.material(type === "house" ? "#5e4632" : "#77746c");
-    const woodMat = mb.material("#6b4f36");
-    const whiteMat = mb.material("#c9c7c0");
-    const metalMat = mb.material("#5d6266", { metalness: 0.4, roughness: 0.6 });
-    const fabricMat = mb.material(pick(rng, ["#4b5a6b", "#6b4b4b", "#5b6b4b", "#77705f"]));
+    const wallMat = mb.material(wallColor, {}, BRICK_COLORS.has(wallColor) ? "brick" : "plaster");
+    const innerMat = mb.material(type === "house" ? "#b7ae9c" : "#a9aaa5", {}, "plaster");
+    const roofMat = mb.material(pick(rng, ROOF_COLORS), {}, "roof");
+    const floorMat = mb.material(type === "house" ? "#6e5238" : "#86837a", {}, type === "house" ? "wood" : "concrete");
+    const woodMat = mb.material("#7a5c40", {}, "wood");
+    const whiteMat = mb.material("#c9c7c0", { roughness: 0.5 }, "metal");
+    const metalMat = mb.material("#6a6f73", { metalness: 0.4, roughness: 0.6 }, "metal");
+    const fabricMat = mb.material(pick(rng, ["#4b5a6b", "#6b4b4b", "#5b6b4b", "#77705f"]), {}, "fabric");
 
     const v1 = new THREE.Vector3();
     const v2 = new THREE.Vector3();
@@ -331,7 +333,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     box(-hw + WALL_T, 0.0, -hd + WALL_T, hw - WALL_T, 0.06, hd - WALL_T, floorMat, false);
     box(-hw - 0.3, WALL_H, -hd - 0.3, hw + 0.3, WALL_H + 0.25, hd + 0.3, roofMat, true, true);
     // Light ceiling under the roof so interiors don't read as a black void.
-    box(-hw + WALL_T, WALL_H - 0.04, -hd + WALL_T, hw - WALL_T, WALL_H, hd - WALL_T, mb.material("#bdb8aa"), false);
+    box(-hw + WALL_T, WALL_H - 0.04, -hd + WALL_T, hw - WALL_T, WALL_H, hd - WALL_T, mb.material("#bdb8aa", {}, "plaster"), false);
     // Door step and frame lintel trim
     box(door.c - door.w / 2 - 0.1, 0, hd, door.c + door.w / 2 + 0.1, 0.12, hd + 0.6, sidewalk, false);
 
@@ -367,7 +369,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       // Corner by the front wall where a supply crate can go.
       const crateX = kLeft ? inner.x0 + 0.1 : inner.x1 - 1.0;
       crateBuilders.set(building, () =>
-        container("Supply Crate", "supply_cache", crateX, 0, inner.z1 - 0.8, crateX + 0.9, 0.55, inner.z1 - 0.15, mb.material("#4a5236")),
+        container("Supply Crate", "supply_cache", crateX, 0, inner.z1 - 0.8, crateX + 0.9, 0.55, inner.z1 - 0.15, mb.material("#55603f", {}, "wood")),
       );
       const sx = kLeft ? inner.x1 - 0.9 : inner.x0;
       box(sx, 0, tz - 1.1, sx + 0.9, 0.8, tz + 1.1, fabricMat, true, false);
@@ -575,7 +577,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   }
 
   // Street lamps (dead, of course)
-  const poleMat = mb.material("#3a3c3e", { metalness: 0.5, roughness: 0.6 });
+  const poleMat = mb.material("#4a4c4e", { metalness: 0.5, roughness: 0.6 }, "metal");
   const bulbKey = mb.material("#d8d2b8", { emissive: "#ffcf8a", emissiveIntensity: 0 });
   const lamp = (x: number, z: number) => {
     const g = new THREE.CylinderGeometry(0.07, 0.1, 5.5, 6);

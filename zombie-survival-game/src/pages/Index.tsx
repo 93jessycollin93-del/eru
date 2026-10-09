@@ -58,6 +58,7 @@ const Index = () => {
           hud={hud}
           onStart={() => gameRef.current?.start()}
           onResume={() => gameRef.current?.resume()}
+          onQuality={(q) => gameRef.current?.setQuality(q)}
         />
       )}
     </main>
