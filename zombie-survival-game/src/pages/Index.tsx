@@ -4,6 +4,8 @@ import type { HudState } from "@/game/types";
 import Hud from "@/components/Hud";
 import Inventory, { type InventoryActions } from "@/components/Inventory";
 import Overlay from "@/components/Overlay";
+import ComputerScreen from "@/components/ComputerScreen";
+import NoteView from "@/components/NoteView";
 
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -42,6 +44,15 @@ const Index = () => {
       <canvas ref={canvasRef} className="block h-full w-full" />
       {hud && playing && <Hud hud={hud} />}
       {hud && hud.status === "playing" && <Inventory hud={hud} actions={actions} />}
+      {hud && hud.status === "playing" && hud.computer && (
+        <ComputerScreen
+          computer={hud.computer}
+          onSubmit={(l) => gameRef.current?.computerSubmit(l)}
+          onComplete={(l) => gameRef.current?.computerComplete(l) ?? l}
+          onClose={() => gameRef.current?.closeUi()}
+        />
+      )}
+      {hud && hud.status === "playing" && hud.reading && <NoteView note={hud.reading} onClose={() => gameRef.current?.closeUi()} />}
       {hud && (
         <Overlay
           hud={hud}

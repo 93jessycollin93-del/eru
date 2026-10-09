@@ -22,11 +22,13 @@ import {
   zombieHit,
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
+import { boot, complete, createComputerState, prompt as shellPrompt, submit } from "../sim/computer";
+import { COUNTY, TOWN, gameDate } from "../sim/computerContent";
 import type { GameStatus, HudMessage, HudState } from "./types";
 import { ColliderWorld } from "./world/colliders";
 import { Environment } from "./world/environment";
 import { Terrain } from "./world/terrain";
-import { generateTown, type LootContainer, type TownData } from "./world/town";
+import { generateTown, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
 import { generateVegetation } from "./world/vegetation";
 
 const WORLD_SEED = 1987;
@@ -92,6 +94,12 @@ export class Game {
   private shelterTimer = 0;
   private airTemp = 10;
   private turned = false;
+  private computerSpot: ComputerSpot | null = null;
+  private computerOpenedAt = 0;
+  private reading: { title: string; text: string } | null = null;
+  private gridWasOn = true;
+  private batteryTimer = 0;
+  private location: string | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -193,6 +201,10 @@ export class Game {
     this.swingTime = 0;
     this.turned = false;
     this.sheltered = false;
+    this.computerSpot = null;
+    this.reading = null;
+    this.gridWasOn = true;
+    for (const c of this.town.computers) c.state = createComputerState(c.state.def, c.initialBattery);
 
     const spawn = this.town.playerSpawn;
     for (let i = 0; i < 80; i++) {
@@ -237,9 +249,14 @@ export class Game {
     this.emitHud();
   }
 
+  private uiOpen() {
+    return this.inventoryOpen || !!this.container || !!this.computerSpot || !!this.reading;
+  }
+
   toggleInventory() {
     if (this.status !== "playing") return;
-    if (this.inventoryOpen || this.container) this.closeUi();
+    if (this.computerSpot) return; // Tab completes in the terminal
+    if (this.uiOpen()) this.closeUi();
     else {
       this.inventoryOpen = true;
       this.releaseLock();
@@ -251,6 +268,8 @@ export class Game {
   closeUi(gesture = true) {
     this.inventoryOpen = false;
     this.container = null;
+    this.computerSpot = null;
+    this.reading = null;
     this.input.reset();
     if (this.status === "playing" && gesture) this.requestLock();
     this.emitHud();
@@ -289,10 +308,73 @@ export class Game {
       case "firearm":
         this.setEquipped(this.equippedUid === uid ? null : uid);
         break;
+      case "note":
+        this.reading = { title: stack.title ?? "Note", text: stack.text ?? "" };
+        this.inventoryOpen = false;
+        this.container = null;
+        break;
       default:
         break;
     }
     this.emitHud();
+  }
+
+  // ------------------------------------------------------------ computers
+
+  private computerContext() {
+    const day = Math.floor(this.minutes / 1440) + 1;
+    return {
+      nowMs: performance.now(),
+      dateText: gameDate(day, this.minutes % 1440),
+      uptimeMinutes: this.minutes - this.computerOpenedAt + 37,
+    };
+  }
+
+  /** Is the town grid still live? It fails at 06:00 on the power-off day. */
+  private gridOn() {
+    return this.minutes < (this.town.facts.powerOffDay - 1) * 1440 + 6 * 60;
+  }
+
+  private computerPowered(c: ComputerSpot) {
+    return c.kind === "laptop" ? (c.state.battery ?? 0) > 0 : this.gridOn();
+  }
+
+  private useComputer(c: ComputerSpot) {
+    if (!this.computerPowered(c)) {
+      this.message(c.kind === "laptop" ? "The laptop's battery is dead." : "The screen stays black. There's no power.", "warn");
+      return;
+    }
+    if (c.state.phase === "off") {
+      boot(c.state, this.computerContext());
+      this.computerOpenedAt = this.minutes;
+    }
+    this.computerSpot = c;
+    this.inventoryOpen = false;
+    this.container = null;
+    this.releaseLock();
+    this.emitHud();
+  }
+
+  computerSubmit(line: string) {
+    const c = this.computerSpot;
+    if (!c) return;
+    submit(c.state, line, this.computerContext());
+    // Keyboard clatter carries a little.
+    this.noises.push({ pos: this.player.pos.clone(), radius: 2.5, ttl: 0.4 });
+    if (c.state.phase === "off") {
+      this.message(`${c.state.def.hostname} powers off.`, "info");
+      this.closeUi(true);
+      return;
+    }
+    this.emitHud();
+  }
+
+  computerComplete(line: string): string {
+    const c = this.computerSpot;
+    if (!c) return line;
+    const out = complete(c.state, line);
+    this.emitHud();
+    return out;
   }
 
   /** Bandage a wound (the worst one if no id is given) using a bandage or first aid kit. */
@@ -413,7 +495,7 @@ export class Game {
     const isLocked = document.pointerLockElement === this.canvas;
     this.locked = isLocked;
     this.input.capturing = isLocked;
-    if (!isLocked && this.status === "playing" && !this.inventoryOpen && !this.container) this.pause();
+    if (!isLocked && this.status === "playing" && !this.uiOpen()) this.pause();
     this.emitHud();
   };
 
@@ -437,7 +519,7 @@ export class Game {
   };
 
   private onCanvasClick = () => {
-    if (this.status === "playing" && !this.locked && !this.inventoryOpen && !this.container) this.requestLock();
+    if (this.status === "playing" && !this.locked && !this.uiOpen()) this.requestLock();
   };
 
   // ------------------------------------------------------------ main loop
@@ -471,14 +553,14 @@ export class Game {
   private update(dt: number) {
     const p = this.player;
     const asleep = p.body.asleep;
-    const controlling = this.locked && !this.inventoryOpen && !this.container && !asleep;
+    const controlling = this.locked && !this.uiOpen() && !asleep;
     const gameMinutes = dt * TIME_SCALE * (asleep ? SLEEP_TIME_SCALE : 1);
     this.minutes += gameMinutes;
     if (asleep && this.input.wasPressed("KeyZ")) this.wake("You get up.");
 
     // Keys that work even with menus open
     if (this.input.wasPressed("Tab") || this.input.wasPressed("KeyI")) this.toggleInventory();
-    if ((this.inventoryOpen || this.container) && this.input.wasPressed("Escape")) this.closeUi(false);
+    if ((this.uiOpen()) && this.input.wasPressed("Escape")) this.closeUi(false);
 
     if (controlling) {
       this.handleActions(dt);
@@ -495,6 +577,9 @@ export class Game {
 
     // Close the loot window if you get dragged away from it.
     if (this.container && this.distanceToContainer(this.container) > INTERACT_RANGE + 1) this.closeUi();
+    if (this.computerSpot && this.distanceToContainer(this.computerSpot) > INTERACT_RANGE + 1) this.closeUi();
+    this.updateElectricity(dt);
+    this.location = this.buildingAt(p.pos.x, p.pos.z);
 
     // Shelter check: is there a roof overhead?
     this.shelterTimer -= dt;
@@ -529,6 +614,48 @@ export class Game {
     this.messages = this.messages.filter((m) => (m as HudMessage & { until: number }).until > now);
   }
 
+  private updateElectricity(dt: number) {
+    const grid = this.gridOn();
+    if (this.gridWasOn && !grid) {
+      this.message("Somewhere a transformer bangs. The power is out across town.", "warn");
+      for (const c of this.town.computers) if (c.kind === "desktop") c.state.phase = "off";
+      if (this.computerSpot?.kind === "desktop") this.closeUi(false);
+    }
+    this.gridWasOn = grid;
+    // Laptop in use drains its battery: about 1% every 8 seconds.
+    const c = this.computerSpot;
+    if (c?.kind === "laptop" && c.state.battery !== null) {
+      this.batteryTimer += dt;
+      if (this.batteryTimer > 8) {
+        this.batteryTimer = 0;
+        c.state.battery = Math.max(0, c.state.battery - 1);
+        if (c.state.battery === 0) {
+          c.state.phase = "off";
+          this.message("The laptop dies. Battery empty.", "warn");
+          this.closeUi(false);
+        }
+      }
+    }
+    // Screens that are on glow (and can be seen from outside at night).
+    for (const comp of this.town.computers) {
+      const on = comp.state.phase !== "off" && this.computerPowered(comp);
+      (comp.screen.material as THREE.MeshStandardMaterial).emissiveIntensity = on ? (comp === c ? 1.1 : 0.7) : 0;
+    }
+    // Street lamps light up after dusk while the grid is live.
+    const dark = this.env.daylight(this.minutes % 1440) < 0.35;
+    this.town.lampMaterial.emissiveIntensity = grid && dark ? 2.2 : 0;
+  }
+
+  private buildingAt(x: number, z: number): string | null {
+    for (const b of this.town.buildings) {
+      if (x > b.rect.minX && x < b.rect.maxX && z > b.rect.minZ && z < b.rect.maxZ) {
+        const label = b.type === "house" ? "House" : b.type === "store" ? "Grocery" : b.type === "hardware" ? "Hardware store" : "Police station";
+        return `${b.address} · ${label}`;
+      }
+    }
+    return null;
+  }
+
   private handleActions(dt: number) {
     const input = this.input;
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
@@ -541,8 +668,9 @@ export class Game {
     if (input.wasPressed("KeyZ")) this.trySleep();
     if (input.wasPressed("KeyB")) this.treatWound();
     if (input.wasPressed("KeyE")) {
-      const c = this.nearestContainer();
-      if (c) this.openContainer(c);
+      const target = this.nearestInteractable();
+      if (target?.type === "computer") this.useComputer(target.computer);
+      else if (target?.type === "container") this.openContainer(target.container);
     }
     if (input.wasPressed("Escape") || input.wasPressed("KeyP")) this.pause();
 
@@ -899,7 +1027,7 @@ export class Game {
 
   // -------------------------------------------------------------- looting
 
-  private distanceToContainer(c: LootContainer) {
+  private distanceToContainer(c: { x: number; y: number; z: number; hx: number; hz: number }) {
     const p = this.player.pos;
     const dx = Math.max(0, Math.abs(p.x - c.x) - c.hx);
     const dz = Math.max(0, Math.abs(p.z - c.z) - c.hz);
@@ -925,8 +1053,28 @@ export class Game {
     return best;
   }
 
+  /** The container or computer you'd interact with by pressing E. */
+  private nearestInteractable():
+    | { type: "container"; container: LootContainer }
+    | { type: "computer"; computer: ComputerSpot }
+    | null {
+    const container = this.nearestContainer();
+    let computer: ComputerSpot | null = null;
+    let best = INTERACT_RANGE;
+    for (const c of this.town.computers) {
+      const d = this.distanceToContainer(c);
+      if (d < best) {
+        best = d;
+        computer = c;
+      }
+    }
+    // Computers sit on desks next to containers; prefer the computer when it's as close.
+    if (computer && (!container || best <= this.distanceToContainer(container) + 0.3)) return { type: "computer", computer };
+    return container ? { type: "container", container } : null;
+  }
+
   private openContainer(c: LootContainer) {
-    if (c.items === null) c.items = rollLoot(c.table, Math.random);
+    if (c.items === null) c.items = [...rollLoot(c.table, Math.random), ...(c.preset ?? [])];
     this.container = c;
     this.inventoryOpen = false;
     this.releaseLock();
@@ -990,10 +1138,8 @@ export class Game {
     const p = this.player;
     const weapon = this.status === "loading" ? FISTS : this.weaponDef();
     const stack = this.equippedStack();
-    const prompt =
-      this.status === "playing" && !this.container && !this.inventoryOpen && this.terrain
-        ? this.nearestContainer()
-        : null;
+    const target = this.status === "playing" && !this.uiOpen() && this.terrain ? this.nearestInteractable() : null;
+    const comp = this.computerSpot;
     const containerItems = this.container?.items ?? null;
     this.onHud({
       status: this.status,
@@ -1037,7 +1183,21 @@ export class Game {
         reloading: this.reloadTimer > 0,
       },
       hotbar: this.hotbar().map((s, i) => ({ slot: i + 1, name: ITEMS[s.id].name, active: s.uid === this.equippedUid })),
-      prompt: prompt ? `Search ${prompt.name}` : null,
+      prompt: !target ? null : target.type === "computer" ? `Use ${target.computer.kind === "laptop" ? "laptop" : "computer"}` : `Search ${target.container.name}`,
+      computer: comp
+        ? {
+            hostname: comp.state.def.hostname,
+            kind: comp.kind,
+            lines: [...comp.state.screen],
+            prompt: shellPrompt(comp.state),
+            battery: comp.state.battery,
+            password: comp.state.phase === "password",
+          }
+        : null,
+      reading: this.reading,
+      location: this.location,
+      gridOn: this.terrain ? this.gridOn() : true,
+      townName: `${TOWN}, ${COUNTY}`,
       inventory: this.inventory.map((s) => ({ ...s })),
       carryWeight: this.carryWeight(),
       maxWeight: MAX_WEIGHT,

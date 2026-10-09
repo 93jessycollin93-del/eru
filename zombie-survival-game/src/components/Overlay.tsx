@@ -57,7 +57,7 @@ const survivedText = (minutes: number) => {
 const Overlay = ({ hud, onStart, onResume }: OverlayProps) => {
   if (hud.status === "playing") {
     // Mouse was released (e.g. Esc closed a menu): one click recaptures it.
-    if (!hud.locked && !hud.inventoryOpen && !hud.container) {
+    if (!hud.locked && !hud.inventoryOpen && !hud.container && !hud.computer && !hud.reading) {
       return (
         <button
           onClick={onResume}

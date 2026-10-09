@@ -60,6 +60,20 @@ export interface HudState {
   equipped: { name: string; loaded?: number; magSize?: number; reserve?: number; reloading: boolean };
   hotbar: { slot: number; name: string; active: boolean }[];
   prompt: string | null;
+  computer: {
+    hostname: string;
+    kind: "desktop" | "laptop";
+    lines: string[];
+    prompt: string;
+    battery: number | null;
+    /** Hide typed characters. */
+    password: boolean;
+  } | null;
+  reading: { title: string; text: string } | null;
+  /** Street address when inside a building. */
+  location: string | null;
+  gridOn: boolean;
+  townName: string;
   inventory: ItemStack[];
   carryWeight: number;
   maxWeight: number;

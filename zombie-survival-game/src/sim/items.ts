@@ -1,4 +1,4 @@
-export type ItemCategory = "food" | "drink" | "medical" | "melee" | "firearm" | "ammo" | "tool";
+export type ItemCategory = "food" | "drink" | "medical" | "melee" | "firearm" | "ammo" | "tool" | "note";
 
 export interface ItemDef {
   id: string;
@@ -143,6 +143,13 @@ export const ITEMS: Record<string, ItemDef> = {
     noise: 55,
     description: "Loud. Every zombie nearby will hear it.",
   },
+  note: {
+    id: "note",
+    name: "Note",
+    category: "note",
+    weight: 0.01,
+    description: "A scrap of paper with writing on it.",
+  },
   ammo_9mm: {
     id: "ammo_9mm",
     name: "9mm Rounds",
@@ -173,14 +180,18 @@ export interface ItemStack {
   count: number;
   /** Rounds loaded, for firearms. */
   loaded?: number;
+  /** Handwritten notes. */
+  title?: string;
+  text?: string;
 }
 
 let nextUid = 1;
-export const makeStack = (id: string, count = 1, loaded?: number): ItemStack => ({
+export const makeStack = (id: string, count = 1, loaded?: number, note?: { title: string; text: string }): ItemStack => ({
   uid: nextUid++,
   id,
   count,
   loaded,
+  ...(note ?? {}),
 });
 
 export const stackWeight = (s: ItemStack) => ITEMS[s.id].weight * s.count;

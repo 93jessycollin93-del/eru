@@ -528,7 +528,7 @@ const BUILTINS: Record<string, Cmd> = {
     }
     return [
       `Mail for ${s.user}: ${msgs.length} messages. Read one with: mail <number>`,
-      ...msgs.map((m, i) => ` ${padL(i + 1, 2)}  ${pad(m.date.slice(0, 16), 17)} ${pad(m.from.slice(0, 26), 27)} ${m.subject}`),
+      ...msgs.map((m, i) => ` ${padL(i + 1, 2)}  ${pad(m.date.slice(0, 17), 18)} ${pad(m.from.slice(0, 26), 27)} ${m.subject}`),
     ];
   },
   man: (_s, args) => (args[0] ? [`No manual entry for ${args[0]}. Try 'help'.`] : ["What manual page do you want?"]),

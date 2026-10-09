@@ -21,6 +21,7 @@ const categoryLabel: Record<string, string> = {
   firearm: "Firearm",
   ammo: "Ammo",
   tool: "Tool",
+  note: "Note",
 };
 
 const useLabel = (s: ItemStack, equippedUid: number | null) => {
@@ -32,6 +33,8 @@ const useLabel = (s: ItemStack, equippedUid: number | null) => {
       return "Drink";
     case "medical":
       return "Use";
+    case "note":
+      return "Read";
     case "melee":
     case "firearm":
       return s.uid === equippedUid ? "Unequip" : "Equip";

@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: session 2 — body simulation done (2026-10-09)_
+_Last updated: session 3 in progress — computers done, graphics pass next (2026-10-09)_
 
 ## The project
 
@@ -58,13 +58,15 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | File | What it does |
 | ---- | ------------ |
 | `src/sim/body.ts` | **Engine-agnostic** body simulation: blood (ml), tissue health, wounds per body part with bleed rates and healing, Knox infection (hidden incubation then symptoms, bites always infect, death then reanimation), body temperature, fatigue/sleep, pain, panic, moodles, plus derived modifiers (`mobility`, `aimSway`, `strength`, `maxStamina`). Bleeding/stamina/panic run in real seconds; everything else runs in game minutes |
+| `src/sim/computer.ts` | **Engine-agnostic** virtual filesystem + Unix-like shell. Login with lockout, permissions, `ls cd cat head tail grep wc find mail history` + pipes, tab completion, data-driven programs |
+| `src/sim/computerContent.ts` | Generates police / store / hardware / house-laptop machines from `TownFacts` (police address, supply-cache address, power-off day). Writes lore, mail, incident reports, and the password note for that building. `gameDate(day, minute)`: day 1 = Fri Oct 23 |
 | `src/sim/climate.ts` | Air temperature by time of day, day number and shelter |
 | `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables; seeded RNG |
 | `src/game/Game.ts` | Main loop and orchestration: pointer lock, combat, looting, inventory, zombie management, HUD emission (10 Hz via `onHud`) |
 | `src/game/entities/player.ts` | Movement, stamina, jump/gravity, survival stat drain, over-the-shoulder camera with collision |
 | `src/game/entities/zombie.ts` | Zombie AI. States: idle, wander, investigate, chase, dead. Senses run every 0.25 s: sight cone + line of sight, footsteps, noise events |
 | `src/game/entities/humanoid.ts` | Box-built character with pivoted limbs, procedural animation, held item meshes |
-| `src/game/world/town.ts` | Procedural town: roads, buildings with interiors (wall openings for doors/windows), furniture, loot containers, cars, lamps, zombie spawn points |
+| `src/game/world/town.ts` | Procedural town: named streets with real house numbers, buildings with interiors, furniture, loot containers (`preset` items for notes and caches), computers (`ComputerSpot` with a glowing screen mesh), a supply crate at the stash address, cars, street lamps (glow at night while the grid is up), zombie spawn points |
 | `src/game/world/colliders.ts` | AABB collision + raycast/LOS over an 8 m spatial grid |
 | `src/game/world/terrain.ts` | Simplex heightmap. The town (radius 120) is flat at y = 0 |
 | `src/game/world/vegetation.ts` | Instanced trees and bushes |
@@ -81,6 +83,15 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - The `zombieContext()` visibility formula in `Game.ts`
 
 ## Status
+
+**Session 3 is in progress.** Computers are complete:
+- 36 machines (police terminal, store/hardware POS, about 24 house laptops).
+- E uses a computer and opens `ComputerScreen.tsx`. Typing makes a little noise, and zombies keep moving.
+- The grid fails at 06:00 on `facts.powerOffDay` (day 3–5); desktops die then, and laptops drain their battery while in use.
+- Notes are readable items.
+- The HUD shows the street address when you're inside a building.
+- Verified by 12 shell tests and a real-keyboard browser test (login via the note's password → mail → stash address).
+- **Remaining for session 3:** the Tarkov-style graphics pass.
 
 **Session 2 (body simulation) is complete and pushed.**
 - Added `src/sim/body.ts`, `climate.ts` and the tests.

@@ -73,6 +73,8 @@ const Hud = ({ hud }: HudProps) => {
         <div className="text-sm tabular-nums text-stone-300">
           {Math.round(hud.airTemp)}°C {hud.sheltered ? "· indoors" : ""}
         </div>
+        <div className="max-w-[16rem] truncate text-sm text-stone-300">{hud.location ?? hud.townName}</div>
+        {!hud.gridOn && <div className="text-xs uppercase tracking-[0.2em] text-amber-300/80">Power out</div>}
         {hud.flashlight && <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">Flashlight on</div>}
       </div>
 

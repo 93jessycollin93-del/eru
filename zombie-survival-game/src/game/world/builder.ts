@@ -19,6 +19,10 @@ export class MeshBuilder {
     return key;
   }
 
+  getMaterial(key: string) {
+    return this.materials.get(key);
+  }
+
   add(geo: THREE.BufferGeometry, materialKey: string) {
     let bucket = this.buckets.get(materialKey);
     if (!bucket) this.buckets.set(materialKey, (bucket = []));

@@ -1,6 +1,8 @@
 import * as THREE from "three";
-import type { ItemStack } from "../../sim/items";
-import { pick, range } from "../../sim/rng";
+import { createComputerState, type ComputerState } from "../../sim/computer";
+import { houseLaptop, policeComputer, storeComputer, type TownFacts } from "../../sim/computerContent";
+import { makeStack, type ItemStack } from "../../sim/items";
+import { mulberry32, pick, range } from "../../sim/rng";
 import { MeshBuilder } from "./builder";
 import type { ColliderWorld } from "./colliders";
 import { WORLD_HALF, type Terrain } from "./terrain";
@@ -17,6 +19,32 @@ export interface LootContainer {
   hz: number;
   /** Rolled the first time it is opened. */
   items: ItemStack[] | null;
+  /** Placed items added to the roll (notes, supply caches). */
+  preset?: ItemStack[];
+}
+
+export interface ComputerSpot {
+  id: number;
+  /** Where you stand to use it. */
+  x: number;
+  y: number;
+  z: number;
+  hx: number;
+  hz: number;
+  kind: "desktop" | "laptop";
+  address: string;
+  /** The machine itself (filesystem, session, battery). */
+  state: ComputerState;
+  initialBattery: number | null;
+  screen: THREE.Mesh;
+}
+
+export interface Building {
+  address: string;
+  type: BuildingType;
+  rect: Rect;
+  containers: LootContainer[];
+  computer?: ComputerSpot;
 }
 
 export interface Rect {
@@ -34,9 +62,14 @@ export interface TownData {
   /** Roads and building lots, so vegetation can avoid them. */
   occupied: Rect[];
   playerSpawn: THREE.Vector3;
+  buildings: Building[];
+  computers: ComputerSpot[];
+  facts: TownFacts;
+  /** Street lamp bulbs: glow at night while the grid is up. */
+  lampMaterial: THREE.MeshStandardMaterial;
 }
 
-type BuildingType = "house" | "store" | "hardware" | "police";
+export type BuildingType = "house" | "store" | "hardware" | "police";
 
 const WALL_COLORS = ["#c9c2b0", "#b8ad8f", "#9a5b45", "#8c9396", "#c4b48a", "#a7a28f", "#7f8a7a"];
 const ROOF_COLORS = ["#3b3a38", "#4a3a32", "#2f3437", "#45403a"];
@@ -60,6 +93,12 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   const occupied: Rect[] = [];
   const lots: Rect[] = [];
   let containerId = 1;
+  const buildings: Building[] = [];
+  const computers: ComputerSpot[] = [];
+  const usedAddresses = new Set<string>();
+  /** Things to finish once every building exists (computers need town facts). */
+  const pendingComputers: { b: Building; spot: Omit<ComputerSpot, "state" | "address" | "initialBattery">; contentType: BuildingType }[] = [];
+  const crateBuilders = new Map<Building, () => LootContainer>();
 
   const asphalt = mb.material("#2c2d2e", { roughness: 0.95 });
   const sidewalk = mb.material("#6e6c66");
@@ -68,14 +107,14 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   // ---------- roads ----------
 
   const hRoads = [
-    { z: 0, x0: -WORLD_HALF, x1: WORLD_HALF },
-    { z: -60, x0: -96, x1: 96 },
-    { z: 60, x0: -96, x1: 96 },
+    { z: 0, x0: -WORLD_HALF, x1: WORLD_HALF, name: "Main Street" },
+    { z: -60, x0: -96, x1: 96, name: "Oak Avenue" },
+    { z: 60, x0: -96, x1: 96, name: "Elm Street" },
   ];
   const vRoads = [
-    { x: -66, z0: -96, z1: 96 },
-    { x: 0, z0: -96, z1: 96 },
-    { x: 66, z0: -96, z1: 96 },
+    { x: -66, z0: -96, z1: 96, name: "Cedar Road" },
+    { x: 0, z0: -96, z1: 96, name: "Pine Street" },
+    { x: 66, z0: -96, z1: 96, name: "Birch Lane" },
   ];
 
   const flatPlane = (cx: number, cz: number, w: number, d: number, y: number, mat: string) => {
@@ -140,8 +179,10 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       (b) => a.minX - margin < b.maxX && a.maxX + margin > b.minX && a.minZ - margin < b.maxZ && a.maxZ + margin > b.minZ,
     );
 
-  const buildBuilding = (cx: number, cz: number, w: number, d: number, rot: number, type: BuildingType) => {
+  const buildBuilding = (cx: number, cz: number, w: number, d: number, rot: number, type: BuildingType, address: string, rect: Rect) => {
     const m = new THREE.Matrix4().makeRotationY(rot).setPosition(cx, 0, cz);
+    const building: Building = { address, type, rect, containers: [] };
+    buildings.push(building);
     const wallColor = type === "police" ? "#7d8790" : pick(rng, WALL_COLORS);
     const wallMat = mb.material(wallColor);
     const innerMat = mb.material(type === "house" ? "#b7ae9c" : "#a9aaa5");
@@ -199,7 +240,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       box(x0, y0, z0, x1, y1, z1, mat, true, false);
       const c = new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).applyMatrix4(m);
       const ext = new THREE.Vector3((x1 - x0) / 2, 0, (z1 - z0) / 2).applyAxisAngle(new THREE.Vector3(0, 1, 0), rot);
-      containers.push({
+      const lc: LootContainer = {
         id: containerId++,
         name,
         table,
@@ -209,6 +250,39 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
         hx: Math.abs(ext.x),
         hz: Math.abs(ext.z),
         items: null,
+      };
+      containers.push(lc);
+      building.containers.push(lc);
+      return lc;
+    };
+
+    /** A computer sitting on a surface at local (lx, top, lz), screen facing local +z. */
+    const placeComputer = (kind: "desktop" | "laptop", lx: number, top: number, lz: number) => {
+      const dark = mb.material("#1d1f21", { roughness: 0.5 });
+      const shell = mb.material(kind === "laptop" ? "#5d6166" : "#2a2c2f", { roughness: 0.45, metalness: 0.2 });
+      let sw: number, sh: number, sy: number, sz: number;
+      if (kind === "desktop") {
+        box(lx - 0.05, top, lz - 0.1, lx + 0.05, top + 0.12, lz - 0.04, shell, false);
+        box(lx - 0.28, top + 0.12, lz - 0.12, lx + 0.28, top + 0.47, lz - 0.07, shell, false);
+        box(lx - 0.22, top, lz + 0.05, lx + 0.22, top + 0.025, lz + 0.2, dark, false);
+        box(lx + 0.38, top, lz - 0.2, lx + 0.58, top + 0.42, lz + 0.2, shell, false);
+        [sw, sh, sy, sz] = [0.52, 0.31, top + 0.295, lz - 0.068];
+      } else {
+        box(lx - 0.17, top, lz - 0.05, lx + 0.17, top + 0.02, lz + 0.19, shell, false);
+        box(lx - 0.17, top + 0.02, lz - 0.07, lx + 0.17, top + 0.25, lz - 0.05, shell, false);
+        [sw, sh, sy, sz] = [0.3, 0.2, top + 0.135, lz - 0.048];
+      }
+      const screen = new THREE.Mesh(
+        new THREE.PlaneGeometry(sw, sh),
+        new THREE.MeshStandardMaterial({ color: "#07090a", roughness: 0.25, metalness: 0.1, emissive: "#b8d4d8", emissiveIntensity: 0 }),
+      );
+      screen.position.set(lx, sy, sz).applyMatrix4(m);
+      screen.rotation.y = rot;
+      const stand = new THREE.Vector3(lx, top, lz + 0.35).applyMatrix4(m);
+      pendingComputers.push({
+        b: building,
+        contentType: type,
+        spot: { id: computers.length + pendingComputers.length + 1, x: stand.x, y: stand.y, z: stand.z, hx: 0.3, hz: 0.3, kind, screen },
       });
     };
 
@@ -289,6 +363,12 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       // Table and sofa
       const tz = (front0 + inner.z1) / 2;
       box(-0.7, 0, tz - 0.45, 0.7, 0.75, tz + 0.45, woodMat, true, false);
+      if (rng() < 0.55) placeComputer("laptop", 0.15, 0.75, tz);
+      // Corner by the front wall where a supply crate can go.
+      const crateX = kLeft ? inner.x0 + 0.1 : inner.x1 - 1.0;
+      crateBuilders.set(building, () =>
+        container("Supply Crate", "supply_cache", crateX, 0, inner.z1 - 0.8, crateX + 0.9, 0.55, inner.z1 - 0.15, mb.material("#4a5236")),
+      );
       const sx = kLeft ? inner.x1 - 0.9 : inner.x0;
       box(sx, 0, tz - 1.1, sx + 0.9, 0.8, tz + 1.1, fabricMat, true, false);
       spawnPoints.push(new THREE.Vector3(0, 0, tz).applyMatrix4(m));
@@ -312,6 +392,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       }
       container("Shelf", table, inner.x0, 0, inner.z0 + 0.1, inner.x1, 1.9, inner.z0 + 0.7, metalMat);
       box(inner.x1 - 2.6, 0, inner.z1 - 2.2, inner.x1 - 0.4, 1.0, inner.z1 - 1.5, woodMat, true, false);
+      placeComputer("desktop", inner.x1 - 1.6, 1.0, inner.z1 - 1.85);
       // Shop sign over the door
       box(-hw * 0.7, WALL_H - 0.7, hd, hw * 0.7, WALL_H - 0.1, hd + 0.12, mb.material(type === "store" ? "#8a2f24" : "#9a6a1f"), false);
       spawnPoints.push(new THREE.Vector3(0, 0, 0).applyMatrix4(m), new THREE.Vector3(0, 0, inner.z1 - 2).applyMatrix4(m));
@@ -321,6 +402,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
         container("Police Locker", "police_locker", x, 0, inner.z0 + 0.1, x + 0.65, 1.9, inner.z0 + 0.6, metalMat);
       }
       box(-2, 0, -0.5, 0, 0.78, 0.5, woodMat, true, false);
+      placeComputer("desktop", -1.1, 0.78, -0.05);
       box(1.5, 0, -0.5, 3.5, 0.78, 0.5, woodMat, true, false);
       container("Evidence Cabinet", "police_locker", inner.x1 - 0.7, 0, inner.z0 + 0.1, inner.x1 - 0.1, 1.4, inner.z0 + 1.6, metalMat);
       // Blue stripe on the facade
@@ -354,6 +436,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     cursor: number,
     side: number,
     type: BuildingType,
+    street: string,
   ): number | null => {
     const [w, d] = sizeFor(type);
     const setback = range(rng, 2.5, 6);
@@ -373,7 +456,12 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     if (Math.hypot(cx, cz) > 112) return null;
     if (overlaps(rect, occupied, 0.5) || overlaps(rect, lots, 2.5)) return null;
     lots.push(rect);
-    buildBuilding(cx, cz, w, d, rot, type);
+    // Odd numbers on one side of the street, even on the other.
+    let n = Math.max(1, Math.round(((along === "x" ? cx : cz) + 110) / 5)) * 2 + (side > 0 ? 1 : 0);
+    while (usedAddresses.has(`${n} ${street}`)) n += 2;
+    const address = `${n} ${street}`;
+    usedAddresses.add(address);
+    buildBuilding(cx, cz, w, d, rot, type, address, rect);
     return w;
   };
 
@@ -381,7 +469,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     for (const side of [-1, 1]) {
       let cursor = Math.max(r.x0, -100) + range(rng, 0, 6);
       while (cursor < Math.min(r.x1, 100)) {
-        const placed = rng() < 0.85 ? tryPlace("x", r.z, cursor, side, nextType()) : null;
+        const placed = rng() < 0.85 ? tryPlace("x", r.z, cursor, side, nextType(), r.name) : null;
         cursor += (placed ?? 3) + range(rng, 3, 9);
       }
     }
@@ -390,12 +478,54 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     for (const side of [-1, 1]) {
       let cursor = r.z0 + range(rng, 0, 6);
       while (cursor < r.z1) {
-        const placed = rng() < 0.85 ? tryPlace("z", r.x, cursor, side, nextType()) : null;
+        const placed = rng() < 0.85 ? tryPlace("z", r.x, cursor, side, nextType(), r.name) : null;
         cursor += (placed ?? 3) + range(rng, 3, 9);
       }
     }
   }
   occupied.push(...lots);
+
+  // ---------- computers, notes and the supply cache ----------
+
+  // Separate stream so tweaking computer content never reshuffles the town layout.
+  const crng = mulberry32(Math.floor(rng() * 1e9));
+  const police = buildings.find((b) => b.type === "police")!;
+  const houses = buildings.filter((b) => b.type === "house" && crateBuilders.has(b));
+  const stashHouse = pick(crng, houses);
+  const facts: TownFacts = {
+    policeAddress: police.address,
+    stashAddress: stashHouse.address,
+    powerOffDay: 3 + Math.floor(crng() * 3),
+  };
+  const crate = crateBuilders.get(stashHouse)!();
+  crate.preset = [
+    makeStack("pistol", 1, 15),
+    makeStack("ammo_9mm", 30),
+    makeStack("first_aid_kit"),
+    makeStack("painkillers"),
+    makeStack("canned_beans", 1),
+    makeStack("canned_beans", 1),
+    makeStack("canned_beans", 1),
+    makeStack("water_bottle", 1),
+    makeStack("water_bottle", 1),
+    makeStack("water_bottle", 1),
+  ];
+
+  for (const { b, spot, contentType } of pendingComputers) {
+    const gen =
+      contentType === "police"
+        ? policeComputer(facts, crng)
+        : contentType === "store" || contentType === "hardware"
+          ? storeComputer(facts, crng, contentType, b.address)
+          : houseLaptop(facts, crng, b.address);
+    const full: ComputerSpot = { ...spot, address: b.address, initialBattery: gen.battery, state: createComputerState(gen.def, gen.battery) };
+    computers.push(full);
+    b.computer = full;
+    if (gen.note && b.containers.length) {
+      const target = pick(crng, b.containers.filter((c) => c.table !== "supply_cache"));
+      target.preset = [...(target.preset ?? []), makeStack("note", 1, undefined, { title: gen.note.title, text: gen.note.text })];
+    }
+  }
 
   // ---------- street props ----------
 
@@ -446,6 +576,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
 
   // Street lamps (dead, of course)
   const poleMat = mb.material("#3a3c3e", { metalness: 0.5, roughness: 0.6 });
+  const bulbKey = mb.material("#d8d2b8", { emissive: "#ffcf8a", emissiveIntensity: 0 });
   const lamp = (x: number, z: number) => {
     const g = new THREE.CylinderGeometry(0.07, 0.1, 5.5, 6);
     g.translate(x, 2.75, z);
@@ -453,6 +584,9 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     const head = new THREE.BoxGeometry(0.3, 0.15, 0.9);
     head.translate(x, 5.5, z);
     mb.add(head, poleMat);
+    const bulb = new THREE.BoxGeometry(0.22, 0.04, 0.6);
+    bulb.translate(x, 5.41, z);
+    mb.add(bulb, bulbKey);
     colliders.add({ minX: x - 0.15, maxX: x + 0.15, minY: 0, maxY: 5.5, minZ: z - 0.15, maxZ: z + 0.15, occludes: false });
   };
   for (const r of hRoads) {
@@ -471,8 +605,15 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     spawnPoints.push(new THREE.Vector3(r.x + range(rng, -3, 3), 0, range(rng, r.z0, r.z1)));
   }
 
+  const group = mb.build();
+  for (const c of computers) group.add(c.screen);
+
   return {
-    group: mb.build(),
+    group,
+    buildings,
+    computers,
+    facts,
+    lampMaterial: mb.getMaterial(bulbKey)!,
     containers,
     spawnPoints,
     occupied,
