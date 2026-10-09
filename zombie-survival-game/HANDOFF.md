@@ -11,7 +11,8 @@ A browser-based, third-person 3D zombie survival game that blends **DayZ** (open
 
 The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 
-**North star (owner's words):** "the best realistic survival game ever created."
+**North star (owner's words):** "the best realistic survival game ever created"; "the physical and CYBERNETIC world in this game should be more realistic than any other game ever created. Using the best of the best."
+**Read [DESIGN.md](DESIGN.md)**: it holds the realism rules and the system-by-system plan for both worlds.
 
 ### Decisions already made (don't re-ask)
 - **Browser now, port to Unreal Engine 5 later.** All simulation rules go in `src/sim/` as engine-agnostic TypeScript (no `three`, React or DOM imports; injected RNG; serialisable state). Rendering, input and UI are a thin client. See the top of ROADMAP.md.

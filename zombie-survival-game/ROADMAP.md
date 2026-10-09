@@ -2,7 +2,7 @@
 
 The goal is a browser-based, third-person zombie survival game that feels like **DayZ** (open world, scavenging, tension, guns are loud), **Vein** (dense, explorable towns where every building has an interior) and **Project Zomboid** (deep survival simulation, "this is how you died").
 
-**North star:** the most realistic survival game ever made.
+**North star:** the most realistic survival game ever made, in both the physical and the cybernetic world. See [DESIGN.md](DESIGN.md) for what that means system by system.
 
 **Strategy: browser now, port later.** Every system is built and tested in the browser, where Claude can run and verify it each session. Once the design is proven, it gets ported to Unreal Engine 5 for top-tier visuals.
 
@@ -51,6 +51,12 @@ Each session below is roughly one working session. The order can change based on
 - Electricity: the grid fails on a set day; laptops have batteries
 - Street addresses for every building
 - Graphics: textured materials, ambient occlusion, colour grading, grain, a physical sky
+
+## Session 4: Networks and CCTV (cybernetic world)
+- Building LANs with real addressing; `ip addr`, `ping`, `nmap`, `ssh` into servers (nested sessions)
+- Police station network: file server, NVR, IP cameras
+- Live CCTV feeds rendered from cameras in the 3D world, viewed from a terminal
+- UPS batteries keep network gear alive for hours after the grid fails
 
 ## Session 3b: Doors, windows and barricades
 - Doors that open, close and lock; zombies bang on them and can break through
