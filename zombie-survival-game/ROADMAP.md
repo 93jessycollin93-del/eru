@@ -46,7 +46,13 @@ Each session below is roughly one working session. The order can change based on
 - Animation blending: idle, walk, run, crouch, melee swings, aim, hit reactions, death
 - Zombie variety in clothing and body type
 
-## Session 3: Doors, windows and barricades
+## Session 3: Usable computers + Tarkov-style graphics pass (owner request)
+- Computers in police stations, shops and houses (laptops): boot, log in, a real shell (`ls`, `cd`, `cat`, `grep`, pipes, `mail`, programs), with lore and gameplay leads (supply caches, power-grid status)
+- Electricity: the grid fails on a set day; laptops have batteries
+- Street addresses for every building
+- Graphics: textured materials, ambient occlusion, colour grading, grain, a physical sky
+
+## Session 3b: Doors, windows and barricades
 - Doors that open, close and lock; zombies bang on them and can break through
 - Climb and vault through windows (breaking the glass makes noise)
 - Board up windows and doors with planks, a hammer and nails

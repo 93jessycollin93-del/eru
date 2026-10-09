@@ -19,7 +19,9 @@ The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 - **Single-player first**; keep systems separable so multiplayer can come later (roadmap session 19).
 - **Stack:** Vite, React, TypeScript, Tailwind, Three.js. This is Lovable's stack, so the owner can import the project into Lovable.dev via GitHub. There is no Lovable connector in Claude sessions, so build the code directly.
 - **Must not be connected to Base44.** The code has no Base44 dependencies; keep it that way.
-- **Visual direction:** muted, grim, desaturated (DayZ-like). HUD uses Barlow Condensed, titles use Big Shoulders Stencil Display, and the death screen uses Special Elite.
+- **Graphics should resemble Escape from Tarkov** (owner request, session 3): gritty photoreal, overcast, desaturated, dirty materials, ambient occlusion, film grain. The browser gets as close as it can; full fidelity comes with the Unreal port.
+- **In-game computers must be realistic and runnable** (owner request, session 3): physical computers in the world that you boot, log into (passwords found as notes in the world), and use through a working Unix-like shell with a virtual filesystem, mail and programs. They need power (the grid fails on a set day; laptops run on battery). The shell and filesystem logic live in `src/sim/computer.ts` (portable).
+- **Visual direction (UI):** muted, grim, desaturated (DayZ-like). HUD uses Barlow Condensed, titles use Big Shoulders Stencil Display, and the death screen uses Special Elite.
 
 ## Where the code lives
 
