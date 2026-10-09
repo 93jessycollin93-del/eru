@@ -7,75 +7,128 @@ interface OverlayProps {
   onResume: () => void;
 }
 
+const CONTROLS: [string, string][] = [
+  ["Move", "W A S D"],
+  ["Look", "Mouse"],
+  ["Sprint", "Shift"],
+  ["Crouch", "C"],
+  ["Jump", "Space"],
+  ["Attack / shoot", "Left click"],
+  ["Aim", "Right click (hold)"],
+  ["Reload", "R"],
+  ["Search", "E"],
+  ["Inventory", "Tab"],
+  ["Weapons", "1–5, 0 to holster"],
+  ["Flashlight", "F"],
+  ["Pause", "Esc"],
+];
+
 const Controls = () => (
-  <ul className="mx-auto mt-6 grid max-w-xs grid-cols-2 gap-x-6 gap-y-1 text-left font-mono text-sm text-neutral-300">
-    <li className="text-neutral-500">Move</li>
-    <li>WASD / Arrows</li>
-    <li className="text-neutral-500">Aim</li>
-    <li>Mouse</li>
-    <li className="text-neutral-500">Shoot</li>
-    <li>Left click (hold)</li>
-    <li className="text-neutral-500">Reload</li>
-    <li>R</li>
-    <li className="text-neutral-500">Pause</li>
-    <li>Esc / P</li>
-  </ul>
+  <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-0.5 text-left text-base">
+    {CONTROLS.map(([action, key]) => (
+      <div key={action} className="contents">
+        <dt className="uppercase tracking-[0.12em] text-stone-500">{action}</dt>
+        <dd className="text-stone-200">{key}</dd>
+      </div>
+    ))}
+  </dl>
 );
 
 const Button = ({ onClick, children }: { onClick: () => void; children: ReactNode }) => (
   <button
     onClick={onClick}
-    className="mt-8 rounded bg-red-700 px-8 py-3 font-display text-2xl tracking-wider text-white shadow-lg shadow-red-900/50 transition hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
+    className="rounded-sm bg-stone-200 px-10 py-3 font-display text-2xl uppercase tracking-[0.15em] text-black transition hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60"
   >
     {children}
   </button>
 );
 
+const survivedText = (minutes: number) => {
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const parts = [];
+  if (days) parts.push(`${days} day${days === 1 ? "" : "s"}`);
+  parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+  return parts.join(", ");
+};
+
 const Overlay = ({ hud, onStart, onResume }: OverlayProps) => {
-  if (hud.status === "playing") return null;
+  if (hud.status === "playing") {
+    // Mouse was released (e.g. Esc closed a menu): one click recaptures it.
+    if (!hud.locked && !hud.inventoryOpen && !hud.container) {
+      return (
+        <button
+          onClick={onResume}
+          className="absolute inset-0 flex items-center justify-center bg-black/30 font-ui text-xl uppercase tracking-[0.3em] text-stone-200"
+        >
+          Click to continue
+        </button>
+      );
+    }
+    return null;
+  }
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="text-center">
+    <div className="absolute inset-0 overflow-y-auto bg-gradient-to-t from-black/90 via-black/60 to-black/30 font-ui">
+      <div className="mx-auto flex min-h-full max-w-5xl flex-col justify-center gap-10 px-6 py-10">
+        {hud.status === "loading" && (
+          <p className="text-center text-xl uppercase tracking-[0.3em] text-stone-300">Building the town…</p>
+        )}
+
         {hud.status === "menu" && (
-          <>
-            <h1 className="font-display text-6xl text-red-600 drop-shadow-[0_0_12px_rgba(220,38,38,0.6)] sm:text-8xl">
-              Zombie Survival
-            </h1>
-            <p className="mt-3 text-neutral-400">The dead are coming. Hold out as long as you can.</p>
-            <Controls />
-            <Button onClick={onStart}>Start</Button>
-            {hud.highScore > 0 && (
-              <p className="mt-4 font-mono text-sm text-neutral-500">High score: {hud.highScore.toLocaleString()}</p>
-            )}
-          </>
+          <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-xl">
+              <p className="mb-3 text-sm uppercase tracking-[0.35em] text-stone-400">Knox Valley · Day 1</p>
+              <h1 className="font-display text-7xl font-black uppercase leading-[0.85] text-stone-100 sm:text-8xl">
+                Zombie
+                <br />
+                Survival
+              </h1>
+              <p className="mt-5 max-w-md text-lg leading-snug text-stone-300">
+                The town went quiet three weeks ago. You have a bottle of water, a cereal bar and a bandage. Scavenge
+                what you can, keep your head down, and don't fire a gun unless you mean it.
+              </p>
+              <div className="mt-8">
+                <Button onClick={onStart}>Begin</Button>
+              </div>
+            </div>
+            <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
+              <Controls />
+            </div>
+          </div>
         )}
 
         {hud.status === "paused" && (
-          <>
-            <h2 className="font-display text-6xl text-neutral-200">Paused</h2>
-            <Controls />
-            <Button onClick={onResume}>Resume</Button>
-          </>
+          <div className="flex flex-col items-start gap-8 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="font-display text-7xl font-black uppercase text-stone-100">Paused</h2>
+              <p className="mt-2 text-stone-400">The world keeps still while you catch your breath.</p>
+              <div className="mt-8">
+                <Button onClick={onResume}>Resume</Button>
+              </div>
+            </div>
+            <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
+              <Controls />
+            </div>
+          </div>
         )}
 
-        {hud.status === "over" && (
-          <>
-            <h2 className="font-display text-7xl text-red-600 drop-shadow-[0_0_12px_rgba(220,38,38,0.6)]">
-              You Died
+        {hud.status === "dead" && (
+          <div className="mx-auto max-w-lg text-center">
+            <p className="font-note text-2xl text-stone-300">This is how you died.</p>
+            <h2 className="mt-4 font-display text-6xl font-black uppercase text-red-700 sm:text-7xl">
+              {hud.causeOfDeath || "You died"}
             </h2>
-            <div className="mt-6 space-y-1 font-mono text-neutral-300">
-              <p>Survived to wave {hud.wave}</p>
-              <p>{hud.kills} zombies killed</p>
-              <p className="text-2xl text-amber-300">Score: {hud.score.toLocaleString()}</p>
-              {hud.score > 0 && hud.score >= hud.highScore ? (
-                <p className="text-green-400">New high score!</p>
-              ) : (
-                <p className="text-neutral-500">High score: {hud.highScore.toLocaleString()}</p>
-              )}
+            <div className="mt-6 space-y-1 font-note text-lg text-stone-300">
+              <p>You survived {survivedText(hud.survivedMinutes)}.</p>
+              <p>
+                {hud.kills} {hud.kills === 1 ? "zombie" : "zombies"} put down.
+              </p>
             </div>
-            <Button onClick={onStart}>Play Again</Button>
-          </>
+            <div className="mt-10">
+              <Button onClick={onStart}>Try again</Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

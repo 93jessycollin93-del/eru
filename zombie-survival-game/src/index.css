@@ -9,6 +9,17 @@ body,
 }
 
 body {
-  @apply bg-neutral-950 text-neutral-100 antialiased;
+  @apply bg-neutral-950 text-neutral-100 antialiased font-ui;
   overflow: hidden;
+}
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.animate-pulse-red {
+  animation: pulse-red 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-red { animation: none; }
 }

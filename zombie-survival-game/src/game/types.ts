@@ -1,72 +1,55 @@
-export type Vec = { x: number; y: number };
+import type { ItemStack } from "./items";
 
-export type ZombieKind = "walker" | "runner" | "brute";
+export type GameStatus = "menu" | "loading" | "playing" | "paused" | "dead";
 
-export interface Zombie {
+export interface HudMessage {
   id: number;
-  kind: ZombieKind;
-  pos: Vec;
-  hp: number;
-  maxHp: number;
-  speed: number;
-  radius: number;
-  damage: number;
-  attackCooldown: number;
-  hitFlash: number;
+  text: string;
+  tone: "info" | "warn" | "danger" | "good";
 }
 
-export interface Bullet {
-  pos: Vec;
-  vel: Vec;
-  life: number;
+export interface ContainerView {
+  id: number;
+  name: string;
+  items: ItemStack[];
 }
-
-export type PickupKind = "health" | "ammo";
-
-export interface Pickup {
-  kind: PickupKind;
-  pos: Vec;
-  life: number;
-}
-
-export interface Particle {
-  pos: Vec;
-  vel: Vec;
-  life: number;
-  maxLife: number;
-  color: string;
-  size: number;
-}
-
-export interface Player {
-  pos: Vec;
-  angle: number;
-  hp: number;
-  maxHp: number;
-  speed: number;
-  radius: number;
-  mag: number;
-  magSize: number;
-  reserve: number;
-  reloadTimer: number;
-  fireCooldown: number;
-  hurtFlash: number;
-}
-
-export type GameStatus = "menu" | "playing" | "paused" | "over";
 
 export interface HudState {
   status: GameStatus;
-  hp: number;
-  maxHp: number;
-  mag: number;
-  magSize: number;
-  reserve: number;
-  reloading: boolean;
-  wave: number;
-  zombiesLeft: number;
-  score: number;
+  /** True while the pointer is captured and the player is actively controlling. */
+  locked: boolean;
+  health: number;
+  hunger: number;
+  thirst: number;
+  stamina: number;
+  bleeding: boolean;
+  crouching: boolean;
+  aiming: boolean;
+  /** 0..1 how much noise the player is making. */
+  noise: number;
+  /** Whether any zombie is currently chasing the player. */
+  hunted: boolean;
+  day: number;
+  /** Minutes since midnight, 0..1440 */
+  timeOfDay: number;
+  equippedUid: number | null;
+  equipped: { name: string; loaded?: number; magSize?: number; reserve?: number; reloading: boolean };
+  hotbar: { slot: number; name: string; active: boolean }[];
+  prompt: string | null;
+  inventory: ItemStack[];
+  carryWeight: number;
+  maxWeight: number;
+  inventoryOpen: boolean;
+  container: ContainerView | null;
+  messages: HudMessage[];
   kills: number;
-  highScore: number;
-  intermission: number;
+  flashlight: boolean;
+  /** 0..1 red flash when hurt. */
+  damageFlash: number;
+  crosshair: boolean;
+  /** Pointer lock failed, so the game runs with a free cursor. */
+  freeMouse: boolean;
+  /** Survival stats summary for the death screen. */
+  survivedMinutes: number;
+  causeOfDeath: string;
 }

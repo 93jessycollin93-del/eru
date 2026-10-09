@@ -5,7 +5,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Creepster", "system-ui", "sans-serif"],
+        display: ['"Big Shoulders Stencil Display"', "Impact", "sans-serif"],
+        ui: ['"Barlow Condensed"', '"Arial Narrow"', "sans-serif"],
+        note: ['"Special Elite"', '"Courier New"', "monospace"],
       },
     },
   },

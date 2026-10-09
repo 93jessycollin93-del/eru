@@ -8,6 +8,12 @@ export default defineConfig({
     port: 8080,
   },
   plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: { manualChunks: { three: ["three"] } },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

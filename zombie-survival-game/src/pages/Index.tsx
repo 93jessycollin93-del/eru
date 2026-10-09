@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { Game } from "@/game/engine";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Game } from "@/game/Game";
 import type { HudState } from "@/game/types";
 import Hud from "@/components/Hud";
+import Inventory, { type InventoryActions } from "@/components/Inventory";
 import Overlay from "@/components/Overlay";
 
 const Index = () => {
@@ -13,21 +14,38 @@ const Index = () => {
     if (!canvasRef.current) return;
     const game = new Game(canvasRef.current, setHud);
     gameRef.current = game;
+    // Debug handle for local testing only; stripped from production builds.
+    if (import.meta.env.DEV) (window as unknown as { __game: Game }).__game = game;
     return () => {
       game.destroy();
       gameRef.current = null;
     };
   }, []);
 
+  const actions = useMemo<InventoryActions>(
+    () => ({
+      use: (uid) => gameRef.current?.useItem(uid),
+      drop: (uid) => gameRef.current?.dropItem(uid),
+      take: (uid) => gameRef.current?.takeFromContainer(uid),
+      takeAll: () => gameRef.current?.takeAll(),
+      put: (uid) => gameRef.current?.putInContainer(uid),
+      close: () => gameRef.current?.closeUi(),
+    }),
+    [],
+  );
+
+  const playing = hud && (hud.status === "playing" || hud.status === "paused");
+
   return (
-    <main className="relative h-full w-full">
-      <canvas ref={canvasRef} className="block h-full w-full cursor-crosshair" />
-      {hud && hud.status !== "menu" && <Hud hud={hud} />}
+    <main className="relative h-full w-full overflow-hidden bg-black">
+      <canvas ref={canvasRef} className="block h-full w-full" />
+      {hud && playing && <Hud hud={hud} />}
+      {hud && hud.status === "playing" && <Inventory hud={hud} actions={actions} />}
       {hud && (
         <Overlay
           hud={hud}
           onStart={() => gameRef.current?.start()}
-          onResume={() => gameRef.current?.togglePause()}
+          onResume={() => gameRef.current?.resume()}
         />
       )}
     </main>
