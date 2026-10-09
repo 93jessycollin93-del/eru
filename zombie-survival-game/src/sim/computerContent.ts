@@ -3,6 +3,7 @@
  * Engine-agnostic: pure data in, pure data out.
  */
 import type { ComputerDef, VDir, VFile, VNode } from "./computer";
+import { hostsFile, macFor, type NetHost, type NetworkSpec } from "./network";
 import { pick } from "./rng";
 
 export const TOWN = "Coldwater";
@@ -18,6 +19,8 @@ export interface TownFacts {
 
 export interface GeneratedComputer {
   def: ComputerDef;
+  /** The building's LAN, including this machine. */
+  network: NetworkSpec;
   /** A note to hide in the same building (passwords, hints). */
   note?: { title: string; text: string };
   battery: number | null;
@@ -63,12 +66,13 @@ const dir = (owner: string, modified: string, children: Record<string, VNode>, e
 });
 const photo = (owner: string, modified: string): VFile => file(owner, modified, "", { binary: true });
 
-function systemTree(hostname: string, home: Record<string, VDir>, bin: Record<string, VFile>): VDir {
+function systemTree(hostname: string, home: Record<string, VDir>, bin: Record<string, VFile>, hosts = ""): VDir {
   return dir("root", "Sep 14 09:12", {
     bin: dir("root", "Sep 14 09:12", {}),
     etc: dir("root", "Sep 30 18:40", {
       hostname: file("root", "Sep 14 09:12", hostname + "\n"),
       "os-release": file("root", "Sep 14 09:12", 'NAME="Ubuntu"\nVERSION="20.04.6 LTS (Focal Fossa)"\n'),
+      hosts: file("root", "Sep 14 09:12", hosts || "127.0.0.1\tlocalhost\n"),
       shadow: file("root", "Sep 14 09:12", "", { private: true }),
     }),
     home: dir("root", "Sep 14 09:12", home),
@@ -238,9 +242,90 @@ The highway checkpoint is closing. We will not be returning to Coldwater.
   const bin = {
     dispatch: file("root", "Sep 14 09:12", "", { program: "dispatch", binary: true }),
     cctv: file("root", "Sep 14 09:12", "", { program: "cctv", binary: true }),
+    nmap: file("root", "Sep 14 09:12", "", { binary: true }),
+  };
+  home[user].children["Mail"] = {
+    ...(home[user].children["Mail"] as VDir),
+    children: {
+      ...(home[user].children["Mail"] as VDir).children,
+      "004.eml": file(
+        user,
+        "Sep 30 11:02",
+        mail(
+          "Coldwater PD IT <it@coldwaterpd.org>",
+          "All staff",
+          "Wed, 30 Sep 11:00",
+          "File server move + camera system",
+          `
+The shared drive has moved to the new file server, cpd-files (10.0.4.10).
+Log in over ssh with the same password as your workstation:
+
+    ssh ${user}@cpd-files
+
+Camera feeds: run 'cctv' from the dispatch terminal. The network closet is on
+the UPS, so the cameras and server stay up for several hours if we lose power.
+`,
+        ),
+      ),
+    },
+  };
+  (home[user].children[".bash_history"] as VFile).content = `nmap -sn 10.0.4.0/24\nssh ${user}@cpd-files\ncctv\ndispatch\ncat reports/incident_1009_station.txt\nshutdown\n`;
+
+  const vg = "c0:56:e3";
+  const cam = (n: number, label: string, mount: "front" | "side" | "desk" | "back"): NetHost => ({
+    ip: `10.0.4.${30 + n}`,
+    hostname: `cam-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
+    mac: macFor(30 + n, vg),
+    vendor: "VistaGuard Security",
+    kind: "camera",
+    services: [
+      { port: 80, name: "http", http: `HTTP/1.1 401 Unauthorized\nServer: VG-Webs\nWWW-Authenticate: Digest realm="IPC-2141"\n\n<html><title>VistaGuard IPC-2141 - ${label}</title><body>401 Unauthorized</body></html>` },
+      { port: 554, name: "rtsp" },
+    ],
+    camera: { channel: n, label, mount },
+  });
+  const files = filesServer(facts, user, password);
+  const network: NetworkSpec = {
+    id: "cpd-lan",
+    cidr: "10.0.4.0/24",
+    gateway: "10.0.4.1",
+    upsMinutes: 8 * 60,
+    hosts: [
+      {
+        ip: "10.0.4.1",
+        hostname: "cpd-gw",
+        mac: macFor(1, "00:1b:2f"),
+        vendor: "Netgear",
+        kind: "router",
+        services: [
+          { port: 22, name: "ssh" },
+          { port: 80, name: "http", http: "HTTP/1.1 200 OK\nServer: httpd\n\n<html><title>NETGEAR ProSAFE VPN Firewall</title><body>WAN: DISCONNECTED (no carrier since Oct 9 18:12)</body></html>" },
+        ],
+      },
+      { ip: "10.0.4.10", hostname: "cpd-files", mac: macFor(10, "0c:c4:7a"), vendor: "Super Micro Computer", kind: "server", services: [{ port: 22, name: "ssh" }, { port: 445, name: "microsoft-ds" }], def: files },
+      { ip: "10.0.4.11", hostname: "cpd-dispatch-01", mac: macFor(11, "f8:bc:12"), vendor: "Dell", kind: "computer", services: [{ port: 22, name: "ssh" }] },
+      {
+        ip: "10.0.4.20",
+        hostname: "cpd-nvr",
+        mac: macFor(20, vg),
+        vendor: "VistaGuard Security",
+        kind: "nvr",
+        services: [
+          { port: 80, name: "http", http: "HTTP/1.1 200 OK\nServer: VG-Webs\n\n<html><title>VistaGuard NVR-8 Login</title><body>Channels: 4/8 recording. Disk: 1.8 TB free.</body></html>" },
+          { port: 554, name: "rtsp" },
+          { port: 8000, name: "http-alt" },
+        ],
+      },
+      cam(1, "FRONT ENTRANCE", "front"),
+      cam(2, "PARKING LOT", "side"),
+      cam(3, "FRONT DESK", "desk"),
+      cam(4, "CELL BLOCK", "back"),
+    ],
   };
   return {
+    network,
     def: {
+      net: { iface: "eth0", ip: "10.0.4.11", mac: macFor(11, "f8:bc:12") },
       hostname: "cpd-dispatch-01",
       osName: "Ubuntu 20.04.6 LTS",
       kind: "desktop",
@@ -248,7 +333,7 @@ The highway checkpoint is closing. We will not be returning to Coldwater.
         { name: user, password, fullName: "Dispatch" },
         { name: "chief.walsh", password: `walsh${badge}!`, fullName: "Chief D. Walsh" },
       ],
-      fs: systemTree("cpd-dispatch-01", home, bin),
+      fs: systemTree("cpd-dispatch-01", home, bin, hostsFile(network)),
       motd: ["COLDWATER POLICE DEPARTMENT — AUTHORIZED USERS ONLY", "All activity on this system is logged."],
       programs,
     },
@@ -257,6 +342,85 @@ The highway checkpoint is closing. We will not be returning to Coldwater.
       text: `Night shift login\nuser: ${user}\npass: ${password}\n\nDON'T leave this on the monitor again — Ortega`,
     },
     battery: null,
+  };
+}
+
+/** The police file server, reachable over ssh from the dispatch terminal. */
+function filesServer(facts: TownFacts, user: string, password: string): ComputerDef {
+  const srv = (content: string, modified: string, extra: Partial<VFile> = {}) => file("root", modified, content, extra);
+  return {
+    hostname: "cpd-files",
+    osName: "Ubuntu 20.04.6 LTS",
+    kind: "desktop",
+    users: [
+      { name: user, password, fullName: "Dispatch" },
+      { name: "ortega", password: "Badge1180!", fullName: "Sgt. M. Ortega" },
+    ],
+    net: { iface: "eth0", ip: "10.0.4.10", mac: macFor(10, "0c:c4:7a") },
+    motd: ["cpd-files — Coldwater PD shared storage", "Shared documents are in /srv/shared."],
+    programs: {},
+    fs: dir("root", "Sep 14 09:12", {
+      etc: dir("root", "Sep 14 09:12", { hostname: srv("cpd-files\n", "Sep 14 09:12") }),
+      home: dir("root", "Sep 14 09:12", {
+        [user]: dir(user, "Oct  9 18:01", {}),
+        ortega: dir("ortega", "Oct  9 17:50", {
+          "to_my_wife.txt": file(
+            "ortega",
+            "Oct  9 17:50",
+            `
+Maria — if this reaches you, I'm sorry I didn't come home. The station isn't safe.
+We're taking the convoy to the highway checkpoint. I left a pistol and ammo with the
+Guard's supply cache at ${facts.stashAddress}. Go there if you can't get out.
+`,
+            { private: true },
+          ),
+        }, { private: true }),
+      }),
+      srv: dir("root", "Sep 30 10:40", {
+        shared: dir("root", "Oct  9 17:44", {
+          "infection_timeline.txt": srv(
+            `
+CASE NOTES — Sgt. M. Ortega (not for release)
+
+Ptl. R. Danner
+  Oct 3 22:48  bitten on left forearm by a suspect during arrest
+  Oct 4        fine, complained of a headache, worked his shift
+  Oct 5 ~14:00 fever, nausea, sent home (about 39 hours after the bite)
+  Oct 6 02:15  found violent and unresponsive (about 51 hours after the bite)
+
+Marlow General memo (Oct 6):
+  - every patient with a bite has turned, usually within 2 to 3 days
+  - some patients with scratches turned, most did not
+  - no treatment has slowed it. Antibiotics, antivirals: nothing.
+  - they react to SOUND first, then movement. They see poorly in the dark.
+`,
+            "Oct  7 09:30",
+          ),
+          "armory_inventory.csv": srv(
+            "item,issued,remaining,location\nGlock 17,14,3,officer lockers\n9mm FMJ (box of 50),40,6,lockers / evidence cabinet\nShotgun,4,0,taken by convoy\nFirst aid kit,10,2,lockers\n",
+            "Oct  9 17:44",
+          ),
+          "network_diagram.txt": srv(
+            `
+COLDWATER PD NETWORK (10.0.4.0/24)
+  10.0.4.1    cpd-gw            firewall / router (WAN down since Oct 9)
+  10.0.4.10   cpd-files         this server
+  10.0.4.11   cpd-dispatch-01   dispatch workstation
+  10.0.4.20   cpd-nvr           camera recorder (VistaGuard NVR-8)
+  10.0.4.31-34                  IP cameras (front, parking lot, desk, cells)
+
+Network closet runs on an APC Smart-UPS 1500: roughly 8 hours after mains fails.
+`,
+            "Sep 30 10:40",
+          ),
+          evidence: dir("root", "Oct  8 12:00", {
+            "case_1003_scene_01.jpg": srv("", "Oct  4 01:12", { binary: true }),
+            "case_1003_scene_02.jpg": srv("", "Oct  4 01:13", { binary: true }),
+            "case_1006_danner_home.jpg": srv("", "Oct  6 03:01", { binary: true }),
+          }),
+        }),
+      }),
+    }),
   };
 }
 
@@ -327,13 +491,26 @@ ${longDate(facts.powerOffDay)} anyway.
       "timesheet.csv": file(user, "Oct  8 21:00", "date,hours\n2026-10-01,8\n2026-10-02,8\n2026-10-05,9\n2026-10-06,11\n2026-10-07,12\n2026-10-08,4\n"),
     }),
   };
+  const network: NetworkSpec = {
+    id: `${host}-lan`,
+    cidr: "192.168.0.0/24",
+    gateway: "192.168.0.1",
+    upsMinutes: 0,
+    hosts: [
+      { ip: "192.168.0.1", hostname: "router", mac: macFor(host.length, "50:c7:bf"), vendor: "TP-Link", kind: "router", services: [{ port: 80, name: "http", http: "HTTP/1.1 200 OK\n\n<html><title>TP-Link Archer C7</title><body>Internet: Disconnected</body></html>" }] },
+      { ip: "192.168.0.10", hostname: host, mac: macFor(host.length + 10, "f8:bc:12"), vendor: "Dell", kind: "computer", services: [] },
+      { ip: "192.168.0.50", hostname: "receipt-printer", mac: macFor(host.length + 50, "64:eb:8c"), vendor: "Seiko Epson", kind: "printer", services: [{ port: 80, name: "http", http: "HTTP/1.1 200 OK\n\n<html><title>EPSON TM-T88VI</title><body>Status: Paper near end</body></html>" }, { port: 9100, name: "jetdirect" }] },
+    ],
+  };
   return {
+    network,
     def: {
+      net: { iface: "eth0", ip: "192.168.0.10", mac: macFor(host.length + 10, "f8:bc:12") },
       hostname: host,
       osName: "Ubuntu 20.04.6 LTS",
       kind: "desktop",
       users: [{ name: user, password, fullName: name }],
-      fs: systemTree(host, home, { inventory: file("root", "Sep 14 09:12", "", { program: "inventory", binary: true }) }),
+      fs: systemTree(host, home, { inventory: file("root", "Sep 14 09:12", "", { program: "inventory", binary: true }) }, "127.0.0.1\tlocalhost\n192.168.0.1\trouter\n192.168.0.50\treceipt-printer\n"),
       motd: [`${name} point-of-sale terminal — ${address}`, "Run 'inventory' to view stock levels."],
       programs: { inventory: stock },
     },
@@ -429,13 +606,22 @@ ${longDate(facts.powerOffDay)}. ${leftTown ? "We're leaving before then." : "We'
     }),
   };
 
+  const lastOctet = 100 + Math.floor(rng() * 50);
+  const hosts: NetHost[] = [
+    { ip: "192.168.1.1", hostname: "router.home", mac: macFor(lastOctet, "50:c7:bf"), vendor: "TP-Link", kind: "router", services: [{ port: 53, name: "domain" }, { port: 80, name: "http", http: `HTTP/1.1 200 OK\n\n<html><title>Archer AX10</title><body>Network: ${last.toUpperCase()}-WIFI. Internet: Disconnected</body></html>` }] },
+    { ip: `192.168.1.${lastOctet}`, hostname: `${first}-laptop`, mac: macFor(lastOctet + 1, "a4:c3:f0"), vendor: "Intel Corporate", kind: "computer", services: [] },
+  ];
+  if (rng() < 0.5) hosts.push({ ip: "192.168.1.40", hostname: "living-room-tv", mac: macFor(lastOctet + 2, "f4:f5:d8"), vendor: "Google", kind: "tv", services: [{ port: 8008, name: "http", http: "HTTP/1.1 200 OK\n\n{\"name\":\"Living Room TV\",\"app\":\"Emergency Alert System\",\"status\":\"STAY INDOORS\"}" }, { port: 8009, name: "ajp13" }] });
+  const network: NetworkSpec = { id: `${first}-${last}-home`, cidr: "192.168.1.0/24", gateway: "192.168.1.1", upsMinutes: 0, hosts };
   return {
+    network,
     def: {
+      net: { iface: "wlan0", ip: `192.168.1.${lastOctet}`, mac: macFor(lastOctet + 1, "a4:c3:f0") },
       hostname: `${first}-laptop`,
       osName: "Ubuntu 20.04.6 LTS",
       kind: "laptop",
       users: [{ name: first, password, fullName: full }],
-      fs: systemTree(`${first}-laptop`, home, {}),
+      fs: systemTree(`${first}-laptop`, home, {}, hostsFile(network)),
       motd: [],
       programs: {},
     },

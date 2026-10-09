@@ -86,7 +86,7 @@ describe("shell", () => {
   it("reads mail, which leads to the supply cache", () => {
     const s = ready();
     const list = run(s, "mail");
-    expect(list[0]).toContain("3 messages");
+    expect(list[0]).toContain("4 messages");
     expect(run(s, "mail 3").join("\n")).toContain("17 Oak Avenue");
     expect(run(s, "mail 2").join("\n")).toContain("06:00");
   });

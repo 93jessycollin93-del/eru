@@ -5,6 +5,7 @@
  * ComputerState); programs are data too (lines to print), so the whole thing
  * can be saved or reimplemented in another engine without behaviour changes.
  */
+import { inSubnet, isIp, latencyMs, resolveHost, type NetHost, type NetworkView } from "./network";
 
 export interface VFile {
   kind: "file";
@@ -47,7 +48,12 @@ export interface ComputerDef {
   motd: string[];
   /** Output for each program id, used by files with `program` set. */
   programs: Record<string, string[]>;
+  /** Network interface, if the machine is on a LAN. */
+  net?: { iface: "eth0" | "wlan0"; ip: string; mac: string };
 }
+
+/** Something the shell asks the game to do (open a camera viewer, ...). */
+export type ComputerEffect = { type: "cctv"; nvrIp: string };
 
 export type ComputerPhase = "off" | "login" | "password" | "shell";
 
@@ -63,6 +69,15 @@ export interface ComputerState {
   screen: string[];
   /** Battery percentage for laptops, null for mains-powered machines. */
   battery: number | null;
+  /** Active ssh session on another machine; input is forwarded to it. */
+  remote: ComputerState | null;
+  /** Set on a session that is itself a remote (ssh) session. */
+  remoteHost: string | null;
+  /** ssh handshake in progress. */
+  ssh: { ip: string; host: string; user: string; stage: "hostkey" | "password"; tries: number } | null;
+  knownHosts: string[];
+  /** Requests for the game, drained after each submit. */
+  effects: ComputerEffect[];
 }
 
 export interface ComputerContext {
@@ -72,6 +87,8 @@ export interface ComputerContext {
   dateText: string;
   /** Minutes since the machine was booted, for uptime. */
   uptimeMinutes: number;
+  /** The LAN this machine is on, if any. */
+  network?: NetworkView;
 }
 
 const MAX_SCREEN = 500;
@@ -88,7 +105,18 @@ export function createComputerState(def: ComputerDef, battery: number | null): C
     history: [],
     screen: [],
     battery,
+    remote: null,
+    remoteHost: null,
+    ssh: null,
+    knownHosts: [],
+    effects: [],
   };
+}
+
+/** True while the terminal should hide what is typed (passwords). */
+export function isSecretInput(s: ComputerState): boolean {
+  if (s.remote) return isSecretInput(s.remote);
+  return s.phase === "password" || s.ssh?.stage === "password";
 }
 
 // ----------------------------------------------------------------- helpers
@@ -140,6 +168,9 @@ function resolve(s: ComputerState, path: string): { abs: string; node: VNode | n
 }
 
 export function prompt(s: ComputerState): string {
+  if (s.remote) return prompt(s.remote);
+  if (s.ssh?.stage === "hostkey") return "Are you sure you want to continue connecting (yes/no/[fingerprint])? ";
+  if (s.ssh?.stage === "password") return `${s.ssh.user}@${s.ssh.host}'s password: `;
   if (s.phase === "login") return `${s.def.hostname} login: `;
   if (s.phase === "password") return "Password: ";
   if (s.phase !== "shell") return "";
@@ -180,6 +211,8 @@ export function shutdown(s: ComputerState) {
 /** Feed one line of keyboard input. */
 export function submit(s: ComputerState, line: string, ctx: ComputerContext) {
   if (s.phase === "off") return;
+  if (s.ssh) return sshInput(s, line, ctx);
+  if (s.remote) return forwardToRemote(s, line, ctx);
   if (s.phase === "login") {
     print(s, prompt(s) + line);
     const name = line.trim();
@@ -215,6 +248,64 @@ export function submit(s: ComputerState, line: string, ctx: ComputerContext) {
   s.history.push(trimmed);
   if (s.history.length > 100) s.history.shift();
   runPipeline(s, trimmed, ctx);
+}
+
+// --------------------------------------------------------------------- ssh
+
+const remoteContext = (ctx: ComputerContext, r: ComputerState): ComputerContext => ({
+  ...ctx,
+  network: ctx.network && r.def.net ? { ...ctx.network, selfIp: r.def.net.ip } : undefined,
+});
+
+function forwardToRemote(s: ComputerState, line: string, ctx: ComputerContext) {
+  const r = s.remote!;
+  r.screen = [];
+  submit(r, line, remoteContext(ctx, r));
+  if (line.trim() === "clear") s.screen = [];
+  else print(s, ...r.screen);
+  r.screen = [];
+  s.effects.push(...r.effects.splice(0));
+  if (r.phase !== "shell" && !r.ssh && !r.remote) {
+    print(s, `Connection to ${r.remoteHost} closed.`, "");
+    s.remote = null;
+  }
+}
+
+function sshInput(s: ComputerState, line: string, ctx: ComputerContext) {
+  const ssh = s.ssh!;
+  print(s, prompt(s) + (ssh.stage === "password" ? "" : line));
+  if (ssh.stage === "hostkey") {
+    if (line.trim() !== "yes") {
+      print(s, "Host key verification failed.");
+      s.ssh = null;
+      return;
+    }
+    s.knownHosts.push(ssh.ip);
+    print(s, `Warning: Permanently added '${ssh.host},${ssh.ip}' (ECDSA) to the list of known hosts.`);
+    ssh.stage = "password";
+    return;
+  }
+  const host = ctx.network ? resolveHost(ctx.network.spec, ssh.ip) : undefined;
+  const user = host?.def?.users.find((u) => u.name === ssh.user);
+  if (host?.def && user && (user.password === null || user.password === line)) {
+    s.ssh = null;
+    const r = createComputerState(host.def, null);
+    r.remoteHost = host.hostname;
+    r.phase = "shell";
+    print(s, "Welcome to Ubuntu 20.04.6 LTS (GNU/Linux 5.4.0-88-generic x86_64)", "");
+    login(r, user.name, ctx);
+    print(s, ...r.screen);
+    r.screen = [];
+    s.remote = r;
+    return;
+  }
+  ssh.tries++;
+  if (ssh.tries >= 3) {
+    print(s, `${ssh.user}@${ssh.host}: Permission denied (publickey,password).`);
+    s.ssh = null;
+  } else {
+    print(s, "Permission denied, please try again.");
+  }
 }
 
 function login(s: ComputerState, user: string, ctx: ComputerContext) {
@@ -318,6 +409,14 @@ function runCommand(s: ComputerState, name: string, args: string[], stdin: strin
   const { node, denied } = resolve(s, path);
   if (denied) return [`bash: ${name}: Permission denied`];
   if (node?.kind === "file" && node.program) {
+    if (node.program === "cctv") {
+      const nvr = ctx.network?.spec.hosts.find((h) => h.kind === "nvr");
+      if (nvr && ctx.network!.isUp(nvr.ip)) {
+        const cams = ctx.network!.spec.hosts.filter((h) => h.kind === "camera" && ctx.network!.isUp(h.ip)).length;
+        s.effects.push({ type: "cctv", nvrIp: nvr.ip });
+        return [`Connecting to NVR ${nvr.hostname} (${nvr.ip}) ...`, "Authenticated as operator.", `${cams} channels online. Opening viewer.`];
+      }
+    }
     return s.def.programs[node.program] ?? [`${name}: segmentation fault (core dumped)`];
   }
   if (node?.kind === "file") return [`bash: ${name}: Permission denied`];
@@ -380,6 +479,9 @@ const BUILTINS: Record<string, Cmd> = {
     "  wc [-l] [file]      count lines/words     find [dir] -name <pattern>",
     "  mail [n]            read your email       history         past commands",
     "  whoami, hostname, date, uptime, uname [-a], ps, echo, clear",
+    "  ip addr, ip route   network interfaces    ping [-c N] <host>",
+    "  arp -a              neighbours on the LAN ssh [user@]<host>   log into another machine",
+    "  curl <url>          fetch a web page      nmap <host|subnet>  (if installed)",
     "  logout              end session           shutdown        power off",
     "Programs in /usr/local/bin can be run by name. Pipes work: cat file | grep word",
   ],
@@ -531,6 +633,146 @@ const BUILTINS: Record<string, Cmd> = {
       ...msgs.map((m, i) => ` ${padL(i + 1, 2)}  ${pad(m.date.slice(0, 17), 18)} ${pad(m.from.slice(0, 26), 27)} ${m.subject}`),
     ];
   },
+  ip: (s, args, _i, ctx) => {
+    const sub = args[0] ?? "";
+    const net = s.def.net;
+    const link = linkUp(s, ctx);
+    if (sub.startsWith("r")) {
+      if (!net || !link || !ctx.network) return [];
+      const p = ctx.network.spec.cidr;
+      return [`default via ${ctx.network.spec.gateway} dev ${net.iface} proto dhcp metric 100`, `${p} dev ${net.iface} proto kernel scope link src ${net.ip} metric 100`];
+    }
+    if (sub.startsWith("a") || sub === "") {
+      const out = [
+        "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000",
+        "    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00",
+        "    inet 127.0.0.1/8 scope host lo",
+      ];
+      if (net) {
+        out.push(
+          `2: ${net.iface}: <BROADCAST,MULTICAST${link ? ",UP,LOWER_UP" : ""}> mtu 1500 qdisc fq_codel state ${link ? "UP" : "DOWN"} group default qlen 1000`,
+          `    link/ether ${net.mac} brd ff:ff:ff:ff:ff:ff`,
+        );
+        if (link) out.push(`    inet ${net.ip}/24 brd ${net.ip.split(".").slice(0, 3).join(".")}.255 scope global dynamic ${net.iface}`);
+      }
+      return out;
+    }
+    return [`Object "${sub}" is unknown, try "ip help".`];
+  },
+  ifconfig: () => ["", "Command 'ifconfig' not found, but can be installed with:", "", "sudo apt install net-tools", ""],
+  ping: (s, args, _i, ctx) => {
+    let count = 4;
+    const ci = args.indexOf("-c");
+    if (ci >= 0) count = Math.max(1, Math.min(10, parseInt(args[ci + 1] ?? "4", 10) || 4));
+    const target = args.filter((a, i) => !a.startsWith("-") && i !== ci + 1)[0];
+    if (!target) return ["ping: usage error: Destination address required"];
+    if (target === "localhost" || target === "127.0.0.1") {
+      return [`PING localhost (127.0.0.1) 56(84) bytes of data.`, ...Array.from({ length: count }, (_, i) => `64 bytes from localhost (127.0.0.1): icmp_seq=${i + 1} ttl=64 time=0.0${3 + i} ms`), "", `--- localhost ping statistics ---`, `${count} packets transmitted, ${count} received, 0% packet loss`];
+    }
+    const net = ctx.network;
+    if (!net || !linkUp(s, ctx)) return ["ping: connect: Network is unreachable"];
+    const h = resolveHost(net.spec, target);
+    if (!h) {
+      if (!isIp(target)) return [`ping: ${target}: Temporary failure in name resolution`];
+      const gw = net.spec.gateway;
+      const local = inSubnet(net.spec, target);
+      const lines = Array.from({ length: count }, (_, i) =>
+        local ? `From ${net.selfIp} icmp_seq=${i + 1} Destination Host Unreachable` : `From ${gw} icmp_seq=${i + 1} Destination Net Unreachable`,
+      );
+      return [`PING ${target} (${target}) 56(84) bytes of data.`, ...lines, "", `--- ${target} ping statistics ---`, `${count} packets transmitted, 0 received, +${count} errors, 100% packet loss, time ${count * 1000 - 997}ms`];
+    }
+    const up = net.isUp(h.ip);
+    const times = Array.from({ length: count }, (_, i) => latencyMs(h.ip, i));
+    const lines = times.map((t, i) => (up ? `64 bytes from ${h.hostname} (${h.ip}): icmp_seq=${i + 1} ttl=64 time=${t.toFixed(3)} ms` : `From ${net.selfIp} icmp_seq=${i + 1} Destination Host Unreachable`));
+    const out = [`PING ${h.hostname} (${h.ip}) 56(84) bytes of data.`, ...lines, "", `--- ${h.hostname} ping statistics ---`];
+    if (up) {
+      const min = Math.min(...times);
+      const max = Math.max(...times);
+      const avg = times.reduce((a, b) => a + b, 0) / count;
+      out.push(`${count} packets transmitted, ${count} received, 0% packet loss, time ${count * 1000 - 997}ms`, `rtt min/avg/max/mdev = ${min.toFixed(3)}/${avg.toFixed(3)}/${max.toFixed(3)}/${((max - min) / 2).toFixed(3)} ms`);
+    } else out.push(`${count} packets transmitted, 0 received, +${count} errors, 100% packet loss, time ${count * 1000 - 997}ms`);
+    return out;
+  },
+  nmap: (s, args, _i, ctx) => {
+    if (!lookup(s.def.fs, "/usr/local/bin/nmap") && !lookup(s.def.fs, "/usr/bin/nmap")) {
+      return ["", "Command 'nmap' not found, but can be installed with:", "", "sudo apt install nmap", ""];
+    }
+    const pingOnly = args.includes("-sn");
+    const target = args.filter((a) => !a.startsWith("-"))[0];
+    if (!target) return ["Nmap 7.80 ( https://nmap.org )", "Usage: nmap [Scan Type(s)] [Options] {target specification}"];
+    const date = ctx.dateText;
+    const head = `Starting Nmap 7.80 ( https://nmap.org ) at ${date} EDT`;
+    const net = ctx.network;
+    let targets: NetHost[] = [];
+    let total = 1;
+    if (net && linkUp(s, ctx)) {
+      if (target.endsWith("/24")) {
+        total = 256;
+        if (inSubnet(net.spec, target.split("/")[0])) targets = net.spec.hosts;
+      } else {
+        const h = resolveHost(net.spec, target);
+        if (h) targets = [h];
+        else if (!isIp(target)) return [head, `Failed to resolve "${target}".`, "WARNING: No targets were specified, so 0 hosts scanned."];
+      }
+    }
+    const up = targets.filter((h) => net!.isUp(h.ip));
+    const out = [head];
+    for (const h of up) {
+      out.push(`Nmap scan report for ${h.hostname} (${h.ip})`, `Host is up (0.000${Math.round(latencyMs(h.ip, 0) * 100)}s latency).`);
+      if (!pingOnly && h.ip !== net!.selfIp) {
+        out.push(`Not shown: ${1000 - h.services.length} closed ports`, "PORT     STATE SERVICE");
+        for (const sv of h.services) out.push(`${pad(`${sv.port}/tcp`, 9)}open  ${sv.name}`);
+      }
+      if (h.ip !== net!.selfIp) out.push(`MAC Address: ${h.mac.toUpperCase()} (${h.vendor})`);
+      out.push("");
+    }
+    if (!up.length && total === 1) out.push("Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn");
+    out.push(`Nmap done: ${total} IP address${total > 1 ? "es" : ""} (${up.length} host${up.length === 1 ? "" : "s"} up) scanned in ${((total > 1 ? 4.8 : 0.4) + up.length * 0.21).toFixed(2)} seconds`);
+    return out;
+  },
+  arp: (s, _a, _i, ctx) => {
+    const net = ctx.network;
+    if (!net || !linkUp(s, ctx) || !s.def.net) return [];
+    return net.spec.hosts
+      .filter((h) => h.ip !== net.selfIp && h.kind !== "camera" && net.isUp(h.ip))
+      .map((h) => `${h.hostname} (${h.ip}) at ${h.mac} [ether] on ${s.def.net!.iface}`);
+  },
+  curl: (s, args, _i, ctx) => {
+    const url = args.filter((a) => !a.startsWith("-"))[0];
+    if (!url) return ["curl: try 'curl --help' for more information"];
+    const m = url.replace(/^https?:\/\//, "").match(/^([^/:]+)(?::(\d+))?/);
+    const hostName = m?.[1] ?? url;
+    const port = parseInt(m?.[2] ?? (url.startsWith("https") ? "443" : "80"), 10);
+    const net = ctx.network;
+    if (!net || !linkUp(s, ctx)) return [`curl: (6) Could not resolve host: ${hostName}`];
+    const h = resolveHost(net.spec, hostName);
+    if (!h) return isIp(hostName) ? [`curl: (7) Failed to connect to ${hostName} port ${port}: No route to host`] : [`curl: (6) Could not resolve host: ${hostName}`];
+    if (!net.isUp(h.ip)) return [`curl: (7) Failed to connect to ${hostName} port ${port}: No route to host`];
+    const svc = h.services.find((sv) => sv.port === port);
+    if (!svc?.http) return [`curl: (7) Failed to connect to ${hostName} port ${port}: Connection refused`];
+    return svc.http.replace(/\n$/, "").split("\n");
+  },
+  ssh: (s, args, _i, ctx) => {
+    const target = args.filter((a) => !a.startsWith("-"))[0];
+    if (!target) return ["usage: ssh [-46AaCfGgKkMNnqsTtVvXxYy] [-l login_name] [-p port] destination"];
+    const [user, hostName] = target.includes("@") ? (target.split("@") as [string, string]) : [s.user!, target];
+    const net = ctx.network;
+    if (!net || !linkUp(s, ctx)) return [`ssh: connect to host ${hostName} port 22: Network is unreachable`];
+    const h = resolveHost(net.spec, hostName);
+    if (!h) {
+      if (isIp(hostName)) return [`ssh: connect to host ${hostName} port 22: ${inSubnet(net.spec, hostName) ? "No route to host" : "Network is unreachable"}`];
+      return [`ssh: Could not resolve hostname ${hostName}: Name or service not known`];
+    }
+    if (!net.isUp(h.ip)) return [`ssh: connect to host ${hostName} port 22: No route to host`];
+    if (!h.def || !h.services.some((sv) => sv.port === 22)) return [`ssh: connect to host ${hostName} port 22: Connection refused`];
+    const known = s.knownHosts.includes(h.ip);
+    s.ssh = { ip: h.ip, host: h.hostname, user, stage: known ? "password" : "hostkey", tries: 0 };
+    if (known) return [];
+    return [
+      `The authenticity of host '${h.hostname} (${h.ip})' can't be established.`,
+      `ECDSA key fingerprint is SHA256:${fingerprint(h.mac)}.`,
+    ];
+  },
   man: (_s, args) => (args[0] ? [`No manual entry for ${args[0]}. Try 'help'.`] : ["What manual page do you want?"]),
   sudo: (s) => [`${s.user} is not in the sudoers file.  This incident will be reported.`],
   logout: (s) => {
@@ -542,12 +784,32 @@ const BUILTINS: Record<string, Cmd> = {
   },
   exit: (s, a, i, c) => BUILTINS.logout(s, a, i, c),
   shutdown: (s) => {
+    if (s.remoteHost) return ["Failed to set wall message, ignoring: Interactive authentication required.", "Failed to power off system via logind: Interactive authentication required."];
     print(s, "Broadcast message: The system is going down for poweroff NOW!", "System halted.");
     s.phase = "off";
     s.user = null;
     return [];
   },
 };
+
+/** Does this machine currently have a network link? (Wi-Fi needs a live router.) */
+function linkUp(s: ComputerState, ctx: ComputerContext): boolean {
+  const net = s.def.net;
+  if (!net || !ctx.network) return false;
+  if (!ctx.network.isUp(ctx.network.selfIp)) return false;
+  return net.iface === "eth0" || ctx.network.isUp(ctx.network.spec.gateway);
+}
+
+function fingerprint(mac: string): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let h = 2166136261;
+  let out = "";
+  for (let i = 0; i < 43; i++) {
+    h = Math.imul(h ^ mac.charCodeAt(i % mac.length) ^ i, 16777619) >>> 0;
+    out += chars[h % 64];
+  }
+  return out;
+}
 
 /** Command names the shell understands (for tests and the help screen). */
 export const SHELL_COMMANDS = Object.keys(BUILTINS);
