@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { pick, range } from "../rng";
+import { pick, range } from "../../sim/rng";
 import type { ColliderWorld } from "../world/colliders";
 import type { Terrain } from "../world/terrain";
 import { Humanoid } from "./humanoid";

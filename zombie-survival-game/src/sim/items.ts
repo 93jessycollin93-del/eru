@@ -10,8 +10,9 @@ export interface ItemDef {
   stackable?: boolean;
   hunger?: number;
   thirst?: number;
+  /** What a medical item does when used. */
+  medical?: "bandage" | "firstAid" | "painkillers";
   heal?: number;
-  stopsBleeding?: boolean;
   /** Melee / firearm damage per hit. */
   damage?: number;
   /** Seconds between attacks. */
@@ -74,18 +75,25 @@ export const ITEMS: Record<string, ItemDef> = {
     name: "Bandage",
     category: "medical",
     weight: 0.1,
-    heal: 5,
-    stopsBleeding: true,
-    description: "Stops bleeding.",
+    medical: "bandage",
+    description: "Wrap one wound to stop it bleeding and help it heal.",
   },
   first_aid_kit: {
     id: "first_aid_kit",
     name: "First Aid Kit",
     category: "medical",
     weight: 0.6,
-    heal: 45,
-    stopsBleeding: true,
-    description: "Treats wounds and stops bleeding.",
+    medical: "firstAid",
+    heal: 25,
+    description: "Dresses every open wound and treats trauma.",
+  },
+  painkillers: {
+    id: "painkillers",
+    name: "Painkillers",
+    category: "medical",
+    weight: 0.05,
+    medical: "painkillers",
+    description: "Dulls pain for a few hours. Steadies your aim.",
   },
   kitchen_knife: {
     id: "kitchen_knife",
@@ -204,6 +212,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
     entries: [
       ["bandage", 5, 1, 2],
       ["first_aid_kit", 1, 1, 1],
+      ["painkillers", 3, 1, 1],
       ["baseball_bat", 2, 1, 1],
       ["ammo_9mm", 1, 4, 10],
       ["pistol", 0.4, 1, 1],
@@ -218,6 +227,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["water_bottle", 5, 1, 2],
       ["soda", 5, 1, 3],
       ["bandage", 2, 1, 2],
+      ["painkillers", 2, 1, 1],
     ],
   },
   police_locker: {

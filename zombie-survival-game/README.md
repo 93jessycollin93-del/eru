@@ -17,7 +17,9 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 | Aim | Right click (hold) |
 | Reload | R |
 | Search a container | E |
-| Inventory | Tab |
+| Inventory and health | Tab |
+| Bandage worst wound | B |
+| Sleep / get up | Z |
 | Switch weapons | 1–5, 0 to holster |
 | Flashlight | F |
 | Pause | Esc |
@@ -27,7 +29,9 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 - **Noise matters.** Sprinting and gunshots draw zombies from far away. Crouch-walking is almost silent.
 - **Night is dangerous.** Zombies see less at night, but your flashlight makes you visible.
 - **Look everywhere.** Kitchens have food, fridges have drinks, bedrooms hide bandages and sometimes a gun. The police station and hardware stores have weapons.
-- **Treat bleeding fast.** Zombie hits can make you bleed; bandages and first aid kits stop it.
+- **Your body is simulated.** Zombie hits leave scratches, lacerations or bites on a specific body part. Deep wounds bleed until you bandage them, and losing about 2 litres of blood kills you. Leg wounds slow you down; arm wounds weaken your swings and shake your aim.
+- **Bites are a death sentence.** Like Project Zomboid, there is no cure. Scratches and lacerations can infect you too. The infection is silent at first, then you feel queasy, then feverish, and then you come back as one of them.
+- **Nights are cold.** Stay indoors after dark. Rest when you're tired (Z), but never with zombies nearby.
 - **Watch your weight.** Carrying more than 20 kg slows you down and stops you sprinting.
 
 ## Tech stack
@@ -36,9 +40,14 @@ Vite, React, TypeScript, Tailwind CSS and Three.js. This is the same stack Lovab
 
 ```
 src/
+  sim/                 Engine-agnostic simulation (ported to Unreal later). No three/React/DOM imports.
+    body.ts            Blood, wounds, infection, temperature, fatigue, pain, panic, moodles
+    body.test.ts       Tests for the body rules (npm test)
+    climate.ts         Air temperature by time of day and shelter
+    items.ts           Item definitions and loot tables
+    rng.ts             Seeded random numbers
   game/
     Game.ts            Main loop: connects world, player, zombies, combat, loot and HUD
-    items.ts           Item definitions and loot tables
     audio.ts           Synthesised sound effects
     input.ts           Keyboard and mouse
     entities/
@@ -62,4 +71,5 @@ The world is generated from a fixed seed (`WORLD_SEED` in `Game.ts`), so everyon
 npm install
 npm run dev     # http://localhost:8080
 npm run build   # production build in dist/
+npm test        # simulation tests
 ```

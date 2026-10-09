@@ -29,6 +29,7 @@ const Index = () => {
       take: (uid) => gameRef.current?.takeFromContainer(uid),
       takeAll: () => gameRef.current?.takeAll(),
       put: (uid) => gameRef.current?.putInContainer(uid),
+      treat: (woundId) => gameRef.current?.treatWound(woundId),
       close: () => gameRef.current?.closeUi(),
     }),
     [],

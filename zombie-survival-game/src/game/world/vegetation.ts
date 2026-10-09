@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createNoise2D } from "simplex-noise";
-import { range } from "../rng";
+import { range } from "../../sim/rng";
 import type { ColliderWorld } from "./colliders";
 import { TOWN_RADIUS, WORLD_HALF, type Terrain } from "./terrain";
 import type { Rect } from "./town";

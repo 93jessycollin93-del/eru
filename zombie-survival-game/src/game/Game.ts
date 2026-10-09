@@ -4,8 +4,24 @@ import { Player } from "./entities/player";
 import { makeHeldItem } from "./entities/humanoid";
 import { Zombie, type NoiseEvent } from "./entities/zombie";
 import { Input } from "./input";
-import { FISTS, ITEMS, makeStack, rollLoot, stackWeight, type ItemDef, type ItemStack } from "./items";
-import { mulberry32, pick, range } from "./rng";
+import { FISTS, ITEMS, makeStack, rollLoot, stackWeight, type ItemDef, type ItemStack } from "../sim/items";
+import { mulberry32, pick, range } from "../sim/rng";
+import {
+  BODY_PART_NAMES,
+  aimSway,
+  bandage,
+  bloodPercent,
+  eat,
+  heal,
+  isBleeding,
+  moodles,
+  pain,
+  strength,
+  takePainkillers,
+  updateBody,
+  zombieHit,
+} from "../sim/body";
+import { airTemperature } from "../sim/climate";
 import type { GameStatus, HudMessage, HudState } from "./types";
 import { ColliderWorld } from "./world/colliders";
 import { Environment } from "./world/environment";
@@ -21,6 +37,8 @@ const MAX_WEIGHT = 20;
 const INTERACT_RANGE = 1.9;
 const RELOAD_SECONDS = 1.8;
 const ZOMBIE_ACTIVE_RANGE = 140;
+/** How much faster the clock runs while you sleep. */
+const SLEEP_TIME_SCALE = 30;
 
 export class Game {
   private renderer: THREE.WebGLRenderer;
@@ -70,6 +88,10 @@ export class Game {
   private muzzle: THREE.PointLight;
   private muzzleTimer = 0;
   private rng = mulberry32(WORLD_SEED + 7);
+  private sheltered = false;
+  private shelterTimer = 0;
+  private airTemp = 10;
+  private turned = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -169,6 +191,8 @@ export class Game {
     this.container = null;
     this.reloadTimer = 0;
     this.swingTime = 0;
+    this.turned = false;
+    this.sheltered = false;
 
     const spawn = this.town.playerSpawn;
     for (let i = 0; i < 80; i++) {
@@ -240,19 +264,26 @@ export class Game {
     switch (def.category) {
       case "food":
       case "drink":
-        p.hunger = clamp(p.hunger + (def.hunger ?? 0));
-        p.thirst = clamp(p.thirst + (def.thirst ?? 0));
+        eat(p.body, def.hunger ?? 0, def.thirst ?? 0);
         this.audio.eat();
         this.message(`${def.category === "food" ? "Ate" : "Drank"} ${def.name}.`, "good");
         this.consume(stack);
         break;
       case "medical":
-        p.health = clamp(p.health + (def.heal ?? 0));
-        if (def.stopsBleeding && p.bleeding) {
-          p.bleeding = false;
-          this.message("The bleeding has stopped.", "good");
-        } else this.message(`Used ${def.name}.`, "good");
-        this.consume(stack);
+        if (def.medical === "painkillers") {
+          takePainkillers(p.body);
+          this.message("You swallow a couple of painkillers.", "good");
+          this.consume(stack);
+        } else if (def.medical === "firstAid") {
+          let treated = 0;
+          while (bandage(p.body)) treated++;
+          heal(p.body, def.heal ?? 0);
+          this.message(treated ? `Dressed ${treated} wound${treated === 1 ? "" : "s"}.` : "You patch yourself up.", "good");
+          this.consume(stack);
+        } else {
+          this.treatWound();
+          return;
+        }
         break;
       case "melee":
       case "firearm":
@@ -261,6 +292,26 @@ export class Game {
       default:
         break;
     }
+    this.emitHud();
+  }
+
+  /** Bandage a wound (the worst one if no id is given) using a bandage or first aid kit. */
+  treatWound(woundId?: number) {
+    const p = this.player;
+    const supply =
+      this.inventory.find((s) => ITEMS[s.id].medical === "bandage") ??
+      this.inventory.find((s) => ITEMS[s.id].medical === "firstAid");
+    if (!supply) {
+      this.message("You have nothing to bandage it with.", "warn");
+      return;
+    }
+    const w = bandage(p.body, woundId);
+    if (!w) {
+      this.message("You have no open wounds.", "info");
+      return;
+    }
+    this.message(`Bandaged the ${w.kind} on your ${BODY_PART_NAMES[w.part].toLowerCase()}.`, "good");
+    this.consume(supply);
     this.emitHud();
   }
 
@@ -419,9 +470,11 @@ export class Game {
 
   private update(dt: number) {
     const p = this.player;
-    const controlling = this.locked && !this.inventoryOpen && !this.container;
-    const gameMinutes = dt * TIME_SCALE;
+    const asleep = p.body.asleep;
+    const controlling = this.locked && !this.inventoryOpen && !this.container && !asleep;
+    const gameMinutes = dt * TIME_SCALE * (asleep ? SLEEP_TIME_SCALE : 1);
     this.minutes += gameMinutes;
+    if (asleep && this.input.wasPressed("KeyZ")) this.wake("You get up.");
 
     // Keys that work even with menus open
     if (this.input.wasPressed("Tab") || this.input.wasPressed("KeyI")) this.toggleInventory();
@@ -443,8 +496,21 @@ export class Game {
     // Close the loot window if you get dragged away from it.
     if (this.container && this.distanceToContainer(this.container) > INTERACT_RANGE + 1) this.closeUi();
 
-    const death = p.updateStats(dt, gameMinutes);
+    // Shelter check: is there a roof overhead?
+    this.shelterTimer -= dt;
+    if (this.shelterTimer <= 0) {
+      this.shelterTimer = 0.5;
+      this.sheltered = this.colliders.raycast(p.pos.x, p.pos.y + 1.7, p.pos.z, 0, 1, 0, 6) < 6;
+    }
+    const day = Math.floor(this.minutes / 1440) + 1;
+    this.airTemp = airTemperature(this.minutes % 1440, day, this.sheltered);
+    const threats = this.zombies.filter((z) => z.hunting && z.pos.distanceTo(p.pos) < 25).length;
+    const death = updateBody(p.body, dt, gameMinutes, { ambientTemp: this.airTemp, exertion: p.exertion, threats });
     if (death) this.die(death);
+    if (asleep) {
+      if (p.body.fatigue < 3) this.wake("You wake up rested.");
+      else if (threats > 0) this.wake("Something is coming. You jolt awake.");
+    }
 
     this.updateZombies(dt);
     this.noises = this.noises.filter((n) => (n.ttl -= dt) > 0);
@@ -472,6 +538,8 @@ export class Game {
       this.audio.dryFire();
     }
     if (input.wasPressed("KeyR")) this.startReload();
+    if (input.wasPressed("KeyZ")) this.trySleep();
+    if (input.wasPressed("KeyB")) this.treatWound();
     if (input.wasPressed("KeyE")) {
       const c = this.nearestContainer();
       if (c) this.openContainer(c);
@@ -516,12 +584,12 @@ export class Game {
 
   private startSwing(weapon: ItemDef) {
     const p = this.player;
-    if (p.stamina < (weapon.stamina ?? 5) * 0.4) {
+    if (p.body.stamina < (weapon.stamina ?? 5) * 0.4) {
       this.message("Too tired to swing.", "warn");
       this.attackCooldown = 0.6;
       return;
     }
-    p.stamina = Math.max(0, p.stamina - (weapon.stamina ?? 5));
+    p.body.stamina = Math.max(0, p.body.stamina - (weapon.stamina ?? 5));
     this.swingDuration = (weapon.attackInterval ?? 0.6) * 0.9;
     this.swingTime = 0.0001;
     this.swingResolved = false;
@@ -569,7 +637,7 @@ export class Game {
       }
     }
     if (!best) return;
-    const tired = p.stamina < 15 ? 0.6 : 1;
+    const tired = strength(p.body);
     const crit = Math.random() < 0.12;
     const dmg = (weapon.damage ?? 10) * tired * (crit ? 2.2 : 1);
     const knock = weapon.id === "baseball_bat" ? 4 : weapon.id === "fire_axe" ? 3 : weapon.id === "fists" ? 2 : 1.2;
@@ -602,7 +670,7 @@ export class Game {
     this.muzzleTimer = 0.05;
 
     // Shoot from the camera through the crosshair, with spread when not aiming.
-    const spread = p.aiming ? 0.008 : 0.06;
+    const spread = (p.aiming ? 0.008 : 0.06) * aimSway(p.body);
     const dir = new THREE.Vector3();
     this.camera.updateMatrixWorld();
     this.camera.getWorldDirection(dir);
@@ -775,24 +843,53 @@ export class Game {
   private onZombieAttack(z: Zombie) {
     if (this.status !== "playing") return;
     const p = this.player;
-    const dmg = range(Math.random, 8, 16);
-    p.health -= dmg;
+    const w = zombieHit(p.body, Math.random);
     this.damageFlash = 1;
     this.audio.hurt();
-    if (!p.bleeding && Math.random() < 0.3) {
-      p.bleeding = true;
-      this.message("You're bleeding. Use a bandage.", "danger");
-    }
+    const where = BODY_PART_NAMES[w.part].toLowerCase();
+    if (w.kind === "bite") this.message(`Bitten on the ${where}.`, "danger");
+    else if (w.kind === "laceration") this.message(`A deep gash on your ${where}. You're bleeding.`, "danger");
+    else this.message(`Scratched on the ${where}.`, "warn");
     // Being grabbed slows you down.
     p.speed *= 0.3;
-    if (p.health <= 0) this.die(p.bleeding ? "Torn apart by the infected" : "Bitten to death");
     void z;
+  }
+
+  private trySleep() {
+    const p = this.player;
+    if (this.zombies.some((z) => z.hunting && z.pos.distanceTo(p.pos) < 40)) {
+      this.message("You can't sleep with them this close.", "warn");
+      return;
+    }
+    if (p.body.fatigue < 30) {
+      this.message("You're not tired enough to sleep.", "info");
+      return;
+    }
+    if (isBleeding(p.body)) {
+      this.message("You need to stop the bleeding first.", "warn");
+      return;
+    }
+    p.body.asleep = true;
+    p.crouching = true;
+    this.message(this.sheltered ? "You lie down and close your eyes." : "You curl up in the open. Not the safest place.", "info");
+  }
+
+  private wake(reason: string) {
+    this.player.body.asleep = false;
+    this.player.crouching = false;
+    this.message(reason, reason.startsWith("Something") ? "danger" : "info");
   }
 
   private die(cause: string) {
     if (this.status === "dead") return;
-    this.player.health = 0;
     this.status = "dead";
+    // Project Zomboid rules: the infected come back.
+    this.turned = cause === "The infection took you";
+    if (this.turned) {
+      const corpse = this.spawnZombie(this.player.pos.clone());
+      corpse.yaw = this.player.bodyYaw;
+      this.player.model.root.visible = false;
+    }
     this.causeOfDeath = cause;
     this.inventoryOpen = false;
     this.container = null;
@@ -901,11 +998,30 @@ export class Game {
     this.onHud({
       status: this.status,
       locked: this.locked,
-      health: Math.max(0, p.health),
-      hunger: p.hunger,
-      thirst: p.thirst,
-      stamina: p.stamina,
-      bleeding: p.bleeding,
+      health: Math.max(0, p.body.health),
+      blood: bloodPercent(p.body),
+      hunger: p.body.hunger,
+      thirst: p.body.thirst,
+      stamina: p.body.stamina,
+      bleeding: isBleeding(p.body),
+      bodyTemp: p.body.bodyTemp,
+      airTemp: this.airTemp,
+      sheltered: this.sheltered,
+      fatigue: p.body.fatigue,
+      pain: pain(p.body),
+      asleep: p.body.asleep,
+      moodles: moodles(p.body),
+      wounds: p.body.wounds.map((w) => ({
+        id: w.id,
+        part: w.part,
+        partName: BODY_PART_NAMES[w.part],
+        kind: w.kind,
+        severity: w.severity,
+        bleeding: !w.bandaged && w.bleedRate > 0.05,
+        bandaged: w.bandaged,
+      })),
+      canBandage: this.inventory.some((s) => ITEMS[s.id].medical === "bandage" || ITEMS[s.id].medical === "firstAid"),
+      turned: this.turned,
       crouching: p.crouching,
       aiming: p.aiming,
       noise: Math.min(1, p.footstepRadius / 15),
@@ -942,7 +1058,6 @@ export class Game {
   }
 }
 
-const clamp = (v: number) => Math.max(0, Math.min(100, v));
 
 /** Input stand-in used while menus are open: the player stands still. */
 const NO_INPUT = {

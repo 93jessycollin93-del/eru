@@ -34,7 +34,7 @@ Each session below is roughly one working session. The order can change based on
 - Synthesised sound (gunshots, hits, groans, wind)
 - Death screen with time survived
 
-## Session 2: Body simulation (Health 2.0) — moved up for realism
+## Session 2: Body simulation (Health 2.0) ✅
 - Blood volume separate from tissue health, wounds per body part (scratch, laceration, bite), bleeding that clots or doesn't
 - Zombie infection with hidden incubation and symptoms (Project Zomboid rules: no cure)
 - Body temperature, fatigue and sleep, pain, panic

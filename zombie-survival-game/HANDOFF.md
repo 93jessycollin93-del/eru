@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: end of session 1 (2026-10-09)_
+_Last updated: session 2 — body simulation done (2026-10-09)_
 
 ## The project
 
@@ -38,6 +38,7 @@ cd zombie-survival-game
 npm install
 npm run dev      # http://localhost:8080
 npm run build    # typecheck + production build; must pass before every commit
+npm test         # Vitest tests for src/sim; must pass before every commit
 ```
 
 In dev builds, `window.__game` exposes the `Game` instance.
@@ -54,6 +55,9 @@ In dev builds, `window.__game` exposes the `Game` instance.
 
 | File | What it does |
 | ---- | ------------ |
+| `src/sim/body.ts` | **Engine-agnostic** body simulation: blood (ml), tissue health, wounds per body part with bleed rates and healing, Knox infection (hidden incubation then symptoms, bites always infect, death then reanimation), body temperature, fatigue/sleep, pain, panic, moodles, plus derived modifiers (`mobility`, `aimSway`, `strength`, `maxStamina`). Bleeding/stamina/panic run in real seconds; everything else runs in game minutes |
+| `src/sim/climate.ts` | Air temperature by time of day, day number and shelter |
+| `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables; seeded RNG |
 | `src/game/Game.ts` | Main loop and orchestration: pointer lock, combat, looting, inventory, zombie management, HUD emission (10 Hz via `onHud`) |
 | `src/game/entities/player.ts` | Movement, stamina, jump/gravity, survival stat drain, over-the-shoulder camera with collision |
 | `src/game/entities/zombie.ts` | Zombie AI. States: idle, wander, investigate, chase, dead. Senses run every 0.25 s: sight cone + line of sight, footsteps, noise events |
@@ -64,10 +68,9 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/game/world/vegetation.ts` | Instanced trees and bushes |
 | `src/game/world/environment.ts` | Sun, hemisphere light, fog, day/night (`daylight()` 0..1) |
 | `src/game/world/builder.ts` | Merges static geometry per material to keep draw calls low |
-| `src/game/items.ts` | Item definitions + loot tables |
 | `src/game/audio.ts` | All sounds synthesised with WebAudio (no audio files) |
 | `src/game/input.ts` | Keyboard/mouse with per-frame "pressed" edges |
-| `src/components/` | React HUD, Inventory (loot transfer), Overlay (menu, pause, death) |
+| `src/components/` | React HUD (stat bars, moodles, sleep screen), Inventory + HealthPanel (body diagram, per-wound bandaging), Overlay (menu, pause, death, "you got back up") |
 
 **Key tuning constants:**
 - `Game.ts`: `WORLD_SEED`, `TIME_SCALE` (1 game minute per real second), `MAX_WEIGHT` = 20 kg
@@ -77,7 +80,15 @@ In dev builds, `window.__game` exposes the `Game` instance.
 
 ## Status
 
-Session 1 is complete and pushed. Everything in ROADMAP "Session 1" works and was verified with headless tests:
+**Session 2 (body simulation) is complete and pushed.**
+- Added `src/sim/body.ts`, `climate.ts` and the tests.
+- Player physiology now lives in `player.body`.
+- New controls: B bandages the worst wound, Z sleeps (time runs 30× faster; you wake on threats).
+- The shelter check raycasts upward for a roof.
+- Painkillers were added as an item.
+- Verified with 12 unit tests plus browser tests: wounds, messages, bandaging, sleep, death by infection followed by reanimation.
+
+Session 1 is also complete. Everything in ROADMAP "Session 1" works and was verified with headless tests:
 - melee, pistol hits and headshots, reload
 - zombie attacks, noise attraction, crouch stealth at night
 - hunger and thirst drain
@@ -95,5 +106,7 @@ Session 1 is complete and pushed. Everything in ROADMAP "Session 1" works and wa
 
 1. Try `add_repo` with owner `yyb84ycgt6-oss` and repo `zombie-survival-game`. If it works, copy the folder's contents to that repo's root (the history can start fresh), push, and update this file. If it fails, keep working on the `eru` branch.
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
-3. Begin **roadmap session 2: characters and animation**. Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.
-4. Before ending: run `npm run build`, commit, push, update the artifact, and update this file.
+3. Follow the ROADMAP order: next is **session 3, doors, windows and barricades** (then saving, which should serialise `BodyState` and the world). Put any new rules (door health, barricade strength, noise) in `src/sim/`. Characters and animation is now session 7.
+4. (Old note, kept for session 7) **Characters and animation**: Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.
+5. Before ending: run `npm test` and `npm run build`, commit, push, update the artifact, and update this file.
+6. Asset hosts: `raw.githubusercontent.com` is reachable from the container; `quaternius.com`, `kenney.nl`, `polyhaven.org` and jsDelivr's `/gh/` are blocked by the network proxy.

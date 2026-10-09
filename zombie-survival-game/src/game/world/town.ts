@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import type { ItemStack } from "../items";
-import { pick, range } from "../rng";
+import type { ItemStack } from "../../sim/items";
+import { pick, range } from "../../sim/rng";
 import { MeshBuilder } from "./builder";
 import type { ColliderWorld } from "./colliders";
 import { WORLD_HALF, type Terrain } from "./terrain";

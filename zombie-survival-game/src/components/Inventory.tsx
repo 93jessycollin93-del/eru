@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { ITEMS, type ItemStack } from "@/game/items";
+import { ITEMS, type ItemStack } from "@/sim/items";
 import type { HudState } from "@/game/types";
+import HealthPanel from "./HealthPanel";
 
 export interface InventoryActions {
   use: (uid: number) => void;
@@ -8,6 +9,7 @@ export interface InventoryActions {
   take: (uid: number) => void;
   takeAll: () => void;
   put: (uid: number) => void;
+  treat: (woundId: number) => void;
   close: () => void;
 }
 
@@ -118,6 +120,8 @@ const Inventory = ({ hud, actions }: { hud: HudState; actions: InventoryActions 
               );
             })}
           </Panel>
+
+          {!hud.container && <HealthPanel hud={hud} onTreat={actions.treat} />}
 
           {hud.container && (
             <Panel

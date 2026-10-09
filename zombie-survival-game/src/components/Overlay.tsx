@@ -17,7 +17,9 @@ const CONTROLS: [string, string][] = [
   ["Aim", "Right click (hold)"],
   ["Reload", "R"],
   ["Search", "E"],
-  ["Inventory", "Tab"],
+  ["Inventory / health", "Tab"],
+  ["Bandage worst wound", "B"],
+  ["Sleep", "Z"],
   ["Weapons", "1–5, 0 to holster"],
   ["Flashlight", "F"],
   ["Pause", "Esc"],
@@ -121,6 +123,7 @@ const Overlay = ({ hud, onStart, onResume }: OverlayProps) => {
             </h2>
             <div className="mt-6 space-y-1 font-note text-lg text-stone-300">
               <p>You survived {survivedText(hud.survivedMinutes)}.</p>
+              {hud.turned && <p className="text-red-400">A few minutes later, you got back up.</p>}
               <p>
                 {hud.kills} {hud.kills === 1 ? "zombie" : "zombies"} put down.
               </p>

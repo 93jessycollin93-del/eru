@@ -70,8 +70,44 @@ const Hud = ({ hud }: HudProps) => {
         <div className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-200">
           Day {hud.day} · {hud.kills} killed
         </div>
+        <div className="text-sm tabular-nums text-stone-300">
+          {Math.round(hud.airTemp)}°C {hud.sheltered ? "· indoors" : ""}
+        </div>
         {hud.flashlight && <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">Flashlight on</div>}
       </div>
+
+      {/* Moodles: status effects, most urgent first */}
+      <div className="absolute right-4 top-32 flex w-44 flex-col items-end gap-1">
+        {hud.moodles.map((m) => (
+          <div
+            key={m.id}
+            className={`flex items-center gap-2 rounded-sm px-2 py-0.5 text-sm font-semibold uppercase tracking-[0.1em] ring-1 ${
+              m.tone === "good"
+                ? "bg-lime-950/60 text-lime-300 ring-lime-400/30"
+                : m.level >= 3
+                  ? "bg-red-950/70 text-red-300 ring-red-500/50"
+                  : "bg-black/50 text-amber-200 ring-amber-300/25"
+            } ${m.level >= 4 ? "animate-pulse-red" : ""}`}
+            title={m.detail}
+          >
+            {m.label}
+            <span className="flex gap-0.5" aria-label={`level ${m.level}`}>
+              {[1, 2, 3, 4].map((i) => (
+                <span key={i} className={`h-2 w-1 rounded-[1px] ${i <= m.level ? "bg-current" : "bg-white/10"}`} />
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Sleep */}
+      {hud.asleep && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90">
+          <div className="font-note text-2xl text-stone-300">Sleeping…</div>
+          <div className="mt-2 text-4xl font-semibold tabular-nums text-stone-100">{formatClock(hud.timeOfDay)}</div>
+          <div className="mt-4 text-sm uppercase tracking-[0.2em] text-stone-500">Press Z to get up</div>
+        </div>
+      )}
 
       {/* Crosshair */}
       {hud.crosshair && (
@@ -98,11 +134,11 @@ const Hud = ({ hud }: HudProps) => {
       {/* Status */}
       <div className="absolute bottom-4 left-4 flex items-end gap-1.5 rounded bg-black/35 px-2 pb-1.5 pt-2.5 ring-1 ring-white/5">
         <Stat label="HP" value={hud.health} />
+        <Stat label="Blood" value={hud.blood} warnAt={60} />
         <Stat label="Food" value={hud.hunger} warnAt={25} />
         <Stat label="Water" value={hud.thirst} warnAt={25} />
         <Stat label="Stam" value={hud.stamina} warnAt={20} />
         <div className="ml-1 flex flex-col justify-end gap-1 pb-5 text-xs font-semibold uppercase tracking-[0.15em]">
-          {hud.bleeding && <span className="text-red-500 animate-pulse-red">Bleeding</span>}
           {hud.crouching && <span className="text-stone-300">Crouched</span>}
           {hud.carryWeight > hud.maxWeight && <span className="text-amber-400">Overloaded</span>}
           <span className="text-stone-500">

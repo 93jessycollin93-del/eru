@@ -1,4 +1,5 @@
-import type { ItemStack } from "./items";
+import type { BodyPart, Moodle, WoundKind } from "../sim/body";
+import type { ItemStack } from "../sim/items";
 
 export type GameStatus = "menu" | "loading" | "playing" | "paused" | "dead";
 
@@ -14,15 +15,38 @@ export interface ContainerView {
   items: ItemStack[];
 }
 
+export interface WoundView {
+  id: number;
+  part: BodyPart;
+  partName: string;
+  kind: WoundKind;
+  severity: number;
+  bleeding: boolean;
+  bandaged: boolean;
+}
+
 export interface HudState {
   status: GameStatus;
   /** True while the pointer is captured and the player is actively controlling. */
   locked: boolean;
   health: number;
+  /** 0..100: 100 is a full 5 litres, 0 is fatal blood loss. */
+  blood: number;
   hunger: number;
   thirst: number;
   stamina: number;
   bleeding: boolean;
+  bodyTemp: number;
+  airTemp: number;
+  sheltered: boolean;
+  fatigue: number;
+  pain: number;
+  asleep: boolean;
+  moodles: Moodle[];
+  wounds: WoundView[];
+  canBandage: boolean;
+  /** Died of the infection and came back. */
+  turned: boolean;
   crouching: boolean;
   aiming: boolean;
   /** 0..1 how much noise the player is making. */

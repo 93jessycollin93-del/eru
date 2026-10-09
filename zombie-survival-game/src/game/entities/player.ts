@@ -3,6 +3,7 @@ import type { Input } from "../input";
 import type { ColliderWorld } from "../world/colliders";
 import type { Terrain } from "../world/terrain";
 import { WORLD_HALF } from "../world/terrain";
+import { createBody, mobility, type BodyState } from "../../sim/body";
 import { Humanoid } from "./humanoid";
 
 const RADIUS = 0.35;
@@ -25,11 +26,8 @@ export class Player {
   bodyYaw = Math.PI / 2;
   speed = 0;
 
-  health = 100;
-  hunger = 85;
-  thirst = 80;
-  stamina = 100;
-  bleeding = false;
+  /** All physiology lives in the engine-agnostic body simulation. */
+  body: BodyState = createBody();
   crouching = false;
   aiming = false;
   sprinting = false;
@@ -45,11 +43,7 @@ export class Player {
   reset(spawn: THREE.Vector3) {
     this.pos.copy(spawn);
     this.velY = 0;
-    this.health = 100;
-    this.hunger = 85;
-    this.thirst = 80;
-    this.stamina = 100;
-    this.bleeding = false;
+    this.body = createBody();
     this.crouching = false;
     this.yaw = this.bodyYaw = Math.PI / 2;
     this.pitch = -0.1;
@@ -76,28 +70,25 @@ export class Player {
     if (moving) move.normalize();
 
     const wantsSprint = input.isDown("ShiftLeft") || input.isDown("ShiftRight");
-    this.sprinting = wantsSprint && moving && !this.aiming && !this.overweight && this.stamina > 1 && input.isDown("KeyW");
+    const b = this.body;
+    this.sprinting = wantsSprint && moving && !this.aiming && !this.overweight && b.stamina > 1 && input.isDown("KeyW");
     if (this.sprinting) this.crouching = false;
 
     let target = this.crouching ? CROUCH : this.sprinting ? SPRINT : WALK;
     if (this.aiming) target = Math.min(target, 1.8);
     if (this.overweight) target *= 0.65;
-    if (this.health < 25) target *= 0.8;
+    target *= mobility(b);
     if (!moving) target = 0;
     this.speed += (target - this.speed) * Math.min(1, dt * 10);
 
     this.pos.addScaledVector(move, this.speed * dt);
 
-    // Stamina
-    if (this.sprinting) this.stamina = Math.max(0, this.stamina - dt * 14);
-    else this.stamina = Math.min(100, this.stamina + dt * (moving ? 7 : 12));
-
     // Jump and gravity
     const ground = Math.max(terrain.height(this.pos.x, this.pos.z), colliders.supportHeight(this.pos.x, this.pos.z, this.pos.y));
-    if (input.wasPressed("Space") && this.grounded && this.stamina > 8) {
+    if (input.wasPressed("Space") && this.grounded && b.stamina > 8) {
       this.velY = JUMP;
       this.grounded = false;
-      this.stamina -= 8;
+      b.stamina -= 8;
       this.crouching = false;
     }
     this.velY -= GRAVITY * dt;
@@ -137,28 +128,9 @@ export class Player {
     this.model.root.rotation.y = this.bodyYaw;
   }
 
-  /** Survival stat drain; gameMinutes is how much in-game time passed. */
-  updateStats(dt: number, gameMinutes: number): string | null {
-    this.hunger = Math.max(0, this.hunger - gameMinutes * 0.055);
-    this.thirst = Math.max(0, this.thirst - gameMinutes * (this.sprinting ? 0.14 : 0.085));
-
-    let cause: string | null = null;
-    if (this.bleeding) {
-      this.health -= dt * 0.7;
-      cause = "Bled out";
-    }
-    if (this.hunger <= 0) {
-      this.health -= dt * 0.25;
-      cause = cause ?? "Starved to death";
-    }
-    if (this.thirst <= 0) {
-      this.health -= dt * 0.45;
-      cause = cause ?? "Died of dehydration";
-    }
-    if (!this.bleeding && this.hunger > 40 && this.thirst > 40 && this.health < 100) {
-      this.health = Math.min(100, this.health + dt * 0.35);
-    }
-    return this.health <= 0 ? cause : null;
+  /** 0 = resting, 1 = sprinting. Feeds the body simulation. */
+  get exertion() {
+    return this.sprinting ? 1 : this.speed > 0.5 ? 0.3 : 0;
   }
 
   /** Over-the-shoulder camera with collision so walls never block the view. */
