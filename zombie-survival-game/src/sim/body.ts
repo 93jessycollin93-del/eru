@@ -12,6 +12,8 @@
  *    infection run on the world clock, and speed up while sleeping)
  */
 
+import { STAMINA } from "./tuning";
+
 export type BodyPart = "head" | "torso" | "leftArm" | "rightArm" | "leftLeg" | "rightLeg";
 export type WoundKind = "scratch" | "laceration" | "bite" | "gunshot";
 
@@ -47,6 +49,10 @@ export interface BodyState {
   /** 100 = hydrated, 0 = dehydrated. */
   thirst: number;
   stamina: number;
+  /** Ran yourself dry: no sprinting or jumping until stamina recovers. */
+  winded: boolean;
+  /** Seconds until stamina starts regenerating again. */
+  staminaDelay: number;
   /** 0 = rested, 100 = can't stay awake. */
   fatigue: number;
   /** Core temperature in °C. */
@@ -108,6 +114,8 @@ export function createBody(): BodyState {
     hunger: 80,
     thirst: 75,
     stamina: 100,
+    winded: false,
+    staminaDelay: 0,
     fatigue: 15,
     bodyTemp: 37,
     panic: 0,
@@ -194,9 +202,17 @@ export function updateBody(b: BodyState, realSeconds: number, gameMinutes: numbe
 
   // Stamina (real time)
   const cap = maxStamina(b);
-  if (env.exertion > 0.5) b.stamina = Math.max(0, b.stamina - realSeconds * 14 * env.exertion);
-  else if (b.stamina < cap) b.stamina = Math.min(cap, b.stamina + realSeconds * (env.exertion > 0 ? 6 : 11) * (pain(b) > 50 ? 0.6 : 1));
-  else b.stamina = Math.max(cap, b.stamina - realSeconds * 5);
+  if (env.exertion > 0.5) {
+    spendStamina(b, realSeconds * STAMINA.sprintDrain * env.exertion);
+  } else if (b.staminaDelay > 0) {
+    b.staminaDelay -= realSeconds;
+  } else if (b.stamina < cap) {
+    const regen = env.exertion > 0 ? STAMINA.regenMoving : STAMINA.regenIdle;
+    b.stamina = Math.min(cap, b.stamina + realSeconds * regen * (pain(b) > 50 ? 0.6 : 1));
+  } else {
+    b.stamina = Math.max(cap, b.stamina - realSeconds * 5);
+  }
+  if (b.winded && b.stamina >= STAMINA.windedRecoverAt) b.winded = false;
 
   // Wounds: bleed in real time, heal on the game clock.
   for (const w of b.wounds) {
@@ -257,6 +273,13 @@ export function updateBody(b: BodyState, realSeconds: number, gameMinutes: numbe
   }
   if (b.infection.infected && b.infection.progress >= 1) return "The infection took you";
   return null;
+}
+
+/** Use stamina (sprinting, swinging, jumping). Delays regeneration; empty leaves you winded. */
+export function spendStamina(b: BodyState, amount: number) {
+  b.stamina = Math.max(0, b.stamina - amount);
+  b.staminaDelay = STAMINA.regenDelay;
+  if (b.stamina <= 0) b.winded = true;
 }
 
 // ------------------------------------------------------------------ events
@@ -351,6 +374,7 @@ export function moodles(b: BodyState): Moodle[] {
   if (b.bodyTemp < 36.2) add("cold", b.bodyTemp < 34.5 ? "Hypothermic" : b.bodyTemp < 35.5 ? "Freezing" : "Chilly", b.bodyTemp < 34.5 ? 4 : b.bodyTemp < 35.5 ? 3 : 1, "Get indoors and stay out of the night air.");
   if (b.bodyTemp > 38 && stage < 2) add("hot", "Overheated", 2, "Slow down and drink water.");
   if (b.fatigue > 60) add("tired", b.fatigue > 90 ? "Exhausted" : b.fatigue > 75 ? "Very tired" : "Tired", b.fatigue > 90 ? 3 : b.fatigue > 75 ? 2 : 1, "Find somewhere safe to sleep (Z).");
+  if (b.winded) add("winded", "Winded", 2, "You're out of breath. You can't sprint until you recover.");
   if (b.panic > 25) add("panic", b.panic > 75 ? "Terrified" : b.panic > 50 ? "Panicked" : "Anxious", b.panic > 75 ? 3 : b.panic > 50 ? 2 : 1, "Panic makes your hands shake.");
   if (b.painkillers > 0) out.push({ id: "painkillers", label: "Painkillers", level: 1, tone: "good", detail: "Pain dulled." });
 

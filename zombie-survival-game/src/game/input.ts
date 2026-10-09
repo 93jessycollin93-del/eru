@@ -57,7 +57,7 @@ export class Input {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     if (!e.repeat) this.pressed.add(e.code);
     this.down.add(e.code);
-    if (["Tab", "Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
+    if (["Tab", "Space", "ArrowUp", "ArrowDown", "AltLeft", "AltRight"].includes(e.code)) e.preventDefault();
   };
 
   private onKeyUp = (e: KeyboardEvent) => this.down.delete(e.code);

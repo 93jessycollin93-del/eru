@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: end of session 4 — networks, ssh, live CCTV, UPS (2026-10-09)_
+_Last updated: session 5 in progress — mechanics tuning done, characters next (2026-10-09)_
 
 ## The project
 
@@ -62,6 +62,8 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/sim/computer.ts` | **Engine-agnostic** virtual filesystem + Unix-like shell. Login with lockout, permissions, `ls cd cat head tail grep wc find mail history` + pipes, tab completion, data-driven programs |
 | `src/sim/computerContent.ts` | Generates police / store / hardware / house-laptop machines from `TownFacts` (police address, supply-cache address, power-off day). Writes lore, mail, incident reports, and the password note for that building. `gameDate(day, minute)`: day 1 = Fri Oct 23 |
 | `src/sim/network.ts` | **Engine-agnostic** LAN model: `NetworkSpec` (cidr, gateway, hosts with services/MAC/vendor, `upsMinutes`), `NetworkView` (selfIp + `isUp(ip)` supplied by the game) |
+| `src/sim/tuning.ts` | **Every gameplay number** (movement, footsteps, stamina, zombie speeds, senses, melee, firearms) plus pure formulas (`sightRate`, `visibilityRange`, `meleeDamage`, `shotSpread`). Design targets are enforced in `tuning.test.ts`. **Change numbers here, never inline.** |
+| `src/sim/nav.ts` | Nav grid (0.25 m cells; cell-centre rasterisation keeps 1 m doorways open) + A* with typed-array workspaces (~1 ms per search) + string-pulling |
 | `src/sim/climate.ts` | Air temperature by time of day, day number and shelter |
 | `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables; seeded RNG |
 | `src/game/Game.ts` | Main loop and orchestration: pointer lock, combat, looting, inventory, zombie management, HUD emission (10 Hz via `onHud`) |
@@ -89,6 +91,24 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - The `zombieContext()` visibility formula in `Game.ts`
 
 ## Status
+
+**Session 5 (mechanics tuning) is complete and pushed; characters come next.**
+- Player: velocity with accel/decel, slower backpedal and strafe, Alt to walk quietly, winded lockout, head bob, sway from `aimSway`, recoil that springs back 75%, camera shake.
+- Zombies:
+  - An awareness meter driven by `sightRate`: they stare when suspicious and groan when they commit.
+  - Hearing raises awareness, and a lost target gets a predicted position.
+  - Lunge at close range; attack slots (max 3).
+  - Knockdowns (down 2–3.2 s, then get up); feeler steering and unsticking.
+  - A* paths whenever the straight line is blocked (budget: 2 searches per frame).
+- Melee: swept arc over the active frames, sweep of 2 for bat and axe, hit-stop, knockdown chance, double damage to downed zombies.
+- Guns: cone spread from `shotSpread`; leg hits do less damage.
+- **Tuning harness results** (real game loop, see the scratch script pattern in the "How to run" section):
+  - Detection at 25 m standing in daylight: 2.3 s. Crouched at night at 12 m: never.
+  - Jogging: a walker loses ~2.6 m every 10 s. A runner catches a jogger.
+  - Sprint: 11.2 s, then winded, with a 19 m lead on a runner.
+  - Jog reached in 0.33 s.
+  - Zombie behind a house reaches you: 8.2 s. Zombie inside a house reaches you outside: 5.6–6.9 s.
+  - Max 3 attackers. Bat: 2.75 swings per kill.
 
 **Session 4 (networks + CCTV) is complete and pushed.**
 - Every building with a computer has a LAN:

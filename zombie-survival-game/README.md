@@ -10,7 +10,8 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 | ------ | ------- |
 | Move | W A S D |
 | Look | Mouse |
-| Sprint | Shift (uses stamina) |
+| Sprint | Shift (uses stamina; run dry and you're winded) |
+| Walk quietly | Alt (hold) |
 | Crouch | C (quieter and harder to see) |
 | Jump | Space |
 | Attack / shoot | Left click |
@@ -23,6 +24,17 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 | Switch weapons | 1–5, 0 to holster |
 | Flashlight | F |
 | Pause | Esc |
+
+### How the mechanics are tuned
+
+Every gameplay number lives in `src/sim/tuning.ts`, with the reasoning written next to it. `src/sim/tuning.test.ts` enforces the design targets, for example:
+- A full bar of stamina sprints for 10–13 s; running dry leaves you winded for 3–5 s.
+- Jogging (3.1 m/s) slowly outpaces a normal zombie (2.0–2.9 m/s), a runner (about 1 in 8) catches a jogger, and only a sprint escapes it.
+- A zombie notices you standing still in daylight at 25 m after 1.5–4 s, and a sprinting player at 8 m almost instantly. Crouched at night 12 m away, you're invisible, unless your flashlight is on.
+- The axe kills in 2 hits, the bat and knife in 3, fists in 10. Hitting a knocked-down zombie does double damage.
+- At most 3 zombies can attack you at once; the rest crowd behind.
+
+Zombies build awareness gradually (they stop and stare before they charge), path around buildings with A* on a navigation grid, use doorways, and guess where you went when they lose sight of you.
 
 ### Survival tips
 
@@ -50,6 +62,8 @@ src/
     computer.ts        Virtual filesystem and Unix-like shell for in-game computers
     computerContent.ts Generated files, mail, programs and networks for each building
     network.ts         LAN model: hosts, services, addressing
+    nav.ts             Navigation grid and A* pathfinding with path smoothing
+    tuning.ts          Every gameplay number, with design targets in tuning.test.ts
     items.ts           Item definitions and loot tables
     rng.ts             Seeded random numbers
   game/

@@ -20,6 +20,12 @@ export interface ItemDef {
   /** Melee reach in metres. */
   reach?: number;
   stamina?: number;
+  /** Chance a hit knocks the zombie to the ground. */
+  knockdown?: number;
+  /** How many zombies one swing can hit. */
+  sweep?: number;
+  /** Shove distance per hit (m/s impulse). */
+  knockback?: number;
   magSize?: number;
   ammo?: string;
   /** Radius in metres that zombies can hear this weapon from. */
@@ -100,10 +106,13 @@ export const ITEMS: Record<string, ItemDef> = {
     name: "Kitchen Knife",
     category: "melee",
     weight: 0.3,
-    damage: 28,
-    attackInterval: 0.45,
+    damage: 34,
+    attackInterval: 0.5,
     reach: 1.5,
     stamina: 6,
+    knockdown: 0,
+    sweep: 1,
+    knockback: 1.2,
     noise: 3,
     description: "Fast, short reach.",
   },
@@ -116,6 +125,9 @@ export const ITEMS: Record<string, ItemDef> = {
     attackInterval: 0.75,
     reach: 2.0,
     stamina: 12,
+    knockdown: 0.3,
+    sweep: 2,
+    knockback: 4,
     noise: 4,
     description: "Reliable. Pushes them back.",
   },
@@ -128,6 +140,9 @@ export const ITEMS: Record<string, ItemDef> = {
     attackInterval: 1.05,
     reach: 2.1,
     stamina: 18,
+    knockdown: 0.2,
+    sweep: 2,
+    knockback: 3,
     noise: 4,
     description: "Heavy and slow, but it ends things.",
   },
@@ -140,7 +155,7 @@ export const ITEMS: Record<string, ItemDef> = {
     attackInterval: 0.22,
     magSize: 15,
     ammo: "ammo_9mm",
-    noise: 55,
+    noise: 60,
     description: "Loud. Every zombie nearby will hear it.",
   },
   note: {
@@ -165,10 +180,13 @@ export const FISTS: ItemDef = {
   name: "Fists",
   category: "melee",
   weight: 0,
-  damage: 12,
+  damage: 10,
   attackInterval: 0.55,
   reach: 1.3,
-  stamina: 8,
+  stamina: 7,
+  knockdown: 0.08,
+  sweep: 1,
+  knockback: 2,
   noise: 2,
   description: "Better than nothing. Barely.",
 };

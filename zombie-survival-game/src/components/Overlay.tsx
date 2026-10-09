@@ -12,6 +12,7 @@ const CONTROLS: [string, string][] = [
   ["Move", "W A S D"],
   ["Look", "Mouse"],
   ["Sprint", "Shift"],
+  ["Walk quietly", "Alt (hold)"],
   ["Crouch", "C"],
   ["Jump", "Space"],
   ["Attack / shoot", "Left click"],

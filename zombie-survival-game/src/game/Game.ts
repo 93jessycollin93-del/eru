@@ -16,12 +16,14 @@ import {
   isBleeding,
   moodles,
   pain,
+  spendStamina,
   strength,
   takePainkillers,
   updateBody,
   zombieHit,
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
+import { MELEE, FIREARM, ZOMBIE, meleeDamage, shotSpread, visibilityRange } from "../sim/tuning";
 import { boot, complete, createComputerState, isSecretInput, prompt as shellPrompt, submit } from "../sim/computer";
 import { COUNTY, TOWN, gameDate } from "../sim/computerContent";
 import type { GameStatus, HudMessage, HudState } from "./types";
@@ -31,6 +33,7 @@ import { PostFX, type Quality } from "./render/postfx";
 import { SkyDome } from "./render/sky";
 import { CctvSystem } from "./render/cctv";
 import type { NetworkSpec, NetworkView } from "../sim/network";
+import { blockBox, createNavGrid, findPath, type NavGrid } from "../sim/nav";
 import { TextureLibrary } from "./render/textures";
 import { Terrain } from "./world/terrain";
 import { generateTown, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
@@ -87,7 +90,13 @@ export class Game {
   private attackCooldown = 0;
   private swingTime = 0;
   private swingDuration = 0;
-  private swingResolved = true;
+  private swingHits = new Set<Zombie>();
+  private hitStop = 0;
+  /** Zombies currently allowed to attack (only a few at once). */
+  private attackers = new Set<Zombie>();
+  private nav!: NavGrid;
+  /** Path searches left this frame (they're the most expensive AI step). */
+  private pathBudget = 0;
   private reloadTimer = 0;
 
   private flashlight: THREE.SpotLight;
@@ -173,6 +182,11 @@ export class Game {
     this.scene.add(generateVegetation(rng, this.terrain, this.colliders, this.town.occupied));
     for (const b of this.town.buildings) {
       if (b.network && b.cameraMounts) this.cctv.setup(b.network, b.cameraMounts);
+    }
+    // Navigation grid over the town: anything at body height blocks walking.
+    this.nav = createNavGrid(-135, -135, 270, 270, 0.25);
+    for (const box of this.colliders.boxes) {
+      if (box.minY < 1.2 && box.maxY > 0.35) blockBox(this.nav, box, 0.3);
     }
   }
 
@@ -837,15 +851,16 @@ export class Game {
 
   private startSwing(weapon: ItemDef) {
     const p = this.player;
-    if (p.body.stamina < (weapon.stamina ?? 5) * 0.4) {
+    const cost = weapon.stamina ?? 5;
+    if (p.body.stamina < cost * 0.4) {
       this.message("Too tired to swing.", "warn");
       this.attackCooldown = 0.6;
       return;
     }
-    p.body.stamina = Math.max(0, p.body.stamina - (weapon.stamina ?? 5));
+    spendStamina(p.body, cost);
     this.swingDuration = (weapon.attackInterval ?? 0.6) * 0.9;
     this.swingTime = 0.0001;
-    this.swingResolved = false;
+    this.swingHits.clear();
     this.attackCooldown = weapon.attackInterval ?? 0.6;
     this.audio.swing();
   }
@@ -853,16 +868,18 @@ export class Game {
   private updateCombat(dt: number) {
     const p = this.player;
     if (this.swingTime > 0) {
-      this.swingTime += dt;
-      const t = this.swingTime / this.swingDuration;
-      p.attackAnim = Math.min(1, t);
-      if (!this.swingResolved && t >= 0.45) {
-        this.swingResolved = true;
-        this.resolveMelee(this.weaponDef());
-      }
-      if (t >= 1) {
-        this.swingTime = 0;
-        p.attackAnim = 0;
+      if (this.hitStop > 0) {
+        // Impact freeze: hold the swing for a beat so the hit lands with weight.
+        this.hitStop -= dt;
+      } else {
+        this.swingTime += dt;
+        const t = this.swingTime / this.swingDuration;
+        p.attackAnim = Math.min(1, t);
+        if (t >= MELEE.activeFrom && t <= MELEE.activeTo) this.sweepMelee(this.weaponDef());
+        if (t >= 1) {
+          this.swingTime = 0;
+          p.attackAnim = 0;
+        }
       }
     }
 
@@ -872,31 +889,36 @@ export class Game {
     }
   }
 
-  private resolveMelee(weapon: ItemDef) {
+  /** Check the swing arc this frame; heavy weapons can catch more than one zombie. */
+  private sweepMelee(weapon: ItemDef) {
     const p = this.player;
+    const maxTargets = weapon.sweep ?? 1;
+    if (this.swingHits.size >= maxTargets) return;
     const fwd = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
-    const reach = (weapon.reach ?? 1.3) + 0.35;
-    let best: Zombie | null = null;
-    let bestDist = Infinity;
-    for (const z of this.zombies) {
-      if (!z.alive) continue;
-      const to = z.pos.clone().sub(p.pos).setY(0);
-      const d = to.length();
-      if (d > reach || d < 0.001) continue;
-      if (to.normalize().dot(fwd) < 0.35) continue;
-      if (d < bestDist) {
-        best = z;
-        bestDist = d;
+    const reach = (weapon.reach ?? 1.3) + ZOMBIE.radius;
+    const candidates = this.zombies
+      .filter((z) => z.alive && !this.swingHits.has(z))
+      .map((z) => ({ z, to: z.pos.clone().sub(p.pos).setY(0) }))
+      .filter(({ to }) => {
+        const d = to.length();
+        return d <= reach && d > 0.001 && to.normalize().dot(fwd) >= MELEE.arcCos;
+      })
+      .sort((a, b) => a.z.pos.distanceToSquared(p.pos) - b.z.pos.distanceToSquared(p.pos));
+    for (const { z } of candidates) {
+      if (this.swingHits.size >= maxTargets) break;
+      const first = this.swingHits.size === 0;
+      this.swingHits.add(z);
+      const crit = Math.random() < MELEE.critChance;
+      const dmg = meleeDamage(weapon.damage ?? 10, strength(p.body), crit, z.isDown);
+      const knockdown = !z.isDown && Math.random() < (weapon.knockdown ?? 0);
+      if (first) {
+        this.hitStop = MELEE.hitStop;
+        this.audio.hit();
+        p.addShake(0.12);
+        this.noises.push({ pos: p.pos.clone(), radius: weapon.noise ?? 3, ttl: 0.4 });
       }
+      if (z.hit(dmg, p.pos, weapon.knockback ?? 1.5, knockdown)) this.onZombieKilled();
     }
-    if (!best) return;
-    const tired = strength(p.body);
-    const crit = Math.random() < 0.12;
-    const dmg = (weapon.damage ?? 10) * tired * (crit ? 2.2 : 1);
-    const knock = weapon.id === "baseball_bat" ? 4 : weapon.id === "fire_axe" ? 3 : weapon.id === "fists" ? 2 : 1.2;
-    this.audio.hit();
-    this.noises.push({ pos: p.pos.clone(), radius: weapon.noise ?? 3, ttl: 0.4 });
-    if (best.hit(dmg, p.pos, knock)) this.onZombieKilled();
   }
 
   private fire(weapon: ItemDef) {
@@ -913,8 +935,7 @@ export class Game {
     this.attackCooldown = weapon.attackInterval ?? 0.25;
     this.audio.gunshot();
     const p = this.player;
-    this.noises.push({ pos: p.pos.clone(), radius: weapon.noise ?? 50, ttl: 0.5 });
-    p.pitch += 0.025; // recoil
+    this.noises.push({ pos: p.pos.clone(), radius: weapon.noise ?? 60, ttl: 0.5 });
 
     const hand = new THREE.Vector3();
     p.model.hand.getWorldPosition(hand);
@@ -922,15 +943,21 @@ export class Game {
     this.muzzle.intensity = 40;
     this.muzzleTimer = 0.05;
 
-    // Shoot from the camera through the crosshair, with spread when not aiming.
-    const spread = (p.aiming ? 0.008 : 0.06) * aimSway(p.body);
+    // Shoot from the camera through the crosshair. Spread depends on how far
+    // you've aimed in, how fast you're moving, and the state of your body.
+    const spread = shotSpread(p.aimProgress, p.speed, aimSway(p.body));
     const dir = new THREE.Vector3();
     this.camera.updateMatrixWorld();
     this.camera.getWorldDirection(dir);
-    dir.x += (Math.random() - 0.5) * spread;
-    dir.y += (Math.random() - 0.5) * spread;
-    dir.z += (Math.random() - 0.5) * spread;
-    dir.normalize();
+    // Uniform within a cone rather than a square.
+    const ang = Math.random() * Math.PI * 2;
+    const rad = Math.sqrt(Math.random()) * spread;
+    const up = new THREE.Vector3(0, 1, 0);
+    const side = new THREE.Vector3().crossVectors(dir, up).normalize();
+    const upv = new THREE.Vector3().crossVectors(side, dir).normalize();
+    dir.addScaledVector(side, Math.cos(ang) * rad).addScaledVector(upv, Math.sin(ang) * rad).normalize();
+    p.addRecoil();
+    p.addShake(0.06);
     const origin = this.camera.position.clone();
     // Ignore anything between the camera and the player.
     const chest = p.pos.clone().setY(p.pos.y + 1.3);
@@ -939,31 +966,36 @@ export class Game {
 
     let hitZombie: Zombie | null = null;
     let hitT = wallT;
-    let headshot = false;
+    let part: "head" | "body" | "legs" = "body";
     const tmp = new THREE.Vector3();
     for (const z of this.zombies) {
       if (!z.alive || z.pos.distanceTo(p.pos) > 120) continue;
-      const parts: [number, number, boolean][] = [
-        [1.66, 0.17, true],
-        [1.2, 0.3, false],
-        [0.55, 0.28, false],
-      ];
-      for (const [h, r, head] of parts) {
+      // A downed zombie lies flat; test a low body instead.
+      const parts: [number, number, "head" | "body" | "legs"][] = z.isDown
+        ? [[0.2, 0.35, "body"]]
+        : [
+            [1.66, 0.15, "head"],
+            [1.2, 0.28, "body"],
+            [0.9, 0.24, "body"],
+            [0.45, 0.22, "legs"],
+          ];
+      for (const [h, r, which] of parts) {
         tmp.set(z.pos.x, z.pos.y + h, z.pos.z);
         const t = raySphere(origin, dir, tmp, r);
         if (t !== null && t > tMin && t < hitT) {
           hitT = t;
           hitZombie = z;
-          headshot = head;
+          part = which;
         }
       }
     }
     if (hitZombie) {
-      const dmg = headshot ? 200 : weapon.damage ?? 40;
+      const base = weapon.damage ?? 40;
+      const dmg = part === "head" ? FIREARM.headshotDamage : part === "legs" ? base * FIREARM.legDamageFactor : base;
       this.audio.hit();
       if (hitZombie.hit(dmg, p.pos, 1.5)) {
         this.onZombieKilled();
-        if (headshot) this.message("Headshot.", "good");
+        if (part === "head") this.message("Headshot.", "good");
       }
     }
   }
@@ -1018,24 +1050,49 @@ export class Game {
   private zombieContext(dt: number) {
     const p = this.player;
     const daylight = this.env.daylight(this.minutes % 1440);
-    let visibility = 9 + daylight * 26;
-    if (p.crouching) visibility *= 0.55;
-    if (this.flashlightOn && daylight < 0.5) visibility = Math.max(visibility, 30);
     return {
       dt,
       playerPos: p.pos,
+      playerVel: p.vel,
       playerAlive: this.status === "playing",
-      visibility,
+      playerMoving: p.speed > 0.5,
+      playerSprinting: p.sprinting,
+      playerCrouching: p.crouching,
+      visibility: visibilityRange(daylight, this.flashlightOn, p.crouching),
       footstepRadius: p.footstepRadius,
       noises: this.noises,
       colliders: this.colliders,
       terrain: this.terrain,
+      canAttack: (z: Zombie) => this.attackers.has(z),
       onAttack: (z: Zombie) => this.onZombieAttack(z),
+      findPath: (from: THREE.Vector3, to: THREE.Vector3) => {
+        if (this.pathBudget <= 0) return undefined;
+        this.pathBudget--;
+        return findPath(this.nav, from.x, from.z, to.x, to.z, 9000);
+      },
+      onNotice: (z: Zombie) => {
+        // A groan as it commits: your cue that you've been seen.
+        const to = z.pos.clone().sub(p.pos);
+        const right = new THREE.Vector3(-Math.cos(p.yaw), 0, Math.sin(p.yaw));
+        this.audio.groan(to.length(), to.normalize().dot(right), true);
+      },
     };
+  }
+
+  /** Hand out attack slots: the closest few hunting zombies, keeping ones already mid-swing. */
+  private assignAttackers() {
+    const p = this.player;
+    const reach = ZOMBIE.attackRange + 0.7;
+    const close = this.zombies
+      .filter((z) => z.hunting && z.pos.distanceTo(p.pos) < reach)
+      .sort((a, b) => Number(b.attacking) - Number(a.attacking) || a.pos.distanceToSquared(p.pos) - b.pos.distanceToSquared(p.pos));
+    this.attackers = new Set(close.slice(0, ZOMBIE.maxAttackers));
   }
 
   private updateZombies(dt: number) {
     const p = this.player;
+    this.assignAttackers();
+    this.pathBudget = 2;
     const ctx = this.zombieContext(dt);
     const near: Zombie[] = [];
     for (const z of this.zombies) {
@@ -1104,7 +1161,8 @@ export class Game {
     else if (w.kind === "laceration") this.message(`A deep gash on your ${where}. You're bleeding.`, "danger");
     else this.message(`Scratched on the ${where}.`, "warn");
     // Being grabbed slows you down.
-    p.speed *= 0.3;
+    p.slow(0.3);
+    p.addShake(0.5);
     void z;
   }
 
