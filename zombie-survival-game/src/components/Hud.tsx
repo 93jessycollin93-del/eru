@@ -74,7 +74,12 @@ const Hud = ({ hud }: HudProps) => {
           {Math.round(hud.airTemp)}°C {hud.sheltered ? "· indoors" : ""}
         </div>
         <div className="max-w-[16rem] truncate text-sm text-stone-300">{hud.location ?? hud.townName}</div>
-        {!hud.gridOn && <div className="text-xs uppercase tracking-[0.2em] text-amber-300/80">Power out</div>}
+        {hud.power && (
+          <div className={`text-xs uppercase tracking-[0.2em] ${hud.power === "none" ? "text-stone-500" : hud.power === "ups" ? "text-amber-300/80" : "text-lime-300/80"}`}>
+            {hud.power === "grid" ? "Mains power" : hud.power === "generator" ? "Generator power" : hud.power === "ups" ? "Battery backup" : "No power"}
+          </div>
+        )}
+        {!hud.gridOn && !hud.power && <div className="text-xs uppercase tracking-[0.2em] text-amber-300/80">Grid down</div>}
         {hud.flashlight && <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">Flashlight on</div>}
       </div>
 

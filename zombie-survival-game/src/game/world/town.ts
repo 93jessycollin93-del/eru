@@ -23,6 +23,8 @@ export interface LootContainer {
   items: ItemStack[] | null;
   /** Placed items added to the roll (notes, supply caches). */
   preset?: ItemStack[];
+  /** Litres left in a car's tank, for siphoning. */
+  fuel?: number;
 }
 
 export interface ComputerSpot {
@@ -49,6 +51,8 @@ export interface Building {
   computer?: ComputerSpot;
   /** The building's LAN (routers, servers, cameras), if it has electronics. */
   network?: NetworkSpec;
+  /** Standby generator outside the building, if it has one. */
+  standby?: { x: number; y: number; z: number };
   /** World-space CCTV mounts: where each camera sits and what it looks at. */
   cameraMounts?: Partial<Record<"front" | "side" | "desk" | "back", { pos: THREE.Vector3; target: THREE.Vector3 }>>;
 }
@@ -414,6 +418,15 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       container("Evidence Cabinet", "police_locker", inner.x1 - 0.7, 0, inner.z0 + 0.1, inner.x1 - 0.1, 1.4, inner.z0 + 1.6, metalMat);
       // Blue stripe on the facade
       box(-hw, 2.2, hd, hw, 2.45, hd + 0.05, mb.material("#2c4a7a"), false);
+      // Standby generator in a steel enclosure against the side wall.
+      const genMat = mb.material("#5b6158", { metalness: 0.3, roughness: 0.7 }, "metal");
+      box(-hw - 1.3, 0, -1.2, -hw - 0.2, 1.15, 0.6, genMat, true, false);
+      box(-hw - 1.25, 1.15, -1.15, -hw - 0.25, 1.22, 0.55, mb.material("#3d413b"), false);
+      // Exhaust stack
+      box(-hw - 1.1, 1.22, 0.2, -hw - 0.95, 1.6, 0.35, mb.material("#2b2b2b"), false);
+      const sp = new THREE.Vector3(-hw - 0.75, 0.6, -0.3).applyMatrix4(m);
+      building.standby = { x: sp.x, y: sp.y, z: sp.z };
+
       // CCTV cameras: two watching outside, two inside.
       const camMat = mb.material("#d6d4cc", { roughness: 0.4 });
       const lensMat = mb.material("#101214", { roughness: 0.2, metalness: 0.6 });
@@ -532,6 +545,13 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     makeStack("water_bottle", 1),
   ];
 
+  // One hardware store still has a generator in stock.
+  const hw = buildings.find((b) => b.type === "hardware");
+  if (hw?.containers.length) {
+    const shelf = hw.containers[0];
+    shelf.preset = [...(shelf.preset ?? []), makeStack("portable_generator"), { ...makeStack("jerry_can"), fuel: 0 }];
+  }
+
   for (const { b, spot, contentType } of pendingComputers) {
     const gen =
       contentType === "police"
@@ -582,7 +602,9 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     const hz = Math.abs(Math.sin(yaw)) * 0.9 + Math.abs(Math.cos(yaw)) * 2.15;
     const y = terrain.height(x, z);
     colliders.add({ minX: x - hx, maxX: x + hx, minY: y, maxY: y + 1.6, minZ: z - hz, maxZ: z + hz, occludes: false });
-    containers.push({ id: containerId++, name: "Car", table: "car", x, y: y + 0.8, z, hx, hz, items: null });
+    // Most tanks were drained in the evacuation; a few still hold something.
+    const fuel = rng() < 0.45 ? 0 : Math.round(range(rng, 1.5, 22) * 10) / 10;
+    containers.push({ id: containerId++, name: "Car", table: "car", x, y: y + 0.8, z, hx, hz, items: null, fuel });
   };
 
   for (const r of hRoads) {

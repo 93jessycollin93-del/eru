@@ -40,6 +40,34 @@ export class AudioSystem {
     src.start();
   }
 
+  private hum: GainNode | null = null;
+
+  /** Continuous engine drone for nearby generators (0 = silent). */
+  setHum(level: number) {
+    if (!this.ctx || !this.master) return;
+    if (!this.hum) {
+      const o = this.ctx.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.value = 58;
+      const o2 = this.ctx.createOscillator();
+      o2.type = "square";
+      o2.frequency.value = 116.5;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 320;
+      this.hum = this.ctx.createGain();
+      this.hum.gain.value = 0;
+      const mix = this.ctx.createGain();
+      mix.gain.value = 0.5;
+      o.connect(lp);
+      o2.connect(mix).connect(lp);
+      lp.connect(this.hum).connect(this.master);
+      o.start();
+      o2.start();
+    }
+    this.hum.gain.setTargetAtTime(level * 0.12, this.ctx.currentTime, 0.2);
+  }
+
   suspend() {
     void this.ctx?.suspend();
   }

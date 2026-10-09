@@ -10,6 +10,7 @@ export interface InventoryActions {
   takeAll: () => void;
   put: (uid: number) => void;
   treat: (woundId: number) => void;
+  siphon: () => void;
   close: () => void;
 }
 
@@ -35,6 +36,8 @@ const useLabel = (s: ItemStack, equippedUid: number | null) => {
       return "Use";
     case "note":
       return "Read";
+    case "tool":
+      return def.generator ? "Place" : null;
     case "melee":
     case "firearm":
       return s.uid === equippedUid ? "Unequip" : "Equip";
@@ -57,7 +60,11 @@ const Btn = ({ onClick, children, quiet }: { onClick: () => void; children: Reac
 const ItemRow = ({ stack, children }: { stack: ItemStack; children: ReactNode }) => {
   const def = ITEMS[stack.id];
   const detail =
-    def.category === "firearm"
+    def.fuelCapacity !== undefined
+      ? `${(stack.fuel ?? 0).toFixed(1)} / ${def.fuelCapacity} L`
+      : def.generator
+        ? `${(stack.fuel ?? 0).toFixed(1)} L in tank`
+        : def.category === "firearm"
       ? `${stack.loaded ?? 0}/${def.magSize} loaded`
       : stack.count > 1
         ? `×${stack.count}`
@@ -70,7 +77,7 @@ const ItemRow = ({ stack, children }: { stack: ItemStack; children: ReactNode })
           {detail && <span className="text-sm tabular-nums text-stone-400">{detail}</span>}
         </div>
         <div className="truncate text-xs text-stone-500">
-          {categoryLabel[def.category]} · {(def.weight * stack.count).toFixed(2)} kg · {def.description}
+          {categoryLabel[def.category]} · {(def.weight * stack.count + (stack.fuel ?? 0) * 0.74).toFixed(2)} kg · {def.description}
         </div>
       </div>
       <div className="flex shrink-0 gap-1">{children}</div>
@@ -129,7 +136,16 @@ const Inventory = ({ hud, actions }: { hud: HudState; actions: InventoryActions 
           {hud.container && (
             <Panel
               title={hud.container.name}
-              aside={hud.container.items.length > 1 ? <Btn onClick={actions.takeAll}>Take all</Btn> : undefined}
+              aside={
+                <div className="flex gap-1">
+                  {hud.containerFuel !== null && (
+                    <Btn quiet onClick={actions.siphon}>
+                      Siphon fuel ({hud.containerFuel.toFixed(1)} L)
+                    </Btn>
+                  )}
+                  {hud.container.items.length > 1 && <Btn onClick={actions.takeAll}>Take all</Btn>}
+                </div>
+              }
             >
               {hud.container.items.length === 0 && <li className="px-3 py-4 text-stone-500">Nothing useful here.</li>}
               {hud.container.items.map((s) => (

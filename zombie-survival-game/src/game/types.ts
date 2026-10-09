@@ -70,6 +70,25 @@ export interface HudState {
     password: boolean;
   } | null;
   reading: { title: string; text: string } | null;
+  generator: {
+    name: string;
+    running: boolean;
+    tripped: boolean;
+    fuelL: number;
+    tankL: number;
+    ratedW: number;
+    loadW: number;
+    connectedTo: string | null;
+    portable: boolean;
+    autoStart: boolean;
+    inReach: string | null;
+    canRefuel: boolean;
+    fuelCarried: number;
+  } | null;
+  /** Power source of the building you're in. */
+  power: "grid" | "generator" | "ups" | "none" | null;
+  /** Litres left in the car being searched. */
+  containerFuel: number | null;
   /** Camera viewer opened from a terminal. */
   cctv: { nvr: string; channels: { channel: number; label: string; online: boolean }[] } | null;
   /** Street address when inside a building. */

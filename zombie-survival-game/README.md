@@ -21,6 +21,7 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 | Inventory and health | Tab |
 | Bandage worst wound | B |
 | Sleep / get up | Z |
+| Lights on/off (inside a building) | L |
 | Switch weapons | 1–5, 0 to holster |
 | Flashlight | F |
 | Pause | Esc |
@@ -45,6 +46,9 @@ Zombies build awareness gradually (they stop and stare before they charge), path
 - **Bites are a death sentence.** Like Project Zomboid, there is no cure. Scratches and lacerations can infect you too. The infection is silent at first, then you feel queasy, then feverish, and then you come back as one of them.
 - **Computers work.** Police terminals, shop tills and family laptops boot into a real command line (`help`, `ls`, `cd`, `cat`, `grep`, `mail`, pipes, Tab completion). Passwords are written on notes hidden in the same building. Read the mail: some of it tells you where help was left behind. Desktops need mains power, and the grid fails a few days in; laptops run on battery.
 - **Buildings have real networks.** Use `ip addr`, `ping`, `arp -a`, `nmap` and `curl` to explore a building's LAN, and `ssh user@host` to log into other machines (the police file server reuses the workstation password, just like real offices). Routers, printers, smart TVs, servers and cameras all answer only while they have power.
+- **Electricity is simulated.** Every building has a circuit (lights, network gear, computers, appliances, a laptop charger). Power comes from the grid until it fails, then from a generator if one is connected and running, then from a UPS battery that only carries critical equipment. Generators burn fuel according to the load they carry (a 3 kW unit uses about 0.3 L/h idling, 1.4 L/h flat out), trip their breaker if overloaded, and are loud enough to draw zombies from 30–40 m.
+- **Bring the power back.** The police station's standby generator was drained for the evacuation; refuel it and it starts by itself. A hardware store still has a portable generator in stock: carry it (24 kg), set it down outside a house, run the cable in, fuel it and start it. Find jerry cans in hardware stores and car trunks, and siphon fuel from cars.
+- **Light gives you away.** Lights left on light up windows at night and draw zombies. Press L to switch a building's lights off.
 - **Live CCTV.** The police station has four network cameras covering the entrance, the parking lot, the front desk and the cells. Run `cctv` on the dispatch terminal to watch them live, with infrared at night. Check the street before you leave. The station's network closet runs on a UPS for about 8 hours after the grid dies.
 - **Nights are cold.** Stay indoors after dark. Rest when you're tired (Z), but never with zombies nearby.
 - **Watch your weight.** Carrying more than 20 kg slows you down and stops you sprinting.
@@ -64,12 +68,14 @@ src/
     network.ts         LAN model: hosts, services, addressing
     nav.ts             Navigation grid and A* pathfinding with path smoothing
     tuning.ts          Every gameplay number, with design targets in tuning.test.ts
+    power.ts           Building circuits, grid, generators (fuel, breakers, auto-start), UPS
     items.ts           Item definitions and loot tables
     rng.ts             Seeded random numbers
   game/
     Game.ts            Main loop: connects world, player, zombies, combat, loot and HUD
     audio.ts           Synthesised sound effects
     input.ts           Keyboard and mouse
+    electricity.ts     Runtime power: generator objects, interior lights, generator noise, light lure
     entities/
       player.ts        Movement, stamina, survival stats, third-person camera
       zombie.ts        Zombie senses and behaviour

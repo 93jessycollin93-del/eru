@@ -22,6 +22,7 @@ const CONTROLS: [string, string][] = [
   ["Inventory / health", "Tab"],
   ["Bandage worst wound", "B"],
   ["Sleep", "Z"],
+  ["Lights (in a building)", "L"],
   ["Weapons", "1–5, 0 to holster"],
   ["Flashlight", "F"],
   ["Pause", "Esc"],
@@ -77,7 +78,7 @@ const QualityToggle = ({ value, onChange }: { value: "low" | "high"; onChange: (
 const Overlay = ({ hud, onStart, onResume, onQuality }: OverlayProps) => {
   if (hud.status === "playing") {
     // Mouse was released (e.g. Esc closed a menu): one click recaptures it.
-    if (!hud.locked && !hud.inventoryOpen && !hud.container && !hud.computer && !hud.reading) {
+    if (!hud.locked && !hud.inventoryOpen && !hud.container && !hud.computer && !hud.reading && !hud.generator) {
       return (
         <button
           onClick={onResume}

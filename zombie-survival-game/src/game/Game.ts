@@ -32,6 +32,8 @@ import { Environment } from "./world/environment";
 import { PostFX, type Quality } from "./render/postfx";
 import { SkyDome } from "./render/sky";
 import { CctvSystem } from "./render/cctv";
+import { Electricity, type GeneratorObject } from "./electricity";
+import { refuel, resetBreaker, startGenerator } from "../sim/power";
 import type { NetworkSpec, NetworkView } from "../sim/network";
 import { blockBox, createNavGrid, findPath, type NavGrid } from "../sim/nav";
 import { TextureLibrary } from "./render/textures";
@@ -111,7 +113,8 @@ export class Game {
   private computerSpot: ComputerSpot | null = null;
   private computerOpenedAt = 0;
   private reading: { title: string; text: string } | null = null;
-  private gridWasOn = true;
+  private elec!: Electricity;
+  private generatorPanel: GeneratorObject | null = null;
   private batteryTimer = 0;
   private location: string | null = null;
   private textures: TextureLibrary;
@@ -183,6 +186,8 @@ export class Game {
     for (const b of this.town.buildings) {
       if (b.network && b.cameraMounts) this.cctv.setup(b.network, b.cameraMounts);
     }
+    this.elec = new Electricity(this.scene, this.town);
+    this.elec.reset(this.rng, (this.town.facts.powerOffDay - 1) * 1440 + 6 * 60);
     // Navigation grid over the town: anything at body height blocks walking.
     this.nav = createNavGrid(-135, -135, 270, 270, 0.25);
     for (const box of this.colliders.boxes) {
@@ -257,7 +262,9 @@ export class Game {
     this.computerSpot = null;
     this.reading = null;
     this.cctvOpen = false;
-    this.gridWasOn = true;
+    this.generatorPanel = null;
+    this.elec.reset(this.rng, (this.town.facts.powerOffDay - 1) * 1440 + 6 * 60);
+    this.generatorPanel = null;
     for (const c of this.town.computers) c.state = createComputerState(c.state.def, c.initialBattery);
 
     const spawn = this.town.playerSpawn;
@@ -304,7 +311,7 @@ export class Game {
   }
 
   private uiOpen() {
-    return this.inventoryOpen || !!this.container || !!this.computerSpot || !!this.reading;
+    return this.inventoryOpen || !!this.container || !!this.computerSpot || !!this.reading || !!this.generatorPanel;
   }
 
   toggleInventory() {
@@ -325,6 +332,7 @@ export class Game {
     this.computerSpot = null;
     this.reading = null;
     this.cctvOpen = false;
+    this.generatorPanel = null;
     this.input.reset();
     if (this.status === "playing" && gesture) this.requestLock();
     this.emitHud();
@@ -363,6 +371,16 @@ export class Game {
       case "firearm":
         this.setEquipped(this.equippedUid === uid ? null : uid);
         break;
+      case "tool":
+        if (def.generator) {
+          const p = this.player;
+          const pos = p.pos.clone().add(new THREE.Vector3(Math.sin(p.bodyYaw) * 1.2, 0, Math.cos(p.bodyYaw) * 1.2));
+          pos.y = this.terrain.height(pos.x, pos.z);
+          this.elec.placePortable(pos, def.generator.ratedW, def.generator.tankL, Math.min(stack.fuel ?? 0, def.generator.tankL), def.generator.noise);
+          this.inventory = this.inventory.filter((s) => s !== stack);
+          this.message("You set the generator down. Press E on it to connect, fuel and start it.", "info");
+        }
+        break;
       case "note":
         this.reading = { title: stack.title ?? "Note", text: stack.text ?? "" };
         this.inventoryOpen = false;
@@ -399,7 +417,10 @@ export class Game {
     if (self?.state.def.net?.ip === ip) return this.computerPowered(self);
     const host = spec.hosts.find((h) => h.ip === ip);
     if (!host) return false;
-    return this.gridOn() || this.onUps(spec);
+    const b = this.town.buildings.find((bb) => bb.network === spec);
+    if (host.kind === "computer") return this.elec.powered(b, "computer");
+    if (host.kind === "tv") return this.elec.powered(b, "appliances");
+    return this.elec.powered(b, "network");
   }
 
   private networkView(c: ComputerSpot): NetworkView | undefined {
@@ -420,19 +441,120 @@ export class Game {
 
   /** Is the town grid still live? It fails at 06:00 on the power-off day. */
   private gridOn() {
-    return this.minutes < (this.town.facts.powerOffDay - 1) * 1440 + 6 * 60;
+    return this.elec.gridUp(this.minutes);
   }
 
   private computerPowered(c: ComputerSpot) {
     if (c.kind === "laptop") return (c.state.battery ?? 0) > 0;
-    return this.gridOn() || this.onUps(this.networkOf(c));
+    return this.elec.powered(this.town.buildings.find((b) => b.computer === c), "computer");
   }
 
-  /** True while a building's UPS is still carrying its load after the grid failed. */
-  private onUps(spec: NetworkSpec | undefined) {
-    if (!spec || spec.upsMinutes <= 0) return false;
-    const gridOffAt = (this.town.facts.powerOffDay - 1) * 1440 + 6 * 60;
-    return this.minutes - gridOffAt < spec.upsMinutes;
+  private buildingObj(x: number, z: number) {
+    return this.town.buildings.find((b) => x > b.rect.minX && x < b.rect.maxX && z > b.rect.minZ && z < b.rect.maxZ);
+  }
+
+  // ------------------------------------------------------------ generators
+
+  private openGenerator(g: GeneratorObject) {
+    this.generatorPanel = g;
+    this.inventoryOpen = false;
+    this.container = null;
+    this.releaseLock();
+    this.emitHud();
+  }
+
+  private fuelCan() {
+    return this.inventory.find((s) => s.id === "jerry_can" && (s.fuel ?? 0) > 0.05);
+  }
+
+  /** Buttons on the generator panel. */
+  generatorAction(action: "start" | "stop" | "refuel" | "reset" | "connect" | "disconnect" | "pickup") {
+    const obj = this.generatorPanel;
+    if (!obj) return;
+    const g = obj.gen;
+    switch (action) {
+      case "start": {
+        const why = startGenerator(g);
+        if (why) this.message(why, "warn");
+        else this.message("It coughs, catches, and roars to life.", "info");
+        break;
+      }
+      case "stop":
+        g.running = false;
+        this.message("The engine winds down.", "info");
+        break;
+      case "refuel": {
+        const can = this.fuelCan();
+        if (!can) {
+          this.message("You have no fuel.", "warn");
+          break;
+        }
+        const added = refuel(g, can.fuel ?? 0);
+        can.fuel = Math.round(((can.fuel ?? 0) - added) * 10) / 10;
+        this.message(added > 0 ? `You pour in ${added.toFixed(1)} L.` : "The tank is already full.", "info");
+        break;
+      }
+      case "reset": {
+        const why = resetBreaker(this.elec.world, g);
+        this.message(why ?? "Breaker reset.", why ? "warn" : "good");
+        break;
+      }
+      case "connect": {
+        const b = this.elec.buildingInReach(obj.x, obj.z);
+        if (!b) {
+          this.message("No building close enough to run a cable to.", "warn");
+          break;
+        }
+        if (this.elec.world.generators.some((o) => o !== g && o.buildingId === b.address)) {
+          this.message(`${b.address} already has a generator connected.`, "warn");
+          break;
+        }
+        g.buildingId = b.address;
+        this.message(`You run the cable into ${b.address} and plug it into the panel.`, "good");
+        break;
+      }
+      case "disconnect":
+        g.buildingId = null;
+        this.message("Cable unplugged.", "info");
+        break;
+      case "pickup": {
+        if (g.running) {
+          this.message("Turn it off first.", "warn");
+          break;
+        }
+        const def = ITEMS.portable_generator;
+        if (this.carryWeight() + def.weight + g.fuelL * 0.74 > MAX_WEIGHT * 1.5) {
+          this.message("Too heavy to carry with everything else you have.", "warn");
+          break;
+        }
+        this.elec.removePortable(obj);
+        this.addToInventory({ ...makeStack("portable_generator"), fuel: g.fuelL });
+        this.generatorPanel = null;
+        this.closeUi(true);
+        return;
+      }
+    }
+    this.emitHud();
+  }
+
+  /** Siphon fuel from the car you're searching into a jerry can. */
+  siphonFuel() {
+    const car = this.container;
+    if (!car || car.table !== "car") return;
+    const can = this.inventory.find((s) => s.id === "jerry_can" && (s.fuel ?? 0) < (ITEMS.jerry_can.fuelCapacity ?? 20) - 0.05);
+    if (!can) {
+      this.message("You need a jerry can with room in it.", "warn");
+      return;
+    }
+    if (!car.fuel) {
+      this.message("The tank is dry.", "warn");
+      return;
+    }
+    const take = Math.min(car.fuel, (ITEMS.jerry_can.fuelCapacity ?? 20) - (can.fuel ?? 0));
+    car.fuel = Math.round((car.fuel - take) * 10) / 10;
+    can.fuel = Math.round(((can.fuel ?? 0) + take) * 10) / 10;
+    this.message(`You siphon ${take.toFixed(1)} L. It tastes awful.`, "good");
+    this.emitHud();
   }
 
   private useComputer(c: ComputerSpot) {
@@ -685,7 +807,8 @@ export class Game {
     // Close the loot window if you get dragged away from it.
     if (this.container && this.distanceToContainer(this.container) > INTERACT_RANGE + 1) this.closeUi();
     if (this.computerSpot && this.distanceToContainer(this.computerSpot) > INTERACT_RANGE + 1) this.closeUi();
-    this.updateElectricity(dt);
+    this.updateElectricity(dt, gameMinutes);
+    if (this.generatorPanel && this.distanceToContainer(this.generatorPanel) > INTERACT_RANGE + 1) this.closeUi();
     if (this.cctvOpen && this.computerSpot) {
       const spec = this.networkOf(this.computerSpot);
       const day = Math.floor(this.minutes / 1440) + 1;
@@ -744,12 +867,23 @@ export class Game {
     }
   }
 
-  private updateElectricity(dt: number) {
-    const grid = this.gridOn();
-    if (this.gridWasOn && !grid) {
-      this.message("Somewhere a transformer bangs. The power is out across town.", "warn");
+  private updateElectricity(dt: number, gameMinutes: number) {
+    const dark = this.env.daylight(this.minutes % 1440) < 0.35;
+    const events = this.elec.step(dt, this.minutes, gameMinutes, this.player.pos, dark, this.noises);
+    for (const e of events) {
+      if (e.type === "gridDown") this.message("Somewhere a transformer bangs. The power is out across town.", "warn");
+      if (e.type === "generatorAutoStarted") this.message("In the distance, a big engine rumbles to life.", "info");
+      if (e.type === "generatorTripped") this.message("A generator's breaker trips: too much load.", "warn");
+      if (e.type === "generatorOutOfFuel") this.message("A generator sputters and dies. Out of fuel.", "warn");
     }
-    this.gridWasOn = grid;
+    const grid = this.gridOn();
+    this.audio.setHum(this.elec.humLevel(this.player.pos));
+    // Laptops recharge wherever their house has power.
+    for (const comp of this.town.computers) {
+      if (comp.kind !== "laptop" || comp.state.battery === null || comp.state.battery >= 100) continue;
+      const b = this.town.buildings.find((bb) => bb.computer === comp);
+      if (this.elec.powered(b, "charger")) comp.state.battery = Math.min(100, comp.state.battery + gameMinutes * 0.8);
+    }
     // Desktops die when their power does (grid, or UPS once it runs flat).
     for (const comp of this.town.computers) {
       if (comp.kind === "desktop" && comp.state.phase !== "off" && !this.computerPowered(comp)) {
@@ -781,7 +915,6 @@ export class Game {
       (comp.screen.material as THREE.MeshStandardMaterial).emissiveIntensity = on ? (comp === c ? 1.1 : 0.7) : 0;
     }
     // Street lamps light up after dusk while the grid is live.
-    const dark = this.env.daylight(this.minutes % 1440) < 0.35;
     this.town.lampMaterial.emissiveIntensity = grid && dark ? 2.2 : 0;
   }
 
@@ -806,9 +939,21 @@ export class Game {
     if (input.wasPressed("KeyR")) this.startReload();
     if (input.wasPressed("KeyZ")) this.trySleep();
     if (input.wasPressed("KeyB")) this.treatWound();
+    if (input.wasPressed("KeyL")) {
+      const b = this.buildingObj(this.player.pos.x, this.player.pos.z);
+      if (!b) this.message("There's no light switch out here.", "info");
+      else if (!this.elec.statusOf(b) || this.elec.statusOf(b)!.source === "none" || this.elec.statusOf(b)!.source === "ups") {
+        const on = this.elec.toggleLights(b);
+        this.message(on ? "You flick the switch. Nothing happens. No power." : "You flick the switch off.", "info");
+      } else {
+        const on = this.elec.toggleLights(b);
+        this.message(on ? "Lights on. Anything outside can see them." : "Lights off.", "info");
+      }
+    }
     if (input.wasPressed("KeyE")) {
       const target = this.nearestInteractable();
-      if (target?.type === "computer") this.useComputer(target.computer);
+      if (target?.type === "generator") this.openGenerator(target.generator);
+      else if (target?.type === "computer") this.useComputer(target.computer);
       else if (target?.type === "container") this.openContainer(target.container);
     }
     if (input.wasPressed("Escape") || input.wasPressed("KeyP")) this.pause();
@@ -1243,7 +1388,11 @@ export class Game {
   private nearestInteractable():
     | { type: "container"; container: LootContainer }
     | { type: "computer"; computer: ComputerSpot }
+    | { type: "generator"; generator: GeneratorObject }
     | null {
+    for (const g of this.elec.generators) {
+      if (this.distanceToContainer(g) < INTERACT_RANGE) return { type: "generator", generator: g };
+    }
     const container = this.nearestContainer();
     let computer: ComputerSpot | null = null;
     let best = INTERACT_RANGE;
@@ -1314,6 +1463,28 @@ export class Game {
     this.flashlight.target.position.copy(this.flashlight.position).addScaledVector(look, 10);
   }
 
+  private generatorView(obj: GeneratorObject) {
+    const g = obj.gen;
+    const circuit = g.buildingId ? this.elec.world.circuits[g.buildingId] : undefined;
+    const st = g.buildingId ? this.elec.status[g.buildingId] : undefined;
+    const load = circuit && st?.source === "generator" ? st.demandW : 0;
+    return {
+      name: g.name,
+      running: g.running,
+      tripped: g.tripped,
+      fuelL: g.fuelL,
+      tankL: g.tankL,
+      ratedW: g.ratedW,
+      loadW: load,
+      connectedTo: g.buildingId,
+      portable: g.portable,
+      autoStart: g.autoStart,
+      inReach: g.portable ? this.elec.buildingInReach(obj.x, obj.z)?.address ?? null : null,
+      canRefuel: !!this.fuelCan() && g.fuelL < g.tankL - 0.05,
+      fuelCarried: this.inventory.filter((s) => s.id === "jerry_can").reduce((n, s) => n + (s.fuel ?? 0), 0),
+    };
+  }
+
   private message(text: string, tone: HudMessage["tone"]) {
     const m = { id: this.messageId++, text, tone, until: performance.now() + 6000 };
     this.messages = [...this.messages.slice(-4), m];
@@ -1369,7 +1540,7 @@ export class Game {
         reloading: this.reloadTimer > 0,
       },
       hotbar: this.hotbar().map((s, i) => ({ slot: i + 1, name: ITEMS[s.id].name, active: s.uid === this.equippedUid })),
-      prompt: !target ? null : target.type === "computer" ? `Use ${target.computer.kind === "laptop" ? "laptop" : "computer"}` : `Search ${target.container.name}`,
+      prompt: !target ? null : target.type === "generator" ? `Inspect ${target.generator.gen.portable ? "generator" : "standby generator"}` : target.type === "computer" ? `Use ${target.computer.kind === "laptop" ? "laptop" : "computer"}` : `Search ${target.container.name}`,
       computer: comp
         ? {
             hostname: comp.state.def.hostname,
@@ -1381,6 +1552,14 @@ export class Game {
           }
         : null,
       reading: this.reading,
+      generator: this.generatorPanel ? this.generatorView(this.generatorPanel) : null,
+      power: (() => {
+        if (!this.town || !this.elec) return null;
+        const b = this.buildingObj(this.player.pos.x, this.player.pos.z);
+        const st = this.elec?.statusOf(b);
+        return b && st ? st.source : null;
+      })(),
+      containerFuel: this.container?.table === "car" ? this.container.fuel ?? 0 : null,
       cctv:
         this.cctvOpen && this.computerSpot
           ? { nvr: this.cctv.nvrName, channels: this.cctv.channels.map((ch) => ({ channel: ch.channel, label: ch.label, online: ch.online })) }

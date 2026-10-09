@@ -58,6 +58,11 @@ Each session below is roughly one working session. The order can change based on
 - Live CCTV feeds rendered from cameras in the 3D world, viewed from a terminal
 - UPS batteries keep network gear alive for hours after the grid fails
 
+## Session 6: Electricity ✅
+- Building circuits with loads; grid then generator then UPS; fuel burn by load; breaker trips; standby auto-start
+- Police standby generator, portable generator, jerry cans, siphoning fuel from cars
+- Interior lights, a light switch, light luring zombies at night, generator noise and hum; laptops recharge
+
 ## Session 3b: Doors, windows and barricades
 - Doors that open, close and lock; zombies bang on them and can break through
 - Climb and vault through windows (breaking the glass makes noise)

@@ -7,6 +7,7 @@ import Overlay from "@/components/Overlay";
 import ComputerScreen from "@/components/ComputerScreen";
 import NoteView from "@/components/NoteView";
 import CctvViewer from "@/components/CctvViewer";
+import GeneratorPanel from "@/components/GeneratorPanel";
 
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,6 +34,7 @@ const Index = () => {
       takeAll: () => gameRef.current?.takeAll(),
       put: (uid) => gameRef.current?.putInContainer(uid),
       treat: (woundId) => gameRef.current?.treatWound(woundId),
+      siphon: () => gameRef.current?.siphonFuel(),
       close: () => gameRef.current?.closeUi(),
     }),
     [],
@@ -57,6 +59,9 @@ const Index = () => {
           onComplete={(l) => gameRef.current?.computerComplete(l) ?? l}
           onClose={() => gameRef.current?.closeUi()}
         />
+      )}
+      {hud && hud.status === "playing" && hud.generator && (
+        <GeneratorPanel gen={hud.generator} onAction={(a) => gameRef.current?.generatorAction(a)} onClose={() => gameRef.current?.closeUi()} />
       )}
       {hud && hud.status === "playing" && hud.reading && <NoteView note={hud.reading} onClose={() => gameRef.current?.closeUi()} />}
       {hud && (

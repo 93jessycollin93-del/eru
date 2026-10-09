@@ -30,7 +30,14 @@ export interface ItemDef {
   ammo?: string;
   /** Radius in metres that zombies can hear this weapon from. */
   noise?: number;
+  /** Fuel containers: litres they hold. */
+  fuelCapacity?: number;
+  /** Placeable generator rating (W) and tank (L). */
+  generator?: { ratedW: number; tankL: number; noise: number };
 }
+
+/** Petrol weighs about 0.74 kg per litre. */
+export const FUEL_KG_PER_L = 0.74;
 
 export const ITEMS: Record<string, ItemDef> = {
   canned_beans: {
@@ -158,6 +165,22 @@ export const ITEMS: Record<string, ItemDef> = {
     noise: 60,
     description: "Loud. Every zombie nearby will hear it.",
   },
+  jerry_can: {
+    id: "jerry_can",
+    name: "Jerry Can",
+    category: "tool",
+    weight: 1.6,
+    fuelCapacity: 20,
+    description: "Steel fuel can, 20 litres. Heavy when full.",
+  },
+  portable_generator: {
+    id: "portable_generator",
+    name: "Portable Generator",
+    category: "tool",
+    weight: 24,
+    generator: { ratedW: 3000, tankL: 6, noise: 30 },
+    description: "3 kW petrol generator. Place it outside a building and run a cable in. Loud.",
+  },
   note: {
     id: "note",
     name: "Note",
@@ -198,6 +221,8 @@ export interface ItemStack {
   count: number;
   /** Rounds loaded, for firearms. */
   loaded?: number;
+  /** Litres of fuel, for fuel cans and generators. */
+  fuel?: number;
   /** Handwritten notes. */
   title?: string;
   text?: string;
@@ -212,7 +237,7 @@ export const makeStack = (id: string, count = 1, loaded?: number, note?: { title
   ...(note ?? {}),
 });
 
-export const stackWeight = (s: ItemStack) => ITEMS[s.id].weight * s.count;
+export const stackWeight = (s: ItemStack) => ITEMS[s.id].weight * s.count + (s.fuel ?? 0) * FUEL_KG_PER_L;
 
 /** Weighted loot tables per container kind. Each roll picks [itemId, min, max]. */
 type LootEntry = [string, number, number, number]; // id, weight, min, max
@@ -275,6 +300,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["baseball_bat", 2, 1, 1],
       ["kitchen_knife", 2, 1, 1],
       ["water_bottle", 1, 1, 1],
+      ["jerry_can", 3, 1, 1],
     ],
   },
   car: {
@@ -285,6 +311,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["cereal_bar", 3, 1, 2],
       ["bandage", 2, 1, 1],
       ["ammo_9mm", 1, 3, 8],
+      ["jerry_can", 1, 1, 1],
     ],
   },
 };
@@ -308,7 +335,10 @@ export function rollLoot(table: string, rng: () => number): ItemStack[] {
           else out.push(makeStack(id, count));
         } else {
           for (let c = 0; c < count; c++) {
-            out.push(makeStack(id, 1, def.category === "firearm" ? Math.floor(rng() * (def.magSize ?? 0)) : undefined));
+            const stack = makeStack(id, 1, def.category === "firearm" ? Math.floor(rng() * (def.magSize ?? 0)) : undefined);
+            // Most cans people left behind are empty; a few still slosh.
+            if (def.fuelCapacity) stack.fuel = rng() < 0.6 ? 0 : Math.round(rng() * def.fuelCapacity * 0.5 * 10) / 10;
+            out.push(stack);
           }
         }
         break;

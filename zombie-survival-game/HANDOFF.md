@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: end of session 5 — mechanics tuning + procedural skinned characters (2026-10-09)_
+_Last updated: end of session 6 — electricity, generators, fuel (2026-10-09)_
 
 ## The project
 
@@ -64,6 +64,7 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/sim/network.ts` | **Engine-agnostic** LAN model: `NetworkSpec` (cidr, gateway, hosts with services/MAC/vendor, `upsMinutes`), `NetworkView` (selfIp + `isUp(ip)` supplied by the game) |
 | `src/sim/tuning.ts` | **Every gameplay number** (movement, footsteps, stamina, zombie speeds, senses, melee, firearms) plus pure formulas (`sightRate`, `visibilityRange`, `meleeDamage`, `shotSpread`). Design targets are enforced in `tuning.test.ts`. **Change numbers here, never inline.** |
 | `src/sim/nav.ts` | Nav grid (0.25 m cells; cell-centre rasterisation keeps 1 m doorways open) + A* with typed-array workspaces (~1 ms per search) + string-pulling |
+| `src/sim/power.ts` | **Engine-agnostic power**: `PowerWorld` (gridFailsAt, circuits keyed by building address, generators), `stepPower` resolves grid → generator → UPS (critical loads only), burns fuel (`fuelPerHour`), trips breakers, auto-starts standby units; `defaultLoads(type)` per building type |
 | `src/sim/climate.ts` | Air temperature by time of day, day number and shelter |
 | `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables; seeded RNG |
 | `src/game/Game.ts` | Main loop and orchestration: pointer lock, combat, looting, inventory, zombie management, HUD emission (10 Hz via `onHud`) |
@@ -78,6 +79,7 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/game/world/builder.ts` | Merges static geometry per material; `material(color, opts, surface)` attaches procedural maps and projects world-space UVs |
 | `src/game/render/textures.ts` | `TextureLibrary`: procedural seamless surface maps (4D-noise torus sampling) |
 | `src/game/render/postfx.ts` | `PostFX`: EffectComposer chain and the Tarkov-style grade shader; `setQuality("high" or "low")` |
+| `src/game/electricity.ts` | `Electricity`: owns the PowerWorld; builds circuits (the police UPS is sized from `network.upsMinutes`); generator objects (the standby at `building.standby`, portables placed by the player); a pool of 4 interior PointLights for lit buildings near the player at night; generator noise every 1.5 s; light lure (noise radius 16 every 3 s) for lit buildings at night; `humLevel` for the engine drone |
 | `src/game/render/cctv.ts` | `CctvSystem`: one PerspectiveCamera per camera host at the building's `cameraMounts`; renders one channel every 0.16 s to a render target, reads pixels, applies grayscale, auto-exposure, IR at night, noise and an OSD into canvases that `CctvViewer.tsx` mounts |
 | `src/game/render/sky.ts` | `SkyDome`: overcast gradient sky that follows the camera |
 | `src/game/audio.ts` | All sounds synthesised with WebAudio (no audio files) |
@@ -91,6 +93,15 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - The `zombieContext()` visibility formula in `Game.ts`
 
 ## Status
+
+**Session 6 (electricity) is complete and pushed.**
+- `Game.deviceUp` and `computerPowered` now read circuit status (load kinds: computer, network, appliances).
+- L toggles lights; E on a generator opens `GeneratorPanel.tsx`; inventory "Place" sets down a portable generator; the car container has a "Siphon fuel" button. Jerry cans carry `fuel` on the ItemStack (and its weight).
+- Verified in the browser:
+  - Grid fails → police on UPS (PC and cameras on, lights off) → dark after 9 h.
+  - Refuel the standby → generator power (1.26 L/h) → a zombie investigates the engine noise.
+  - Portable from the hardware store (26 kg carried → overweight) → placed, connected, fuelled, started → house on generator.
+  - Overload trips; reset works; siphon 3.7 L from a car.
 
 **Session 5 is complete and pushed:** mechanics tuning, plus procedural skinned characters (1 draw call each, down from 13).
 - Shot hit-volumes follow the new anatomy, scaled by each zombie's height.
@@ -164,7 +175,6 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 1. Try `add_repo` with owner `yyb84ycgt6-oss` and repo `zombie-survival-game`. If it works, copy the folder's contents to that repo's root (the history can start fresh), push, and update this file. If it fails, keep working on the `eru` branch.
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
 3. **Recommended next, in order:**
-   - **(a) Generators and building circuits** (DESIGN.md "Energy"): fuel, noise and wiring to a building, so the station's network can come back after the UPS dies.
    - **(b) Doors and access control:** physical doors plus network door controllers; zombies bang on doors and break through.
    - **(c) Saving** (serialise `BodyState`, computers, containers, world).
    - **(d) Character detail pass:** face textures, clothing variety (jackets, hoodies, uniforms on police zombies), carried gear visible on the body.

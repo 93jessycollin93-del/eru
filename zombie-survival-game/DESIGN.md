@@ -45,7 +45,7 @@ Blood volume, wounds per body part, clotting, hidden infection and reanimation, 
 - Containers have capacity.
 - Doors and windows have health, lock state and noise; glass breaks and can cut you.
 
-### Energy (key system linking both worlds)
+### Energy (key system linking both worlds) (done: session 6)
 - The town grid goes down on a set day.
 - Each building has a **circuit with a load**: lights, fridge, computers, network gear.
 - **UPS batteries** keep critical equipment alive for hours. Generators burn real fuel per kW, make noise that attracts zombies, and must be wired to a building.
