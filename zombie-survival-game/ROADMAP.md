@@ -2,7 +2,22 @@
 
 The goal is a browser-based, third-person zombie survival game that feels like **DayZ** (open world, scavenging, tension, guns are loud), **Vein** (dense, explorable towns where every building has an interior) and **Project Zomboid** (deep survival simulation, "this is how you died").
 
-Single-player first. Every system is built so multiplayer can be added later without a rewrite.
+**North star:** the most realistic survival game ever made.
+
+**Strategy: browser now, port later.** Every system is built and tested in the browser, where Claude can run and verify it each session. Once the design is proven, it gets ported to Unreal Engine 5 for top-tier visuals.
+
+To make the port practical:
+- **Simulation lives in `src/sim/`.** This is plain TypeScript with no Three.js, React or DOM, and it holds the rules of the world: body, wounds, infection, temperature, hunger, items, loot. It is deterministic given an RNG, and its state is serialisable. This is the part that gets ported.
+- **Rendering, input and UI** (`src/game/`, `src/components/`) are a thin client over the simulation and are expected to be rewritten in Unreal.
+- **Data over code.** Items, loot tables, zombie types and recipes are data tables, so they can be exported as JSON for Unreal.
+
+**Realism pillars:**
+1. **Body:** blood, wounds per body part, infection, temperature, fatigue, pain.
+2. **World:** persistent, physical, everything enterable, weather.
+3. **Sound and sight:** stealth based on noise and light.
+4. **Consequences:** permadeath, scarcity, things decay and break.
+
+Single-player first. Multiplayer comes after the port.
 
 Each session below is roughly one working session. The order can change based on what feels most important after playtesting.
 
@@ -19,7 +34,14 @@ Each session below is roughly one working session. The order can change based on
 - Synthesised sound (gunshots, hits, groans, wind)
 - Death screen with time survived
 
-## Session 2: Characters and animation
+## Session 2: Body simulation (Health 2.0) — moved up for realism
+- Blood volume separate from tissue health, wounds per body part (scratch, laceration, bite), bleeding that clots or doesn't
+- Zombie infection with hidden incubation and symptoms (Project Zomboid rules: no cure)
+- Body temperature, fatigue and sleep, pain, panic
+- Zomboid-style status indicators ("moodles"); health panel with a body diagram and per-wound treatment
+- First engine-agnostic module in `src/sim/`
+
+## Session 7 (was 2): Characters and animation
 - Replace box people with rigged, animated models (CC0 packs such as Quaternius or Kenney, loaded as glTF)
 - Animation blending: idle, walk, run, crouch, melee swings, aim, hit reactions, death
 - Zombie variety in clothing and body type
@@ -44,11 +66,8 @@ Each session below is roughly one working session. The order can change based on
 - Item condition and durability; weapons wear out
 - Drag and drop between containers
 
-## Session 7: Health 2.0
-- Per-body-part wounds: scratches, lacerations, bites, fractures
-- Infection: bites can turn you
-- Sleep and fatigue, body temperature, sickness from bad food or water
-- Zomboid-style status icons for panic, pain, tiredness and hunger
+## Session 2b: Health follow-ups (fold into later sessions)
+- Fractures and splints, wound infection from dirty bandages, disinfectant, food poisoning
 
 ## Session 8: Cooking and crafting
 - Campfires and stoves; cook food, boil water
@@ -100,9 +119,10 @@ Each session below is roughly one working session. The order can change based on
 - Skills that improve with use: fitness, strength, aiming, carpentry, cooking, first aid
 - Books and magazines that speed up learning
 
-## Session 19: Multiplayer groundwork
-- Separate simulation from rendering so a server can run the world
-- Prototype a small co-op server
+## Session 19: Port preparation
+- Audit `src/sim/` so it has no browser dependencies, and export all data tables as JSON
+- Write the Unreal port plan: module mapping, C++ class layout, asset list
+- (Multiplayer comes after the port, on Unreal's networking)
 
 ## Session 20: Polish and release
 - Settings: graphics quality, mouse sensitivity, key bindings, volume

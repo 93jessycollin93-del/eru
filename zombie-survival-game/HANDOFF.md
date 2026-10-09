@@ -11,7 +11,10 @@ A browser-based, third-person 3D zombie survival game that blends **DayZ** (open
 
 The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 
+**North star (owner's words):** "the best realistic survival game ever created."
+
 ### Decisions already made (don't re-ask)
+- **Browser now, port to Unreal Engine 5 later.** All simulation rules go in `src/sim/` as engine-agnostic TypeScript (no `three`, React or DOM imports; injected RNG; serialisable state). Rendering, input and UI are a thin client. See the top of ROADMAP.md.
 - **3D third-person** with Three.js (not isometric 2D).
 - **Single-player first**; keep systems separable so multiplayer can come later (roadmap session 19).
 - **Stack:** Vite, React, TypeScript, Tailwind, Three.js. This is Lovable's stack, so the owner can import the project into Lovable.dev via GitHub. There is no Lovable connector in Claude sessions, so build the code directly.
