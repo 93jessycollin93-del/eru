@@ -23,6 +23,7 @@ The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 - Right now: the `zombie-survival-game/` folder of `93jessycollin93-del/eru`, on branch **`claude/zombie-survival-game-repo-v1v6hp`**.
   - Never merge it into `eru` main: that repo is synced to Base44.
 - **Pending:** the owner will create a dedicated GitHub repo, `zombie-survival-game`. Claude can't create repos (the GitHub integration returns 403). Once it exists, move this folder's contents to that repo's root and update this file.
+  - The owner's target GitHub account is **`yyb84ycgt6-oss`**. As of the end of session 1, Claude had no access to it: Claude's GitHub connection only covers `93jessycollin93-del`. The owner needs to install the Claude GitHub App on `yyb84ycgt6-oss` (via https://claude.ai/connect-github), create the repo, then start a session with that repo selected or attach it with `add_repo`.
 - **Playable build:** published as a private Claude artifact at https://claude.ai/artifact/Rb7QJzHErrwfXWtoFxTHtH
   - To update it from a new session: build with `npx vite build --base ./`, then publish with the Artifact tool, passing `url`.
   - The page is a small HTML file that references `./assets/*.js` and `./assets/*.css` from the build. Pass those files via `files`, and set the old asset paths to `null`.
@@ -89,7 +90,7 @@ Session 1 is complete and pushed. Everything in ROADMAP "Session 1" works and wa
 
 ## Next session: start here
 
-1. Check whether the owner has created the `zombie-survival-game` repo. If so, use `add_repo`, move the code there, and update this file.
+1. Try `add_repo` with owner `yyb84ycgt6-oss` and repo `zombie-survival-game`. If it works, copy the folder's contents to that repo's root (the history can start fresh), push, and update this file. If it fails, keep working on the `eru` branch.
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
 3. Begin **roadmap session 2: characters and animation**. Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.
 4. Before ending: run `npm run build`, commit, push, update the artifact, and update this file.
