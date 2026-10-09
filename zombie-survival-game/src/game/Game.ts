@@ -22,13 +22,15 @@ import {
   zombieHit,
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
-import { boot, complete, createComputerState, prompt as shellPrompt, submit } from "../sim/computer";
+import { boot, complete, createComputerState, isSecretInput, prompt as shellPrompt, submit } from "../sim/computer";
 import { COUNTY, TOWN, gameDate } from "../sim/computerContent";
 import type { GameStatus, HudMessage, HudState } from "./types";
 import { ColliderWorld } from "./world/colliders";
 import { Environment } from "./world/environment";
 import { PostFX, type Quality } from "./render/postfx";
 import { SkyDome } from "./render/sky";
+import { CctvSystem } from "./render/cctv";
+import type { NetworkSpec, NetworkView } from "../sim/network";
 import { TextureLibrary } from "./render/textures";
 import { Terrain } from "./world/terrain";
 import { generateTown, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
@@ -111,6 +113,8 @@ export class Game {
   private perfTime = 0;
   private perfFrames = 0;
   private perfChecked = false;
+  private cctv: CctvSystem;
+  private cctvOpen = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -132,6 +136,7 @@ export class Game {
     this.qualityChosen = saved !== null;
     this.quality = saved ?? "high";
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.quality);
+    this.cctv = new CctvSystem(this.renderer, this.scene);
 
     this.flashlight = new THREE.SpotLight("#fff4d6", 0, 45, 0.45, 0.5, 1);
     this.scene.add(this.flashlight, this.flashlight.target);
@@ -166,6 +171,9 @@ export class Game {
     this.town = generateTown(rng, this.terrain, this.colliders, this.textures);
     this.scene.add(this.town.group);
     this.scene.add(generateVegetation(rng, this.terrain, this.colliders, this.town.occupied));
+    for (const b of this.town.buildings) {
+      if (b.network && b.cameraMounts) this.cctv.setup(b.network, b.cameraMounts);
+    }
   }
 
   destroy() {
@@ -234,6 +242,7 @@ export class Game {
     this.sheltered = false;
     this.computerSpot = null;
     this.reading = null;
+    this.cctvOpen = false;
     this.gridWasOn = true;
     for (const c of this.town.computers) c.state = createComputerState(c.state.def, c.initialBattery);
 
@@ -301,6 +310,7 @@ export class Game {
     this.container = null;
     this.computerSpot = null;
     this.reading = null;
+    this.cctvOpen = false;
     this.input.reset();
     if (this.status === "playing" && gesture) this.requestLock();
     this.emitHud();
@@ -354,11 +364,44 @@ export class Game {
 
   private computerContext() {
     const day = Math.floor(this.minutes / 1440) + 1;
+    const c = this.computerSpot;
     return {
       nowMs: performance.now(),
       dateText: gameDate(day, this.minutes % 1440),
       uptimeMinutes: this.minutes - this.computerOpenedAt + 37,
+      network: c ? this.networkView(c) : undefined,
     };
+  }
+
+  private networkOf(c: ComputerSpot): NetworkSpec | undefined {
+    return this.town.buildings.find((b) => b.computer === c)?.network;
+  }
+
+  /**
+   * Which devices have power. Workstations and home/shop routers run off the
+   * grid; servers, recorders and cameras on a UPS outlast it for a few hours.
+   */
+  private deviceUp(spec: NetworkSpec, ip: string, self?: ComputerSpot): boolean {
+    if (self?.state.def.net?.ip === ip) return this.computerPowered(self);
+    const host = spec.hosts.find((h) => h.ip === ip);
+    if (!host) return false;
+    return this.gridOn() || this.onUps(spec);
+  }
+
+  private networkView(c: ComputerSpot): NetworkView | undefined {
+    const spec = this.networkOf(c);
+    if (!spec || !c.state.def.net) return undefined;
+    return { spec, selfIp: c.state.def.net.ip, isUp: (ip) => this.deviceUp(spec, ip, c) };
+  }
+
+  /** The camera viewer's canvas for a channel (the viewer mounts it directly). */
+  cctvCanvas(channel: number): HTMLCanvasElement | null {
+    return this.cctv.channels.find((ch) => ch.channel === channel)?.canvas ?? null;
+  }
+
+  closeCctv() {
+    this.cctvOpen = false;
+    this.emitHud();
   }
 
   /** Is the town grid still live? It fails at 06:00 on the power-off day. */
@@ -367,7 +410,15 @@ export class Game {
   }
 
   private computerPowered(c: ComputerSpot) {
-    return c.kind === "laptop" ? (c.state.battery ?? 0) > 0 : this.gridOn();
+    if (c.kind === "laptop") return (c.state.battery ?? 0) > 0;
+    return this.gridOn() || this.onUps(this.networkOf(c));
+  }
+
+  /** True while a building's UPS is still carrying its load after the grid failed. */
+  private onUps(spec: NetworkSpec | undefined) {
+    if (!spec || spec.upsMinutes <= 0) return false;
+    const gridOffAt = (this.town.facts.powerOffDay - 1) * 1440 + 6 * 60;
+    return this.minutes - gridOffAt < spec.upsMinutes;
   }
 
   private useComputer(c: ComputerSpot) {
@@ -390,6 +441,14 @@ export class Game {
     const c = this.computerSpot;
     if (!c) return;
     submit(c.state, line, this.computerContext());
+    for (const fx of c.state.effects.splice(0)) {
+      if (fx.type === "cctv") {
+        this.cctvOpen = true;
+        const spec = this.networkOf(c);
+        const day = Math.floor(this.minutes / 1440) + 1;
+        if (spec) this.cctv.renderAll((ip) => this.deviceUp(spec, ip), this.env.daylight(this.minutes % 1440), `${gameDate(day, this.minutes % 1440)}:00`);
+      }
+    }
     // Keyboard clatter carries a little.
     this.noises.push({ pos: this.player.pos.clone(), radius: 2.5, ttl: 0.4 });
     if (c.state.phase === "off") {
@@ -594,7 +653,7 @@ export class Game {
 
     // Keys that work even with menus open
     if (this.input.wasPressed("Tab") || this.input.wasPressed("KeyI")) this.toggleInventory();
-    if ((this.uiOpen()) && this.input.wasPressed("Escape")) this.closeUi(false);
+    if (this.uiOpen() && !this.cctvOpen && this.input.wasPressed("Escape")) this.closeUi(false);
 
     if (controlling) {
       this.handleActions(dt);
@@ -613,6 +672,13 @@ export class Game {
     if (this.container && this.distanceToContainer(this.container) > INTERACT_RANGE + 1) this.closeUi();
     if (this.computerSpot && this.distanceToContainer(this.computerSpot) > INTERACT_RANGE + 1) this.closeUi();
     this.updateElectricity(dt);
+    if (this.cctvOpen && this.computerSpot) {
+      const spec = this.networkOf(this.computerSpot);
+      const day = Math.floor(this.minutes / 1440) + 1;
+      if (spec) {
+        this.cctv.update(dt, (ip) => this.deviceUp(spec, ip), this.env.daylight(this.minutes % 1440), `${gameDate(day, this.minutes % 1440)}:${String(Math.floor((this.minutes * 60) % 60)).padStart(2, "0")}`);
+      }
+    }
     this.location = this.buildingAt(p.pos.x, p.pos.z);
 
     // Shelter check: is there a roof overhead?
@@ -668,10 +734,19 @@ export class Game {
     const grid = this.gridOn();
     if (this.gridWasOn && !grid) {
       this.message("Somewhere a transformer bangs. The power is out across town.", "warn");
-      for (const c of this.town.computers) if (c.kind === "desktop") c.state.phase = "off";
-      if (this.computerSpot?.kind === "desktop") this.closeUi(false);
     }
     this.gridWasOn = grid;
+    // Desktops die when their power does (grid, or UPS once it runs flat).
+    for (const comp of this.town.computers) {
+      if (comp.kind === "desktop" && comp.state.phase !== "off" && !this.computerPowered(comp)) {
+        comp.state.phase = "off";
+        comp.state.remote = null;
+        if (comp === this.computerSpot) {
+          this.message("The screen goes black. No power.", "warn");
+          this.closeUi(false);
+        }
+      }
+    }
     // Laptop in use drains its battery: about 1% every 8 seconds.
     const c = this.computerSpot;
     if (c?.kind === "laptop" && c.state.battery !== null) {
@@ -1241,10 +1316,14 @@ export class Game {
             lines: [...comp.state.screen],
             prompt: shellPrompt(comp.state),
             battery: comp.state.battery,
-            password: comp.state.phase === "password",
+            password: isSecretInput(comp.state),
           }
         : null,
       reading: this.reading,
+      cctv:
+        this.cctvOpen && this.computerSpot
+          ? { nvr: this.cctv.nvrName, channels: this.cctv.channels.map((ch) => ({ channel: ch.channel, label: ch.label, online: ch.online })) }
+          : null,
       location: this.location,
       gridOn: this.terrain ? this.gridOn() : true,
       townName: `${TOWN}, ${COUNTY}`,

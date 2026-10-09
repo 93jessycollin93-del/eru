@@ -52,7 +52,7 @@ Each session below is roughly one working session. The order can change based on
 - Street addresses for every building
 - Graphics: textured materials, ambient occlusion, colour grading, grain, a physical sky
 
-## Session 4: Networks and CCTV (cybernetic world)
+## Session 4: Networks and CCTV (cybernetic world) ✅
 - Building LANs with real addressing; `ip addr`, `ping`, `nmap`, `ssh` into servers (nested sessions)
 - Police station network: file server, NVR, IP cameras
 - Live CCTV feeds rendered from cameras in the 3D world, viewed from a terminal

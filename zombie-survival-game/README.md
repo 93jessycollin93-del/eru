@@ -32,6 +32,8 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 - **Your body is simulated.** Zombie hits leave scratches, lacerations or bites on a specific body part. Deep wounds bleed until you bandage them, and losing about 2 litres of blood kills you. Leg wounds slow you down; arm wounds weaken your swings and shake your aim.
 - **Bites are a death sentence.** Like Project Zomboid, there is no cure. Scratches and lacerations can infect you too. The infection is silent at first, then you feel queasy, then feverish, and then you come back as one of them.
 - **Computers work.** Police terminals, shop tills and family laptops boot into a real command line (`help`, `ls`, `cd`, `cat`, `grep`, `mail`, pipes, Tab completion). Passwords are written on notes hidden in the same building. Read the mail: some of it tells you where help was left behind. Desktops need mains power, and the grid fails a few days in; laptops run on battery.
+- **Buildings have real networks.** Use `ip addr`, `ping`, `arp -a`, `nmap` and `curl` to explore a building's LAN, and `ssh user@host` to log into other machines (the police file server reuses the workstation password, just like real offices). Routers, printers, smart TVs, servers and cameras all answer only while they have power.
+- **Live CCTV.** The police station has four network cameras covering the entrance, the parking lot, the front desk and the cells. Run `cctv` on the dispatch terminal to watch them live, with infrared at night. Check the street before you leave. The station's network closet runs on a UPS for about 8 hours after the grid dies.
 - **Nights are cold.** Stay indoors after dark. Rest when you're tired (Z), but never with zombies nearby.
 - **Watch your weight.** Carrying more than 20 kg slows you down and stops you sprinting.
 
@@ -46,7 +48,8 @@ src/
     body.test.ts       Tests for the body rules (npm test)
     climate.ts         Air temperature by time of day and shelter
     computer.ts        Virtual filesystem and Unix-like shell for in-game computers
-    computerContent.ts Generated files, mail and programs for each computer
+    computerContent.ts Generated files, mail, programs and networks for each building
+    network.ts         LAN model: hosts, services, addressing
     items.ts           Item definitions and loot tables
     rng.ts             Seeded random numbers
   game/
@@ -61,6 +64,7 @@ src/
       textures.ts      Procedural surface textures (albedo, normal, roughness)
       postfx.ts        Ambient occlusion, bloom, Tarkov-style colour grade and grain
       sky.ts           Overcast sky dome
+      cctv.ts          Live CCTV: renders world cameras offscreen with auto-exposure and IR
     world/
       terrain.ts       Heightmap terrain (the town area is flat)
       town.ts          Procedural town: roads, buildings with interiors, cars, loot

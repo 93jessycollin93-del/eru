@@ -6,6 +6,7 @@ import Inventory, { type InventoryActions } from "@/components/Inventory";
 import Overlay from "@/components/Overlay";
 import ComputerScreen from "@/components/ComputerScreen";
 import NoteView from "@/components/NoteView";
+import CctvViewer from "@/components/CctvViewer";
 
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,6 +38,8 @@ const Index = () => {
     [],
   );
 
+  const getCanvas = useMemo(() => (ch: number) => gameRef.current?.cctvCanvas(ch) ?? null, []);
+
   const playing = hud && (hud.status === "playing" || hud.status === "paused");
 
   return (
@@ -44,7 +47,10 @@ const Index = () => {
       <canvas ref={canvasRef} className="block h-full w-full" />
       {hud && playing && <Hud hud={hud} />}
       {hud && hud.status === "playing" && <Inventory hud={hud} actions={actions} />}
-      {hud && hud.status === "playing" && hud.computer && (
+      {hud && hud.status === "playing" && hud.cctv && (
+        <CctvViewer cctv={hud.cctv} getCanvas={getCanvas} onClose={() => gameRef.current?.closeCctv()} />
+      )}
+      {hud && hud.status === "playing" && hud.computer && !hud.cctv && (
         <ComputerScreen
           computer={hud.computer}
           onSubmit={(l) => gameRef.current?.computerSubmit(l)}

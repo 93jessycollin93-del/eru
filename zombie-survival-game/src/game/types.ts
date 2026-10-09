@@ -70,6 +70,8 @@ export interface HudState {
     password: boolean;
   } | null;
   reading: { title: string; text: string } | null;
+  /** Camera viewer opened from a terminal. */
+  cctv: { nvr: string; channels: { channel: number; label: string; online: boolean }[] } | null;
   /** Street address when inside a building. */
   location: string | null;
   gridOn: boolean;

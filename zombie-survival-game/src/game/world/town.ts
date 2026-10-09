@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { createComputerState, type ComputerState } from "../../sim/computer";
 import { houseLaptop, policeComputer, storeComputer, type TownFacts } from "../../sim/computerContent";
 import { makeStack, type ItemStack } from "../../sim/items";
+import type { NetworkSpec } from "../../sim/network";
 import { mulberry32, pick, range } from "../../sim/rng";
 import type { TextureLibrary } from "../render/textures";
 import { MeshBuilder } from "./builder";
@@ -46,6 +47,10 @@ export interface Building {
   rect: Rect;
   containers: LootContainer[];
   computer?: ComputerSpot;
+  /** The building's LAN (routers, servers, cameras), if it has electronics. */
+  network?: NetworkSpec;
+  /** World-space CCTV mounts: where each camera sits and what it looks at. */
+  cameraMounts?: Partial<Record<"front" | "side" | "desk" | "back", { pos: THREE.Vector3; target: THREE.Vector3 }>>;
 }
 
 export interface Rect {
@@ -409,6 +414,20 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       container("Evidence Cabinet", "police_locker", inner.x1 - 0.7, 0, inner.z0 + 0.1, inner.x1 - 0.1, 1.4, inner.z0 + 1.6, metalMat);
       // Blue stripe on the facade
       box(-hw, 2.2, hd, hw, 2.45, hd + 0.05, mb.material("#2c4a7a"), false);
+      // CCTV cameras: two watching outside, two inside.
+      const camMat = mb.material("#d6d4cc", { roughness: 0.4 });
+      const lensMat = mb.material("#101214", { roughness: 0.2, metalness: 0.6 });
+      const mounts: Building["cameraMounts"] = {};
+      const mount = (key: "front" | "side" | "desk" | "back", p: [number, number, number], t: [number, number, number]) => {
+        box(p[0] - 0.07, p[1] - 0.06, p[2] - 0.07, p[0] + 0.07, p[1] + 0.06, p[2] + 0.07, camMat, false);
+        box(p[0] - 0.03, p[1] - 0.09, p[2] - 0.03, p[0] + 0.03, p[1] - 0.05, p[2] + 0.03, lensMat, false);
+        mounts[key] = { pos: new THREE.Vector3(...p).applyMatrix4(m), target: new THREE.Vector3(...t).applyMatrix4(m) };
+      };
+      mount("front", [door.c + 1.3, 2.75, hd + 0.2], [door.c - 1, 0.2, hd + 9]);
+      mount("side", [hw + 0.2, 2.75, hd - 0.4], [hw + 9, 0.2, hd + 5]);
+      mount("desk", [inner.x1 - 0.3, 2.75, inner.z1 - 0.3], [-1.1, 0.6, -0.2]);
+      mount("back", [inner.x1 - 0.3, 2.75, inner.z0 + 0.3], [inner.x0 + 1.8, 0.5, inner.z0 + 2.2]);
+      building.cameraMounts = mounts;
       spawnPoints.push(new THREE.Vector3(0, 0, 1.5).applyMatrix4(m), new THREE.Vector3(0, 0, -2).applyMatrix4(m));
     }
   };
@@ -523,6 +542,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     const full: ComputerSpot = { ...spot, address: b.address, initialBattery: gen.battery, state: createComputerState(gen.def, gen.battery) };
     computers.push(full);
     b.computer = full;
+    b.network = gen.network;
     if (gen.note && b.containers.length) {
       const target = pick(crng, b.containers.filter((c) => c.table !== "supply_cache"));
       target.preset = [...(target.preset ?? []), makeStack("note", 1, undefined, { title: gen.note.title, text: gen.note.text })];

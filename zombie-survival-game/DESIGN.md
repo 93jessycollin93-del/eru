@@ -74,7 +74,7 @@ Boot, login, real shell, filesystem with permissions, mail, programs, battery.
 - `ps`/`kill`, logs that record *your* actions (and can be read by others later)
 - USB drives as physical items that carry files between machines
 
-### Networks (session 4)
+### Networks (done: session 4)
 - Each building with electronics has a LAN with real addressing (`10.0.4.0/24`, `192.168.1.0/24`), a router, and devices.
 - Commands: `ip addr`, `ping`, `nmap`, `ssh`, `scp`.
 - The internet is down; inter-building links come later (radio bridges, long Ethernet runs you lay yourself).

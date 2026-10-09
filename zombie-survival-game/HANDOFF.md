@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: end of session 3 — computers + Tarkov-style graphics pass (2026-10-09)_
+_Last updated: end of session 4 — networks, ssh, live CCTV, UPS (2026-10-09)_
 
 ## The project
 
@@ -61,6 +61,7 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/sim/body.ts` | **Engine-agnostic** body simulation: blood (ml), tissue health, wounds per body part with bleed rates and healing, Knox infection (hidden incubation then symptoms, bites always infect, death then reanimation), body temperature, fatigue/sleep, pain, panic, moodles, plus derived modifiers (`mobility`, `aimSway`, `strength`, `maxStamina`). Bleeding/stamina/panic run in real seconds; everything else runs in game minutes |
 | `src/sim/computer.ts` | **Engine-agnostic** virtual filesystem + Unix-like shell. Login with lockout, permissions, `ls cd cat head tail grep wc find mail history` + pipes, tab completion, data-driven programs |
 | `src/sim/computerContent.ts` | Generates police / store / hardware / house-laptop machines from `TownFacts` (police address, supply-cache address, power-off day). Writes lore, mail, incident reports, and the password note for that building. `gameDate(day, minute)`: day 1 = Fri Oct 23 |
+| `src/sim/network.ts` | **Engine-agnostic** LAN model: `NetworkSpec` (cidr, gateway, hosts with services/MAC/vendor, `upsMinutes`), `NetworkView` (selfIp + `isUp(ip)` supplied by the game) |
 | `src/sim/climate.ts` | Air temperature by time of day, day number and shelter |
 | `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables; seeded RNG |
 | `src/game/Game.ts` | Main loop and orchestration: pointer lock, combat, looting, inventory, zombie management, HUD emission (10 Hz via `onHud`) |
@@ -75,6 +76,7 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/game/world/builder.ts` | Merges static geometry per material; `material(color, opts, surface)` attaches procedural maps and projects world-space UVs |
 | `src/game/render/textures.ts` | `TextureLibrary`: procedural seamless surface maps (4D-noise torus sampling) |
 | `src/game/render/postfx.ts` | `PostFX`: EffectComposer chain and the Tarkov-style grade shader; `setQuality("high" or "low")` |
+| `src/game/render/cctv.ts` | `CctvSystem`: one PerspectiveCamera per camera host at the building's `cameraMounts`; renders one channel every 0.16 s to a render target, reads pixels, applies grayscale, auto-exposure, IR at night, noise and an OSD into canvases that `CctvViewer.tsx` mounts |
 | `src/game/render/sky.ts` | `SkyDome`: overcast gradient sky that follows the camera |
 | `src/game/audio.ts` | All sounds synthesised with WebAudio (no audio files) |
 | `src/game/input.ts` | Keyboard/mouse with per-frame "pressed" edges |
@@ -88,7 +90,17 @@ In dev builds, `window.__game` exposes the `Game` instance.
 
 ## Status
 
-**Session 3 is in progress.** Computers are complete:
+**Session 4 (networks + CCTV) is complete and pushed.**
+- Every building with a computer has a LAN:
+  - Police `10.0.4.0/24`: gw, files server, dispatch, NVR, 4 cameras; UPS 8 h.
+  - Stores `192.168.0.0/24`: router, POS, receipt printer.
+  - Homes `192.168.1.0/24`: router, laptop on Wi-Fi, sometimes a smart TV.
+- Shell commands added: `ip`, `ping`, `nmap` (only where installed: the police dispatch box), `arp`, `curl`, `ssh` (host-key prompt, password retries, nested remote session; `exit` returns).
+- The `cctv` program raises an effect, and the game opens the live viewer.
+- Power rules (`Game.deviceUp`): everything runs on the grid until 06:00 on the power-off day; police gear (including the dispatch desktop) then runs on the UPS for `upsMinutes`. Laptop Wi-Fi needs the home router.
+- Verified by 33 unit tests plus a browser run: nmap → ssh → files → exit → cctv with live zombies on camera → night IR → UPS keeps the terminal alive 1 h after the grid fails, dead at 9 h.
+
+**Session 3 is complete.** Computers:
 - 36 machines (police terminal, store/hardware POS, about 24 house laptops).
 - E uses a computer and opens `ComputerScreen.tsx`. Typing makes a little noise, and zombies keep moving.
 - The grid fails at 06:00 on `facts.powerOffDay` (day 3–5); desktops die then, and laptops drain their battery while in use.
@@ -128,7 +140,12 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 
 1. Try `add_repo` with owner `yyb84ycgt6-oss` and repo `zombie-survival-game`. If it works, copy the folder's contents to that repo's root (the history can start fresh), push, and update this file. If it fails, keep working on the `eru` branch.
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
-3. **Recommended next: characters and animation (roadmap session 7, pulled forward).** The blocky people are now the biggest gap against the Tarkov look. `raw.githubusercontent.com` is reachable, so look for CC0 rigged glTF characters hosted on GitHub. Then do doors, windows and barricades (session 3b) and saving. Put any new rules in `src/sim/`.
+3. **Recommended next, in order:**
+   - **(a) Characters and animation.** The blocky people are the biggest visual gap; see the note below.
+   - **(b) Generators and building circuits** (DESIGN.md "Energy"): fuel, noise and wiring to a building, so the station's network can come back after the UPS dies.
+   - **(c) Doors and access control:** physical doors plus network door controllers.
+   - **(d) Saving.**
+   Note for (a): **Characters and animation** (roadmap session 7, pulled forward).** The blocky people are now the biggest gap against the Tarkov look. `raw.githubusercontent.com` is reachable, so look for CC0 rigged glTF characters hosted on GitHub. Then do doors, windows and barricades (session 3b) and saving. Put any new rules in `src/sim/`.
 4. (Old note, kept for session 7) **Characters and animation**: Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.
 5. Before ending: run `npm test` and `npm run build`, commit, push, update the artifact, and update this file.
 6. Asset hosts: `raw.githubusercontent.com` is reachable from the container; `quaternius.com`, `kenney.nl`, `polyhaven.org` and jsDelivr's `/gh/` are blocked by the network proxy.
