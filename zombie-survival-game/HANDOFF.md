@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: session 5 in progress — mechanics tuning done, characters next (2026-10-09)_
+_Last updated: end of session 5 — mechanics tuning + procedural skinned characters (2026-10-09)_
 
 ## The project
 
@@ -69,7 +69,7 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/game/Game.ts` | Main loop and orchestration: pointer lock, combat, looting, inventory, zombie management, HUD emission (10 Hz via `onHud`) |
 | `src/game/entities/player.ts` | Movement, stamina, jump/gravity, survival stat drain, over-the-shoulder camera with collision |
 | `src/game/entities/zombie.ts` | Zombie AI. States: idle, wander, investigate, chase, dead. Senses run every 0.25 s: sight cone + line of sight, footsteps, noise events |
-| `src/game/entities/humanoid.ts` | Box-built character with pivoted limbs, procedural animation, held item meshes |
+| `src/game/entities/humanoid.ts` | **Procedural skinned human.** 19-bone skeleton; the body is lofted from cross-sections (torso keyframes, arms, legs with calves, a shaped head with jaw, nose and ears, hands, shoes) and skinned with blended weights. Six cached template geometries (m/f × slim/average/heavy). Clothing, hair, eyebrows, grime and blood come from a shader (`zone`/`limbT` attributes + per-character uniforms). Procedural animation: gait with knee and foot plant, hip bob/twist, chest counter-rotation, breathing, crouch, two-handed aim, overhead swing, flinch, zombie hunch/limp/twitch/arm habits, knee-buckle fall. Public API used by others: `root`, `body`, `head`, `hand`, `animate()`, `fall()`, `flinch()`, `setTint()`, `setShadows()` |
 | `src/game/world/town.ts` | Procedural town: named streets with real house numbers, buildings with interiors, furniture, loot containers (`preset` items for notes and caches), computers (`ComputerSpot` with a glowing screen mesh), a supply crate at the stash address, cars, street lamps (glow at night while the grid is up), zombie spawn points |
 | `src/game/world/colliders.ts` | AABB collision + raycast/LOS over an 8 m spatial grid |
 | `src/game/world/terrain.ts` | Simplex heightmap. The town (radius 120) is flat at y = 0 |
@@ -92,7 +92,10 @@ In dev builds, `window.__game` exposes the `Game` instance.
 
 ## Status
 
-**Session 5 (mechanics tuning) is complete and pushed; characters come next.**
+**Session 5 is complete and pushed:** mechanics tuning, plus procedural skinned characters (1 draw call each, down from 13).
+- Shot hit-volumes follow the new anatomy, scaled by each zombie's height.
+- Characters are generated in code because asset sites are blocked and other GitHub repos are out of this session's scope.
+- Still to improve: faces are simple (no textures), and elbows and knees crease slightly.
 - Player: velocity with accel/decel, slower backpedal and strafe, Alt to walk quietly, winded lockout, head bob, sway from `aimSway`, recoil that springs back 75%, camera shake.
 - Zombies:
   - An awareness meter driven by `sightRate`: they stare when suspicious and groan when they commit.
@@ -161,10 +164,10 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 1. Try `add_repo` with owner `yyb84ycgt6-oss` and repo `zombie-survival-game`. If it works, copy the folder's contents to that repo's root (the history can start fresh), push, and update this file. If it fails, keep working on the `eru` branch.
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
 3. **Recommended next, in order:**
-   - **(a) Characters and animation.** The blocky people are the biggest visual gap; see the note below.
-   - **(b) Generators and building circuits** (DESIGN.md "Energy"): fuel, noise and wiring to a building, so the station's network can come back after the UPS dies.
-   - **(c) Doors and access control:** physical doors plus network door controllers.
-   - **(d) Saving.**
+   - **(a) Generators and building circuits** (DESIGN.md "Energy"): fuel, noise and wiring to a building, so the station's network can come back after the UPS dies.
+   - **(b) Doors and access control:** physical doors plus network door controllers; zombies bang on doors and break through.
+   - **(c) Saving** (serialise `BodyState`, computers, containers, world).
+   - **(d) Character detail pass:** face textures, clothing variety (jackets, hoodies, uniforms on police zombies), carried gear visible on the body.
    Note for (a): **Characters and animation** (roadmap session 7, pulled forward).** The blocky people are now the biggest gap against the Tarkov look. `raw.githubusercontent.com` is reachable, so look for CC0 rigged glTF characters hosted on GitHub. Then do doors, windows and barricades (session 3b) and saving. Put any new rules in `src/sim/`.
 4. (Old note, kept for session 7) **Characters and animation**: Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.
 5. Before ending: run `npm test` and `npm run build`, commit, push, update the artifact, and update this file.

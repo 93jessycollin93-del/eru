@@ -73,7 +73,7 @@ src/
     entities/
       player.ts        Movement, stamina, survival stats, third-person camera
       zombie.ts        Zombie senses and behaviour
-      humanoid.ts      Low-poly character model with procedural animation
+      humanoid.ts      Procedural skinned human (19 bones, generated body, clothing shader, procedural animation)
     render/
       textures.ts      Procedural surface textures (albedo, normal, roughness)
       postfx.ts        Ambient occlusion, bloom, Tarkov-style colour grade and grain

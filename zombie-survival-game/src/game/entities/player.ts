@@ -14,7 +14,10 @@ const MOUSE_SENS = 0.0022;
 export type Gait = "still" | "crouch" | "walk" | "jog" | "sprint";
 
 export class Player {
-  readonly model = new Humanoid({ skin: "#c9a27e", shirt: "#6b7558", pants: "#43546e", shoes: "#3a3128" });
+  readonly model = new Humanoid(
+    { skin: "#c49a78", shirt: "#5a6148", pants: "#3e4a5c", shoes: "#3a3128", hair: "#3b2e24" },
+    { build: "average", sex: "m", sleeve: 1, hair: 0.85, grime: 0.2 },
+  );
   readonly pos = new THREE.Vector3();
   /** Horizontal velocity (m/s). */
   readonly vel = new THREE.Vector3();
@@ -59,8 +62,8 @@ export class Player {
     this.pitch = -0.1;
     this.recoil.pitch = this.recoil.yaw = 0;
     this.shake = 0;
-    this.model.body.rotation.set(0, 0, 0);
-    this.model.body.position.set(0, 0, 0);
+    this.model.fall(0);
+    this.model.root.visible = true;
     this.camPos.set(spawn.x - 4, spawn.y + 2, spawn.z);
   }
 

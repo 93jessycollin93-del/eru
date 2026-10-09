@@ -40,7 +40,9 @@ export interface ZombieContext {
   findPath: (from: THREE.Vector3, to: THREE.Vector3) => [number, number][] | null | undefined;
 }
 
-const SKINS = ["#7d8a6f", "#8f8d78", "#6f7a66", "#9a8f7c", "#7a7f72"];
+// Grey-green, waxy skin; clothes from ordinary life, now filthy.
+const SKINS = ["#8c9180", "#9a9584", "#7f8676", "#a39a88", "#868b7e", "#8d8478"];
+const HAIR = ["#1f1a16", "#3a2c22", "#5a4a3a", "#7a6a55", "#2a2a2a", "#8a8070"];
 const SHIRTS = ["#4d4a44", "#5a3e34", "#3c4a55", "#6b6452", "#7a6b5a", "#3e3a36", "#58584f", "#6d3030"];
 const PANTS = ["#2f3238", "#3a3530", "#46413a", "#2b3340", "#4a4a40"];
 
@@ -91,21 +93,23 @@ export class Zombie {
   constructor(position: THREE.Vector3, rng: () => number) {
     this.pos = position.clone();
     this.lastPos.copy(this.pos);
-    this.model = new Humanoid({
-      skin: pick(rng, SKINS),
-      shirt: pick(rng, SHIRTS),
-      pants: pick(rng, PANTS),
-      shoes: "#1e1c1a",
-    });
+    const r = rng();
+    this.model = new Humanoid(
+      { skin: pick(rng, SKINS), shirt: pick(rng, SHIRTS), pants: pick(rng, PANTS), shoes: "#1e1c1a", hair: pick(rng, HAIR) },
+      {
+        zombie: true,
+        sex: rng() < 0.42 ? "f" : "m",
+        build: r < 0.3 ? "slim" : r < 0.8 ? "average" : "heavy",
+        sleeve: pick(rng, [0.3, 0.5, 0.95, 1]),
+        hair: rng() < 0.15 ? 0 : 0.5 + rng() * 0.5,
+        grime: 0.6 + rng() * 0.4,
+        blood: 0.35 + rng() * 0.65,
+        height: 0.93 + rng() * 0.12,
+      },
+    );
     this.walkSpeed = range(rng, ...ZOMBIE.wanderSpeed);
     this.runner = rng() < ZOMBIE.runnerChance;
     this.chaseSpeed = this.runner ? range(rng, ...ZOMBIE.runnerSpeed) : range(rng, ...ZOMBIE.chaseSpeed);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: "#d8d2a0" });
-    for (const x of [-0.06, 0.06]) {
-      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.01), eyeMat);
-      eye.position.set(x, 0.03, 0.131);
-      this.model.head.add(eye);
-    }
     this.model.root.position.copy(this.pos);
   }
 
@@ -145,6 +149,7 @@ export class Zombie {
     const away = this.pos.clone().sub(from).setY(0).normalize();
     this.knock.copy(away).multiplyScalar(knockback);
     this.model.setTint(0x551111);
+    this.model.flinch(1);
     setTimeout(() => this.model.setTint(0x000000), 90);
     this.awareness = Math.max(this.awareness, 1);
     this.target.copy(from);

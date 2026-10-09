@@ -971,17 +971,20 @@ export class Game {
     for (const z of this.zombies) {
       if (!z.alive || z.pos.distanceTo(p.pos) > 120) continue;
       // A downed zombie lies flat; test a low body instead.
+      // Hit volumes follow the body's proportions, scaled by this zombie's height.
+      const k = z.model.root.scale.y;
       const parts: [number, number, "head" | "body" | "legs"][] = z.isDown
         ? [[0.2, 0.35, "body"]]
         : [
-            [1.66, 0.15, "head"],
-            [1.2, 0.28, "body"],
-            [0.9, 0.24, "body"],
-            [0.45, 0.22, "legs"],
+            [1.62, 0.12, "head"],
+            [1.3, 0.2, "body"],
+            [1.05, 0.2, "body"],
+            [0.65, 0.17, "legs"],
+            [0.3, 0.14, "legs"],
           ];
       for (const [h, r, which] of parts) {
-        tmp.set(z.pos.x, z.pos.y + h, z.pos.z);
-        const t = raySphere(origin, dir, tmp, r);
+        tmp.set(z.pos.x, z.pos.y + h * k, z.pos.z);
+        const t = raySphere(origin, dir, tmp, r * k);
         if (t !== null && t > tMin && t < hitT) {
           hitT = t;
           hitZombie = z;

@@ -41,7 +41,7 @@ Each session below is roughly one working session. The order can change based on
 - Zomboid-style status indicators ("moodles"); health panel with a body diagram and per-wound treatment
 - First engine-agnostic module in `src/sim/`
 
-## Session 7 (was 2): Characters and animation
+## Session 7 (was 2): Characters and animation — first pass done in session 5 ✅ (procedural skinned bodies)
 - Replace box people with rigged, animated models (CC0 packs such as Quaternius or Kenney, loaded as glTF)
 - Animation blending: idle, walk, run, crouch, melee swings, aim, hit reactions, death
 - Zombie variety in clothing and body type
