@@ -63,6 +63,12 @@ await p.evaluate(() => {
 const run = async (name, fn) => {
   if (only !== "all" && !only.split(",").includes(name)) return;
   const t0 = Date.now();
+  // Headless pointer lock fails when a UI closes, which pauses the game; every scenario starts in play.
+  await p.evaluate(() => {
+    const g = window.__game;
+    if (g.status === "paused") g.status = "playing";
+    g.locked = true;
+  });
   try {
     const out = await p.evaluate(fn);
     console.log(name, JSON.stringify(out), `(${((Date.now() - t0) / 1000).toFixed(1)}s)`);
@@ -722,6 +728,10 @@ await run("H10", () => {
   z.hp = 100;
   z.state = "chase";
   z.awareness = 1.2;
+  z.lastSeen = 0;
+  // Daylight, so it can see you through the glass; earlier scenarios may have moved the clock.
+  g.minutes = Math.floor(g.minutes / 1440) * 1440 + 12 * 60;
+  g.noises = [];
   let t = 0;
   let breachAt = null;
   let attackedAt = null;
