@@ -57,6 +57,8 @@ export interface ZombieContext {
   barrierContact: (z: Zombie, id: number) => ZombieAccess;
   /** The point on a barrier to face while pounding on it. */
   barrierPoint: (id: number, from: THREE.Vector3) => THREE.Vector3;
+  /** The player is on this zombie's side of the barrier (no need to break through to get at them). */
+  playerSameSide: (z: Zombie, id: number) => boolean;
   /** Whether it has one of the barrier's few places to swing from. */
   canBreach: (z: Zombie, id: number) => boolean;
   onBarrierHit: (z: Zombie, id: number) => void;
@@ -123,6 +125,8 @@ export class Zombie {
   breach: number | null = null;
   /** Climbing through a window. */
   clamber: Clamber | null = null;
+  /** A window it found it can't climb through, and for how long to stop trying. */
+  private noClimb = { id: -1, t: 0 };
 
   constructor(position: THREE.Vector3, rng: () => number) {
     this.pos = position.clone();
@@ -252,6 +256,7 @@ export class Zombie {
     }
 
     this.stateTimer -= dt;
+    if (this.noClimb.t > 0) this.noClimb.t -= dt;
     let speed = 0;
     let faceOnly = false;
     const toPlayer = ctx.playerPos.clone().sub(this.pos).setY(0);
@@ -260,7 +265,10 @@ export class Zombie {
     if (this.breach !== null) {
       // Keep at it until the way is open, it can reach you, or it forgets why it came.
       const giveUp =
-        this.state === "idle" || this.state === "wander" || ctx.barrierContact(this, this.breach) !== "blocking" || (this.state === "chase" && ctx.canAttack(this));
+        this.state === "idle" ||
+        this.state === "wander" ||
+        ctx.barrierContact(this, this.breach) !== "blocking" ||
+        (this.state === "chase" && (ctx.canAttack(this) || ctx.playerSameSide(this, this.breach)));
       if (giveUp) {
         this.breach = null;
         if (this.attackTimer > 0) this.attackTimer = 0;
@@ -435,8 +443,14 @@ export class Zombie {
       return true;
     }
     if (access === "climbable") {
+      if (this.noClimb.id === id && this.noClimb.t > 0) return false;
       const c = WINDOW.zombiesClimb ? ctx.clamberPoints(this, id) : null;
-      if (!c) return false;
+      if (!c) {
+        // Nowhere to land: stop trying this one for a while and find another way.
+        this.noClimb = { id, t: 8 };
+        this.path = null;
+        return false;
+      }
       this.clamber = { start: this.pos.clone(), ...c, t: 0, id };
       this.breach = null;
       return true;
@@ -647,7 +661,8 @@ export class Zombie {
       return;
     }
     for (const n of ctx.noises) {
-      if (n.barrierId !== undefined && n.barrierId === this.breach) continue;
+      // While pounding on something, other zombies' pounding doesn't keep it going (only you can).
+      if (n.barrierId !== undefined && this.breach !== null) continue;
       const nd = this.pos.distanceTo(n.pos);
       if (nd < n.radius) {
         // Close, loud noises make it certain something's there.

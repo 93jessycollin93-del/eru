@@ -513,8 +513,9 @@ export class Game {
     return this.elec.powered(this.town.buildings.find((b) => b.computer === c), "computer");
   }
 
-  private buildingObj(x: number, z: number) {
-    return this.town.buildings.find((b) => x > b.rect.minX && x < b.rect.maxX && z > b.rect.minZ && z < b.rect.maxZ);
+  /** The building whose footprint contains the point; `inset` shrinks it (0.45 m = properly inside, past the wall line). */
+  private buildingObj(x: number, z: number, inset = 0) {
+    return this.town.buildings.find((b) => x > b.rect.minX + inset && x < b.rect.maxX - inset && z > b.rect.minZ + inset && z < b.rect.maxZ - inset);
   }
 
   // ------------------------------------------------------------ generators
@@ -637,6 +638,11 @@ export class Game {
     return [d, d > 0.01 ? to.normalize().dot(right) : 0];
   }
 
+  /** Where a noise you make at a door or window comes from: just your side of it (not inside the building). */
+  private atYourSide(id: number) {
+    return this.barriers.approach(id, this.barriers.sideOf(id, this.player.pos), 0.6);
+  }
+
   /** An electric lock biting or letting go. */
   private lockSound(id: number) {
     const at = this.barriers.centre(id);
@@ -720,7 +726,7 @@ export class Game {
         this.barriers.close(id);
         const [d, pan] = this.hear(at);
         this.audio.doorThud(d, pan);
-        this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.doorClose, ttl: 0.4 });
+        this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.doorClose, ttl: 0.4 });
       } else if (side === -1 && b.bolted) {
         this.audio.lockClunk(0, 0);
         this.startAction({ label: "Unbolting", dur: DOOR.unboltSeconds, done: () => this.openDoorNow(id, side) });
@@ -749,7 +755,7 @@ export class Game {
     }
     const [d, pan] = this.hear(at);
     this.audio.doorCreak(d, pan);
-    this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.doorOpen, ttl: 0.4 });
+    this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.doorOpen, ttl: 0.4 });
   }
 
   private smashWindow(id: number) {
@@ -757,7 +763,7 @@ export class Game {
     const at = this.barriers.closestPoint(id, this.player.pos).setY(0);
     const [d, pan] = this.hear(at);
     this.audio.glassBreak(d, pan);
-    this.noises.push({ pos: at, radius: BARRIER_NOISE.glassBreak, ttl: 0.5 });
+    this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.glassBreak, ttl: 0.5 });
     if (d < 2.5) this.player.addShake(0.15);
   }
 
@@ -791,7 +797,7 @@ export class Game {
         return;
       }
       this.audio.lockClunk(0, 0);
-      this.noises.push({ pos: this.barriers.centre(id).clone(), radius: BARRIER_NOISE.bolt, ttl: 0.3 });
+      this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.bolt, ttl: 0.3 });
       this.message(was ? "You draw the deadbolt." : "You throw the deadbolt.", "info");
       return;
     }
@@ -810,7 +816,7 @@ export class Game {
         beat: () => {
           const [d, pan] = this.hear(at);
           this.audio.doorBang(d, pan, "glass");
-          this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.clearGlass, ttl: 0.3 });
+          this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.clearGlass, ttl: 0.3 });
         },
         done: () => {
           if (this.barriers.clear(id)) this.message("You knock the last shards out of the frame.", "info");
@@ -846,7 +852,7 @@ export class Game {
       beat: () => {
         const [d, pan] = this.hear(at);
         this.audio.hammer(d, pan);
-        this.noises.push({ pos: at.clone().setY(0), radius: BARRIER_NOISE.hammer, ttl: 0.3 });
+        this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.hammer, ttl: 0.3 });
       },
       done: () => {
         // Things may have changed while you worked.
@@ -886,7 +892,7 @@ export class Game {
       beat: () => {
         const [d, pan] = this.hear(at);
         this.audio.pry(d, pan);
-        this.noises.push({ pos: at.clone().setY(0), radius: BARRIER_NOISE.pry, ttl: 0.3 });
+        this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.pry, ttl: 0.3 });
       },
       done: () => {
         const got = this.barriers.pry(id, side);
@@ -1531,7 +1537,8 @@ export class Game {
     if (total < 1e-3) return true;
     const ux = dx / total;
     const uz = dz / total;
-    const y = Math.max(a.y, b.y) + 1.15;
+    // Chest height above the ground, not above a body mid-climb (that ray would pass over the window head).
+    const y = Math.max(this.terrain.height(a.x, a.z), this.terrain.height(b.x, b.z)) + 1.15;
     let ox = a.x;
     let oz = a.z;
     let left = total;
@@ -1716,7 +1723,7 @@ export class Game {
         this.pathBudget--;
         // A target inside a building it isn't in: make for the best way in. Searching the
         // whole block instead is slow (crossing costs are invisible to the A* heuristic).
-        const inside = this.buildingObj(to.x, to.z);
+        const inside = this.buildingObj(to.x, to.z, 0.45);
         if (inside && inside !== this.buildingObj(from.x, from.z)) {
           const siege = this.siegePath(from, inside);
           if (siege) return siege;
@@ -1735,6 +1742,7 @@ export class Game {
         return t < d - 0.05 && id !== undefined ? { id, dist: t } : null;
       },
       canBreach: (z: Zombie) => this.breachers.has(z),
+      playerSameSide: (z: Zombie, id: number) => this.barriers.sideOf(id, z.pos) === this.barriers.sideOf(id, p.pos),
       onBarrierHit: (z: Zombie, id: number) => this.zombieHitsBarrier(z, id),
       onBarrierPush: (z: Zombie, id: number) => {
         const side = this.barriers.sideOf(id, z.pos);
@@ -1817,7 +1825,7 @@ export class Game {
     else if (r.opened) this.audio.doorCreak(d, pan);
     else this.audio.doorBang(d, pan, mat);
     this.noises.push({
-      pos: at.clone().setY(0),
+      pos: byZombie ? at.clone().setY(0) : this.barriers.approach(id, side, 0.6),
       radius: r.noise,
       ttl: 0.5,
       ...(byZombie ? { lure: this.barriers.approach(id, (-side) as Side, 1.0), barrierId: id } : {}),
