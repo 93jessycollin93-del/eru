@@ -43,7 +43,12 @@ Blood volume, wounds per body part, clotting, hidden infection and reanimation, 
 - Every item has weight, volume, condition and material.
 - Food spoils on a real timeline, faster without a working fridge.
 - Containers have capacity.
-- Doors and windows have health, lock state and noise; glass breaks and can cut you.
+- Doors and windows have health, lock state and noise; glass breaks and can cut you. **(done: session 7)**
+  - A barrier is a stack of layers met in the order a real attacker meets them: boards on the striker's side, then the core (glass, or the closed door), then boards on the far side. Damage doesn't carry over between layers.
+  - A closed door holds until damage reaches the weaker of its leaf (hollow 120, glass 260, solid 1400, steel 3000) and what keeps it shut (latch 300, deadbolt 900, maglock 1500, strike 2400). At 8 damage per zombie blow every 1.15 s, those read as seconds of pounding: a latched door lasts ~44 s against one zombie.
+  - Zombies never use handles. A maglock door with no power has no latch, so it swings open from its push side and only the door stop holds from the other.
+  - Crossing a window is always a scripted climb (no jumping through); glass is a non-occluding collider that bullets pass through and break.
+  - Noise from a barrier being pounded lures others to just past it, so they path through and join in; zombies pounding on it ignore that noise, so a siege can't sustain itself.
 
 ### Energy (key system linking both worlds) (done: session 6)
 - The town grid goes down on a set day.
@@ -82,7 +87,7 @@ Boot, login, real shell, filesystem with permissions, mail, programs, battery.
 
 ### Devices that touch the physical world
 - **CCTV:** network cameras streaming **live views of the 3D world** to an NVR you can watch from a terminal. Scout before you step outside.
-- **Access control:** door controllers you can unlock from the network (with credentials).
+- **Access control:** door controllers you can unlock from the network (with credentials). **(done: session 7)** The police station's VistaGuard ACS-4 (`cpd-acs`, 10.0.4.40) is still on its factory login (found in the manual on the file server). Its `door` CLI locks, unlocks and pulses real doors. The lobby maglock fails safe (releases when power dies) and the armory strike fails secure (stays locked; lever egress inside). The keypad needs controller power. The armory PIN is derived from existing secrets so the content random stream never shifts.
 - **Building systems:** lights, alarms (which make noise and draw zombies), water pumps.
 - **Radio:** scanners, emergency broadcasts on a schedule, transmitting to other survivors (multiplayer era).
 - **Programmable logic:** a simple PLC or microcontroller language to automate generators, lights and doors (EXAPUNKS-style), and later drones.

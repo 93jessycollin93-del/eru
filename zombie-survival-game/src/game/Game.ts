@@ -1725,6 +1725,15 @@ export class Game {
       },
       barrierContact: (z: Zombie, id: number) => this.barriers.access(id, this.barriers.sideOf(id, z.pos)),
       barrierPoint: (id: number, from: THREE.Vector3) => this.barriers.closestPoint(id, from),
+      barrierBetween: (z: Zombie) => {
+        const dx = p.pos.x - z.pos.x;
+        const dz = p.pos.z - z.pos.z;
+        const d = Math.hypot(dx, dz);
+        if (d < 1e-3) return null;
+        const t = this.colliders.raycast(z.pos.x, z.pos.y + 1.15, z.pos.z, dx / d, 0, dz / d, d, false, this.rayHit);
+        const id = this.rayHit.box?.barrierId;
+        return t < d - 0.05 && id !== undefined ? { id, dist: t } : null;
+      },
       canBreach: (z: Zombie) => this.breachers.has(z),
       onBarrierHit: (z: Zombie, id: number) => this.zombieHitsBarrier(z, id),
       onBarrierPush: (z: Zombie, id: number) => {
@@ -1980,6 +1989,12 @@ export class Game {
     return Math.abs(p.y + 1 - c.y) > 2.2 ? Infinity : Math.hypot(dx, dz);
   }
 
+  /** No wall or closed door between you and it (no looting through walls). */
+  private inReach(c: { x: number; y: number; z: number }) {
+    const p = this.player.pos;
+    return this.colliders.lineOfSight(p.x, p.y + 1.2, p.z, c.x, Math.max(c.y, 0.3), c.z);
+  }
+
   private nearestContainer(): LootContainer | null {
     const p = this.player;
     const fwd = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
@@ -1987,7 +2002,7 @@ export class Game {
     let bestScore = Infinity;
     for (const c of this.town.containers) {
       const d = this.distanceToContainer(c);
-      if (d > INTERACT_RANGE) continue;
+      if (d > INTERACT_RANGE || !this.inReach(c)) continue;
       const to = new THREE.Vector3(c.x - p.pos.x, 0, c.z - p.pos.z).normalize();
       // Prefer what you're looking at.
       const score = d - to.dot(fwd) * 0.8;
@@ -2016,7 +2031,7 @@ export class Game {
     let best = INTERACT_RANGE;
     for (const c of this.town.computers) {
       const d = this.distanceToContainer(c);
-      if (d < best) {
+      if (d < best && this.inReach(c)) {
         best = d;
         computer = c;
       }

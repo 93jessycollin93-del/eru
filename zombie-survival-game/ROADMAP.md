@@ -63,10 +63,12 @@ Each session below is roughly one working session. The order can change based on
 - Police standby generator, portable generator, jerry cans, siphoning fuel from cars
 - Interior lights, a light switch, light luring zombies at night, generator noise and hum; laptops recharge
 
-## Session 3b: Doors, windows and barricades
-- Doors that open, close and lock; zombies bang on them and can break through
-- Climb and vault through windows (breaking the glass makes noise)
-- Board up windows and doors with planks, a hammer and nails
+## Session 3b (done in session 7): Doors, windows, barricades and access control ✅
+- Doors that open, close and lock (latch, deadbolt, maglock, electric strike); zombies pound on them (limited slots), push latchless doors open, and burst them off their hinges
+- Glass windows: break them (loud), climb through (shards cut unless cleared), zombies climb in and can be shoved off
+- Board up windows and doors with planks, a hammer and nails; boards on the attacker's side go first
+- Nav grid crossing costs so zombies pick the easiest way in; a silent player ends a siege
+- Police door controller on the network (factory login), `door` CLI, armory keypad, fail-safe vs fail-secure on power loss
 
 ## Session 4: Zombie navigation and hordes
 - Navmesh pathfinding so zombies route through doorways instead of sliding along walls

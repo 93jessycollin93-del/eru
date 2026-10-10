@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockBox, cellsInBox, createNavGrid, findPath, gridLineClear, setCellCost, toCell, type NavGrid } from "./nav";
+import { blockBox, cellCenter, cellsInBox, createNavGrid, findPath, gridLineClear, setCellCost, toCell, type NavGrid } from "./nav";
 
 /** A 40 m square with a 20 m wall across the middle, open at both ends. */
 function wallGrid() {
@@ -34,6 +34,16 @@ describe("pathfinding", () => {
     const g = createNavGrid(-20, -20, 40, 40, 0.5);
     const path = findPath(g, -15, -15, 15, 12)!;
     expect(path).toHaveLength(1);
+  });
+
+  it("doesn't string-pull past a blocked cell's corner", () => {
+    // One blocked cell whose corner lies on the start-to-goal diagonal. The search won't step
+    // diagonally past it, so a smoothed segment mustn't graze it either.
+    const g = createNavGrid(0, 0, 10, 10, 1);
+    g.blocked[4 * g.width + 5] = 1;
+    const path = findPath(g, 0.5, 0.5, 9.5, 9.5)!;
+    expect(path).not.toBeNull();
+    expect(path.length).toBeGreaterThan(1);
   });
 
   it("uses a doorway in a wall", () => {
@@ -163,12 +173,15 @@ describe("costed cells", () => {
   it("makes the cell where the route crosses a costed strip a waypoint", () => {
     const g = gappedWall([[-1, 1]]);
     const door = strip(g, -1, 1);
-    const nearStrip = (path: [number, number][]) => path.some(([, z]) => Math.abs(z) <= CELL);
+    const [, stripZ] = cellCenter(g, door[0] % g.width, Math.floor(door[0] / g.width));
+    // Exactly one: a costed cell may still end or start a sight line, so the crossing cell
+    // itself is the waypoint, not its neighbours on either side.
+    const waypointsNearStrip = (path: [number, number][]) => path.filter(([, z]) => Math.abs(z - stripZ) <= 1.5 * CELL).length;
     const free = findPath(g, -1.5, -4, 1.5, 4)!;
-    expect(nearStrip(free)).toBe(false);
+    expect(waypointsNearStrip(free)).toBe(0);
     setCellCost(g, door, 4);
     const costed = findPath(g, -1.5, -4, 1.5, 4)!;
-    expect(nearStrip(costed)).toBe(true);
+    expect(waypointsNearStrip(costed)).toBe(1);
     expect(length([-1.5, -4], costed)).toBeLessThan(length([-1.5, -4], free) + 0.1);
   });
 
@@ -184,8 +197,10 @@ describe("costed cells", () => {
     expect(glass.filter((i) => touched.has(i))).toEqual([]);
   });
 
-  it("finds a way into a closed room through costed openings within the game's budget", () => {
-    // 10 x 10 m room whose only ways in are a west door (36) and a north window (28).
+  it("finds a way into a closed room within the game's budget from the sides facing its openings", () => {
+    // 10 x 10 m room whose only ways in are a west door (36) and a north window (28). From
+    // the blind south side the search needs 11-13k expansions (crossing costs are invisible
+    // to the heuristic), so the game makes for an opening instead of searching into a room.
     const g = createNavGrid(-30, -30, 60, 60, CELL);
     const t = 0.1;
     const walls = [

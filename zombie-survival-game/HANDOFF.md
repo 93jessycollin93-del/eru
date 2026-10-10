@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: end of session 6 — electricity, generators, fuel (2026-10-09)_
+_Last updated: session 7 — doors, windows, barricades, access control (2026-10-10)_
 
 ## The project
 
@@ -50,6 +50,8 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - Software rendering runs at about 2 fps, so test logic by stepping the simulation: call `renderer.setAnimationLoop(null)`, then call `g.update(1/30)` in a loop.
 - For screenshots, call `g.renderer.render(g.scene, g.camera)` after positioning the player.
 
+**Committed harness:** `tools/harness/` (see its README): `doors.mjs` runs the door/window/barricade/police scenarios H0–H8, `perf.mjs` measures draw calls and AI cost, `snap.mjs` snapshots everything the town random stream decides (diff it against an older commit's build to prove determinism). Copy their pattern for new systems.
+
 **Gotchas:**
 - Don't run `pkill -f vite`; it kills the calling shell. Run servers as background tasks instead.
 - Before raycasting from the camera, call `camera.updateMatrixWorld()`.
@@ -63,7 +65,8 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/sim/computerContent.ts` | Generates police / store / hardware / house-laptop machines from `TownFacts` (police address, supply-cache address, power-off day). Writes lore, mail, incident reports, and the password note for that building. `gameDate(day, minute)`: day 1 = Fri Oct 23 |
 | `src/sim/network.ts` | **Engine-agnostic** LAN model: `NetworkSpec` (cidr, gateway, hosts with services/MAC/vendor, `upsMinutes`), `NetworkView` (selfIp + `isUp(ip)` supplied by the game) |
 | `src/sim/tuning.ts` | **Every gameplay number** (movement, footsteps, stamina, zombie speeds, senses, melee, firearms) plus pure formulas (`sightRate`, `visibilityRange`, `meleeDamage`, `shotSpread`). Design targets are enforced in `tuning.test.ts`. **Change numbers here, never inline.** |
-| `src/sim/nav.ts` | Nav grid (0.25 m cells; cell-centre rasterisation keeps 1 m doorways open) + A* with typed-array workspaces (~1 ms per search) + string-pulling |
+| `src/sim/nav.ts` | Nav grid (0.25 m cells; cell-centre rasterisation keeps 1 m doorways open) + A* with typed-array workspaces (~1 ms per search) + string-pulling. **Cost layer:** `NavGrid.cost` (extra cells per crossing), `cellsInBox` (half-open, one row for a one-cell strip), `setCellCost`; string-pulling (`pullLineClear`) never cuts through a costed cell the route didn't use. Costs make A* expand a lot when the goal is inside a closed building, so `Game` routes "into a building" with `siegePath` first |
+| `src/sim/barriers.ts` | **Engine-agnostic doors/windows/barricades.** `Barrier` state (open, latch, bolted, electronic lock, glass, damage, broken, boards + side). Layered `hitBarrier` (near boards → core → far boards), `coreStrength` (min of leaf and hold), `zombieAccess` (passable/pushable/climbable/blocking), `colliderEnabled`, `occludes`, `navCost`, door actions (free egress from side -1), glass (`climbCut`), boards (`boardCost`, `canBoard`, `addBoard`, `removeBoard`), electric locks (`setLockPower`, `lockCommand`, `keypadEnter`, `tickBarrier`). `createBarrierWorld(seeds, rng)` draws exactly 2 numbers per barrier. Side +1 = the spec normal's side (street / main room) |
 | `src/sim/power.ts` | **Engine-agnostic power**: `PowerWorld` (gridFailsAt, circuits keyed by building address, generators), `stepPower` resolves grid → generator → UPS (critical loads only), burns fuel (`fuelPerHour`), trips breakers, auto-starts standby units; `defaultLoads(type)` per building type |
 | `src/sim/climate.ts` | Air temperature by time of day, day number and shelter |
 | `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables; seeded RNG |
@@ -71,8 +74,9 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/game/entities/player.ts` | Movement, stamina, jump/gravity, survival stat drain, over-the-shoulder camera with collision |
 | `src/game/entities/zombie.ts` | Zombie AI. States: idle, wander, investigate, chase, dead. Senses run every 0.25 s: sight cone + line of sight, footsteps, noise events |
 | `src/game/entities/humanoid.ts` | **Procedural skinned human.** 19-bone skeleton; the body is lofted from cross-sections (torso keyframes, arms, legs with calves, a shaped head with jaw, nose and ears, hands, shoes) and skinned with blended weights. Six cached template geometries (m/f × slim/average/heavy). Clothing, hair, eyebrows, grime and blood come from a shader (`zone`/`limbT` attributes + per-character uniforms). Procedural animation: gait with knee and foot plant, hip bob/twist, chest counter-rotation, breathing, crouch, two-handed aim, overhead swing, flinch, zombie hunch/limp/twitch/arm habits, knee-buckle fall. Public API used by others: `root`, `body`, `head`, `hand`, `animate()`, `fall()`, `flinch()`, `setTint()`, `setShadows()` |
-| `src/game/world/town.ts` | Procedural town: named streets with real house numbers, buildings with interiors, furniture, loot containers (`preset` items for notes and caches), computers (`ComputerSpot` with a glowing screen mesh), a supply crate at the stash address, cars, street lamps (glow at night while the grid is up), zombie spawn points |
-| `src/game/world/colliders.ts` | AABB collision + raycast/LOS over an 8 m spatial grid |
+| `src/game/world/town.ts` | Procedural town: named streets with real house numbers, buildings with interiors, furniture, loot containers (`preset` items for notes and caches), computers (`ComputerSpot` with a glowing screen mesh), a supply crate at the stash address, cars, street lamps (glow at night while the grid is up), zombie spawn points. Every opening emits a `BarrierSpec` (index = barrier id) from `wall(..., meta)`; window frames and door jambs are added with no random draws. The police armory (back-left corner) and its keypad are built here; the armory PIN is copied from the controller host after generation. **Never add rng draws here** (the whole town and every password would reshuffle) |
+| `src/game/world/colliders.ts` | AABB collision + raycast/LOS over an 8 m spatial grid. Boxes can be switched off (`setEnabled`), tagged with `barrierId`, or marked `glass` (bullets skip with `skipGlass`); `raycast(..., out)` reports the box hit |
+| `src/game/world/barrierSystem.ts` | **Client side of barriers.** One collider box per opening (doors: switched off when open; windows: always on, `glass`), a one-cell nav cost strip on the wall line, instanced leaves (one mesh per build, hinge-pivoted swing, burst tilt, per-house paint via a paint-mask shader tweak), glass planes, packed shard and board pools, keypad LED. API: `reset`, `syncAll` (save restore path), `nearest`, `nearestKeypad`, `sideOf`, `closestPoint`, `approach`, `open/close/bolt/hit/push/breakGlass/clear/board/pry`, `traversal`, `reachThrough`, `sealed`, `setControllerPower`, `command`, `keypad`, `accessRows`, `update(dt)` |
 | `src/game/world/terrain.ts` | Simplex heightmap. The town (radius 120) is flat at y = 0 |
 | `src/game/world/vegetation.ts` | Instanced trees and bushes |
 | `src/game/world/environment.ts` | Sun, hemisphere light, fog, day/night (`daylight()` 0..1) |
@@ -93,6 +97,20 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - The `zombieContext()` visibility formula in `Game.ts`
 
 ## Status
+
+**Session 7 (doors, windows, barricades, access control) is complete and pushed.**
+- Design: a 3-approach judge panel produced the spec (kept in the session scratchpad; the decisions are summarised in DESIGN.md "Matter and objects" and "Access control").
+- 463 barriers in town: 86 doors (43 solid house fronts, 30 hollow interior, 11 glass shopfronts, the police steel front and armory) and 377 windows.
+- Controls: E open/close/break/climb, Q deadbolt or clear shards, hold H board up, Shift+H pry off. Timed actions show a progress bar and lock movement (mouse look still works); moving, releasing H or getting hit cancels.
+- Verified in the browser with `tools/harness/doors.mjs`:
+  - Closed door blocks movement and sight, open doesn't; deadbolt only from inside; can't close a door on yourself.
+  - 1 zombie bursts a latched door after 43 s of pounding (38 blows, 1.14 s apart); 2 on a deadbolt take 66 s.
+  - A silent, crouched player ends a siege in ~20 s; the door survives.
+  - Break glass (20 m noise), vault 1.97 s, zombie routes to a broken window over a bolted door, climbs in 3.0 s; a punch mid-climb shoves it back out, down.
+  - Boarding a window: 24 s, exactly 3 planks + 12 nails; hammering heard at once; outside boards torn before the glass, inside boards after it.
+  - Police: ssh admin@cpd-acs (admin/admin) → `door unlock armory` → opens; keypad 5 wrong → 60 s lockout; UPS runs flat → "A heavy clunk from the entrance." (maglock released, armory stays locked, keypad dark); a zombie inside pushes the front door open; refuel the standby → locks restore their commanded state.
+  - Determinism: buildings, all 36 computers' passwords, 217 containers and spawn points identical to the pre-feature build. Barrier JSON identical across new games; save → restore gives identical colliders and nav costs.
+  - Performance: +12 draw calls (110 → 122 at the fixed pose), AI update unchanged or faster.
 
 **Session 6 (electricity) is complete and pushed.**
 - `Game.deviceUp` and `computerPowered` now read circuit status (load kinds: computer, network, appliances).
@@ -164,9 +182,8 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 
 ### Known issues / not yet done
 - Frame rate has not been measured on a real GPU. There are about 670 draw calls; zombies are about 13 meshes each, which is the main cost. Shadows are skipped beyond 40 m and zombies are hidden beyond 115 m.
-- Zombies have no pathfinding and can get stuck on walls (roadmap session 4).
-- Doorways have no doors (session 3).
-- No saving (session 5).
+- Barriers: keys/lockpicking, openable sash windows, crowbars, holding cells, sound occlusion by closed doors, and zombies reaching through gaps between boards are deferred (see ROADMAP).
+- No saving yet (next). The barrier world is plain JSON and `BarrierSystem.syncAll()` is the restore path.
 - No mobile/touch controls.
 - When pointer lock is refused twice after clicks, the game falls back to free-mouse mode.
 
@@ -174,9 +191,9 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 
 1. Try `add_repo` with owner `yyb84ycgt6-oss` and repo `zombie-survival-game`. If it works, copy the folder's contents to that repo's root (the history can start fresh), push, and update this file. If it fails, keep working on the `eru` branch.
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
-3. **Recommended next, in order:**
-   - **(b) Doors and access control:** physical doors plus network door controllers; zombies bang on doors and break through.
-   - **(c) Saving** (serialise `BodyState`, computers, containers, world).
+3. **Recommended next, in order (owner approved this order):**
+   - ~~(b) Doors and access control~~ done in session 7.
+   - **(c) Saving** (serialise `BodyState`, inventory, computers (state incl. remote sessions), containers and ground piles, the power world and generators, the barrier world (`barriers.world` + `syncAll()`), zombies, clock). IndexedDB, several slots.
    - **(d) Character detail pass:** face textures, clothing variety (jackets, hoodies, uniforms on police zombies), carried gear visible on the body.
    Note for (a): **Characters and animation** (roadmap session 7, pulled forward).** The blocky people are now the biggest gap against the Tarkov look. `raw.githubusercontent.com` is reachable, so look for CC0 rigged glTF characters hosted on GitHub. Then do doors, windows and barricades (session 3b) and saving. Put any new rules in `src/sim/`.
 4. (Old note, kept for session 7) **Characters and animation**: Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.

@@ -61,6 +61,8 @@ export interface ZombieContext {
   canBreach: (z: Zombie, id: number) => boolean;
   onBarrierHit: (z: Zombie, id: number) => void;
   onBarrierPush: (z: Zombie, id: number) => void;
+  /** The door, window or boards between it and the player (first thing a reach would hit), if any. */
+  barrierBetween: (z: Zombie) => { id: number; dist: number } | null;
   /** A climb through a window, or null if there's no room on the far side. */
   clamberPoints: (z: Zombie, id: number) => { from: THREE.Vector3; to: THREE.Vector3; dur: number; peak: number } | null;
 }
@@ -314,7 +316,15 @@ export class Zombie {
         } else {
           if (this.attackTimer > 0) this.attackTimer = 0;
           if (this.attackTimer < 0) this.attackTimer = Math.min(0, this.attackTimer + dt);
-          if (!allowed && playerDist < ZOMBIE.attackRange + 0.7) {
+          const between = !allowed && playerDist < ZOMBIE.attackRange + 0.7 ? ctx.barrierBetween(this) : null;
+          if (between && between.dist > ZOMBIE.radius + BARRIER.engageReach) {
+            // You're just behind a door or glass: walk into it (the feeler will engage it).
+            speed = this.chaseSpeed;
+          } else if (between && this.onBarrier(ctx, between.id)) {
+            // Close enough: go at what's in the way instead of waiting.
+            speed = 0;
+            faceOnly = true;
+          } else if (!allowed && playerDist < ZOMBIE.attackRange + 0.7) {
             // Crowd behind the ones already on you.
             speed = 0;
             faceOnly = true;

@@ -33,7 +33,7 @@ import {
 import { cellsInBox, setCellCost, type NavGrid } from "../../sim/nav";
 import { BARRICADE, DOOR, WINDOW } from "../../sim/tuning";
 import type { TextureLibrary } from "../render/textures";
-import type { AABB, ColliderWorld } from "./colliders";
+import type { AABB, ColliderWorld, RayHit } from "./colliders";
 import type { BarrierSpec, TownData } from "./town";
 
 const WALL_T = 0.25;
@@ -105,6 +105,7 @@ const tmpV = new THREE.Vector3();
 const tmpS = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+const reachHit: RayHit = { box: null };
 
 /** Small stable pseudo-random number for cosmetic jitter (board tilt), so rebuilds look the same. */
 const jitter = (a: number, b: number) => {
@@ -588,6 +589,7 @@ export class BarrierSystem {
       if (s.spec.bottom > pos.y + 1.6) continue;
       const facing = d > 1e-3 ? (dx * fx + dz * fz) / d : 1;
       if (facing < 0.3 && d > 0.6) continue;
+      if (!this.reachable(s, pos)) continue;
       const score = d - facing * 0.8;
       if (score < bestScore) {
         bestScore = score;
@@ -595,6 +597,22 @@ export class BarrierSystem {
       }
     }
     return best;
+  }
+
+  /**
+   * Nothing solid between you and the opening but the barrier itself, so you
+   * can't work a door through a wall. Aims a little inside the jambs.
+   */
+  private reachable(s: Slot, pos: THREE.Vector3): boolean {
+    const t = (pos.x - s.centre.x) * s.along.x + (pos.z - s.centre.z) * s.along.z;
+    const lim = Math.max(0, s.spec.width / 2 - 0.2);
+    const ax = s.centre.x + s.along.x * Math.max(-lim, Math.min(lim, t)) - pos.x;
+    const az = s.centre.z + s.along.z * Math.max(-lim, Math.min(lim, t)) - pos.z;
+    const d = Math.hypot(ax, az);
+    if (d < 0.4) return true;
+    const y = Math.max(pos.y + 1.0, s.spec.bottom + 0.15);
+    const hit = this.colliders.raycast(pos.x, y, pos.z, ax / d, 0, az / d, d, false, reachHit);
+    return hit >= d - 0.2 || reachHit.box?.barrierId === s.spec.id;
   }
 
   /** The keypad within reach that you're facing, scored like other targets (lower is better). */
