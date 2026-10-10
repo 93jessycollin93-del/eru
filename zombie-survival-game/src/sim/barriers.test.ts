@@ -216,6 +216,27 @@ describe("pushable doors", () => {
     expect(b.broken).toBe(false);
   });
 
+  it("boards across the far side hold a latchless door shut", () => {
+    const b = make("front");
+    addBoard(b, 1);
+    addBoard(b, 1);
+    expect(zombieAccess(b, -1)).toBe("blocking");
+    const r = hitBarrier(b, 8, -1);
+    expect(r).toMatchObject({ layer: "board", opened: false });
+    expect(b.open).toBe(false);
+    expect(canBoard(b, 1)).toBe(null);
+  });
+
+  it("a powered, locked maglock is not pushable and costs a closed door", () => {
+    const b = make("front");
+    lockCommand(b, "lock");
+    expect(zombieAccess(b, -1)).toBe("blocking");
+    expect(zombieAccess(b, 1)).toBe("blocking");
+    expect(navCost(b)).toBe(NAV_COST.closedDoor);
+    expect(coreStrength(b, -1)).toBe(1500);
+    expect(pushOpen(b, -1)).toBe(false);
+  });
+
   it("latched doors are never pushable", () => {
     for (const n of ["hollow", "solid", "glassDoor", "armory"] as const) {
       expect(zombieAccess(make(n), 1)).toBe("blocking");
@@ -326,6 +347,18 @@ describe("keypad", () => {
     setLockPower(b, false);
     expect(effectiveLocked(b)).toBe(true);
     expect(keypadEnter(b, "4821")).toBe("dark");
+    // Power straight back: the pulse is gone, so the strike holds.
+    setLockPower(b, true);
+    expect(effectiveLocked(b)).toBe(true);
+  });
+
+  it("wrong tries start over after a lockout and after a good code", () => {
+    const b = make("armory");
+    for (let i = 0; i < ACCESS.keypadMaxTries; i++) keypadEnter(b, "0000");
+    tickBarrier(b, ACCESS.keypadLockoutSec + 0.1);
+    expect(keypadEnter(b, "0000")).toBe("denied");
+    expect(keypadEnter(b, "4821")).toBe("granted");
+    for (let i = 0; i < ACCESS.keypadMaxTries - 1; i++) expect(keypadEnter(b, "0000")).toBe("denied");
   });
 
   it("a door with no reader never grants", () => {

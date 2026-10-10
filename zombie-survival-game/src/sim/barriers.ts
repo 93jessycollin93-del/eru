@@ -344,7 +344,9 @@ export function hitBarrier(b: Barrier, dmg: number, from: Side): HitResult {
     r.layer = "door";
     const strength = coreStrength(b, from);
     if (strength <= 0) {
-      // Nothing holds it from this side: the blow just swings it open.
+      // Nothing holds it from this side: the blow swings it open, unless boards across the far side hold the leaf.
+      const far = b.boards.length ? b.boards[b.boards.length - 1] : null;
+      if (far) return hitBoard(b, far, dmg, r);
       b.open = true;
       r.opened = true;
       r.noise = BARRIER_NOISE.doorOpen;

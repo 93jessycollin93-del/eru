@@ -249,8 +249,9 @@ export const WINDOW = {
   clearSeconds: 2.0,
   /** Chance of a laceration climbing over shards you didn't clear. */
   cutChance: 0.4,
-  /** Landing spots tried past the wall centre line (m). */
-  landing: [0.6, 0.9] as const,
+  /** Landing spots tried past the wall centre line (m), and sideways along the wall (a bed or counter under the sill). */
+  landing: [0.6, 0.9, 1.2] as const,
+  landingSideways: [0, 0.3, -0.3, 0.6, -0.6] as const,
 } as const;
 
 export const BARRICADE = {

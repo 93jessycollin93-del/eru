@@ -1839,7 +1839,7 @@ export class Game {
     let best = -1;
     let bestD = Infinity;
     for (const s of this.barriers.specs) {
-      if (s.building !== b.address || s.role === "interior" || s.role === "armory") continue;
+      if (s.building !== b.address || s.role === "interior" || s.role === "armory" || !this.barriers.crossable(s.id, 1)) continue;
       const d = Math.hypot(s.cx + s.nx * 0.8 - from.x, s.cz + s.nz * 0.8 - from.z) + navCost(this.barriers.barrier(s.id)) * this.nav.cell;
       if (d < bestD) {
         bestD = d;

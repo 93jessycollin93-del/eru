@@ -79,6 +79,8 @@ interface Slot {
   angle: number;
   target: number;
   pane: number;
+  /** Crossable from side +1 and from side -1 (see crossable()). */
+  crossable: [boolean, boolean];
   /** What the meshes last showed, so pools are rebuilt only when it changes. */
   shown: { boards: number; side: Side; glass: string };
 }
@@ -106,6 +108,8 @@ const tmpS = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 const reachHit: RayHit = { box: null };
+/** Nav cost of an opening no body can pass (the cost layer's maximum). */
+const UNCROSSABLE = 255;
 
 /** Small stable pseudo-random number for cosmetic jitter (board tilt), so rebuilds look the same. */
 const jitter = (a: number, b: number) => {
@@ -144,6 +148,13 @@ export class BarrierSystem {
     this.specs = town.barrierSpecs;
     this.buildMeshes(textures);
     for (const spec of this.specs) this.slots.push(this.buildSlot(spec));
+    // With every collider in place, work out which openings a body can actually get through.
+    for (const s of this.slots) {
+      const walkable = s.cells.some((c) => !this.nav.blocked[c]);
+      s.crossable = s.spec.kind === "window"
+        ? [walkable && this.traversal(s.spec.id, 1, s.centre) !== null, walkable && this.traversal(s.spec.id, -1, s.centre) !== null]
+        : [walkable, walkable];
+    }
     this.electronic = this.specs.filter((s) => s.electronic).map((s) => s.id);
     this.buildKeypads();
   }
@@ -300,7 +311,22 @@ export class BarrierSystem {
       }
     }
     const pane = spec.kind === "window" ? this.nextPane++ : -1;
-    return { spec, along, n, centre, box, collider, cells, leaves, swing: spec.swingIn ? -1 : 1, angle: 0, target: 0, pane, shown: { boards: -1, side: -1, glass: "" } };
+    return {
+      spec,
+      along,
+      n,
+      centre,
+      box,
+      collider,
+      cells,
+      leaves,
+      swing: spec.swingIn ? -1 : 1,
+      angle: 0,
+      target: 0,
+      pane,
+      crossable: [true, true],
+      shown: { boards: -1, side: -1, glass: "" },
+    };
   }
 
   private buildKeypads() {
@@ -358,7 +384,8 @@ export class BarrierSystem {
     const s = this.slots[id];
     this.colliders.setEnabled(s.collider, colliderEnabled(b));
     s.box.occludes = occludes(b);
-    setCellCost(this.nav, s.cells, navCost(b));
+    // An opening nobody can get through either way (furniture both sides) is priced out of every route.
+    setCellCost(this.nav, s.cells, s.crossable[0] || s.crossable[1] ? navCost(b) : UNCROSSABLE);
     if (b.kind === "door") {
       const target = b.broken ? DOOR.burstAngle : b.open ? DOOR.openAngle : 0;
       if (target !== s.target) {
@@ -715,22 +742,38 @@ export class BarrierSystem {
    */
   traversal(id: number, from: Side, pos: { x: number; z: number }, zombie = false): Traversal | null {
     const s = this.slots[id];
-    const b = this.world.barriers[id];
-    if (b.kind !== "window") return null;
+    if (s.spec.kind !== "window") return null;
     const t = (pos.x - s.centre.x) * s.along.x + (pos.z - s.centre.z) * s.along.z;
     const lim = Math.max(0, s.spec.width / 2 - 0.4);
     const off = Math.max(-lim, Math.min(lim, t));
     const base = new THREE.Vector3().copy(s.centre).addScaledVector(s.along, off);
     const start = base.clone().addScaledVector(s.n, from * 0.5);
+    const to = this.landing(s, base, from);
+    if (!to) return null;
+    const sill = { sill: s.spec.bottom } as Barrier;
+    return { from: start, to, dur: zombie ? zombieClimbSeconds(sill) : vaultSeconds(sill), peak: s.spec.bottom + 0.15 };
+  }
+
+  /** The first clear spot on the far side: straight in first, then further in and sideways. */
+  private landing(s: Slot, base: THREE.Vector3, from: Side): THREE.Vector3 | null {
     for (const d of WINDOW.landing) {
-      const to = base.clone().addScaledVector(s.n, -from * d);
-      const probe = { x: to.x, z: to.z };
-      this.colliders.resolveCylinder(probe, 0.35, 0.05, 1.7);
-      if (Math.hypot(probe.x - to.x, probe.z - to.z) < 1e-3) {
-        return { from: start, to, dur: zombie ? zombieClimbSeconds(b) : vaultSeconds(b), peak: s.spec.bottom + 0.15 };
+      for (const side of WINDOW.landingSideways) {
+        const to = base.clone().addScaledVector(s.n, -from * d).addScaledVector(s.along, side);
+        const probe = { x: to.x, z: to.z };
+        this.colliders.resolveCylinder(probe, 0.35, 0.05, 1.7);
+        if (Math.hypot(probe.x - to.x, probe.z - to.z) < 1e-3) return to;
       }
     }
     return null;
+  }
+
+  /**
+   * Can a body get through this opening going from `from` to the other side?
+   * Doors need a walkable cell in the doorway; windows also need somewhere to
+   * land. Furniture never moves, so this is worked out once.
+   */
+  crossable(id: number, from: Side): boolean {
+    return this.slots[id].crossable[from === 1 ? 0 : 1];
   }
 
   // ------------------------------------------------------- access control
