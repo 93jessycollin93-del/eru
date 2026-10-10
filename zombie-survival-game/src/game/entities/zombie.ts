@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { pick, range } from "../../sim/rng";
+import { mulberry32, pick, range } from "../../sim/rng";
 import type { ZombieAccess } from "../../sim/barriers";
 import { BARRIER, SENSES, WINDOW, ZOMBIE, sightRate } from "../../sim/tuning";
 import type { ColliderWorld, RayHit } from "../world/colliders";
@@ -128,7 +128,15 @@ export class Zombie {
   /** A window it found it can't climb through, and for how long to stop trying. */
   private noClimb = { id: -1, t: 0 };
 
-  constructor(position: THREE.Vector3, rng: () => number) {
+  /**
+   * Everything about who this zombie was (looks, build, gait, runner or not)
+   * comes from `seed`, so a saved zombie comes back as the same person.
+   */
+  constructor(
+    position: THREE.Vector3,
+    readonly seed: number,
+  ) {
+    const rng = mulberry32(seed);
     this.pos = position.clone();
     this.lastPos.copy(this.pos);
     const r = rng();

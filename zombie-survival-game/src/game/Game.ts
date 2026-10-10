@@ -1694,7 +1694,7 @@ export class Game {
 
   private spawnZombie(pos: THREE.Vector3) {
     pos.y = this.terrain.height(pos.x, pos.z);
-    const z = new Zombie(pos, this.rng);
+    const z = new Zombie(pos, Math.floor(this.rng() * 4294967296));
     this.zombies.push(z);
     this.scene.add(z.model.root);
     return z;
