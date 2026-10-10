@@ -5,7 +5,7 @@
  * ComputerState); programs are data too (lines to print), so the whole thing
  * can be saved or reimplemented in another engine without behaviour changes.
  */
-import { inSubnet, isIp, latencyMs, resolveHost, type NetHost, type NetworkView } from "./network";
+import { inSubnet, isIp, latencyMs, resolveHost, type AccessDoorStatus, type AccessView, type NetHost, type NetworkView } from "./network";
 
 export interface VFile {
   kind: "file";
@@ -52,8 +52,10 @@ export interface ComputerDef {
   net?: { iface: "eth0" | "wlan0"; ip: string; mac: string };
 }
 
-/** Something the shell asks the game to do (open a camera viewer, ...). */
-export type ComputerEffect = { type: "cctv"; nvrIp: string };
+export type DoorAction = "lock" | "unlock" | "pulse";
+
+/** Something the shell asks the game to do (open a camera viewer, drive a door lock, ...). */
+export type ComputerEffect = { type: "cctv"; nvrIp: string } | { type: "door"; controller: string; door: string; action: DoorAction };
 
 export type ComputerPhase = "off" | "login" | "password" | "shell";
 
@@ -89,6 +91,8 @@ export interface ComputerContext {
   uptimeMinutes: number;
   /** The LAN this machine is on, if any. */
   network?: NetworkView;
+  /** Live door state, if the LAN has an access controller. */
+  access?: AccessView;
 }
 
 const MAX_SCREEN = 500;
@@ -252,6 +256,7 @@ export function submit(s: ComputerState, line: string, ctx: ComputerContext) {
 
 // --------------------------------------------------------------------- ssh
 
+// `access` passes through untouched: the `door` program checks it is running on the controller itself.
 const remoteContext = (ctx: ComputerContext, r: ComputerState): ComputerContext => ({
   ...ctx,
   network: ctx.network && r.def.net ? { ...ctx.network, selfIp: r.def.net.ip } : undefined,
@@ -259,6 +264,13 @@ const remoteContext = (ctx: ComputerContext, r: ComputerState): ComputerContext 
 
 function forwardToRemote(s: ComputerState, line: string, ctx: ComputerContext) {
   const r = s.remote!;
+  // The far end lost power: the session dies on the next keystroke instead of
+  // carrying on as if the machine were still there (a dead controller takes no commands).
+  if (r.def.net && ctx.network && !ctx.network.isUp(r.def.net.ip)) {
+    print(s, prompt(r) + line, "client_loop: send disconnect: Broken pipe", "");
+    s.remote = null;
+    return;
+  }
   r.screen = [];
   submit(r, line, remoteContext(ctx, r));
   if (line.trim() === "clear") s.screen = [];
@@ -292,7 +304,8 @@ function sshInput(s: ComputerState, line: string, ctx: ComputerContext) {
     const r = createComputerState(host.def, null);
     r.remoteHost = host.hostname;
     r.phase = "shell";
-    print(s, "Welcome to Ubuntu 20.04.6 LTS (GNU/Linux 5.4.0-88-generic x86_64)", "");
+    const os = host.def.osName;
+    print(s, os.startsWith("Ubuntu") ? `Welcome to ${os} (GNU/Linux 5.4.0-88-generic x86_64)` : `Welcome to ${os}`, "");
     login(r, user.name, ctx);
     print(s, ...r.screen);
     r.screen = [];
@@ -409,6 +422,8 @@ function runCommand(s: ComputerState, name: string, args: string[], stdin: strin
   const { node, denied } = resolve(s, path);
   if (denied) return [`bash: ${name}: Permission denied`];
   if (node?.kind === "file" && node.program) {
+    // Live only on the controller the game wired up; anywhere else it falls back to its canned lines.
+    if (node.program === "acs" && ctx.access?.controller === s.def.hostname) return acs(s, args, ctx.access);
     if (node.program === "cctv") {
       const nvr = ctx.network?.spec.hosts.find((h) => h.kind === "nvr");
       if (nvr && ctx.network!.isUp(nvr.ip)) {
@@ -421,6 +436,47 @@ function runCommand(s: ComputerState, name: string, args: string[], stdin: strin
   }
   if (node?.kind === "file") return [`bash: ${name}: Permission denied`];
   return [`${name}: command not found`];
+}
+
+// ------------------------------------------------------- door controller
+
+const ON_POWER_LOSS: Record<AccessDoorStatus["mode"], string> = { maglock: "releases (fail-safe)", strike: "stays locked (fail-secure)" };
+
+const ACS_USAGE = [
+  "VistaGuard ACS-4 door control",
+  "usage: door list              doors, lock types and state",
+  "       door unlock <door>     release until locked again",
+  "       door lock <door>       secure (an open door locks when it closes)",
+  "       door pulse <door>      momentary release, like a valid keypad code",
+];
+
+function doorState(d: AccessDoorStatus): string {
+  if (d.open) return d.commanded === "locked" ? "open (held-open alarm)" : "open";
+  if (d.locked) return "closed, locked";
+  // Powered, commanded locked, yet not holding: a pulse is running.
+  return d.commanded === "locked" ? "closed, unlocked (pulse)" : "closed, unlocked";
+}
+
+/** The `door` CLI on an access controller. Commands become effects; the game moves the locks. */
+function acs(s: ComputerState, args: string[], access: AccessView): string[] {
+  const [sub, target] = args;
+  const doors = access.doors();
+  if (sub === "list" || sub === "status") {
+    const p = access.power();
+    const ac = p.source === "mains" ? "AC: OK" : `AC: FAIL  UPS ${p.upsPercent === null ? "--" : Math.round(p.upsPercent)}%`;
+    const rows = [["DOOR", "LOCK", "ON POWER LOSS", "COMMAND", "STATE"], ...doors.map((d) => [d.name, d.mode, ON_POWER_LOSS[d.mode], d.commanded, doorState(d)])];
+    const widths = rows[0].map((_, i) => Math.max(...rows.map((r) => r[i].length)) + 2);
+    return [`VistaGuard ACS-4 fw 2.3.1  ${ac}`, "", ...rows.map((r) => r.map((c, i) => (i < r.length - 1 ? pad(c, widths[i]) : c)).join(""))];
+  }
+  if (sub === "lock" || sub === "unlock" || sub === "pulse") {
+    if (!target) return [`usage: door ${sub} <door>`];
+    const d = doors.find((x) => x.name === target.toLowerCase());
+    if (!d) return [`door: no such door '${target}'`];
+    s.effects.push({ type: "door", controller: access.controller, door: d.name, action: sub });
+    if (sub === "lock" && d.open) return [`${d.name}: will lock when closed`];
+    return [`${d.name}: ${sub} accepted (${d.mode} ${sub === "lock" ? "engaged" : sub === "pulse" ? "released momentarily" : "released"})`];
+  }
+  return sub && sub !== "help" ? [`door: unknown command '${sub}'`, ...ACS_USAGE] : ACS_USAGE;
 }
 
 const fileLines = (s: ComputerState, path: string, cmd: string): string[] | string => {

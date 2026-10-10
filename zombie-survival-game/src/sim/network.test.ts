@@ -46,7 +46,12 @@ describe("network commands", () => {
     expect(out).toContain("Nmap scan report for cpd-files (10.0.4.10)");
     expect(out).toContain("22/tcp   open  ssh");
     expect(out).toContain("554/tcp  open  rtsp");
-    expect(out).toContain("(8 hosts up)");
+    expect(out).toContain("(9 hosts up)");
+    // The door controller answers on ssh and its web login.
+    const acs = out.slice(out.indexOf("Nmap scan report for cpd-acs (10.0.4.40)")).split("\n\n")[0];
+    expect(acs).toContain("22/tcp   open  ssh");
+    expect(acs).toContain("80/tcp   open  http");
+    expect(acs).toContain("(VistaGuard Security)");
   });
 
   it("lists neighbours and fetches device web pages", () => {

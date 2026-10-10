@@ -99,16 +99,31 @@ function mail(from: string, to: string, date: string, subject: string, body: str
   return `From: ${from}\nTo: ${to}\nDate: ${date}\nSubject: ${subject}\n\n${body.replace(/^\n/, "")}`;
 }
 
+/**
+ * A stable 4-digit code from text (FNV-1a, mod 9000 + 1000). Secrets derived
+ * this way cost no random draws, so adding one never reshuffles later machines.
+ */
+export function pinFrom(text: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return String((h % 9000) + 1000);
+}
+
 const word = (rng: () => number) => pick(rng, ["harbor", "maple", "winter", "falcon", "copper", "juniper", "granite", "otter", "cedar", "lantern"]);
 const digits = (rng: () => number, n: number) => Array.from({ length: n }, () => Math.floor(rng() * 10)).join("");
 
 // ------------------------------------------------------------------ police
+
+/** MAC prefix shared by the station's VistaGuard cameras, recorder and door controller. */
+const VISTAGUARD_OUI = "c0:56:e3";
 
 export function policeComputer(facts: TownFacts, rng: () => number): GeneratedComputer {
   const user = "dispatch";
   const password = `${word(rng)}${digits(rng, 2)}`;
   const powerDate = longDate(facts.powerOffDay);
   const badge = digits(rng, 4);
+  // Derived, not drawn: the content rng stream must stay byte-identical.
+  const armoryPin = pinFrom(`${password}:${badge}`);
   const reports: Record<string, VNode> = {
     "incident_1003_oak.txt": file(
       user,
@@ -220,6 +235,7 @@ The highway checkpoint is closing. We will not be returning to Coldwater.
     dispatch: [
       "Coldwater CAD 4.2 — dispatch log (read-only, server offline)",
       "--------------------------------------------------------------------",
+      "10/09 17:55  SYSTEM    LOCKDOWN FAILED: front entrance held open",
       "10/09 17:41  UNIT 12   10-33 EMERGENCY at the station, cells breached",
       "10/09 17:38  UNIT 7    requesting backup, Oak Ave, multiple subjects",
       "10/09 16:02  CALLER    screaming, address not given, line dropped",
@@ -264,6 +280,9 @@ Log in over ssh with the same password as your workstation:
 
 Camera feeds: run 'cctv' from the dispatch terminal. The network closet is on
 the UPS, so the cameras and server stay up for several hours if we lose power.
+
+Front entrance and armory are now on the door controller cpd-acs (10.0.4.40).
+Armory code is set on the controller — ask the Chief.
 `,
         ),
       ),
@@ -271,7 +290,7 @@ the UPS, so the cameras and server stay up for several hours if we lose power.
   };
   (home[user].children[".bash_history"] as VFile).content = `nmap -sn 10.0.4.0/24\nssh ${user}@cpd-files\ncctv\ndispatch\ncat reports/incident_1009_station.txt\nshutdown\n`;
 
-  const vg = "c0:56:e3";
+  const vg = VISTAGUARD_OUI;
   const cam = (n: number, label: string, mount: "front" | "side" | "desk" | "back"): NetHost => ({
     ip: `10.0.4.${30 + n}`,
     hostname: `cam-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
@@ -320,6 +339,7 @@ the UPS, so the cameras and server stay up for several hours if we lose power.
       cam(2, "PARKING LOT", "side"),
       cam(3, "FRONT DESK", "desk"),
       cam(4, "CELL BLOCK", "back"),
+      doorController(armoryPin),
     ],
   };
   return {
@@ -342,6 +362,100 @@ the UPS, so the cameras and server stay up for several hours if we lose power.
       text: `Night shift login\nuser: ${user}\npass: ${password}\n\nDON'T leave this on the monitor again — Ortega`,
     },
     battery: null,
+  };
+}
+
+/**
+ * The station's door controller: a cheap embedded box on the UPS, still on its
+ * factory login. The `door` program talks to the game through ComputerContext.access.
+ */
+function doorController(pin: string): NetHost {
+  const ip = "10.0.4.40";
+  const mac = macFor(40, VISTAGUARD_OUI);
+  const root = (content: string, modified: string, extra: Partial<VFile> = {}) => file("root", modified, content, extra);
+  return {
+    ip,
+    hostname: "cpd-acs",
+    mac,
+    vendor: "VistaGuard Security",
+    kind: "controller",
+    services: [
+      { port: 22, name: "ssh" },
+      {
+        port: 80,
+        name: "http",
+        http: "HTTP/1.1 200 OK\nServer: VG-Webs\n\n<html><title>VistaGuard ACS-4 Login</title><body>ACS-4 Door Controller (fw 2.3.1)<form>Username <input name=user> Password <input type=password name=pass> <button>Log in</button></form></body></html>",
+      },
+    ],
+    access: {
+      doors: [
+        { name: "front", label: "Lobby entrance", mode: "maglock", pin: null },
+        { name: "armory", label: "Armory", mode: "strike", pin },
+      ],
+    },
+    def: {
+      hostname: "cpd-acs",
+      osName: "VistaGuard ACS-4 firmware 2.3.1 (BusyBox)",
+      kind: "desktop",
+      users: [{ name: "admin", password: "admin", fullName: "Administrator" }],
+      net: { iface: "eth0", ip, mac },
+      motd: ["VistaGuard ACS-4 door controller — 2 doors. Type 'door'."],
+      // Only shown if the game hasn't wired the controller up (no ComputerContext.access).
+      programs: { acs: ["door: /dev/ttyS1: no response from door bus"] },
+      fs: dir("root", "Sep 28 14:02", {
+        etc: dir("root", "Sep 28 14:20", {
+          hostname: root("cpd-acs\n", "Sep 28 14:02"),
+          version: root("ACS-4 2.3.1 build 20190612 (BusyBox v1.24.1)\n", "Sep 28 14:02"),
+          acs: dir("root", "Sep 28 14:20", {
+            "doors.conf": root(
+              `
+# VistaGuard ACS-4 door configuration
+# Coldwater PD. Installed Sep 28 by Tri-County Security.
+
+[door1]
+name=front
+label=Lobby entrance
+lock=maglock (double leaf)
+power_loss=fail-safe: releases on power loss (egress)
+egress=push-to-exit button, inside
+reader=none
+
+[door2]
+name=armory
+label=Armory
+lock=electric strike
+power_loss=fail-secure: stays locked on power loss (lever egress inside)
+egress=lever, inside
+reader=keypad
+pin=${pin}
+`,
+              "Sep 28 14:20",
+            ),
+          }),
+        }),
+        home: dir("root", "Sep 28 14:02", { admin: dir("admin", "Sep 28 14:02", {}) }),
+        usr: dir("root", "Sep 28 14:02", { local: dir("root", "Sep 28 14:02", { bin: dir("root", "Sep 28 14:02", { door: root("", "Sep 28 14:02", { program: "acs", binary: true }) }) }) }),
+        var: dir("root", "Sep 28 14:02", {
+          log: dir("root", "Oct  9 18:25", {
+            acs: dir("root", "Oct  9 18:25", {
+              "events.log": root(
+                `
+Sep 28 14:02 system BOOT fw 2.3.1
+Sep 28 14:20 armory PIN SET admin
+Oct 06 02:31 armory GRANTED keypad
+Oct 09 17:44 armory GRANTED keypad
+Oct 09 17:52 front FORCED
+Oct 09 17:55 front LOCKDOWN FAILED: door held open
+Oct 09 18:24 front UNLOCK admin "left open for returning units - MO"
+Oct 09 18:25 armory LOCKED
+`,
+                "Oct  9 18:25",
+              ),
+            }),
+          }),
+        }),
+      }),
+    },
   };
 }
 
@@ -408,11 +522,49 @@ COLDWATER PD NETWORK (10.0.4.0/24)
   10.0.4.11   cpd-dispatch-01   dispatch workstation
   10.0.4.20   cpd-nvr           camera recorder (VistaGuard NVR-8)
   10.0.4.31-34                  IP cameras (front, parking lot, desk, cells)
+  10.0.4.40   cpd-acs           door controller (VistaGuard ACS-4)
 
 Network closet runs on an APC Smart-UPS 1500: roughly 8 hours after mains fails.
 `,
             "Sep 30 10:40",
           ),
+          manuals: dir("root", "Sep 30 10:42", {
+            "VistaGuard_ACS-4_QuickStart.txt": srv(
+              `
+VistaGuard ACS-4 Door Controller — Quick Start Guide (rev C)
+
+1. LOGGING IN
+   Each controller has a web page (http://<controller>/) and an ssh console.
+   Default login admin / admin (ssh and web). CHANGE THIS.
+
+2. CONSOLE COMMANDS
+   door list             every door, its lock type and current state
+   door unlock <door>    release a door until it is locked again
+   door lock <door>      secure a door (an open door locks once it closes)
+   door pulse <door>     momentary release, as if a valid code was entered
+
+3. LOCK TYPES AND POWER LOSS
+   Magnetic lock (maglock) = FAIL-SAFE. The magnet needs power to hold the
+   door. On power loss it releases and the door opens freely. Fire code
+   requires this on exit routes so nobody is trapped.
+
+   Electric strike = FAIL-SECURE. The strike stays locked without power, so
+   nobody gets in from outside. The lever on the inside always opens the door
+   (free egress). Use strikes for rooms that must stay shut: armories,
+   evidence, server rooms.
+
+   Keypads are powered by the controller. With no power they go dark and
+   accept no codes.
+
+4. POWER
+   Put the controller on a UPS. When mains fails it keeps running on the UPS;
+   'door list' shows AC: FAIL and the battery level. When the UPS runs flat
+   every maglock releases and every strike stays locked until power returns.
+   On power-up the controller restores the last commanded state.
+`,
+              "Sep 30 10:42",
+            ),
+          }),
           evidence: dir("root", "Oct  8 12:00", {
             "case_1003_scene_01.jpg": srv("", "Oct  4 01:12", { binary: true }),
             "case_1003_scene_02.jpg": srv("", "Oct  4 01:13", { binary: true }),

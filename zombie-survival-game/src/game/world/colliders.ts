@@ -1,4 +1,4 @@
-/** Axis-aligned box used for all static world collision and line-of-sight checks. */
+/** Axis-aligned box used for world collision and line-of-sight checks. */
 export interface AABB {
   minX: number;
   minY: number;
@@ -6,8 +6,19 @@ export interface AABB {
   maxX: number;
   maxY: number;
   maxZ: number;
-  /** Blocks sight (walls do, low fences and tables don't). */
+  /** Blocks sight (walls do, low fences and tables don't). Barriers flip this as they change. */
   occludes: boolean;
+  /** false = switched off (an open door); queries skip it. */
+  enabled?: boolean;
+  /** The door or window this box belongs to (sill, leaf or pane). */
+  barrierId?: number;
+  /** A glass pane: bullets can pass through (and break it). */
+  glass?: boolean;
+}
+
+/** Filled in by raycast with the box that was hit, if any. */
+export interface RayHit {
+  box: AABB | null;
 }
 
 const CELL = 8;
@@ -22,7 +33,8 @@ export class ColliderWorld {
   private stamp = 0;
   private marks: number[] = [];
 
-  add(box: AABB) {
+  /** Add a box; returns its index for setEnabled. */
+  add(box: AABB): number {
     const index = this.boxes.length;
     this.boxes.push(box);
     this.marks.push(0);
@@ -34,6 +46,12 @@ export class ColliderWorld {
         cell.push(index);
       }
     }
+    return index;
+  }
+
+  /** Switch a box on or off (doors opening and closing). */
+  setEnabled(index: number, on: boolean) {
+    this.boxes[index].enabled = on;
   }
 
   /** Visit each box overlapping the XZ rectangle once. */
@@ -46,7 +64,9 @@ export class ColliderWorld {
         for (const i of cell) {
           if (this.marks[i] === this.stamp) continue;
           this.marks[i] = this.stamp;
-          visit(this.boxes[i]);
+          const b = this.boxes[i];
+          if (b.enabled === false) continue;
+          visit(b);
         }
       }
     }
@@ -102,7 +122,8 @@ export class ColliderWorld {
 
   /**
    * Distance along a normalised ray to the first box hit, or maxDist.
-   * Set occludersOnly to ignore boxes that don't block sight.
+   * Set occludersOnly to ignore boxes that don't block sight, skipGlass to
+   * see through window panes. `out.box` receives the box that was hit.
    */
   raycast(
     ox: number,
@@ -113,8 +134,11 @@ export class ColliderWorld {
     dz: number,
     maxDist: number,
     occludersOnly = false,
+    out?: RayHit,
+    skipGlass = false,
   ): number {
     let best = maxDist;
+    if (out) out.box = null;
     const ex = ox + dx * maxDist;
     const ez = oz + dz * maxDist;
     const inv = (v: number) => (Math.abs(v) < 1e-9 ? 1e9 : 1 / v);
@@ -123,6 +147,7 @@ export class ColliderWorld {
     const iz = inv(dz);
     this.query(Math.min(ox, ex), Math.min(oz, ez), Math.max(ox, ex), Math.max(oz, ez), (b) => {
       if (occludersOnly && !b.occludes) return;
+      if (skipGlass && b.glass) return;
       let t1 = (b.minX - ox) * ix;
       let t2 = (b.maxX - ox) * ix;
       let tmin = Math.min(t1, t2);
@@ -135,7 +160,10 @@ export class ColliderWorld {
       t2 = (b.maxZ - oz) * iz;
       tmin = Math.max(tmin, Math.min(t1, t2));
       tmax = Math.min(tmax, Math.max(t1, t2));
-      if (tmax >= Math.max(tmin, 0) && tmin < best) best = Math.max(0, tmin);
+      if (tmax >= Math.max(tmin, 0) && tmin < best) {
+        best = Math.max(0, tmin);
+        if (out) out.box = b;
+      }
     });
     return best;
   }

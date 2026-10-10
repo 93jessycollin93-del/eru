@@ -7,7 +7,7 @@
  */
 import type { ComputerDef } from "./computer";
 
-export type HostKind = "router" | "computer" | "server" | "nvr" | "camera" | "printer" | "tv";
+export type HostKind = "router" | "computer" | "server" | "nvr" | "camera" | "printer" | "tv" | "controller";
 
 export interface NetService {
   port: number;
@@ -27,6 +27,41 @@ export interface NetHost {
   def?: ComputerDef;
   /** Camera metadata: the client places a real camera in the world for it. */
   camera?: { channel: number; label: string; mount: "front" | "side" | "desk" | "back" };
+  /** Door controller metadata: the client wires these names to physical doors. */
+  access?: { doors: AccessDoor[] };
+}
+
+/** A door wired to an access controller (static config; live state comes from AccessView). */
+export interface AccessDoor {
+  name: string;
+  label: string;
+  /** maglock fails safe (releases without power), strike fails secure (stays locked). */
+  mode: "maglock" | "strike";
+  /** Keypad code, or null for a door without a reader. */
+  pin: string | null;
+}
+
+/** One door as the controller sees it right now. */
+export interface AccessDoorStatus {
+  name: string;
+  label: string;
+  mode: AccessDoor["mode"];
+  /** What the controller was last told. */
+  commanded: "locked" | "unlocked";
+  /** Whether the lock holds right now (after power and momentary pulses). */
+  locked: boolean;
+  open: boolean;
+}
+
+/**
+ * Live door state for a controller's shell, supplied by the game each call.
+ * Functions rather than data so the shell always reads the current state.
+ */
+export interface AccessView {
+  /** Hostname of the controller this view drives. */
+  controller: string;
+  doors(): AccessDoorStatus[];
+  power(): { source: "mains" | "ups"; upsPercent: number | null };
 }
 
 export interface NetworkSpec {

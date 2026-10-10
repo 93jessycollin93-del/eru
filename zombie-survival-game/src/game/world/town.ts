@@ -64,6 +64,48 @@ export interface Rect {
   maxZ: number;
 }
 
+/**
+ * Geometry for one door or window opening, emitted in generation order (the
+ * index is the barrier id). Side +1 is the way the normal points: outside for
+ * exterior walls, the main/front room for partitions. Side -1 is the
+ * protected room (thumbturn and free egress).
+ */
+export interface BarrierSpec {
+  id: number;
+  kind: "door" | "window";
+  build: "hollow" | "solid" | "glass" | "steel" | "pane" | "display";
+  role: "house-front" | "interior" | "shopfront" | "police-front" | "armory" | "window";
+  building: string;
+  /** World centre of the opening at floor level. */
+  cx: number;
+  cz: number;
+  /** World axis the wall runs along. */
+  axis: "x" | "z";
+  /** Unit normal towards side +1. */
+  nx: number;
+  nz: number;
+  width: number;
+  /** Sill height (0 for doors) and head height. */
+  bottom: number;
+  top: number;
+  /** Which jamb the hinges are on (+1 / -1 along the wall axis). */
+  hinge: 1 | -1;
+  /** Door leaf swings towards side -1 (into the building or protected room). */
+  swingIn: boolean;
+  /** The side the leaf swings away from, i.e. where you push it open. */
+  pushSide: 1 | -1;
+  leaves: 1 | 2;
+  electronic?: { controller: string; name: string; mode: "maglock" | "strike"; pin: string | null };
+  /** Wall-mounted keypad on side +1 of an electronically locked door. */
+  keypad?: { x: number; y: number; z: number; nx: number; nz: number };
+}
+
+interface WallMeta {
+  /** Local unit normal towards side +1. */
+  n: [number, number];
+  door?: { role: BarrierSpec["role"]; build: BarrierSpec["build"]; swingIn: boolean; electronic?: BarrierSpec["electronic"] };
+}
+
 export interface TownData {
   group: THREE.Group;
   containers: LootContainer[];
@@ -74,6 +116,8 @@ export interface TownData {
   playerSpawn: THREE.Vector3;
   buildings: Building[];
   computers: ComputerSpot[];
+  /** Every door and window opening; index === BarrierSpec.id. */
+  barrierSpecs: BarrierSpec[];
   facts: TownFacts;
   /** Street lamp bulbs: glow at night while the grid is up. */
   lampMaterial: THREE.MeshStandardMaterial;
@@ -105,6 +149,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   const lots: Rect[] = [];
   let containerId = 1;
   const buildings: Building[] = [];
+  const barrierSpecs: BarrierSpec[] = [];
   const computers: ComputerSpot[] = [];
   const usedAddresses = new Set<string>();
   /** Things to finish once every building exists (computers need town facts). */
@@ -217,6 +262,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       mat: string,
       collide = true,
       occludes = true,
+      barrierId?: number,
     ) => {
       const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
       g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
@@ -233,6 +279,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
           maxY: y1,
           maxZ: Math.max(v1.z, v2.z),
           occludes,
+          ...(barrierId !== undefined ? { barrierId } : {}),
         });
       }
     };
@@ -297,19 +344,55 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       });
     };
 
+    const up = new THREE.Vector3(0, 1, 0);
+    /** Record a door or window opening as a barrier spec (no random draws). */
+    const registerOpening = (axis: "x" | "z", fixed: number, o: Opening, meta: WallMeta): number => {
+      const local = axis === "x" ? new THREE.Vector3(o.c, 0, fixed) : new THREE.Vector3(fixed, 0, o.c);
+      const c = local.applyMatrix4(m);
+      const n = new THREE.Vector3(meta.n[0], 0, meta.n[1]).applyAxisAngle(up, rot);
+      const along = new THREE.Vector3(axis === "x" ? 1 : 0, 0, axis === "z" ? 1 : 0).applyAxisAngle(up, rot);
+      const id = barrierSpecs.length;
+      const isDoor = o.b === 0;
+      const d = isDoor ? meta.door : undefined;
+      const swingIn = d?.swingIn ?? false;
+      barrierSpecs.push({
+        id,
+        kind: isDoor ? "door" : "window",
+        build: d?.build ?? (isDoor ? "solid" : o.w >= 3 ? "display" : "pane"),
+        role: d?.role ?? (isDoor ? "interior" : "window"),
+        building: building.address,
+        cx: c.x,
+        cz: c.z,
+        axis: Math.abs(along.x) > 0.5 ? "x" : "z",
+        nx: Math.round(n.x),
+        nz: Math.round(n.z),
+        width: o.w,
+        bottom: o.b,
+        top: o.t,
+        hinge: id % 2 ? 1 : -1,
+        swingIn,
+        pushSide: swingIn ? 1 : -1,
+        leaves: o.w >= 1.8 ? 2 : 1,
+        ...(d?.electronic ? { electronic: { ...d.electronic } } : {}),
+      });
+      return id;
+    };
+
     /** Wall running along local X (axis "x") or Z with gaps for doors and windows. */
-    const wall = (axis: "x" | "z", fixed: number, from: number, to: number, openings: Opening[], mat: string) => {
-      const piece = (a: number, b: number, y0: number, y1: number) => {
+    const wall = (axis: "x" | "z", fixed: number, from: number, to: number, openings: Opening[], mat: string, meta?: WallMeta) => {
+      const piece = (a: number, b: number, y0: number, y1: number, barrierId?: number) => {
         if (b - a < 0.01 || y1 - y0 < 0.01) return;
-        if (axis === "x") box(a, y0, fixed - WALL_T / 2, b, y1, fixed + WALL_T / 2, mat);
-        else box(fixed - WALL_T / 2, y0, a, fixed + WALL_T / 2, y1, b, mat);
+        if (axis === "x") box(a, y0, fixed - WALL_T / 2, b, y1, fixed + WALL_T / 2, mat, true, true, barrierId);
+        else box(fixed - WALL_T / 2, y0, a, fixed + WALL_T / 2, y1, b, mat, true, true, barrierId);
       };
       let cursor = from;
       for (const o of [...openings].sort((p, q) => p.c - q.c)) {
         const o0 = o.c - o.w / 2;
         const o1 = o.c + o.w / 2;
+        const id = meta ? registerOpening(axis, fixed, o, meta) : undefined;
         piece(cursor, o0, 0, WALL_H);
-        piece(o0, o1, 0, o.b);
+        // The sill is tagged so zombies probing a window know which barrier it is.
+        piece(o0, o1, 0, o.b, id);
         piece(o0, o1, o.t, WALL_H);
         cursor = o1;
       }
@@ -332,11 +415,31 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       type === "store"
         ? [door, ...(door.c > 0 ? [{ c: door.c - 4, w: 4.5, b: 0.5, t: 2.5 }] : [{ c: door.c + 4, w: 4.5, b: 0.5, t: 2.5 }])]
         : [door, ...windowsAlong(w, door.c)];
+    const frontDoor: WallMeta["door"] =
+      type === "house"
+        ? { role: "house-front", build: "solid", swingIn: true }
+        : type === "police"
+          ? { role: "police-front", build: "steel", swingIn: false, electronic: { controller: "cpd-acs", name: "front", mode: "maglock", pin: null } }
+          : { role: "shopfront", build: "glass", swingIn: false };
+    // The police armory occupies the back-left corner; its outer walls have no windows.
+    // (Filtered after generation so the random stream is unchanged.)
+    const ARMORY = { x0: -7.75, x1: -3.95, z0: -5.75, z1: -3.35 };
+    const clearOf = (lo: number, hi: number) => (o: Opening) => type !== "police" || o.c + o.w / 2 <= lo || o.c - o.w / 2 >= hi;
     // Shells: front/back span the full width, sides fit between them.
-    wall("x", hd - WALL_T / 2, -hw, hw, frontOpenings, wallMat);
-    wall("x", -hd + WALL_T / 2, -hw, hw, windowsAlong(w, null), wallMat);
-    wall("z", -hw + WALL_T / 2, -hd + WALL_T, hd - WALL_T, windowsAlong(d, null).filter(() => type !== "police" || rng() < 0.5), wallMat);
-    wall("z", hw - WALL_T / 2, -hd + WALL_T, hd - WALL_T, windowsAlong(d, null), wallMat);
+    wall("x", hd - WALL_T / 2, -hw, hw, frontOpenings, wallMat, { n: [0, 1], door: frontDoor });
+    wall("x", -hd + WALL_T / 2, -hw, hw, windowsAlong(w, null).filter(clearOf(ARMORY.x0, ARMORY.x1)), wallMat, { n: [0, -1] });
+    wall(
+      "z",
+      -hw + WALL_T / 2,
+      -hd + WALL_T,
+      hd - WALL_T,
+      windowsAlong(d, null)
+        .filter(() => type !== "police" || rng() < 0.5)
+        .filter(clearOf(ARMORY.z0, ARMORY.z1)),
+      wallMat,
+      { n: [-1, 0] },
+    );
+    wall("z", hw - WALL_T / 2, -hd + WALL_T, hd - WALL_T, windowsAlong(d, null), wallMat, { n: [1, 0] });
 
     // Floor (visual only, the town ground is flat) and roof.
     box(-hw + WALL_T, 0.0, -hd + WALL_T, hw - WALL_T, 0.06, hd - WALL_T, floorMat, false);
@@ -353,7 +456,10 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       const partZ = inner.z0 + (inner.z1 - inner.z0) * 0.42;
       if (hasBedroom) {
         const pd = range(rng, inner.x0 + 1.2, inner.x1 - 1.2);
-        wall("x", partZ, inner.x0, inner.x1, [{ c: pd, w: 1.0, b: 0, t: 2.2 }], innerMat);
+        wall("x", partZ, inner.x0, inner.x1, [{ c: pd, w: 1.0, b: 0, t: 2.2 }], innerMat, {
+          n: [0, 1],
+          door: { role: "interior", build: "hollow", swingIn: true },
+        });
         // Bedroom: bed, wardrobe, nightstand
         const bedLeft = rng() < 0.5;
         const bx0 = bedLeft ? inner.x0 + 0.1 : inner.x1 - 1.5;
@@ -412,6 +518,18 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
         const x = inner.x0 + 0.3 + i * 0.75;
         container("Police Locker", "police_locker", x, 0, inner.z0 + 0.1, x + 0.65, 1.9, inner.z0 + 0.6, metalMat);
       }
+      // Armory: partition walls around the lockers, a steel door on an electric strike.
+      wall("x", ARMORY.z1, inner.x0, ARMORY.x1 + WALL_T / 2, [{ c: -5.15, w: 1.0, b: 0, t: 2.2 }], innerMat, {
+        n: [0, 1],
+        door: { role: "armory", build: "steel", swingIn: false, electronic: { controller: "cpd-acs", name: "armory", mode: "strike", pin: null } },
+      });
+      wall("z", ARMORY.x1, inner.z0, ARMORY.z1 - WALL_T / 2, [], innerMat);
+      // Keypad beside the armory door, on the main-room side.
+      const armorySpec = barrierSpecs[barrierSpecs.length - 1];
+      box(-4.43, 1.2, ARMORY.z1 + WALL_T / 2, -4.27, 1.42, ARMORY.z1 + WALL_T / 2 + 0.04, mb.material("#26282a", { roughness: 0.4 }), false);
+      const kp = new THREE.Vector3(-4.35, 1.3, ARMORY.z1 + WALL_T / 2 + 0.05).applyMatrix4(m);
+      armorySpec.keypad = { x: kp.x, y: kp.y, z: kp.z, nx: armorySpec.nx, nz: armorySpec.nz };
+
       box(-2, 0, -0.5, 0, 0.78, 0.5, woodMat, true, false);
       placeComputer("desktop", -1.1, 0.78, -0.05);
       box(1.5, 0, -0.5, 3.5, 0.78, 0.5, woodMat, true, false);
@@ -439,7 +557,8 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       mount("front", [door.c + 1.3, 2.75, hd + 0.2], [door.c - 1, 0.2, hd + 9]);
       mount("side", [hw + 0.2, 2.75, hd - 0.4], [hw + 9, 0.2, hd + 5]);
       mount("desk", [inner.x1 - 0.3, 2.75, inner.z1 - 0.3], [-1.1, 0.6, -0.2]);
-      mount("back", [inner.x1 - 0.3, 2.75, inner.z0 + 0.3], [inner.x0 + 1.8, 0.5, inner.z0 + 2.2]);
+      // Watches the armory door.
+      mount("back", [inner.x1 - 0.3, 2.75, inner.z0 + 0.3], [-5.15, 1.0, -2.6]);
       building.cameraMounts = mounts;
       spawnPoints.push(new THREE.Vector3(0, 0, 1.5).applyMatrix4(m), new THREE.Vector3(0, 0, -2).applyMatrix4(m));
     }
@@ -549,7 +668,14 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   const hw = buildings.find((b) => b.type === "hardware");
   if (hw?.containers.length) {
     const shelf = hw.containers[0];
-    shelf.preset = [...(shelf.preset ?? []), makeStack("portable_generator"), { ...makeStack("jerry_can"), fuel: 0 }];
+    shelf.preset = [
+      ...(shelf.preset ?? []),
+      makeStack("portable_generator"),
+      { ...makeStack("jerry_can"), fuel: 0 },
+      makeStack("hammer"),
+      makeStack("nails", 48),
+      makeStack("plank", 6),
+    ];
   }
 
   for (const { b, spot, contentType } of pendingComputers) {
@@ -563,6 +689,14 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     computers.push(full);
     b.computer = full;
     b.network = gen.network;
+    // Door controller PINs live on the controller; copy them to the doors it drives.
+    const acs = gen.network.hosts.find((h) => h.kind === "controller");
+    if (acs?.access) {
+      for (const spec of barrierSpecs) {
+        if (spec.building !== b.address || !spec.electronic) continue;
+        spec.electronic.pin = acs.access.doors.find((d) => d.name === spec.electronic!.name)?.pin ?? null;
+      }
+    }
     if (gen.note && b.containers.length) {
       const target = pick(crng, b.containers.filter((c) => c.table !== "supply_cache"));
       target.preset = [...(target.preset ?? []), makeStack("note", 1, undefined, { title: gen.note.title, text: gen.note.text })];
@@ -655,6 +789,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   return {
     group,
     buildings,
+    barrierSpecs,
     computers,
     facts,
     lampMaterial: mb.getMaterial(bulbKey)!,
