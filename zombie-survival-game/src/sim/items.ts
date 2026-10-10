@@ -153,6 +153,21 @@ export const ITEMS: Record<string, ItemDef> = {
     noise: 4,
     description: "Heavy and slow, but it ends things.",
   },
+  hammer: {
+    id: "hammer",
+    name: "Claw Hammer",
+    category: "melee",
+    weight: 0.6,
+    damage: 24,
+    attackInterval: 0.55,
+    reach: 1.2,
+    stamina: 6,
+    knockdown: 0.05,
+    sweep: 1,
+    knockback: 1.5,
+    noise: 3,
+    description: "Short and quick. Also nails boards over doors and windows (hold H) and pries them off (Shift+H).",
+  },
   pistol: {
     id: "pistol",
     name: "9mm Pistol",
@@ -180,6 +195,22 @@ export const ITEMS: Record<string, ItemDef> = {
     weight: 24,
     generator: { ratedW: 3000, tankL: 6, noise: 30 },
     description: "3 kW petrol generator. Place it outside a building and run a cable in. Loud.",
+  },
+  nails: {
+    id: "nails",
+    name: "Nails",
+    category: "tool",
+    weight: 0.01,
+    stackable: true,
+    description: "Common 3-inch nails. Four per plank.",
+  },
+  plank: {
+    id: "plank",
+    name: "Plank",
+    category: "tool",
+    weight: 2.6,
+    stackable: true,
+    description: "A 2.4 m length of 1x6 lumber. Nail it across a door or window.",
   },
   note: {
     id: "note",
@@ -252,6 +283,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["water_bottle", 4, 1, 1],
       ["soda", 4, 1, 2],
       ["kitchen_knife", 2, 1, 1],
+      ["hammer", 0.6, 1, 1],
     ],
   },
   fridge: {
@@ -301,6 +333,10 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["kitchen_knife", 2, 1, 1],
       ["water_bottle", 1, 1, 1],
       ["jerry_can", 3, 1, 1],
+      ["hammer", 2, 1, 1],
+      // Each arrives as one stack within its range; a repeat roll tops it up only to max (rollLoot).
+      ["nails", 3, 20, 50],
+      ["plank", 3, 2, 4],
     ],
   },
   car: {
@@ -331,7 +367,9 @@ export function rollLoot(table: string, rng: () => number): ItemStack[] {
         const def = ITEMS[id];
         if (def.stackable) {
           const existing = out.find((s) => s.id === id);
-          if (existing) existing.count += count;
+          // Loose rounds add up and weigh little, but a shelf holds one box of nails or one
+          // bundle of planks: capping keeps them in range and a plank stack light enough to lift.
+          if (existing) existing.count = Math.min(existing.count + count, def.category === "ammo" ? Infinity : max);
           else out.push(makeStack(id, count));
         } else {
           for (let c = 0; c < count; c++) {

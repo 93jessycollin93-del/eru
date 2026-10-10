@@ -759,10 +759,10 @@ export class Humanoid {
 /** Simple held-item meshes. */
 export function makeHeldItem(id: string): THREE.Object3D | null {
   const g = new THREE.Group();
-  const box = (w: number, h: number, d: number, color: string, y: number, z = 0) => {
+  const box = (w: number, h: number, d: number, color: string, y: number, z = 0, metalness = 0.2) => {
     const m = new THREE.Mesh(
       new THREE.BoxGeometry(w, h, d),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.2 }),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness }),
     );
     m.position.set(0, y, z);
     m.castShadow = true;
@@ -786,6 +786,20 @@ export function makeHeldItem(id: string): THREE.Object3D | null {
       box(0.03, 0.18, 0.26, "#9aa0a6", -0.8, 0.1);
       g.rotation.x = -Math.PI / 2;
       return g;
+    case "hammer": {
+      // 0.33 m hickory handle, thicker at the grip and slimming towards the head.
+      box(0.032, 0.17, 0.026, "#9a7a52", -0.045);
+      box(0.024, 0.16, 0.019, "#9a7a52", -0.21);
+      // Steel head across the end: striking face on the axe-blade side (+z), claw behind.
+      const steel = "#5d6166";
+      box(0.024, 0.028, 0.06, steel, -0.3, 0.01, 0.6);
+      box(0.03, 0.03, 0.015, steel, -0.3, 0.0475, 0.6);
+      // The claw tilts back towards the grip, suggesting its curve.
+      const claw = box(0.022, 0.012, 0.042, steel, -0.296, -0.038, 0.6);
+      claw.rotation.x = 0.4;
+      g.rotation.x = -Math.PI / 2;
+      return g;
+    }
     case "kitchen_knife":
       box(0.025, 0.1, 0.025, "#222", -0.03);
       box(0.012, 0.19, 0.035, "#c0c4c8", -0.16);

@@ -60,6 +60,14 @@ export interface HudState {
   equipped: { name: string; loaded?: number; magSize?: number; reserve?: number; reloading: boolean };
   hotbar: { slot: number; name: string; active: boolean }[];
   prompt: string | null;
+  /** Other actions on what you're looking at, e.g. Q to throw a deadbolt. */
+  altPrompts: { key: string; label: string }[];
+  /** The door or window you're looking at. */
+  barrier: { label: string; boards: number; maxBoards: number; integrity: "Holding" | "Cracked" | "Splintering" | null } | null;
+  /** Timed work in progress (boarding up, breaking glass). */
+  action: { label: string; progress: number } | null;
+  /** Door keypad in use: digits entered so far (shown masked) and the last result. */
+  keypad: { label: string; entered: number; status: "idle" | "granted" | "denied" | "lockout" | "dark"; lockout: number } | null;
   computer: {
     hostname: string;
     kind: "desktop" | "laptop";

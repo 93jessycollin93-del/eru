@@ -8,6 +8,7 @@ import ComputerScreen from "@/components/ComputerScreen";
 import NoteView from "@/components/NoteView";
 import CctvViewer from "@/components/CctvViewer";
 import GeneratorPanel from "@/components/GeneratorPanel";
+import Keypad from "@/components/Keypad";
 
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,6 +41,9 @@ const Index = () => {
     [],
   );
 
+  const onKeypad = useMemo(() => (k: string) => gameRef.current?.keypadPress(k), []);
+  const onCloseUi = useMemo(() => () => gameRef.current?.closeUi(), []);
+
   const getCanvas = useMemo(() => (ch: number) => gameRef.current?.cctvCanvas(ch) ?? null, []);
 
   const playing = hud && (hud.status === "playing" || hud.status === "paused");
@@ -64,6 +68,7 @@ const Index = () => {
         <GeneratorPanel gen={hud.generator} onAction={(a) => gameRef.current?.generatorAction(a)} onClose={() => gameRef.current?.closeUi()} />
       )}
       {hud && hud.status === "playing" && hud.reading && <NoteView note={hud.reading} onClose={() => gameRef.current?.closeUi()} />}
+      {hud && hud.status === "playing" && hud.keypad && <Keypad keypad={hud.keypad} onKey={onKeypad} onClose={onCloseUi} />}
       {hud && (
         <Overlay
           hud={hud}

@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { pick, range } from "../../sim/rng";
-import { SENSES, ZOMBIE, sightRate } from "../../sim/tuning";
-import type { ColliderWorld } from "../world/colliders";
+import type { ZombieAccess } from "../../sim/barriers";
+import { BARRIER, SENSES, WINDOW, ZOMBIE, sightRate } from "../../sim/tuning";
+import type { ColliderWorld, RayHit } from "../world/colliders";
 import type { Terrain } from "../world/terrain";
 import { Humanoid } from "./humanoid";
 
@@ -11,6 +12,20 @@ export interface NoiseEvent {
   pos: THREE.Vector3;
   radius: number;
   ttl: number;
+  /** Where hearers should head instead of pos (just past a barrier being pounded, so newcomers join in). */
+  lure?: THREE.Vector3;
+  /** The barrier making the noise: zombies already pounding on it don't keep themselves going with it. */
+  barrierId?: number;
+}
+
+export interface Clamber {
+  start: THREE.Vector3;
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+  t: number;
+  dur: number;
+  peak: number;
+  id: number;
 }
 
 export interface ZombieContext {
@@ -38,6 +53,16 @@ export interface ZombieContext {
    * the per-frame pathfinding budget is used up (try again next frame).
    */
   findPath: (from: THREE.Vector3, to: THREE.Vector3) => [number, number][] | null | undefined;
+  /** How it can get past a barrier it bumped into, from where it stands. */
+  barrierContact: (z: Zombie, id: number) => ZombieAccess;
+  /** The point on a barrier to face while pounding on it. */
+  barrierPoint: (id: number, from: THREE.Vector3) => THREE.Vector3;
+  /** Whether it has one of the barrier's few places to swing from. */
+  canBreach: (z: Zombie, id: number) => boolean;
+  onBarrierHit: (z: Zombie, id: number) => void;
+  onBarrierPush: (z: Zombie, id: number) => void;
+  /** A climb through a window, or null if there's no room on the far side. */
+  clamberPoints: (z: Zombie, id: number) => { from: THREE.Vector3; to: THREE.Vector3; dur: number; peak: number } | null;
 }
 
 // Grey-green, waxy skin; clothes from ordinary life, now filthy.
@@ -49,6 +74,9 @@ const PANTS = ["#2f3238", "#3a3530", "#46413a", "#2b3340", "#4a4a40"];
 const SENSE_INTERVAL = 0.2;
 /** Feeler angles tried when the way ahead is blocked. */
 const STEER_ANGLES = [0.6, -0.6, 1.2, -1.2, 1.8, -1.8];
+/** Seconds down after being shoved off a window it was climbing. */
+const SHOVED_DOWN = 1.2;
+const probeHit: RayHit = { box: null };
 
 let nextId = 1;
 
@@ -89,6 +117,10 @@ export class Zombie {
   private pathGoal = new THREE.Vector3(1e9, 0, 1e9);
   private directClear = true;
   private moveTarget = new THREE.Vector3();
+  /** The barrier it's pounding on, if any. */
+  breach: number | null = null;
+  /** Climbing through a window. */
+  clamber: Clamber | null = null;
 
   constructor(position: THREE.Vector3, rng: () => number) {
     this.pos = position.clone();
@@ -157,7 +189,20 @@ export class Zombie {
     if (this.hp <= 0) {
       this.state = "dead";
       this.deadTime = 0;
+      if (this.clamber) this.pos.copy(this.clamber.start);
+      this.clamber = null;
       return true;
+    }
+    if (this.clamber) {
+      // Any hit mid-climb shoves it back out of the window.
+      this.pos.copy(this.clamber.start);
+      this.clamber = null;
+      this.breach = null;
+      this.state = "down";
+      this.downTimer = SHOVED_DOWN;
+      this.getUp = 0;
+      this.knock.set(0, 0, 0);
+      return false;
     }
     if (knockdown && this.state !== "down") {
       this.state = "down";
@@ -192,6 +237,12 @@ export class Zombie {
       return;
     }
 
+    if (this.clamber) {
+      this.senseTimer -= dt;
+      this.updateClamber(ctx);
+      return;
+    }
+
     this.senseTimer -= dt;
     if (this.senseTimer <= 0) {
       this.senseTimer = SENSE_INTERVAL;
@@ -203,6 +254,19 @@ export class Zombie {
     let faceOnly = false;
     const toPlayer = ctx.playerPos.clone().sub(this.pos).setY(0);
     const playerDist = toPlayer.length();
+
+    if (this.breach !== null) {
+      // Keep at it until the way is open, it can reach you, or it forgets why it came.
+      const giveUp =
+        this.state === "idle" || this.state === "wander" || ctx.barrierContact(this, this.breach) !== "blocking" || (this.state === "chase" && ctx.canAttack(this));
+      if (giveUp) {
+        this.breach = null;
+        if (this.attackTimer > 0) this.attackTimer = 0;
+      } else {
+        this.updateBreach(ctx);
+        return;
+      }
+    }
 
     switch (this.state) {
       case "idle":
@@ -275,6 +339,101 @@ export class Zombie {
     this.model.animate(dt, this.moveSpeed, { zombie: true, attack: windup });
     this.model.root.position.copy(this.pos);
     this.model.root.rotation.y = this.yaw;
+  }
+
+  /** Pound on the barrier: one blow per attack cycle if it has a place to swing from, otherwise crowd and wait. */
+  private updateBreach(ctx: ZombieContext) {
+    const { dt } = ctx;
+    const id = this.breach!;
+    if (this.state === "chase") {
+      this.lastSeen += dt;
+      if (this.lastSeen < 0.5) this.target.copy(ctx.playerPos);
+      if (!ctx.playerAlive || this.lastSeen > ZOMBIE.loseTrackAfter) {
+        this.state = "investigate";
+        this.stateTimer = 15;
+        this.awareness = 0.6;
+      }
+    } else if (this.stateTimer <= 0) {
+      // Investigating and heard nothing more: it loses interest.
+      this.state = "idle";
+      this.stateTimer = range(Math.random, 2, 7);
+      this.breach = null;
+    }
+    const face = ctx.barrierPoint(id, this.pos);
+    let diff = Math.atan2(face.x - this.pos.x, face.z - this.pos.z) - this.yaw;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    this.yaw += diff * Math.min(1, dt * 6);
+    if (this.breach !== null && ctx.canBreach(this, id) && this.stun <= 0) {
+      this.attackTimer += dt;
+      if (this.attackTimer >= ZOMBIE.attackWindup) {
+        this.attackTimer = -ZOMBIE.attackRecovery;
+        ctx.onBarrierHit(this, id);
+      }
+    } else if (this.attackTimer > 0) {
+      this.attackTimer = 0;
+    } else if (this.attackTimer < 0) {
+      this.attackTimer = Math.min(0, this.attackTimer + dt);
+    }
+    if (this.stun > 0) this.stun -= dt;
+    this.finishMove(ctx, 0);
+    const windup = this.attackTimer > 0 ? this.attackTimer / ZOMBIE.attackWindup : undefined;
+    this.model.animate(dt, this.moveSpeed, { zombie: true, attack: windup });
+    this.model.root.position.copy(this.pos);
+    this.model.root.rotation.y = this.yaw;
+  }
+
+  /** Up onto the sill and over, ignoring collision. */
+  private updateClamber(ctx: ZombieContext) {
+    const c = this.clamber!;
+    c.t += ctx.dt;
+    const u = Math.min(1, c.t / c.dur);
+    const lead = 0.25;
+    if (u < lead) {
+      this.pos.lerpVectors(c.start, c.from, u / lead);
+      this.pos.y = ctx.terrain.height(this.pos.x, this.pos.z);
+    } else {
+      const k = (u - lead) / (1 - lead);
+      this.pos.lerpVectors(c.from, c.to, k);
+      this.pos.y = ctx.terrain.height(this.pos.x, this.pos.z) + Math.sin(Math.PI * k) * c.peak;
+    }
+    this.yaw = Math.atan2(c.to.x - c.from.x, c.to.z - c.from.z);
+    if (u >= 1) {
+      this.pos.copy(c.to);
+      this.pos.y = ctx.terrain.height(c.to.x, c.to.z);
+      this.clamber = null;
+      this.lastPos.copy(this.pos);
+      this.path = null;
+    }
+    this.moveSpeed = 0;
+    this.model.animate(ctx.dt, 0.8, { zombie: true });
+    this.model.root.position.copy(this.pos);
+    this.model.root.rotation.y = this.yaw;
+  }
+
+  /** It walked into a door or window. Returns true if that changed what it's doing. */
+  private onBarrier(ctx: ZombieContext, id: number): boolean {
+    const access = ctx.barrierContact(this, id);
+    if (access === "passable") return false;
+    if (this.state === "wander") {
+      // Nothing worth breaking in for: turn back.
+      this.state = "idle";
+      this.stateTimer = range(Math.random, 2, 5);
+      return true;
+    }
+    if (access === "pushable") {
+      ctx.onBarrierPush(this, id);
+      return true;
+    }
+    if (access === "climbable") {
+      const c = WINDOW.zombiesClimb ? ctx.clamberPoints(this, id) : null;
+      if (!c) return false;
+      this.clamber = { start: this.pos.clone(), ...c, t: 0, id };
+      this.breach = null;
+      return true;
+    }
+    this.breach = id;
+    this.stuckTimer = 0;
+    return true;
   }
 
   private updateDown(ctx: ZombieContext) {
@@ -353,9 +512,24 @@ export class Zombie {
       const probe = Math.min(1.2, dist);
       const blocked = (a: number) =>
         ctx.colliders.raycast(this.pos.x, this.pos.y + 0.6, this.pos.z, Math.sin(a), 0, Math.cos(a), probe + ZOMBIE.radius) < probe + ZOMBIE.radius - 0.05;
-      if (this.steerTimer > 0 && this.steerBias !== 0 && blocked(desired)) {
+      // The straight-ahead feeler also says what it touched: a door or window means deal with it.
+      const ahead = ctx.colliders.raycast(
+        this.pos.x,
+        this.pos.y + 0.6,
+        this.pos.z,
+        Math.sin(desired),
+        0,
+        Math.cos(desired),
+        probe + ZOMBIE.radius,
+        false,
+        probeHit,
+      );
+      const barrier = probeHit.box?.barrierId;
+      if (barrier !== undefined && ahead < ZOMBIE.radius + BARRIER.engageReach && this.onBarrier(ctx, barrier)) return;
+      const aheadBlocked = ahead < probe + ZOMBIE.radius - 0.05;
+      if (this.steerTimer > 0 && this.steerBias !== 0 && aheadBlocked) {
         desired += this.steerBias;
-      } else if (blocked(desired)) {
+      } else if (aheadBlocked) {
         for (const off of STEER_ANGLES) {
           if (!blocked(desired + off)) {
             this.steerBias = off;
@@ -463,10 +637,11 @@ export class Zombie {
       return;
     }
     for (const n of ctx.noises) {
+      if (n.barrierId !== undefined && n.barrierId === this.breach) continue;
       const nd = this.pos.distanceTo(n.pos);
       if (nd < n.radius) {
         // Close, loud noises make it certain something's there.
-        this.alert(n.pos, nd < n.radius * 0.4 ? 0.9 : SENSES.heardBoost);
+        this.alert(n.lure ?? n.pos, nd < n.radius * 0.4 ? 0.9 : SENSES.heardBoost);
         return;
       }
     }

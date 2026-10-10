@@ -59,6 +59,7 @@ export class PostFX {
   private bloom: UnrealBloomPass;
   private grade: ShaderPass;
   private time = 0;
+  private noAO: THREE.Object3D[] = [];
   quality: Quality;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, quality: Quality) {
@@ -72,6 +73,14 @@ export class PostFX {
     this.gtao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.4, thickness: 1.2, scale: 1.1, samples: 12 });
     this.gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
     this.composer.addPass(this.gtao);
+    // See-through things (window glass) stay out of the AO normal pass so they
+    // neither shade themselves nor hide the occlusion of what's behind them.
+    const gtao = this.gtao as unknown as { overrideVisibility: () => void };
+    const hide = gtao.overrideVisibility.bind(this.gtao);
+    gtao.overrideVisibility = () => {
+      hide();
+      for (const o of this.noAO) o.visible = false;
+    };
 
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.35, 0.5, 0.92);
     this.composer.addPass(this.bloom);
@@ -82,6 +91,11 @@ export class PostFX {
 
     this.quality = quality;
     this.setQuality(quality);
+  }
+
+  /** Keep an object out of ambient occlusion (transparent glass). */
+  excludeFromAO(o: THREE.Object3D) {
+    this.noAO.push(o);
   }
 
   setQuality(q: Quality) {

@@ -1,7 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { createBody, spendStamina, updateBody } from "./body";
 import { FISTS, ITEMS } from "./items";
-import { FOOTSTEPS, MOVE, SENSES, STAMINA, ZOMBIE, meleeDamage, shotSpread, sightRate, visibilityRange } from "./tuning";
+import {
+  BARRICADE,
+  BARRIER,
+  BARRIER_NOISE,
+  DOOR,
+  FOOTSTEPS,
+  MOVE,
+  NAV_COST,
+  SENSES,
+  STAMINA,
+  WINDOW,
+  ZOMBIE,
+  meleeDamage,
+  shotSpread,
+  sightRate,
+  visibilityRange,
+} from "./tuning";
 
 const env = (exertion: number) => ({ ambientTemp: 15, exertion, threats: 0 });
 
@@ -114,5 +130,50 @@ describe("combat targets (100 hp zombie, no crits)", () => {
 
   it("a pistol body shot does about half a zombie", () => {
     expect(hits(ITEMS.pistol.damage!)).toBe(3);
+  });
+});
+
+describe("barrier targets", () => {
+  const blow = ZOMBIE.attackWindup + ZOMBIE.attackRecovery;
+  const siege = (strength: number, zombies: number) => Math.ceil(strength / (BARRIER.zombieDamage * zombies)) * blow;
+
+  it("strength order: hollow < glass door < latched < deadbolt < maglock < strike", () => {
+    const s = [
+      Math.min(DOOR.leaf.hollow, DOOR.hold.latch),
+      Math.min(DOOR.leaf.glass, DOOR.hold.latch),
+      Math.min(DOOR.leaf.solid, DOOR.hold.latch),
+      Math.min(DOOR.leaf.solid, DOOR.hold.deadbolt),
+      Math.min(DOOR.leaf.steel, DOOR.hold.maglock),
+      Math.min(DOOR.leaf.steel, DOOR.hold.strike),
+    ];
+    for (let i = 1; i < s.length; i++) expect(s[i]).toBeGreaterThan(s[i - 1]);
+  });
+
+  it("one zombie bursts a latched door in 35-55 s; two take a deadbolted one in 55-80 s", () => {
+    expect(siege(DOOR.hold.latch, 1)).toBeGreaterThanOrEqual(35);
+    expect(siege(DOOR.hold.latch, 1)).toBeLessThanOrEqual(55);
+    expect(siege(DOOR.hold.deadbolt, 2)).toBeGreaterThanOrEqual(55);
+    expect(siege(DOOR.hold.deadbolt, 2)).toBeLessThanOrEqual(80);
+  });
+
+  it("a kick breaks a pane; a board outlasts a latch; steel shrugs off an axe", () => {
+    expect(WINDOW.glassHp.pane).toBeLessThan(BARRIER.kickDamage);
+    expect(BARRICADE.boardHp).toBeGreaterThanOrEqual(DOOR.hold.latch);
+    const axeHits = Math.ceil(Math.min(DOOR.leaf.steel, DOOR.hold.strike) / (ITEMS.fire_axe.damage! * BARRIER.playerFactor.steel));
+    expect(axeHits).toBeGreaterThan(300);
+    expect(Math.ceil(DOOR.hold.latch / ITEMS.fire_axe.damage!)).toBe(5);
+  });
+
+  it("noise order: opening < climbing < glass tap < board tearing < wood blow < steel blow < hammering < glass breaking < a door bursting < a gunshot", () => {
+    const n = BARRIER_NOISE;
+    const order = [n.doorOpen, n.climb, n.glassHit, n.boardTear, n.woodHit, n.steelHit, n.hammer, n.glassBreak, n.burst, SENSES.gunshotRadius];
+    for (let i = 1; i < order.length; i++) expect(order[i]).toBeGreaterThan(order[i - 1]);
+    expect(n.hammer).toBeGreaterThanOrEqual(FOOTSTEPS.sprint);
+  });
+
+  it("nav costs stay small enough for the search budget", () => {
+    expect(NAV_COST.max).toBeLessThanOrEqual(40);
+    expect(NAV_COST.intactWindow).toBeGreaterThan(NAV_COST.closedDoor);
+    expect(NAV_COST.brokenWindow).toBeLessThan(NAV_COST.closedDoor);
   });
 });

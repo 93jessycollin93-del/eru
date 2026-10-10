@@ -42,6 +42,9 @@ export class Player {
   /** 0 (hip) .. 1 (fully aimed), eases in over ~0.2 s. */
   aimProgress = 0;
 
+  /** Scripted climb through a window: input, gravity and collision are off until it ends. */
+  private climb: { start: THREE.Vector3; via: THREE.Vector3; to: THREE.Vector3; t: number; dur: number; peak: number } | null = null;
+
   private camPos = new THREE.Vector3();
   private recoil = { pitch: 0, yaw: 0 };
   private shake = 0;
@@ -52,12 +55,57 @@ export class Player {
     return Math.hypot(this.vel.x, this.vel.z);
   }
 
+  get traversing() {
+    return this.climb !== null;
+  }
+
+  /**
+   * Climb from where you stand to `via` (lined up with the opening), then over
+   * the sill to `to`, peaking `peak` metres up, taking `dur` seconds.
+   */
+  traverse(via: THREE.Vector3, to: THREE.Vector3, dur: number, peak: number) {
+    this.climb = { start: this.pos.clone(), via: via.clone(), to: to.clone(), t: 0, dur, peak };
+    this.vel.set(0, 0, 0);
+    this.velY = 0;
+    this.crouching = false;
+  }
+
+  private updateClimb(dt: number, terrain: Terrain) {
+    const c = this.climb!;
+    c.t += dt;
+    const u = Math.min(1, c.t / c.dur);
+    // The first fifth lines you up with the opening; the rest is up, over and down.
+    const lead = 0.2;
+    if (u < lead) {
+      this.pos.lerpVectors(c.start, c.via, u / lead);
+      this.pos.y = terrain.height(this.pos.x, this.pos.z);
+    } else {
+      const k = (u - lead) / (1 - lead);
+      this.pos.lerpVectors(c.via, c.to, k);
+      this.pos.y = terrain.height(this.pos.x, this.pos.z) + Math.sin(Math.PI * k) * c.peak;
+    }
+    const dir = c.to.clone().sub(c.via);
+    this.bodyYaw = Math.atan2(dir.x, dir.z);
+    this.footstepRadius = 0;
+    this.gait = "crouch";
+    this.model.animate(dt, 1.2, { crouch: true });
+    this.model.root.position.copy(this.pos);
+    this.model.root.rotation.y = this.bodyYaw;
+    if (u >= 1) {
+      this.pos.copy(c.to);
+      this.pos.y = terrain.height(c.to.x, c.to.z);
+      this.climb = null;
+      this.grounded = true;
+    }
+  }
+
   reset(spawn: THREE.Vector3) {
     this.pos.copy(spawn);
     this.vel.set(0, 0, 0);
     this.velY = 0;
     this.body = createBody();
     this.crouching = false;
+    this.climb = null;
     this.yaw = this.bodyYaw = Math.PI / 2;
     this.pitch = -0.1;
     this.recoil.pitch = this.recoil.yaw = 0;
@@ -89,6 +137,10 @@ export class Player {
     const sens = MOUSE_SENS * (this.aiming ? 0.55 : 1);
     this.yaw -= input.mouseDX * sens;
     this.pitch = Math.max(-1.2, Math.min(0.9, this.pitch - input.mouseDY * sens));
+    if (this.climb) {
+      this.updateClimb(dt, terrain);
+      return;
+    }
 
     if (input.wasPressed("KeyC") || input.wasPressed("ControlLeft")) this.crouching = !this.crouching;
     this.aiming = input.rightDown;

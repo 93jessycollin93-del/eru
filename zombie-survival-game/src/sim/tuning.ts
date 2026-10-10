@@ -192,3 +192,123 @@ export function shotSpread(aimProgress: number, speed: number, sway: number): nu
   const moving = speed * FIREARM.moveSpreadPerMps * (1 - 0.6 * aimProgress);
   return (base + moving) * sway;
 }
+
+// ------------------------------------------------- doors, windows, barricades
+
+/**
+ * Barriers soak damage into one accumulator against a strength. Zombies land
+ * one blow per attack cycle (windup + recovery = 1.15 s), about 7 damage per
+ * second each, so the numbers below read directly as "seconds of pounding".
+ */
+export const BARRIER = {
+  /** Damage per zombie blow. */
+  zombieDamage: 8,
+  /** Each zombie needs this much of the barrier's width to swing at it. */
+  slotWidth: 0.6,
+  maxSlots: 3,
+  /** A zombie engages a barrier its feeler hits within radius + this (m). */
+  engageReach: 0.6,
+  /** Unarmed against a barrier you kick it. */
+  kickDamage: 22,
+  /** Your weapon's damage times this, by what you're hitting. Steel shrugs off hand tools. */
+  playerFactor: { wood: 1, glass: 1, steel: 0.05 },
+  /** A blow this close to a sleeping player wakes them. */
+  wakeRadius: 12,
+} as const;
+
+/**
+ * A closed door holds until damage reaches the weaker of its leaf and what
+ * keeps it shut. Leaf: a hollow-core interior door caves in fast; a solid
+ * exterior door outlasts its latch; steel is effectively unbreakable by hand.
+ * Hold: a spring latch tears out of the jamb long before a deadbolt; a 1200 lbf
+ * maglock and a heavy-duty strike are stronger still.
+ */
+export const DOOR = {
+  leaf: { hollow: 120, solid: 1400, glass: 260, steel: 3000 },
+  hold: { latch: 300, deadbolt: 900, maglock: 1500, strike: 2400 },
+  swingSeconds: 0.7,
+  /** Radians the leaf swings when opened (95°), and where a burst one ends up hanging. */
+  openAngle: 1.66,
+  burstAngle: 1.75,
+  burstTilt: 0.1,
+  /** Turning the thumbturn before opening. */
+  unboltSeconds: 0.3,
+} as const;
+
+export const WINDOW = {
+  /** Annealed 3–4 mm house pane; 6 mm shop plate glass. Three blows break a pane. */
+  glassHp: { pane: 20, display: 50 },
+  /** Climbing through: 1.0 m sill → 2.0 s, a 0.5 m shop sill → 1.55 s. */
+  vaultBase: 1.1,
+  vaultPerMetre: 0.9,
+  /** Zombies are clumsy: 3.0 s over a house sill, 2.3 s over a shop sill. */
+  zombieClimbBase: 1.6,
+  zombieClimbPerMetre: 1.4,
+  zombiesClimb: true,
+  breakSeconds: 0.4,
+  clearSeconds: 2.0,
+  /** Chance of a laceration climbing over shards you didn't clear. */
+  cutChance: 0.4,
+  /** Landing spots tried past the wall centre line (m). */
+  landing: [0.6, 0.9] as const,
+} as const;
+
+export const BARRICADE = {
+  maxBoards: { door: 4, window: 3 },
+  /** Planks per board = ceil(opening width / plank length). */
+  plankLength: 2.4,
+  nailsPerPlank: 4,
+  secondsPerPlank: 8,
+  /** A hammer blow (and its noise) every this many seconds while boarding. */
+  hammerInterval: 0.5,
+  boardHp: 300,
+  prySeconds: 4,
+  /** Boards that stop you seeing through. */
+  occludeAt: { door: 4, window: 3 },
+} as const;
+
+/**
+ * Noise radius (m) of barrier sounds. For scale: crouching 1.5, jogging 7,
+ * sprinting 16, a generator 30–40, a gunshot 60.
+ */
+export const BARRIER_NOISE = {
+  doorOpen: 2,
+  doorClose: 3,
+  bolt: 2,
+  keypad: 1.5,
+  lockClunk: 3,
+  climb: 4,
+  pry: 6,
+  clearGlass: 6,
+  glassHit: 8,
+  boardTear: 12,
+  woodHit: 14,
+  steelHit: 16,
+  hammer: 18,
+  glassBreak: 20,
+  burst: 22,
+} as const;
+
+/**
+ * Extra path cost (in 0.25 m cells) of crossing a barrier, charged once on a
+ * one-cell strip. Zombies prefer an open way round unless it is much longer.
+ */
+export const NAV_COST = { closedDoor: 12, pushDoor: 2, intactWindow: 24, brokenWindow: 8, perBoard: 4, max: 40 } as const;
+
+export const ACCESS = {
+  /** A good keypad code or `door pulse` releases the lock this long (s). */
+  pulseSeconds: 6,
+  keypadMaxTries: 5,
+  keypadLockoutSec: 60,
+} as const;
+
+/** How doors and windows were left when everyone fled. */
+export const BARRIER_START = {
+  houseFront: { open: 0.1, latched: 0.5, bolted: 0.4 },
+  interior: { open: 0.65 },
+  shopfront: { broken: 0.15, latched: 0.25, bolted: 0.6 },
+  windowBroken: { pane: 0.06, display: 0.3 },
+  /** Some residents boarded windows from inside before leaving. */
+  houseWindowPreBoarded: 0.05,
+  preBoards: 2,
+} as const;

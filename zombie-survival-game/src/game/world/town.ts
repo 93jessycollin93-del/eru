@@ -247,6 +247,8 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     const woodMat = mb.material("#7a5c40", {}, "wood");
     const whiteMat = mb.material("#c9c7c0", { roughness: 0.5 }, "metal");
     const metalMat = mb.material("#6a6f73", { metalness: 0.4, roughness: 0.6 }, "metal");
+    // Stained timber trim on houses, aluminium on shops and the station (existing materials: no extra draw calls).
+    const trimMat = type === "house" ? woodMat : metalMat;
     const fabricMat = mb.material(pick(rng, ["#4b5a6b", "#6b4b4b", "#5b6b4b", "#77705f"]), {}, "fabric");
 
     const v1 = new THREE.Vector3();
@@ -378,6 +380,52 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
       return id;
     };
 
+    /** Window frames and door jambs (visual only, no random draws). */
+    const frame = (axis: "x" | "z", fixed: number, o: Opening, meta: WallMeta) => {
+      const o0 = o.c - o.w / 2;
+      const o1 = o.c + o.w / 2;
+      const fbox = (a0: number, a1: number, y0: number, y1: number, d0: number, d1: number, mat = trimMat) => {
+        const lo = fixed + Math.min(d0, d1);
+        const hi = fixed + Math.max(d0, d1);
+        if (axis === "x") box(a0, y0, lo, a1, y1, hi, mat, false);
+        else box(lo, y0, a0, hi, y1, a1, mat, false);
+      };
+      if (o.b > 0) {
+        // Frame around the glass, a meeting rail (sash window) or mullions (shop front).
+        const fw = 0.05;
+        const fd = 0.035;
+        fbox(o0, o0 + fw, o.b, o.t, -fd, fd);
+        fbox(o1 - fw, o1, o.b, o.t, -fd, fd);
+        fbox(o0, o1, o.t - fw, o.t, -fd, fd);
+        fbox(o0, o1, o.b, o.b + fw, -fd, fd);
+        const mid = (o.b + o.t) / 2;
+        if (o.w < 3) fbox(o0, o1, mid - 0.022, mid + 0.022, -fd, fd);
+        else {
+          const bays = Math.round(o.w / 1.5);
+          for (let k = 1; k < bays; k++) {
+            const x = o0 + (o.w * k) / bays;
+            fbox(x - 0.03, x + 0.03, o.b, o.t, -fd, fd);
+          }
+        }
+        // Concrete sill ledge outside.
+        const ns = axis === "x" ? meta.n[1] : meta.n[0];
+        fbox(o0 - 0.05, o1 + 0.05, o.b - 0.05, o.b, ns * (WALL_T / 2 - 0.02), ns * (WALL_T / 2 + 0.07), sidewalk);
+      } else {
+        // Jamb liners the leaves hang between, and architraves on both faces.
+        const ht = WALL_T / 2 + 0.004;
+        fbox(o0, o0 + 0.03, 0, o.t, -ht, ht);
+        fbox(o1 - 0.03, o1, 0, o.t, -ht, ht);
+        fbox(o0, o1, o.t - 0.03, o.t, -ht, ht);
+        for (const sgn of [-1, 1]) {
+          const d0 = sgn * (WALL_T / 2);
+          const d1 = sgn * (WALL_T / 2 + 0.014);
+          fbox(o0 - 0.07, o0, 0, o.t + 0.07, d0, d1);
+          fbox(o1, o1 + 0.07, 0, o.t + 0.07, d0, d1);
+          fbox(o0 - 0.07, o1 + 0.07, o.t, o.t + 0.07, d0, d1);
+        }
+      }
+    };
+
     /** Wall running along local X (axis "x") or Z with gaps for doors and windows. */
     const wall = (axis: "x" | "z", fixed: number, from: number, to: number, openings: Opening[], mat: string, meta?: WallMeta) => {
       const piece = (a: number, b: number, y0: number, y1: number, barrierId?: number) => {
@@ -390,6 +438,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
         const o0 = o.c - o.w / 2;
         const o1 = o.c + o.w / 2;
         const id = meta ? registerOpening(axis, fixed, o, meta) : undefined;
+        if (meta) frame(axis, fixed, o, meta);
         piece(cursor, o0, 0, WALL_H);
         // The sill is tagged so zombies probing a window know which barrier it is.
         piece(o0, o1, 0, o.b, id);

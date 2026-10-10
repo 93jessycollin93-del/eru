@@ -2,8 +2,9 @@
  * Navigation grid and A* pathfinding. Engine-agnostic.
  *
  * The walkable area is a uniform grid; blocked cells are inflated by the agent
- * radius when built. Paths are 8-connected (no corner cutting) and then
- * string-pulled into straight segments.
+ * radius when built. Doors and windows are open cells with an extra cost, so a
+ * route goes through one only when that beats walking round. Paths are
+ * 8-connected (no corner cutting) and then string-pulled into straight segments.
  */
 
 export interface NavGrid {
@@ -15,6 +16,8 @@ export interface NavGrid {
   height: number;
   /** 1 = blocked. */
   blocked: Uint8Array;
+  /** Extra cost (in cells) of entering each cell; 0 = free. Rewritten only when a door or window changes state. */
+  cost: Uint8Array;
 }
 
 export interface Box2 {
@@ -27,7 +30,7 @@ export interface Box2 {
 export function createNavGrid(originX: number, originZ: number, sizeX: number, sizeZ: number, cell: number): NavGrid {
   const width = Math.ceil(sizeX / cell);
   const height = Math.ceil(sizeZ / cell);
-  return { originX, originZ, cell, width, height, blocked: new Uint8Array(width * height) };
+  return { originX, originZ, cell, width, height, blocked: new Uint8Array(width * height), cost: new Uint8Array(width * height) };
 }
 
 /**
@@ -40,6 +43,32 @@ export function blockBox(g: NavGrid, b: Box2, radius: number) {
   const z0 = Math.max(0, Math.ceil((b.minZ - radius - g.originZ) / g.cell - 0.5));
   const z1 = Math.min(g.height - 1, Math.floor((b.maxZ + radius - g.originZ) / g.cell - 0.5));
   for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) g.blocked[z * g.width + x] = 1;
+}
+
+/**
+ * Indices of the cells whose centre lies in the box, half-open (min <= centre < max),
+ * clamped to the grid. The half-open bounds mean `{min: w - cell/2, max: w + cell/2}`
+ * holds exactly one cell centre for any coordinate w, so that box (on the wall's centre
+ * line, spanning the opening) is the one-cell strip a door or window is charged on.
+ */
+export function cellsInBox(g: NavGrid, b: Box2): number[] {
+  // First index whose centre is >= v. Nudged down a hair so float noise can't flip a bound
+  // that lands exactly on a centre, which is where both strip edges sit when the wall line
+  // falls on a cell boundary.
+  const first = (v: number, origin: number) => Math.ceil((v - origin) / g.cell - 0.5 - 1e-6);
+  const x0 = Math.max(0, first(b.minX, g.originX));
+  const x1 = Math.min(g.width, first(b.maxX, g.originX)) - 1;
+  const z0 = Math.max(0, first(b.minZ, g.originZ));
+  const z1 = Math.min(g.height, first(b.maxZ, g.originZ)) - 1;
+  const out: number[] = [];
+  for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) out.push(z * g.width + x);
+  return out;
+}
+
+/** Set the extra traversal cost of cells, rounded and clamped to 0..255. */
+export function setCellCost(g: NavGrid, cells: readonly number[], cost: number) {
+  const c = Math.min(255, Math.max(0, Math.round(cost)));
+  for (const i of cells) g.cost[i] = c;
 }
 
 export const toCell = (g: NavGrid, x: number, z: number): [number, number] => [
@@ -95,6 +124,42 @@ export function gridLineClear(g: NavGrid, ax: number, az: number, bx: number, bz
     }
   }
   return true;
+}
+
+/**
+ * Sight line for string-pulling: the segment between the two cell centres touches no
+ * blocked cell and no costed cell other than its own ends. Unlike gridLineClear's walk,
+ * which can skip a cell the line clips by up to half a cell, this visits every cell the
+ * segment enters, so a smoothed path can't graze a door or window the route went round.
+ */
+function pullLineClear(g: NavGrid, ax: number, az: number, bx: number, bz: number): boolean {
+  const dx = Math.abs(bx - ax);
+  const dz = Math.abs(bz - az);
+  const sx = bx > ax ? 1 : -1;
+  const sz = bz > az ? 1 : -1;
+  let x = ax;
+  let z = az;
+  for (let ix = 0, iz = 0; ; ) {
+    if (isBlocked(g, x, z)) return false;
+    if (x === bx && z === bz) return true;
+    if ((ix || iz) && g.cost[z * g.width + x] > 0) return false;
+    // Step across whichever cell edge the segment reaches first.
+    const d = (1 + 2 * ix) * dz - (1 + 2 * iz) * dx;
+    if (d < 0) {
+      x += sx;
+      ix++;
+    } else if (d > 0) {
+      z += sz;
+      iz++;
+    } else {
+      // Exactly through a corner: same no-corner-cutting rule as the search.
+      if (isBlocked(g, x + sx, z) || isBlocked(g, x, z + sz)) return false;
+      x += sx;
+      z += sz;
+      ix++;
+      iz++;
+    }
+  }
 }
 
 /** Scratch arrays reused across searches (stamped, so nothing needs clearing). */
@@ -161,6 +226,7 @@ class MinHeap {
 /**
  * Find a path between two world points. Returns world-space waypoints
  * (excluding the start), or null if there is no path within maxExpansions.
+ * Entering a cell costs its step length plus its `cost`.
  */
 export function findPath(g: NavGrid, sx: number, sz: number, gx: number, gz: number, maxExpansions = 8000): [number, number][] | null {
   const s0 = toCell(g, sx, sz);
@@ -210,12 +276,13 @@ export function findPath(g: NavGrid, sx: number, sz: number, gx: number, gz: num
         if (dx && dz && (isBlocked(g, cx + dx, cz) || isBlocked(g, cx, cz + dz))) continue;
         const ni = nz * W + nx;
         if (ws.closed[ni] === stamp) continue;
-        const cost = base + (dx && dz ? Math.SQRT2 : 1);
-        if (cost < gOf(ni)) {
+        // Costs only add, so the octile heuristic stays admissible.
+        const ng = base + (dx && dz ? Math.SQRT2 : 1) + g.cost[ni];
+        if (ng < gOf(ni)) {
           ws.seen[ni] = stamp;
-          ws.g[ni] = cost;
+          ws.g[ni] = ng;
           ws.came[ni] = cur;
-          open.push(ni, cost + h(ni));
+          open.push(ni, ng + h(ni));
         }
       }
     }
@@ -223,7 +290,9 @@ export function findPath(g: NavGrid, sx: number, sz: number, gx: number, gz: num
   if (!found) return null;
   const came = { get: (i: number) => (ws.came[i] >= 0 ? ws.came[i] : undefined) };
 
-  // Rebuild, then string-pull: keep only the corners we can't see past.
+  // Rebuild, then string-pull: keep only the corners we can't see past. Costed cells block
+  // sight (bar a line's ends), so the cell where the route crosses a door or window becomes
+  // a waypoint and no segment cuts through one the route went round.
   const cells: number[] = [];
   for (let c: number | undefined = goalI; c !== undefined && c !== startI; c = came.get(c)) cells.push(c);
   cells.reverse();
@@ -231,7 +300,7 @@ export function findPath(g: NavGrid, sx: number, sz: number, gx: number, gz: num
   let anchor = startI;
   for (let i = 0; i < cells.length; i++) {
     const next = cells[i + 1];
-    if (next === undefined || !gridLineClear(g, anchor % W, Math.floor(anchor / W), next % W, Math.floor(next / W))) {
+    if (next === undefined || !pullLineClear(g, anchor % W, Math.floor(anchor / W), next % W, Math.floor(next / W))) {
       const c = cells[i];
       out.push(cellCenter(g, c % W, Math.floor(c / W)));
       anchor = c;

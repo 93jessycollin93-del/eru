@@ -8,6 +8,7 @@ import { FISTS, ITEMS, makeStack, rollLoot, stackWeight, type ItemDef, type Item
 import { mulberry32, pick, range } from "../sim/rng";
 import {
   BODY_PART_NAMES,
+  addWound,
   aimSway,
   bandage,
   bloodPercent,
@@ -23,25 +24,41 @@ import {
   zombieHit,
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
-import { MELEE, FIREARM, ZOMBIE, meleeDamage, shotSpread, visibilityRange } from "../sim/tuning";
+import { BARRICADE, BARRIER, BARRIER_NOISE, DOOR, MELEE, FIREARM, WINDOW, ZOMBIE, meleeDamage, shotSpread, visibilityRange } from "../sim/tuning";
+import {
+  attackSlots,
+  boardCost,
+  canBoard,
+  climbCut,
+  effectiveLocked,
+  integrityLabel,
+  navCost,
+  struckMaterial,
+  type HitMaterial,
+  type HitResult,
+  type Side,
+} from "../sim/barriers";
 import { boot, complete, createComputerState, isSecretInput, prompt as shellPrompt, submit } from "../sim/computer";
 import { COUNTY, TOWN, gameDate } from "../sim/computerContent";
 import type { GameStatus, HudMessage, HudState } from "./types";
-import { ColliderWorld } from "./world/colliders";
+import { ColliderWorld, type RayHit } from "./world/colliders";
+import { BarrierSystem } from "./world/barrierSystem";
 import { Environment } from "./world/environment";
 import { PostFX, type Quality } from "./render/postfx";
 import { SkyDome } from "./render/sky";
 import { CctvSystem } from "./render/cctv";
 import { Electricity, type GeneratorObject } from "./electricity";
 import { refuel, resetBreaker, startGenerator } from "../sim/power";
-import type { NetworkSpec, NetworkView } from "../sim/network";
+import type { AccessView, NetworkSpec, NetworkView } from "../sim/network";
 import { blockBox, createNavGrid, findPath, type NavGrid } from "../sim/nav";
 import { TextureLibrary } from "./render/textures";
 import { Terrain } from "./world/terrain";
-import { generateTown, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
+import { generateTown, type Building, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
 import { generateVegetation } from "./world/vegetation";
 
 const WORLD_SEED = 1987;
+/** Doors and windows start the same way every game (their own stream, so nothing else shifts). */
+const BARRIER_SEED = WORLD_SEED + 31;
 /** In-game minutes that pass per real second. A full day takes 24 minutes. */
 const TIME_SCALE = 1;
 const START_MINUTES = 7 * 60 + 30;
@@ -127,6 +144,18 @@ export class Game {
   private perfChecked = false;
   private cctv: CctvSystem;
   private cctvOpen = false;
+  private barriers!: BarrierSystem;
+  /** Zombies with a place to swing at the barrier they're pounding on. */
+  private breachers = new Set<Zombie>();
+  /** Timed work in progress (boarding up, breaking glass...): you stand still until it's done. */
+  private action: TimedAction | null = null;
+  private keypadId: number | null = null;
+  private keypadEntry = "";
+  private keypadStatus: KeypadStatus = "idle";
+  private swungAtBarrier = false;
+  /** Buildings with a door controller on their network. */
+  private controllers: { hostname: string; building: Building }[] = [];
+  private rayHit: RayHit = { box: null };
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -191,7 +220,18 @@ export class Game {
     // Navigation grid over the town: anything at body height blocks walking.
     this.nav = createNavGrid(-135, -135, 270, 270, 0.25);
     for (const box of this.colliders.boxes) {
+      // Window sills are crossings with a cost (charged by the barrier system), not walls.
+      if (box.barrierId !== undefined) continue;
       if (box.minY < 1.2 && box.maxY > 0.35) blockBox(this.nav, box, 0.3);
+    }
+    // Doors and windows add their own colliders after the nav build.
+    this.barriers = new BarrierSystem(this.town, this.colliders, this.nav, this.textures);
+    this.scene.add(this.barriers.group);
+    for (const o of this.barriers.seeThrough) this.post.excludeFromAO(o);
+    this.barriers.reset(mulberry32(BARRIER_SEED));
+    for (const b of this.town.buildings) {
+      const acs = b.network?.hosts.find((h) => h.kind === "controller");
+      if (acs) this.controllers.push({ hostname: acs.hostname, building: b });
     }
   }
 
@@ -266,6 +306,10 @@ export class Game {
     this.elec.reset(this.rng, (this.town.facts.powerOffDay - 1) * 1440 + 6 * 60);
     this.generatorPanel = null;
     for (const c of this.town.computers) c.state = createComputerState(c.state.def, c.initialBattery);
+    this.barriers.reset(mulberry32(BARRIER_SEED));
+    this.breachers.clear();
+    this.action = null;
+    this.keypadId = null;
 
     const spawn = this.town.playerSpawn;
     for (let i = 0; i < 80; i++) {
@@ -311,7 +355,7 @@ export class Game {
   }
 
   private uiOpen() {
-    return this.inventoryOpen || !!this.container || !!this.computerSpot || !!this.reading || !!this.generatorPanel;
+    return this.inventoryOpen || !!this.container || !!this.computerSpot || !!this.reading || !!this.generatorPanel || this.keypadId !== null;
   }
 
   toggleInventory() {
@@ -333,6 +377,7 @@ export class Game {
     this.reading = null;
     this.cctvOpen = false;
     this.generatorPanel = null;
+    this.keypadId = null;
     this.input.reset();
     if (this.status === "playing" && gesture) this.requestLock();
     this.emitHud();
@@ -402,6 +447,25 @@ export class Game {
       dateText: gameDate(day, this.minutes % 1440),
       uptimeMinutes: this.minutes - this.computerOpenedAt + 37,
       network: c ? this.networkView(c) : undefined,
+      access: c ? this.accessView(c) : undefined,
+    };
+  }
+
+  /** Live door state for the access controller on this computer's LAN, if there is one. */
+  private accessView(c: ComputerSpot): AccessView | undefined {
+    const spec = this.networkOf(c);
+    const host = spec?.hosts.find((h) => h.kind === "controller");
+    const ctl = host && this.controllers.find((x) => x.hostname === host.hostname);
+    if (!host || !ctl) return undefined;
+    return {
+      controller: host.hostname,
+      doors: () =>
+        this.barriers.accessRows(host.hostname).map((r) => ({ ...r, label: host.access?.doors.find((d) => d.name === r.name)?.label ?? r.name })),
+      power: () => {
+        const st = this.elec.statusOf(ctl.building);
+        const ups = this.elec.circuitOf(ctl.building).ups;
+        return { source: st?.source === "ups" ? "ups" : "mains", upsPercent: ups ? (ups.chargeWh / ups.capacityWh) * 100 : null };
+      },
     };
   }
 
@@ -557,6 +621,335 @@ export class Game {
     this.emitHud();
   }
 
+  // ------------------------------------------------- doors and windows
+
+  private barrierTarget() {
+    const p = this.player;
+    return this.barriers.nearest(p.pos, p.yaw, INTERACT_RANGE);
+  }
+
+  /** Distance and stereo pan from the listener to a point. */
+  private hear(at: THREE.Vector3): [number, number] {
+    const p = this.player;
+    const to = new THREE.Vector3(at.x - p.pos.x, 0, at.z - p.pos.z);
+    const d = to.length();
+    const right = new THREE.Vector3(-Math.cos(p.yaw), 0, Math.sin(p.yaw));
+    return [d, d > 0.01 ? to.normalize().dot(right) : 0];
+  }
+
+  /** An electric lock biting or letting go. */
+  private lockSound(id: number) {
+    const at = this.barriers.centre(id);
+    const [d, pan] = this.hear(at);
+    this.audio.lockClunk(d, pan);
+    this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.lockClunk, ttl: 0.4 });
+  }
+
+  private countItem(id: string) {
+    return this.inventory.filter((s) => s.id === id).reduce((n, s) => n + s.count, 0);
+  }
+
+  private takeItems(id: string, count: number) {
+    for (const s of this.inventory.filter((st) => st.id === id)) {
+      const take = Math.min(count, s.count);
+      s.count -= take;
+      count -= take;
+      if (count <= 0) break;
+    }
+    this.inventory = this.inventory.filter((s) => s.count > 0);
+    if (this.equippedUid !== null && !this.equippedStack()) this.setEquipped(null);
+  }
+
+  private startAction(a: Omit<TimedAction, "t" | "nextBeat">) {
+    this.action = { ...a, t: 0, nextBeat: (a.every ?? 0) * 0.5 };
+    this.emitHud();
+  }
+
+  private updateAction(dt: number) {
+    const a = this.action!;
+    const input = this.input;
+    if (a.hold && !input.isDown(a.hold)) return this.cancelAction(null);
+    if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].some((k) => input.isDown(k))) {
+      return this.cancelAction(null);
+    }
+    a.t += dt;
+    if (a.every && a.beat) {
+      while (a.t >= a.nextBeat && a.nextBeat < a.dur) {
+        a.beat();
+        a.nextBeat += a.every;
+      }
+    }
+    if (a.t >= a.dur) {
+      this.action = null;
+      a.done();
+      if (a.repeat && a.hold && input.isDown(a.hold)) a.repeat();
+      this.emitHud();
+    }
+  }
+
+  private cancelAction(why: string | null) {
+    this.action = null;
+    if (why) this.message(why, "warn");
+    this.emitHud();
+  }
+
+  /** Nobody standing where the leaf closes. */
+  private doorObstructed(id: number) {
+    const box = this.barriers.doorBox(id);
+    const inside = (pos: THREE.Vector3, r: number) =>
+      pos.x > box.minX - r && pos.x < box.maxX + r && pos.z > box.minZ - r && pos.z < box.maxZ + r;
+    return inside(this.player.pos, 0.3) || this.zombies.some((z) => z.alive && inside(z.pos, z.radius * 0.8));
+  }
+
+  /** E on a door or window. */
+  private useBarrier(id: number, side: Side) {
+    const b = this.barriers.barrier(id);
+    const at = this.barriers.closestPoint(id, this.player.pos);
+    if (b.boards.length && (b.kind === "window" || !b.open || b.broken)) {
+      this.message(`It's boarded up${b.boardSide === side ? "" : " from the other side"}.`, "info");
+      return;
+    }
+    if (b.kind === "door") {
+      if (b.broken) {
+        this.message("Smashed off its hinges.", "info");
+      } else if (b.open) {
+        if (this.doorObstructed(id)) {
+          this.message("Something's in the way.", "warn");
+          return;
+        }
+        this.barriers.close(id);
+        const [d, pan] = this.hear(at);
+        this.audio.doorThud(d, pan);
+        this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.doorClose, ttl: 0.4 });
+      } else if (side === -1 && b.bolted) {
+        this.audio.lockClunk(0, 0);
+        this.startAction({ label: "Unbolting", dur: DOOR.unboltSeconds, done: () => this.openDoorNow(id, side) });
+      } else {
+        this.openDoorNow(id, side);
+      }
+      return;
+    }
+    if (b.glass === "intact") {
+      this.startAction({ label: "Breaking the glass", dur: WINDOW.breakSeconds, done: () => this.smashWindow(id) });
+      return;
+    }
+    this.climbThrough(id, side);
+  }
+
+  private openDoorNow(id: number, side: Side) {
+    const why = this.barriers.open(id, side);
+    const at = this.barriers.closestPoint(id, this.player.pos);
+    if (why) {
+      if (why === "Locked.") {
+        const b = this.barriers.barrier(id);
+        this.message(b.electronic ? "Locked. The keypad's light is red." : b.bolted ? "Locked. Deadbolted from inside." : why, "info");
+        this.audio.doorBang(0, 0, b.build === "steel" ? "steel" : "wood");
+      } else this.message(why, "info");
+      return;
+    }
+    const [d, pan] = this.hear(at);
+    this.audio.doorCreak(d, pan);
+    this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.doorOpen, ttl: 0.4 });
+  }
+
+  private smashWindow(id: number) {
+    if (!this.barriers.breakGlass(id)) return;
+    const at = this.barriers.closestPoint(id, this.player.pos).setY(0);
+    const [d, pan] = this.hear(at);
+    this.audio.glassBreak(d, pan);
+    this.noises.push({ pos: at, radius: BARRIER_NOISE.glassBreak, ttl: 0.5 });
+    if (d < 2.5) this.player.addShake(0.15);
+  }
+
+  private climbThrough(id: number, side: Side) {
+    const p = this.player;
+    const t = this.barriers.traversal(id, side, p.pos);
+    if (!t) {
+      this.message("Something's blocking the other side.", "warn");
+      return;
+    }
+    const cut = climbCut(this.barriers.barrier(id), Math.random);
+    p.traverse(t.from, t.to, t.dur, t.peak);
+    this.audio.climb(0, 0);
+    this.noises.push({ pos: this.barriers.centre(id).clone(), radius: BARRIER_NOISE.climb, ttl: 0.5 });
+    if (cut) {
+      addWound(p.body, cut, "laceration", Math.random);
+      this.damageFlash = 0.6;
+      this.audio.hurt();
+      this.message(`You slice your ${BODY_PART_NAMES[cut].toLowerCase()} on the broken glass.`, "danger");
+    }
+  }
+
+  /** Q: the deadbolt on a door, or clearing shards out of a broken window. */
+  private altBarrier(id: number, side: Side) {
+    const b = this.barriers.barrier(id);
+    if (b.kind === "door") {
+      const was = b.bolted;
+      const why = this.barriers.bolt(id, side);
+      if (why) {
+        this.message(why, "info");
+        return;
+      }
+      this.audio.lockClunk(0, 0);
+      this.noises.push({ pos: this.barriers.centre(id).clone(), radius: BARRIER_NOISE.bolt, ttl: 0.3 });
+      this.message(was ? "You draw the deadbolt." : "You throw the deadbolt.", "info");
+      return;
+    }
+    if (b.glass === "intact") {
+      this.message("The sash is painted shut. You'd have to break the glass.", "info");
+    } else if (b.glass === "broken") {
+      if (b.boards.length && b.boardSide === side) {
+        this.message("The boards are in the way.", "info");
+        return;
+      }
+      const at = this.barriers.centre(id);
+      this.startAction({
+        label: "Clearing the shards",
+        dur: WINDOW.clearSeconds,
+        every: 0.6,
+        beat: () => {
+          const [d, pan] = this.hear(at);
+          this.audio.doorBang(d, pan, "glass");
+          this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.clearGlass, ttl: 0.3 });
+        },
+        done: () => {
+          if (this.barriers.clear(id)) this.message("You knock the last shards out of the frame.", "info");
+        },
+      });
+    }
+  }
+
+  /** Hold H: nail a board across the door or window from your side. */
+  private startBoarding(id: number, side: Side) {
+    const b = this.barriers.barrier(id);
+    if (!this.countItem("hammer")) {
+      this.message("You need a hammer to board it up.", "warn");
+      return;
+    }
+    const why = canBoard(b, side);
+    if (why) {
+      this.message(why, "info");
+      return;
+    }
+    const cost = boardCost(b);
+    if (this.countItem("plank") < cost.planks || this.countItem("nails") < cost.nails) {
+      this.message(`You need ${cost.planks} plank${cost.planks > 1 ? "s" : ""} and ${cost.nails} nails for each board.`, "warn");
+      return;
+    }
+    const max = BARRICADE.maxBoards[b.kind];
+    const at = this.barriers.closestPoint(id, this.player.pos).setY(1.2);
+    this.startAction({
+      label: `Boarding up (${b.boards.length + 1}/${max})`,
+      dur: cost.seconds,
+      hold: "KeyH",
+      every: BARRICADE.hammerInterval,
+      beat: () => {
+        const [d, pan] = this.hear(at);
+        this.audio.hammer(d, pan);
+        this.noises.push({ pos: at.clone().setY(0), radius: BARRIER_NOISE.hammer, ttl: 0.3 });
+      },
+      done: () => {
+        // Things may have changed while you worked.
+        if (canBoard(b, side) || this.countItem("plank") < cost.planks || this.countItem("nails") < cost.nails) return;
+        this.takeItems("plank", cost.planks);
+        this.takeItems("nails", cost.nails);
+        this.barriers.board(id, side);
+        this.message(b.boards.length >= max ? "Boarded up solid." : `Board nailed (${b.boards.length}/${max}). Keep holding H for another.`, "good");
+      },
+      repeat: () => {
+        if (!canBoard(b, side) && this.countItem("plank") >= cost.planks && this.countItem("nails") >= cost.nails) this.startBoarding(id, side);
+      },
+    });
+  }
+
+  /** Shift+H: pry the outermost board off from the side it's nailed on. */
+  private startPrying(id: number, side: Side) {
+    const b = this.barriers.barrier(id);
+    if (!b.boards.length) {
+      this.message("There are no boards to pry off.", "info");
+      return;
+    }
+    if (b.boardSide !== side) {
+      this.message("The boards are nailed on from the other side.", "info");
+      return;
+    }
+    if (!this.countItem("hammer")) {
+      this.message("You need a hammer's claw to pry boards off.", "warn");
+      return;
+    }
+    const at = this.barriers.closestPoint(id, this.player.pos).setY(1.2);
+    this.startAction({
+      label: "Prying off a board",
+      dur: BARRICADE.prySeconds,
+      hold: "KeyH",
+      every: 1,
+      beat: () => {
+        const [d, pan] = this.hear(at);
+        this.audio.pry(d, pan);
+        this.noises.push({ pos: at.clone().setY(0), radius: BARRIER_NOISE.pry, ttl: 0.3 });
+      },
+      done: () => {
+        const got = this.barriers.pry(id, side);
+        if (!got) return;
+        this.addToInventory(makeStack("plank", got.planks));
+        this.message(`You pry the board off: ${got.planks} plank${got.planks > 1 ? "s" : ""}. The nails are bent and useless.`, "info");
+      },
+      repeat: () => {
+        if (b.boards.length && b.boardSide === side) this.startPrying(id, side);
+      },
+    });
+  }
+
+  private openKeypad(id: number) {
+    const e = this.barriers.barrier(id).electronic;
+    if (!e?.powered) {
+      this.message("The keypad is dark. No power.", "info");
+      return;
+    }
+    this.keypadId = id;
+    this.keypadEntry = "";
+    this.keypadStatus = "idle";
+    this.inventoryOpen = false;
+    this.container = null;
+    this.releaseLock();
+    this.emitHud();
+  }
+
+  /** A key on the door keypad: a digit, "C" to clear or "#" to enter. */
+  keypadPress(key: string) {
+    const id = this.keypadId;
+    if (id === null) return;
+    const b = this.barriers.barrier(id);
+    if (!b.electronic?.powered) {
+      this.keypadStatus = "dark";
+    } else if (key === "C") {
+      this.keypadEntry = "";
+      this.keypadStatus = "idle";
+      this.audio.keypadBeep(true);
+    } else if (key === "#") {
+      const r = this.barriers.keypad(id, this.keypadEntry);
+      this.keypadEntry = "";
+      this.keypadStatus = r;
+      this.audio.keypadBeep(r === "granted");
+      this.noises.push({ pos: this.player.pos.clone(), radius: BARRIER_NOISE.keypad, ttl: 0.3 });
+      if (r === "granted") {
+        this.lockSound(id);
+        this.message("The strike clicks. You have a few seconds.", "good");
+        this.closeUi(true);
+        return;
+      }
+      if (r === "lockout") this.message("The keypad flashes red and stops responding.", "warn");
+    } else if (/^[0-9]$/.test(key) && this.keypadEntry.length < 8) {
+      if (b.electronic.lockoutLeft > 0) this.keypadStatus = "lockout";
+      else {
+        this.keypadEntry += key;
+        this.keypadStatus = "idle";
+        this.audio.keypadBeep(true);
+      }
+    }
+    this.emitHud();
+  }
+
   private useComputer(c: ComputerSpot) {
     if (!this.computerPowered(c)) {
       this.message(c.kind === "laptop" ? "The laptop's battery is dead." : "The screen stays black. There's no power.", "warn");
@@ -583,6 +976,9 @@ export class Game {
         const spec = this.networkOf(c);
         const day = Math.floor(this.minutes / 1440) + 1;
         if (spec) this.cctv.renderAll((ip) => this.deviceUp(spec, ip), this.env.daylight(this.minutes % 1440), `${gameDate(day, this.minutes % 1440)}:00`);
+      } else if (fx.type === "door") {
+        const id = this.barriers.command(fx.controller, fx.door, fx.action);
+        if (id !== null) this.lockSound(id);
       }
     }
     // Keyboard clatter carries a little.
@@ -796,10 +1192,17 @@ export class Game {
     } else {
       this.input.mouseDX = this.input.mouseDY = 0;
     }
+    if (this.action) {
+      if (controlling) this.updateAction(dt);
+      else this.cancelAction(null);
+    }
 
     const swinging = this.swingTime > 0;
-    if (controlling) p.update(dt, this.input, this.colliders, this.terrain, swinging);
+    // Busy hands: you can look around but not walk off mid-job.
+    if (controlling && !this.action) p.update(dt, this.input, this.colliders, this.terrain, swinging);
+    else if (controlling) p.update(dt, lookOnly(this.input), this.colliders, this.terrain, swinging);
     else p.update(dt, NO_INPUT, this.colliders, this.terrain, swinging);
+    for (const id of this.barriers.update(dt)) this.lockSound(id);
     p.overweight = this.carryWeight() > MAX_WEIGHT;
 
     this.updateCombat(dt);
@@ -878,6 +1281,16 @@ export class Game {
     }
     const grid = this.gridOn();
     this.audio.setHum(this.elec.humLevel(this.player.pos));
+    // Door controllers: maglocks let go and strikes stay shut when their power dies.
+    for (const c of this.controllers) {
+      for (const ch of this.barriers.setControllerPower(c.hostname, this.elec.powered(c.building, "network"))) {
+        this.lockSound(ch.id);
+        const name = this.barriers.barrier(ch.id).electronic?.name;
+        if (this.barriers.centre(ch.id).distanceTo(this.player.pos) < 40 && ch.change === "released") {
+          this.message(`A heavy clunk from the ${name === "front" ? "entrance" : `${name} door`}.`, "info");
+        }
+      }
+    }
     // Laptops recharge wherever their house has power.
     for (const comp of this.town.computers) {
       if (comp.kind !== "laptop" || comp.state.battery === null || comp.state.battery >= 100) continue;
@@ -931,6 +1344,11 @@ export class Game {
   private handleActions(dt: number) {
     const input = this.input;
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+    if (input.wasPressed("Escape") || input.wasPressed("KeyP")) {
+      this.pause();
+      return;
+    }
+    if (this.player.traversing || this.action) return;
 
     if (input.wasPressed("KeyF")) {
       this.flashlightOn = !this.flashlightOn;
@@ -955,8 +1373,19 @@ export class Game {
       if (target?.type === "generator") this.openGenerator(target.generator);
       else if (target?.type === "computer") this.useComputer(target.computer);
       else if (target?.type === "container") this.openContainer(target.container);
+      else if (target?.type === "barrier") this.useBarrier(target.id, target.side);
+      else if (target?.type === "keypad") this.openKeypad(target.id);
     }
-    if (input.wasPressed("Escape") || input.wasPressed("KeyP")) this.pause();
+    if (input.wasPressed("KeyQ")) {
+      const t = this.barrierTarget();
+      if (t) this.altBarrier(t.id, t.side);
+    }
+    if (input.wasPressed("KeyH")) {
+      const t = this.barrierTarget();
+      if (!t) this.message("There's no door or window here to board up.", "info");
+      else if (input.isDown("ShiftLeft") || input.isDown("ShiftRight")) this.startPrying(t.id, t.side);
+      else this.startBoarding(t.id, t.side);
+    }
 
     const hotbar = this.hotbar();
     for (let i = 0; i < 5; i++) {
@@ -1006,6 +1435,7 @@ export class Game {
     this.swingDuration = (weapon.attackInterval ?? 0.6) * 0.9;
     this.swingTime = 0.0001;
     this.swingHits.clear();
+    this.swungAtBarrier = false;
     this.attackCooldown = weapon.attackInterval ?? 0.6;
     this.audio.swing();
   }
@@ -1044,9 +1474,9 @@ export class Game {
     const candidates = this.zombies
       .filter((z) => z.alive && !this.swingHits.has(z))
       .map((z) => ({ z, to: z.pos.clone().sub(p.pos).setY(0) }))
-      .filter(({ to }) => {
+      .filter(({ z, to }) => {
         const d = to.length();
-        return d <= reach && d > 0.001 && to.normalize().dot(fwd) >= MELEE.arcCos;
+        return d <= reach && d > 0.001 && to.normalize().dot(fwd) >= MELEE.arcCos && this.clearReach(p.pos, z.pos);
       })
       .sort((a, b) => a.z.pos.distanceToSquared(p.pos) - b.z.pos.distanceToSquared(p.pos));
     for (const { z } of candidates) {
@@ -1064,6 +1494,58 @@ export class Game {
       }
       if (z.hit(dmg, p.pos, weapon.knockback ?? 1.5, knockdown)) this.onZombieKilled();
     }
+    // Nothing to hit but the door or window in front of you: hit that, once per swing.
+    if (this.swingHits.size === 0 && !this.swungAtBarrier) {
+      const reachB = (weapon.reach ?? 1.3) + 0.35;
+      const t = this.colliders.raycast(p.pos.x, p.pos.y + 1.1, p.pos.z, fwd.x, 0, fwd.z, reachB, false, this.rayHit);
+      const id = this.rayHit.box?.barrierId;
+      if (id !== undefined && t < reachB) {
+        this.swungAtBarrier = true;
+        this.strikeBarrier(id, weapon);
+      }
+    }
+  }
+
+  /** A melee blow (or a kick, unarmed) on a door, window or board. */
+  private strikeBarrier(id: number, weapon: ItemDef) {
+    const p = this.player;
+    const side = this.barriers.sideOf(id, p.pos);
+    const mat = struckMaterial(this.barriers.barrier(id), side);
+    if (!mat) return;
+    const base = this.equippedStack() ? (weapon.damage ?? 10) * strength(p.body) : BARRIER.kickDamage;
+    const r = this.barriers.hit(id, base * BARRIER.playerFactor[mat], side);
+    this.hitStop = MELEE.hitStop;
+    p.addShake(mat === "steel" ? 0.22 : 0.12);
+    this.barrierEffects(id, r, mat, p.pos, side, false);
+    if (mat === "steel" && r.layer === "door" && Math.random() < 0.3) this.message("The steel barely dents. You'll need another way in.", "info");
+  }
+
+  /**
+   * Can an arm or a blade get from a to b at chest height? Closed doors, glass
+   * and boards stop it; an empty window frame doesn't.
+   */
+  private clearReach(a: THREE.Vector3, b: THREE.Vector3): boolean {
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const total = Math.hypot(dx, dz);
+    if (total < 1e-3) return true;
+    const ux = dx / total;
+    const uz = dz / total;
+    const y = Math.max(a.y, b.y) + 1.15;
+    let ox = a.x;
+    let oz = a.z;
+    let left = total;
+    for (let i = 0; i < 3; i++) {
+      const t = this.colliders.raycast(ox, y, oz, ux, 0, uz, left, false, this.rayHit);
+      if (t >= left - 0.05) return true;
+      const id = this.rayHit.box?.barrierId;
+      if (id === undefined || !this.barriers.reachThrough(id)) return false;
+      ox += ux * (t + 0.3);
+      oz += uz * (t + 0.3);
+      left -= t + 0.3;
+      if (left <= 0) return true;
+    }
+    return false;
   }
 
   private fire(weapon: ItemDef) {
@@ -1107,7 +1589,7 @@ export class Game {
     // Ignore anything between the camera and the player.
     const chest = p.pos.clone().setY(p.pos.y + 1.3);
     const tMin = Math.max(0, chest.clone().sub(origin).dot(dir) - 0.3);
-    const wallT = this.colliders.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, 150);
+    const wallT = this.colliders.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, 150, false, undefined, true);
 
     let hitZombie: Zombie | null = null;
     let hitT = wallT;
@@ -1137,6 +1619,7 @@ export class Game {
         }
       }
     }
+    this.shatterAlong(origin, dir, hitT);
     if (hitZombie) {
       const base = weapon.damage ?? 40;
       const dmg = part === "head" ? FIREARM.headshotDamage : part === "legs" ? base * FIREARM.legDamageFactor : base;
@@ -1145,6 +1628,21 @@ export class Game {
         this.onZombieKilled();
         if (part === "head") this.message("Headshot.", "good");
       }
+    }
+  }
+
+  /** A bullet breaks the first intact pane it passes through before it hits. */
+  private shatterAlong(o: THREE.Vector3, d: THREE.Vector3, maxT: number) {
+    let start = 0;
+    for (let i = 0; i < 4 && start < maxT; i++) {
+      const t = this.colliders.raycast(o.x + d.x * start, o.y + d.y * start, o.z + d.z * start, d.x, d.y, d.z, maxT - start, false, this.rayHit);
+      const box = this.rayHit.box;
+      if (!box?.glass || box.barrierId === undefined || start + t >= maxT) return;
+      if (this.barriers.barrier(box.barrierId).glass === "intact") {
+        this.smashWindow(box.barrierId);
+        return;
+      }
+      start += t + 0.3;
     }
   }
 
@@ -1216,7 +1714,36 @@ export class Game {
       findPath: (from: THREE.Vector3, to: THREE.Vector3) => {
         if (this.pathBudget <= 0) return undefined;
         this.pathBudget--;
-        return findPath(this.nav, from.x, from.z, to.x, to.z, 9000);
+        // A target inside a building it isn't in: make for the best way in. Searching the
+        // whole block instead is slow (crossing costs are invisible to the A* heuristic).
+        const inside = this.buildingObj(to.x, to.z);
+        if (inside && inside !== this.buildingObj(from.x, from.z)) {
+          const siege = this.siegePath(from, inside);
+          if (siege) return siege;
+        }
+        return findPath(this.nav, from.x, from.z, to.x, to.z, 9000) ?? (inside ? this.siegePath(from, inside) : null);
+      },
+      barrierContact: (z: Zombie, id: number) => this.barriers.access(id, this.barriers.sideOf(id, z.pos)),
+      barrierPoint: (id: number, from: THREE.Vector3) => this.barriers.closestPoint(id, from),
+      canBreach: (z: Zombie) => this.breachers.has(z),
+      onBarrierHit: (z: Zombie, id: number) => this.zombieHitsBarrier(z, id),
+      onBarrierPush: (z: Zombie, id: number) => {
+        const side = this.barriers.sideOf(id, z.pos);
+        if (!this.barriers.push(id, side)) return;
+        // A body shoving a door open is about as loud as one slamming.
+        const at = this.barriers.closestPoint(id, z.pos);
+        this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.doorClose, ttl: 0.4 });
+        const [d, pan] = this.hear(at);
+        this.audio.doorCreak(d, pan);
+      },
+      clamberPoints: (z: Zombie, id: number) => {
+        const t = this.barriers.traversal(id, this.barriers.sideOf(id, z.pos), z.pos, true);
+        if (!t) return null;
+        const at = this.barriers.centre(id);
+        this.noises.push({ pos: at.clone(), radius: BARRIER_NOISE.climb, ttl: 0.4 });
+        const [d, pan] = this.hear(at);
+        this.audio.climb(d, pan);
+        return t;
       },
       onNotice: (z: Zombie) => {
         // A groan as it commits: your cue that you've been seen.
@@ -1232,14 +1759,96 @@ export class Game {
     const p = this.player;
     const reach = ZOMBIE.attackRange + 0.7;
     const close = this.zombies
-      .filter((z) => z.hunting && z.pos.distanceTo(p.pos) < reach)
+      .filter((z) => z.hunting && !z.clamber && z.pos.distanceTo(p.pos) < reach && this.clearReach(z.pos, p.pos))
       .sort((a, b) => Number(b.attacking) - Number(a.attacking) || a.pos.distanceToSquared(p.pos) - b.pos.distanceToSquared(p.pos));
     this.attackers = new Set(close.slice(0, ZOMBIE.maxAttackers));
+  }
+
+  /** The closest few zombies at each barrier get to swing at it; the rest crowd behind. */
+  private assignBreachers() {
+    this.breachers.clear();
+    const groups = new Map<number, Zombie[]>();
+    for (const z of this.zombies) {
+      if (!z.alive || z.breach === null) continue;
+      let list = groups.get(z.breach);
+      if (!list) groups.set(z.breach, (list = []));
+      list.push(z);
+    }
+    for (const [id, list] of groups) {
+      const c = this.barriers.centre(id);
+      list.sort((a, b) => a.pos.distanceToSquared(c) - b.pos.distanceToSquared(c));
+      for (const z of list.slice(0, attackSlots(this.barriers.barrier(id)))) this.breachers.add(z);
+    }
+  }
+
+  /** A zombie's blow on a door, window or board. */
+  private zombieHitsBarrier(z: Zombie, id: number) {
+    const side = this.barriers.sideOf(id, z.pos);
+    const mat = struckMaterial(this.barriers.barrier(id), side) ?? "wood";
+    const r = this.barriers.hit(id, BARRIER.zombieDamage, side);
+    this.barrierEffects(id, r, mat, z.pos, side, true);
+    const p = this.player;
+    if (p.body.asleep && this.barriers.centre(id).distanceTo(p.pos) < BARRIER.wakeRadius) {
+      this.wake(`Something is pounding on the ${this.barriers.barrier(id).kind}.`);
+    }
+  }
+
+  /**
+   * Sound, noise and messages for a blow on a barrier. Zombie blows lure others
+   * to just past the barrier, so newcomers path through it and join in.
+   */
+  private barrierEffects(id: number, r: HitResult, mat: HitMaterial, source: THREE.Vector3, side: Side, byZombie: boolean) {
+    if (r.layer === "none") return;
+    const b = this.barriers.barrier(id);
+    const at = this.barriers.closestPoint(id, source).setY(1.1);
+    const [d, pan] = this.hear(at);
+    if (r.burst) this.audio.doorBurst(d, pan);
+    else if (r.glassBroke) this.audio.glassBreak(d, pan);
+    else if (r.boardTorn) this.audio.boardTear(d, pan);
+    else if (r.opened) this.audio.doorCreak(d, pan);
+    else this.audio.doorBang(d, pan, mat);
+    this.noises.push({
+      pos: at.clone().setY(0),
+      radius: r.noise,
+      ttl: 0.5,
+      ...(byZombie ? { lure: this.barriers.approach(id, (-side) as Side, 1.0), barrierId: id } : {}),
+    });
+    if (d < 25) {
+      const what = b.kind === "door" ? "door" : "window";
+      if (r.burst) this.message(byZombie ? `The ${what} bursts open!` : "The door gives way.", byZombie ? "danger" : "good");
+      else if (r.boardTorn) this.message(`A board splinters off the ${what}.`, byZombie ? "warn" : "info");
+      else if (r.glassBroke && byZombie) this.message("Glass shatters nearby.", "warn");
+    }
+  }
+
+  /**
+   * The way into a building from outside: to the opening that's closest once
+   * its crossing cost is counted (an open door beats a boarded window next to
+   * it), then through it.
+   */
+  private siegePath(from: THREE.Vector3, b: Building): [number, number][] | null {
+    let best = -1;
+    let bestD = Infinity;
+    for (const s of this.barriers.specs) {
+      if (s.building !== b.address || s.role === "interior" || s.role === "armory") continue;
+      const d = Math.hypot(s.cx + s.nx * 0.8 - from.x, s.cz + s.nz * 0.8 - from.z) + navCost(this.barriers.barrier(s.id)) * this.nav.cell;
+      if (d < bestD) {
+        bestD = d;
+        best = s.id;
+      }
+    }
+    if (best < 0) return null;
+    const a = this.barriers.approach(best, 1, 0.8);
+    const path = findPath(this.nav, from.x, from.z, a.x, a.z, 9000);
+    if (!path) return null;
+    const inside = this.barriers.approach(best, -1, 0.6);
+    return [...path, [inside.x, inside.z]];
   }
 
   private updateZombies(dt: number) {
     const p = this.player;
     this.assignAttackers();
+    this.assignBreachers();
     this.pathBudget = 2;
     const ctx = this.zombieContext(dt);
     const near: Zombie[] = [];
@@ -1250,7 +1859,7 @@ export class Game {
       if (d > ZOMBIE_ACTIVE_RANGE && z.alive) continue;
       const wasHunting = z.hunting;
       z.update(ctx);
-      if (z.alive && d < 30) near.push(z);
+      if (z.alive && d < 30 && !z.clamber) near.push(z);
       // A zombie that spots you draws its neighbours in.
       if (!wasHunting && z.hunting) {
         for (const other of this.zombies) {
@@ -1291,6 +1900,9 @@ export class Game {
       for (let tries = 0; tries < 6 && alive < cap; tries++) {
         const sp = pick(this.rng, this.town.spawnPoints);
         if (sp.distanceTo(p.pos) < 60) continue;
+        // Your fortress doesn't fill up while you're away: nothing appears inside a sealed building.
+        const inside = this.buildingObj(sp.x, sp.z);
+        if (inside && this.barriers.sealed(inside.address)) continue;
         if (this.colliders.lineOfSight(sp.x, 1.6, sp.z, p.pos.x, p.pos.y + 1.6, p.pos.z) && sp.distanceTo(p.pos) < 100) continue;
         this.spawnZombie(sp.clone().add(new THREE.Vector3(range(this.rng, -2, 2), 0, range(this.rng, -2, 2))));
         break;
@@ -1302,6 +1914,7 @@ export class Game {
     if (this.status !== "playing") return;
     const p = this.player;
     const w = zombieHit(p.body, Math.random);
+    if (this.action) this.cancelAction("Interrupted!");
     this.damageFlash = 1;
     this.audio.hurt();
     const where = BODY_PART_NAMES[w.part].toLowerCase();
@@ -1350,6 +1963,8 @@ export class Game {
       this.player.model.root.visible = false;
     }
     this.causeOfDeath = cause;
+    this.action = null;
+    this.keypadId = null;
     this.inventoryOpen = false;
     this.container = null;
     this.releaseLock();
@@ -1389,10 +2004,13 @@ export class Game {
     | { type: "container"; container: LootContainer }
     | { type: "computer"; computer: ComputerSpot }
     | { type: "generator"; generator: GeneratorObject }
+    | { type: "barrier"; id: number; side: Side }
+    | { type: "keypad"; id: number }
     | null {
     for (const g of this.elec.generators) {
       if (this.distanceToContainer(g) < INTERACT_RANGE) return { type: "generator", generator: g };
     }
+    const p = this.player;
     const container = this.nearestContainer();
     let computer: ComputerSpot | null = null;
     let best = INTERACT_RANGE;
@@ -1404,8 +2022,93 @@ export class Game {
       }
     }
     // Computers sit on desks next to containers; prefer the computer when it's as close.
-    if (computer && (!container || best <= this.distanceToContainer(container) + 0.3)) return { type: "computer", computer };
-    return container ? { type: "container", container } : null;
+    const thing =
+      computer && (!container || best <= this.distanceToContainer(container) + 0.3)
+        ? ({ type: "computer", computer } as const)
+        : container
+          ? ({ type: "container", container } as const)
+          : null;
+    // Whatever you're looking at most squarely wins: distance minus how directly you face it.
+    const fwd = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
+    let choice: ReturnType<Game["nearestInteractable"]> = thing;
+    let bestScore = Infinity;
+    if (thing) {
+      const c = thing.type === "computer" ? thing.computer : thing.container;
+      const to = new THREE.Vector3(c.x - p.pos.x, 0, c.z - p.pos.z).normalize();
+      bestScore = this.distanceToContainer(c) - to.dot(fwd) * 0.8;
+    }
+    const bt = this.barriers.nearest(p.pos, p.yaw, INTERACT_RANGE);
+    if (bt) {
+      const bp = this.barriers.closestPoint(bt.id, p.pos);
+      const tb = new THREE.Vector3(bp.x - p.pos.x, 0, bp.z - p.pos.z);
+      const score = bt.dist - (tb.lengthSq() > 1e-6 ? tb.normalize().dot(fwd) : 1) * 0.8;
+      if (score < bestScore) {
+        choice = { type: "barrier", id: bt.id, side: bt.side };
+        bestScore = score;
+      }
+    }
+    const kp = this.barriers.nearestKeypad(p.pos, p.yaw, 1.3);
+    if (kp && kp.score < bestScore) choice = { type: "keypad", id: kp.id };
+    return choice;
+  }
+
+  /** What E, Q and H would do to a door or window right now. */
+  private barrierPrompt(id: number, side: Side): { main: string; alts: { key: string; label: string }[] } {
+    const b = this.barriers.barrier(id);
+    const alts: { key: string; label: string }[] = [];
+    let main: string;
+    const boarded = b.boards.length > 0 && (b.kind === "window" || !b.open || b.broken);
+    if (b.kind === "door") {
+      if (boarded) main = "Boarded door";
+      else if (b.broken) main = "Smashed door";
+      else if (b.open) main = "Close door";
+      else if (side === 1 && (b.bolted || effectiveLocked(b))) main = "Try the door (locked)";
+      else main = side === -1 && b.bolted ? "Unbolt and open" : "Open door";
+      if ((b.build === "solid" || b.build === "glass") && !b.open && !b.broken && side === -1) {
+        alts.push({ key: "Q", label: b.bolted ? "Draw deadbolt" : "Throw deadbolt" });
+      }
+    } else {
+      main = boarded ? "Boarded window" : b.glass === "intact" ? "Break the glass" : "Climb through";
+      if (b.glass === "broken" && !(b.boards.length && b.boardSide === side)) alts.push({ key: "Q", label: "Clear shards" });
+    }
+    if (this.countItem("hammer")) {
+      if (!canBoard(b, side)) {
+        const c = boardCost(b);
+        const enough = this.countItem("plank") >= c.planks && this.countItem("nails") >= c.nails;
+        alts.push({
+          key: "H",
+          label: `Board up: ${c.planks} plank${c.planks > 1 ? "s" : ""}, ${c.nails} nails (${b.boards.length}/${BARRICADE.maxBoards[b.kind]})${enough ? "" : " · need more"}`,
+        });
+      }
+      if (b.boards.length && b.boardSide === side) alts.push({ key: "Shift+H", label: "Pry off a board" });
+    }
+    return { main, alts };
+  }
+
+  private barrierView(id: number): NonNullable<HudState["barrier"]> {
+    const b = this.barriers.barrier(id);
+    let label: string;
+    if (b.kind === "door") {
+      const name = { hollow: "Interior door", solid: "Wooden door", glass: "Glass door", steel: "Steel door" }[b.build as "hollow"];
+      const state = b.broken
+        ? "smashed"
+        : b.open
+          ? "open"
+          : b.electronic
+            ? effectiveLocked(b)
+              ? b.electronic.mode === "maglock"
+                ? "maglocked"
+                : "locked"
+              : "unlocked"
+            : b.bolted
+              ? "deadbolted"
+              : "latched";
+      label = `${name} · ${state}`;
+    } else {
+      label = `${b.build === "display" ? "Shop window" : "Window"} · ${b.glass === "intact" ? "glass intact" : b.glass === "broken" ? "broken glass" : "empty frame"}`;
+    }
+    const holds = b.boards.length > 0 || (b.kind === "window" ? b.glass === "intact" : !b.open && !b.broken);
+    return { label, boards: b.boards.length, maxBoards: BARRICADE.maxBoards[b.kind], integrity: holds ? integrityLabel(b) : null };
   }
 
   private openContainer(c: LootContainer) {
@@ -1540,7 +2243,29 @@ export class Game {
         reloading: this.reloadTimer > 0,
       },
       hotbar: this.hotbar().map((s, i) => ({ slot: i + 1, name: ITEMS[s.id].name, active: s.uid === this.equippedUid })),
-      prompt: !target ? null : target.type === "generator" ? `Inspect ${target.generator.gen.portable ? "generator" : "standby generator"}` : target.type === "computer" ? `Use ${target.computer.kind === "laptop" ? "laptop" : "computer"}` : `Search ${target.container.name}`,
+      prompt: !target
+        ? null
+        : target.type === "generator"
+          ? `Inspect ${target.generator.gen.portable ? "generator" : "standby generator"}`
+          : target.type === "computer"
+            ? `Use ${target.computer.kind === "laptop" ? "laptop" : "computer"}`
+            : target.type === "barrier"
+              ? this.barrierPrompt(target.id, target.side).main
+              : target.type === "keypad"
+                ? "Use keypad"
+                : `Search ${target.container.name}`,
+      altPrompts: target?.type === "barrier" ? this.barrierPrompt(target.id, target.side).alts : [],
+      barrier: target?.type === "barrier" ? this.barrierView(target.id) : null,
+      action: this.action ? { label: this.action.label, progress: Math.min(1, this.action.t / this.action.dur) } : null,
+      keypad:
+        this.keypadId !== null
+          ? {
+              label: this.barriers.barrier(this.keypadId).electronic?.name === "armory" ? "ARMORY" : (this.barriers.barrier(this.keypadId).electronic?.name ?? "").toUpperCase(),
+              entered: this.keypadEntry.length,
+              status: this.keypadStatus,
+              lockout: Math.ceil(this.barriers.barrier(this.keypadId).electronic?.lockoutLeft ?? 0),
+            }
+          : null,
       computer: comp
         ? {
             hostname: comp.state.def.hostname,
@@ -1599,6 +2324,28 @@ function loadQuality(): Quality | null {
     return null;
   }
 }
+
+type KeypadStatus = "idle" | "granted" | "denied" | "lockout" | "dark";
+
+/** Work that takes time: you stand still (or keep a key held) until it's done. */
+interface TimedAction {
+  label: string;
+  t: number;
+  dur: number;
+  /** Letting go of this key stops the work. */
+  hold?: string;
+  /** Something that happens every `every` seconds while working (a hammer blow). */
+  every?: number;
+  beat?: () => void;
+  nextBeat: number;
+  done: () => void;
+  /** Still holding the key when it's done: start the next one. */
+  repeat?: () => void;
+}
+
+/** Input that only passes mouse look through (busy hands). */
+const lookOnly = (input: Input) =>
+  ({ mouseDX: input.mouseDX, mouseDY: input.mouseDY, rightDown: false, isDown: () => false, wasPressed: () => false }) as unknown as Input;
 
 /** Input stand-in used while menus are open: the player stands still. */
 const NO_INPUT = {

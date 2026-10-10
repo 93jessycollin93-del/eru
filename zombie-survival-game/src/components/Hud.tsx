@@ -31,6 +31,9 @@ const Stat = ({ label, value, warnAt = 30 }: { label: string; value: number; war
   );
 };
 
+/** A key cap, e.g. E or Shift+H. */
+const Key = ({ k }: { k: string }) => <span className="mr-2 rounded-sm bg-stone-200 px-1.5 font-bold text-black">{k}</span>;
+
 const toneClass: Record<string, string> = {
   info: "text-stone-200",
   warn: "text-amber-300",
@@ -124,10 +127,49 @@ const Hud = ({ hud }: HudProps) => {
       )}
 
       {/* Interaction prompt */}
-      {hud.prompt && (
-        <div className="absolute left-1/2 top-[58%] -translate-x-1/2 rounded bg-black/55 px-3 py-1.5 text-base text-stone-100 ring-1 ring-white/10">
-          <span className="mr-2 rounded-sm bg-stone-200 px-1.5 font-bold text-black">E</span>
-          {hud.prompt}
+      {hud.prompt && !hud.action && (
+        <div className="absolute left-1/2 top-[58%] flex -translate-x-1/2 flex-col items-center gap-1">
+          <div className="rounded bg-black/55 px-3 py-1.5 text-base text-stone-100 ring-1 ring-white/10">
+            <Key k="E" />
+            {hud.prompt}
+          </div>
+          {hud.barrier && (
+            <div className="flex items-center gap-2 rounded bg-black/45 px-2.5 py-1 text-sm text-stone-300 ring-1 ring-white/5">
+              <span>{hud.barrier.label}</span>
+              {hud.barrier.integrity && (
+                <span
+                  className={`text-xs font-semibold uppercase tracking-[0.15em] ${
+                    hud.barrier.integrity === "Holding" ? "text-stone-300" : hud.barrier.integrity === "Cracked" ? "text-amber-300" : "text-red-400"
+                  }`}
+                >
+                  {hud.barrier.integrity}
+                </span>
+              )}
+              {hud.barrier.boards > 0 && (
+                <span className="flex gap-0.5" aria-label={`${hud.barrier.boards} of ${hud.barrier.maxBoards} boards`}>
+                  {Array.from({ length: hud.barrier.maxBoards }, (_, i) => (
+                    <span key={i} className={`h-2.5 w-1.5 rounded-[1px] ${i < hud.barrier!.boards ? "bg-amber-700" : "bg-white/10"}`} />
+                  ))}
+                </span>
+              )}
+            </div>
+          )}
+          {hud.altPrompts.map((a) => (
+            <div key={a.key} className="rounded bg-black/40 px-2.5 py-1 text-sm text-stone-300 ring-1 ring-white/5">
+              <Key k={a.key} />
+              {a.label}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Timed action */}
+      {hud.action && (
+        <div className="absolute left-1/2 top-[58%] w-64 -translate-x-1/2 rounded bg-black/55 px-3 py-2 ring-1 ring-white/10">
+          <div className="text-sm font-semibold uppercase tracking-[0.15em] text-stone-200">{hud.action.label}</div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-sm bg-black/60">
+            <div className="h-full bg-stone-200" style={{ width: `${hud.action.progress * 100}%` }} />
+          </div>
         </div>
       )}
 
