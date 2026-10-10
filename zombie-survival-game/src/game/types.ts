@@ -1,5 +1,6 @@
 import type { BodyPart, Moodle, WoundKind } from "../sim/body";
 import type { ItemStack } from "../sim/items";
+import type { SaveMeta } from "../sim/save";
 
 export type GameStatus = "menu" | "loading" | "playing" | "paused" | "dead";
 
@@ -117,6 +118,10 @@ export interface HudState {
   crosshair: boolean;
   /** Pointer lock failed, so the game runs with a free cursor. */
   freeMouse: boolean;
+  /** Save slots with something in them ("auto" is the autosave). */
+  saves: (SaveMeta & { slot: "auto" | "1" | "2" | "3" })[];
+  /** False when the browser won't keep saves after the tab closes (private windows, blocked storage). */
+  savesPersistent: boolean;
   /** Survival stats summary for the death screen. */
   survivedMinutes: number;
   causeOfDeath: string;

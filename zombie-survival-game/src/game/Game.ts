@@ -4,7 +4,9 @@ import { Player } from "./entities/player";
 import { makeHeldItem } from "./entities/humanoid";
 import { Zombie, type NoiseEvent } from "./entities/zombie";
 import { Input } from "./input";
-import { FISTS, ITEMS, makeStack, rollLoot, stackWeight, type ItemDef, type ItemStack } from "../sim/items";
+import { FISTS, ITEMS, makeStack, peekNextUid, rollLoot, setNextUid, stackWeight, type ItemDef, type ItemStack } from "../sim/items";
+import { SAVE_VERSION, SaveError, deserialise, serialise, type SaveData, type SaveMeta } from "../sim/save";
+import { SaveStore, type SlotId } from "./saveStore";
 import { mulberry32, pick, range } from "../sim/rng";
 import {
   BODY_PART_NAMES,
@@ -38,7 +40,7 @@ import {
   type HitResult,
   type Side,
 } from "../sim/barriers";
-import { boot, complete, createComputerState, isSecretInput, prompt as shellPrompt, submit } from "../sim/computer";
+import { boot, complete, createComputerState, isSecretInput, restoreComputer, saveComputer, prompt as shellPrompt, submit } from "../sim/computer";
 import { COUNTY, TOWN, gameDate } from "../sim/computerContent";
 import type { GameStatus, HudMessage, HudState } from "./types";
 import { ColliderWorld, type RayHit } from "./world/colliders";
@@ -57,6 +59,8 @@ import { generateTown, type Building, type ComputerSpot, type LootContainer, typ
 import { generateVegetation } from "./world/vegetation";
 
 const WORLD_SEED = 1987;
+/** Real seconds between autosaves (only when nothing is hunting you and no menu is open). */
+const AUTOSAVE_SECONDS = 120;
 /** Doors and windows start the same way every game (their own stream, so nothing else shifts). */
 const BARRIER_SEED = WORLD_SEED + 31;
 /** In-game minutes that pass per real second. A full day takes 24 minutes. */
@@ -156,6 +160,12 @@ export class Game {
   /** Buildings with a door controller on their network. */
   private controllers: { hostname: string; building: Building }[] = [];
   private rayHit: RayHit = { box: null };
+  /** Car tanks as the town was generated, for a new game. */
+  private initialFuel = new Map<number, number>();
+  private saves = new SaveStore();
+  private saveList: { slot: SlotId; meta: SaveMeta }[] = [];
+  private autosaveTimer = AUTOSAVE_SECONDS;
+  private saving = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -188,6 +198,7 @@ export class Game {
     this.player.model.root.visible = false;
 
     window.addEventListener("resize", this.resize);
+    document.addEventListener("visibilitychange", this.onVisibility);
     document.addEventListener("pointerlockchange", this.onLockChange);
     document.addEventListener("pointerlockerror", this.onLockError);
     canvas.addEventListener("click", this.onCanvasClick);
@@ -233,18 +244,27 @@ export class Game {
       const acs = b.network?.hosts.find((h) => h.kind === "controller");
       if (acs) this.controllers.push({ hostname: acs.hostname, building: b });
     }
+    for (const c of this.town.containers) if (c.fuel !== undefined) this.initialFuel.set(c.id, c.fuel);
+    void this.refreshSaves();
   }
 
   destroy() {
     this.renderer.setAnimationLoop(null);
     this.input.destroy();
     window.removeEventListener("resize", this.resize);
+    document.removeEventListener("visibilitychange", this.onVisibility);
     document.removeEventListener("pointerlockchange", this.onLockChange);
     document.removeEventListener("pointerlockerror", this.onLockError);
     this.canvas.removeEventListener("click", this.onCanvasClick);
     if (document.pointerLockElement === this.canvas) document.exitPointerLock();
     this.renderer.dispose();
   }
+
+  /** Leaving the tab (or closing it) saves the run, unless something is hunting you. */
+  private onVisibility = () => {
+    if (document.visibilityState !== "hidden") return;
+    if ((this.status === "playing" || this.status === "paused") && !this.zombies.some((z) => z.hunting)) void this.saveGame("auto", true);
+  };
 
   private resize = () => {
     const w = this.canvas.clientWidth || window.innerWidth;
@@ -273,6 +293,33 @@ export class Game {
   start() {
     if (this.status === "loading") return;
     this.audio.init();
+    this.resetRun();
+    this.inventory = [makeStack("water_bottle"), makeStack("cereal_bar"), makeStack("bandage")];
+
+    const spawn = this.town.playerSpawn;
+    for (let i = 0; i < 80; i++) {
+      const p = pick(this.rng, this.town.spawnPoints);
+      const pos = new THREE.Vector3(p.x + range(this.rng, -3, 3), 0, p.z + range(this.rng, -3, 3));
+      if (pos.distanceTo(spawn) < 45) continue;
+      this.spawnZombie(pos);
+    }
+    // A few stragglers in the woods along the highway.
+    for (let i = 0; i < 12; i++) {
+      const x = range(this.rng, -280, 280);
+      const z = range(this.rng, -40, 40);
+      if (Math.abs(x - spawn.x) < 50) continue;
+      this.spawnZombie(new THREE.Vector3(x, 0, z));
+    }
+
+    this.status = "playing";
+    this.message("Day 1. Find food, water and something to fight with. The town is east.", "info");
+    this.message("Gunshots carry. Crouch (C) to stay quiet.", "warn");
+    this.requestLock();
+    this.emitHud();
+  }
+
+  /** The town as it was generated, with nobody in it: shared by a new game and by loading a save. */
+  private resetRun() {
     for (const z of this.zombies) {
       this.scene.remove(z.model.root);
       z.model.dispose();
@@ -281,7 +328,11 @@ export class Game {
     for (const [, obj] of this.groundPiles) this.scene.remove(obj);
     this.groundPiles.clear();
     this.town.containers = this.town.containers.filter((c) => c.table !== "ground");
-    for (const c of this.town.containers) c.items = null;
+    for (const c of this.town.containers) {
+      c.items = null;
+      // Cars get their fuel back (siphoned tanks used to stay empty into the next game).
+      if (this.initialFuel.has(c.id)) c.fuel = this.initialFuel.get(c.id);
+    }
 
     this.player.reset(this.town.playerSpawn);
     this.player.model.root.visible = true;
@@ -310,27 +361,9 @@ export class Game {
     this.breachers.clear();
     this.action = null;
     this.keypadId = null;
-
-    const spawn = this.town.playerSpawn;
-    for (let i = 0; i < 80; i++) {
-      const p = pick(this.rng, this.town.spawnPoints);
-      const pos = new THREE.Vector3(p.x + range(this.rng, -3, 3), 0, p.z + range(this.rng, -3, 3));
-      if (pos.distanceTo(spawn) < 45) continue;
-      this.spawnZombie(pos);
-    }
-    // A few stragglers in the woods along the highway.
-    for (let i = 0; i < 12; i++) {
-      const x = range(this.rng, -280, 280);
-      const z = range(this.rng, -40, 40);
-      if (Math.abs(x - spawn.x) < 50) continue;
-      this.spawnZombie(new THREE.Vector3(x, 0, z));
-    }
-
-    this.status = "playing";
-    this.message("Day 1. Find food, water and something to fight with. The town is east.", "info");
-    this.message("Gunshots carry. Crouch (C) to stay quiet.", "warn");
-    this.requestLock();
-    this.emitHud();
+    this.causeOfDeath = "";
+    this.respawnTimer = 30;
+    this.autosaveTimer = AUTOSAVE_SECONDS;
   }
 
   resume() {
@@ -1033,31 +1066,22 @@ export class Game {
     // Drop onto an existing pile at your feet, or start a new one.
     const p = this.player.pos;
     let pile = this.town.containers.find((c) => c.table === "ground" && Math.hypot(c.x - p.x, c.z - p.z) < 1.5);
-    if (!pile) {
-      pile = {
-        id: 100000 + this.messageId++,
-        name: "Ground",
-        table: "ground",
-        x: p.x,
-        y: p.y + 0.1,
-        z: p.z,
-        hx: 0.3,
-        hz: 0.3,
-        items: [],
-      };
-      this.town.containers.push(pile);
-      const bag = new THREE.Mesh(
-        new THREE.BoxGeometry(0.45, 0.22, 0.35),
-        new THREE.MeshStandardMaterial({ color: "#3d4134", roughness: 1 }),
-      );
-      bag.position.set(p.x, p.y + 0.11, p.z);
-      bag.rotation.y = Math.random() * Math.PI;
-      bag.castShadow = true;
-      this.scene.add(bag);
-      this.groundPiles.set(pile.id, bag);
-    }
+    if (!pile) pile = this.makePile(100000 + this.messageId++, p.x, p.y + 0.1, p.z);
     pile.items!.push(stack);
     this.emitHud();
+  }
+
+  /** A pile of dropped things on the ground (a loot container with a bag mesh). */
+  private makePile(id: number, x: number, y: number, z: number): LootContainer {
+    const pile: LootContainer = { id, name: "Ground", table: "ground", x, y, z, hx: 0.3, hz: 0.3, items: [] };
+    this.town.containers.push(pile);
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.22, 0.35), new THREE.MeshStandardMaterial({ color: "#3d4134", roughness: 1 }));
+    bag.position.set(x, y + 0.01, z);
+    bag.rotation.y = (id * 2.399) % Math.PI;
+    bag.castShadow = true;
+    this.scene.add(bag);
+    this.groundPiles.set(id, bag);
+    return pile;
   }
 
   takeFromContainer(uid: number) {
@@ -1091,6 +1115,153 @@ export class Game {
     const [stack] = this.inventory.splice(idx, 1);
     if (this.equippedUid === uid) this.setEquipped(null);
     c.items.push(stack);
+    this.emitHud();
+  }
+
+  // --------------------------------------------------------- save and load
+
+  /** Everything about this run that the world seed can't rebuild. */
+  private toSave(): SaveData {
+    const p = this.player;
+    const nowMs = performance.now();
+    const meta: SaveMeta = {
+      version: SAVE_VERSION,
+      worldSeed: WORLD_SEED,
+      savedAt: new Date().toISOString(),
+      day: Math.floor(this.minutes / 1440) + 1,
+      timeOfDay: this.minutes % 1440,
+      location: this.location,
+      survivedMinutes: this.minutes - START_MINUTES,
+      kills: this.kills,
+      health: p.body.health,
+    };
+    return {
+      version: SAVE_VERSION,
+      worldSeed: WORLD_SEED,
+      meta,
+      minutes: this.minutes,
+      rng: { game: this.rng.state() },
+      player: {
+        pos: [p.pos.x, p.pos.y, p.pos.z],
+        yaw: p.yaw,
+        pitch: p.pitch,
+        bodyYaw: p.bodyYaw,
+        crouching: p.crouching,
+        body: p.body,
+        inventory: this.inventory,
+        equippedUid: this.equippedUid,
+        flashlight: this.flashlightOn,
+      },
+      kills: this.kills,
+      respawnTimer: this.respawnTimer,
+      nextUid: peekNextUid(),
+      zombies: this.zombies.map((z) => z.toSave()),
+      containers: this.town.containers
+        .filter((c) => c.table !== "ground" && (c.items !== null || c.fuel !== this.initialFuel.get(c.id)))
+        .map((c) => ({ id: c.id, items: c.items, ...(c.fuel !== undefined ? { fuel: c.fuel } : {}) })),
+      ground: this.town.containers.filter((c) => c.table === "ground" && c.items?.length).map((c) => ({ id: c.id, pos: [c.x, c.y, c.z], items: c.items! })),
+      computers: this.town.computers.map((c) => ({ id: c.id, state: saveComputer(c.state, nowMs) })),
+      power: this.elec.toSave(),
+      barriers: this.barriers.world,
+    };
+  }
+
+  /** Rebuild a run from a save on top of the freshly generated town. */
+  private applySave(d: SaveData) {
+    this.resetRun();
+    const nowMs = performance.now();
+    this.minutes = d.minutes;
+    this.rng.setState(d.rng.game);
+    const p = this.player;
+    p.reset(this.town.playerSpawn);
+    p.pos.set(d.player.pos[0], d.player.pos[1], d.player.pos[2]);
+    p.yaw = d.player.yaw;
+    p.pitch = d.player.pitch;
+    p.bodyYaw = d.player.bodyYaw;
+    p.crouching = d.player.crouching;
+    p.body = d.player.body;
+    p.model.root.visible = true;
+    setNextUid(d.nextUid);
+    this.inventory = d.player.inventory;
+    this.setEquipped(this.inventory.some((s) => s.uid === d.player.equippedUid) ? d.player.equippedUid : null);
+    this.flashlightOn = d.player.flashlight;
+    this.kills = d.kills;
+    this.respawnTimer = d.respawnTimer;
+
+    const byId = new Map(this.town.containers.map((c) => [c.id, c]));
+    for (const c of d.containers) {
+      const target = byId.get(c.id);
+      if (!target) continue;
+      target.items = c.items;
+      if (c.fuel !== undefined) target.fuel = c.fuel;
+    }
+    for (const g of d.ground) {
+      const pile = this.makePile(g.id, g.pos[0], g.pos[1], g.pos[2]);
+      pile.items = g.items;
+      this.messageId = Math.max(this.messageId, g.id - 100000 + 1);
+    }
+    for (const sc of d.computers) {
+      const c = this.town.computers.find((x) => x.id === sc.id);
+      if (!c) continue;
+      const spec = this.networkOf(c);
+      c.state = restoreComputer(c.state.def, sc.state, nowMs, (host) => spec?.hosts.find((h) => h.hostname === host)?.def);
+    }
+    this.elec.restore(d.power);
+    this.barriers.world = d.barriers;
+    this.barriers.syncAll();
+    for (const zs of d.zombies) {
+      const z = Zombie.fromSave(zs);
+      this.zombies.push(z);
+      this.scene.add(z.model.root);
+    }
+  }
+
+  /** Write the run to a slot. Quiet saves (autosave) only speak up when they fail. */
+  async saveGame(slot: SlotId, quiet = false) {
+    if ((this.status !== "playing" && this.status !== "paused") || this.saving) return;
+    this.saving = true;
+    try {
+      const data = this.toSave();
+      await this.saves.write({ slot, meta: data.meta, data: serialise(data) });
+      if (!quiet) this.message(slot === "auto" ? "Autosaved." : `Saved to slot ${slot}.`, "good");
+      await this.refreshSaves();
+    } catch {
+      this.message("Couldn't save: the browser refused to store it (storage full or blocked).", "danger");
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  async loadGame(slot: SlotId) {
+    if (this.status === "loading") return;
+    const rec = await this.saves.read(slot);
+    if (!rec) {
+      this.message("That slot is empty.", "warn");
+      return;
+    }
+    let data: SaveData;
+    try {
+      data = deserialise(rec.data, WORLD_SEED);
+    } catch (e) {
+      this.message(e instanceof SaveError ? e.message : "This save is damaged and can't be loaded.", "danger");
+      this.emitHud();
+      return;
+    }
+    this.audio.init();
+    this.applySave(data);
+    this.status = "playing";
+    this.message(`Day ${data.meta.day}. You pick up where you left off.`, "info");
+    this.requestLock();
+    this.emitHud();
+  }
+
+  async deleteSave(slot: SlotId) {
+    await this.saves.remove(slot);
+    await this.refreshSaves();
+  }
+
+  private async refreshSaves() {
+    this.saveList = await this.saves.list();
     this.emitHud();
   }
 
@@ -1245,6 +1416,13 @@ export class Game {
 
     this.updateZombies(dt);
     this.noises = this.noises.filter((n) => (n.ttl -= dt) > 0);
+
+    // Autosave in quiet moments: never mid-fight, mid-climb, mid-job or with a menu open.
+    this.autosaveTimer -= dt;
+    if (this.autosaveTimer <= 0 && !this.zombies.some((z) => z.hunting) && !this.uiOpen() && !p.traversing && !this.action) {
+      this.autosaveTimer = AUTOSAVE_SECONDS;
+      void this.saveGame("auto", true);
+    }
 
     const daylight = this.env.daylight(this.minutes % 1440);
     this.env.update(this.minutes % 1440, p.pos);
@@ -1960,6 +2138,7 @@ export class Game {
     }
     p.body.asleep = true;
     p.crouching = true;
+    void this.saveGame("auto", true);
     this.message(this.sheltered ? "You lie down and close your eyes." : "You curl up in the open. Not the safest place.", "info");
   }
 
@@ -1980,6 +2159,8 @@ export class Game {
       this.player.model.root.visible = false;
     }
     this.causeOfDeath = cause;
+    // Permadeath: the run's autosave dies with you. Your own save slots are kept.
+    void this.deleteSave("auto");
     this.action = null;
     this.keypadId = null;
     this.inventoryOpen = false;
@@ -2332,6 +2513,8 @@ export class Game {
       freeMouse: this.freeMouse,
       survivedMinutes: this.minutes - START_MINUTES,
       causeOfDeath: this.causeOfDeath,
+      saves: this.saveList.map((s) => ({ slot: s.slot, ...s.meta })),
+      savesPersistent: this.saves.persistent,
     });
   }
 }

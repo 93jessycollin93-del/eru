@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { mulberry32, pick, range } from "../../sim/rng";
 import type { ZombieAccess } from "../../sim/barriers";
+import type { SavedZombie, Vec3 } from "../../sim/save";
 import { BARRIER, SENSES, WINDOW, ZOMBIE, sightRate } from "../../sim/tuning";
 import type { ColliderWorld, RayHit } from "../world/colliders";
 import type { Terrain } from "../world/terrain";
@@ -90,7 +91,7 @@ export class Zombie {
   readonly pos: THREE.Vector3;
   yaw = Math.random() * Math.PI * 2;
   state: ZombieState = "idle";
-  hp = ZOMBIE.hp;
+  hp: number = ZOMBIE.hp;
   /** 0..1+ how sure it is that something is there. 1 = chase. */
   awareness = 0;
   /** Seconds since death, used for the fall animation and despawn. */
@@ -161,6 +162,50 @@ export class Zombie {
 
   get alive() {
     return this.state !== "dead";
+  }
+
+  /** What a save keeps (paths and steering are recomputed on the next frames). */
+  toSave(): SavedZombie {
+    const v = (p: THREE.Vector3): Vec3 => [p.x, p.y, p.z];
+    const c = this.clamber;
+    return {
+      seed: this.seed,
+      pos: v(this.pos),
+      yaw: this.yaw,
+      state: this.state,
+      hp: this.hp,
+      awareness: this.awareness,
+      target: v(this.target),
+      stateTimer: this.stateTimer,
+      lastSeen: this.lastSeen,
+      deadTime: this.deadTime,
+      downTimer: this.downTimer,
+      breach: this.breach,
+      clamber: c ? { start: v(c.start), from: v(c.from), to: v(c.to), t: c.t, dur: c.dur, peak: c.peak, id: c.id } : null,
+    };
+  }
+
+  static fromSave(d: SavedZombie): Zombie {
+    const v = (a: Vec3) => new THREE.Vector3(a[0], a[1], a[2]);
+    const z = new Zombie(v(d.pos), d.seed);
+    z.yaw = d.yaw;
+    z.state = d.state;
+    z.hp = d.hp;
+    z.awareness = d.awareness;
+    z.target.copy(v(d.target));
+    z.stateTimer = d.stateTimer;
+    z.lastSeen = d.lastSeen;
+    z.deadTime = d.deadTime;
+    z.downTimer = d.downTimer;
+    // A downed zombie comes back lying down.
+    if (d.state === "down") z.getUp = 1;
+    z.breach = d.breach;
+    const c = d.clamber;
+    z.clamber = c ? { start: v(c.start), from: v(c.from), to: v(c.to), t: c.t, dur: c.dur, peak: c.peak, id: c.id } : null;
+    z.model.root.position.copy(z.pos);
+    z.model.root.rotation.y = z.yaw;
+    if (d.state === "dead") z.model.fall(Math.min(1, d.deadTime * 2.2));
+    return z;
   }
 
   get radius() {

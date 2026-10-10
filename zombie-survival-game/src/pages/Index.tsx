@@ -75,6 +75,9 @@ const Index = () => {
           onStart={() => gameRef.current?.start()}
           onResume={() => gameRef.current?.resume()}
           onQuality={(q) => gameRef.current?.setQuality(q)}
+          onSave={(slot) => void gameRef.current?.saveGame(slot)}
+          onLoad={(slot) => void gameRef.current?.loadGame(slot)}
+          onDelete={(slot) => void gameRef.current?.deleteSave(slot)}
         />
       )}
     </main>

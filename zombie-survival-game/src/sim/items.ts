@@ -268,6 +268,12 @@ export const makeStack = (id: string, count = 1, loaded?: number, note?: { title
   ...(note ?? {}),
 });
 
+/** The uid the next stack will get; saved so loaded stacks never collide with new ones. */
+export const peekNextUid = () => nextUid;
+export function setNextUid(n: number) {
+  nextUid = Math.max(nextUid, n);
+}
+
 export const stackWeight = (s: ItemStack) => ITEMS[s.id].weight * s.count + (s.fuel ?? 0) * FUEL_KG_PER_L;
 
 /** Weighted loot tables per container kind. Each roll picks [itemId, min, max]. */

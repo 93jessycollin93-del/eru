@@ -1,11 +1,16 @@
 import type { ReactNode } from "react";
 import type { HudState } from "@/game/types";
 
+type Slot = "auto" | "1" | "2" | "3";
+
 interface OverlayProps {
   hud: HudState;
   onStart: () => void;
   onResume: () => void;
   onQuality: (q: "low" | "high") => void;
+  onSave: (slot: Slot) => void;
+  onLoad: (slot: Slot) => void;
+  onDelete: (slot: Slot) => void;
 }
 
 const CONTROLS: [string, string][] = [
@@ -60,6 +65,56 @@ const survivedText = (minutes: number) => {
   return parts.join(", ");
 };
 
+const clock = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(Math.floor(m % 60)).padStart(2, "0")}`;
+
+/**
+ * Save slots. In the pause menu each player slot can be written; everywhere a
+ * filled slot can be loaded. The autosave is its own row.
+ */
+const SaveSlots = ({ hud, canSave, onSave, onLoad, onDelete }: { hud: HudState; canSave: boolean } & Pick<OverlayProps, "onSave" | "onLoad" | "onDelete">) => {
+  const rows: Slot[] = canSave ? ["auto", "1", "2", "3"] : (["auto", "1", "2", "3"] as Slot[]).filter((s) => hud.saves.some((x) => x.slot === s));
+  if (!rows.length) return null;
+  return (
+    <div className="rounded-sm bg-black/40 p-4 ring-1 ring-white/10">
+      <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-stone-400">{canSave ? "Save / load" : "Load"}</h3>
+      {!hud.savesPersistent && (
+        <p className="mt-2 text-sm text-amber-300">This browser won't keep saves after you close the tab (private window or blocked storage).</p>
+      )}
+      <ul className="mt-3 flex flex-col gap-2">
+        {rows.map((slot) => {
+          const s = hud.saves.find((x) => x.slot === slot);
+          return (
+            <li key={slot} className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="w-20 text-sm font-semibold uppercase tracking-[0.15em] text-stone-300">{slot === "auto" ? "Autosave" : `Slot ${slot}`}</span>
+              <span className="min-w-0 flex-1 text-sm tabular-nums text-stone-400">
+                {s ? `Day ${s.day}, ${clock(s.timeOfDay)} · ${s.location ?? "Outdoors"} · ${s.kills} killed` : "Empty"}
+              </span>
+              <span className="flex gap-2">
+                {canSave && slot !== "auto" && (
+                  <SmallButton onClick={() => onSave(slot)}>{s ? "Overwrite" : "Save"}</SmallButton>
+                )}
+                {s && <SmallButton onClick={() => onLoad(slot)}>Load</SmallButton>}
+                {s && slot !== "auto" && <SmallButton quiet onClick={() => onDelete(slot)}>Delete</SmallButton>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
+const SmallButton = ({ onClick, children, quiet }: { onClick: () => void; children: ReactNode; quiet?: boolean }) => (
+  <button
+    onClick={onClick}
+    className={`rounded-sm px-3 py-1 text-sm font-semibold uppercase tracking-wider transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+      quiet ? "text-stone-400 ring-1 ring-white/15 hover:text-stone-100" : "bg-stone-200 text-black hover:bg-white"
+    }`}
+  >
+    {children}
+  </button>
+);
+
 const QualityToggle = ({ value, onChange }: { value: "low" | "high"; onChange: (q: "low" | "high") => void }) => (
   <div className="mt-6 flex items-center gap-3 text-sm uppercase tracking-[0.15em] text-stone-400">
     Graphics
@@ -78,10 +133,11 @@ const QualityToggle = ({ value, onChange }: { value: "low" | "high"; onChange: (
   </div>
 );
 
-const Overlay = ({ hud, onStart, onResume, onQuality }: OverlayProps) => {
+const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }: OverlayProps) => {
+  const newest = [...hud.saves].sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0];
   if (hud.status === "playing") {
     // Mouse was released (e.g. Esc closed a menu): one click recaptures it.
-    if (!hud.locked && !hud.inventoryOpen && !hud.container && !hud.computer && !hud.reading && !hud.generator) {
+    if (!hud.locked && !hud.inventoryOpen && !hud.container && !hud.computer && !hud.reading && !hud.generator && !hud.keypad) {
       return (
         <button
           onClick={onResume}
@@ -114,10 +170,14 @@ const Overlay = ({ hud, onStart, onResume, onQuality }: OverlayProps) => {
                 The town went quiet three weeks ago. You have a bottle of water, a cereal bar and a bandage. Scavenge
                 what you can, keep your head down, and don't fire a gun unless you mean it.
               </p>
-              <div className="mt-8">
-                <Button onClick={onStart}>Begin</Button>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {newest && <Button onClick={() => onLoad(newest.slot)}>Continue</Button>}
+                <Button onClick={onStart}>{newest ? "New game" : "Begin"}</Button>
               </div>
               <QualityToggle value={hud.quality} onChange={onQuality} />
+              <div className="mt-6">
+                <SaveSlots hud={hud} canSave={false} onSave={onSave} onLoad={onLoad} onDelete={onDelete} />
+              </div>
             </div>
             <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
               <Controls />
@@ -134,6 +194,9 @@ const Overlay = ({ hud, onStart, onResume, onQuality }: OverlayProps) => {
                 <Button onClick={onResume}>Resume</Button>
               </div>
               <QualityToggle value={hud.quality} onChange={onQuality} />
+              <div className="mt-6">
+                <SaveSlots hud={hud} canSave onSave={onSave} onLoad={onLoad} onDelete={onDelete} />
+              </div>
             </div>
             <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
               <Controls />
@@ -154,8 +217,11 @@ const Overlay = ({ hud, onStart, onResume, onQuality }: OverlayProps) => {
                 {hud.kills} {hud.kills === 1 ? "zombie" : "zombies"} put down.
               </p>
             </div>
-            <div className="mt-10">
+            <div className="mt-10 flex flex-wrap justify-center gap-3">
               <Button onClick={onStart}>Try again</Button>
+            </div>
+            <div className="mx-auto mt-6 max-w-xl text-left">
+              <SaveSlots hud={hud} canSave={false} onSave={onSave} onLoad={onLoad} onDelete={onDelete} />
             </div>
           </div>
         )}

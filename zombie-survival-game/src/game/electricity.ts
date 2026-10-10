@@ -90,6 +90,42 @@ export class Electricity {
     this.status = {};
   }
 
+  /** The power world plus where portable generators stand (standby units come back with their building). */
+  toSave(): { world: PowerWorld; portables: { id: string; pos: [number, number, number] }[]; nextGenId: number } {
+    return {
+      world: this.world,
+      portables: this.generators
+        .filter((g) => g.gen.portable && g.mesh)
+        .map((g) => ({ id: g.gen.id, pos: [g.mesh!.position.x, g.mesh!.position.y, g.mesh!.position.z] as [number, number, number] })),
+      nextGenId: this.nextGenId,
+    };
+  }
+
+  /** Replace the power world with a saved one and rebuild the generator objects around it. */
+  restore(data: { world: PowerWorld; portables: { id: string; pos: [number, number, number] }[]; nextGenId: number }) {
+    for (const g of this.generators) if (g.mesh) this.scene.remove(g.mesh);
+    this.generators = [];
+    this.world = data.world;
+    // Standby units were created in building order (see reset), so the k-th one belongs to the k-th building that has one.
+    const standby = this.world.generators.filter((g) => !g.portable);
+    let k = 0;
+    for (const b of this.town.buildings) {
+      if (!b.standby) continue;
+      const gen = standby[k++];
+      if (gen) this.generators.push({ gen, mesh: null, x: b.standby.x, y: b.standby.y, z: b.standby.z, hx: 0.6, hz: 0.9 });
+    }
+    for (const p of data.portables) {
+      const gen = this.world.generators.find((g) => g.id === p.id);
+      if (!gen) continue;
+      const mesh = makePortableMesh();
+      mesh.position.set(p.pos[0], p.pos[1], p.pos[2]);
+      this.scene.add(mesh);
+      this.generators.push({ gen, mesh, x: p.pos[0], y: p.pos[1] + 0.25, z: p.pos[2], hx: 0.35, hz: 0.3 });
+    }
+    this.nextGenId = data.nextGenId;
+    this.status = {};
+  }
+
   gridUp(minute: number) {
     return gridUp(this.world, minute);
   }

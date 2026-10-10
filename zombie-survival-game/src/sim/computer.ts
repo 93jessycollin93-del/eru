@@ -6,6 +6,7 @@
  * can be saved or reimplemented in another engine without behaviour changes.
  */
 import { inSubnet, isIp, latencyMs, resolveHost, type AccessDoorStatus, type AccessView, type NetHost, type NetworkView } from "./network";
+import { trimScreen, type SavedComputer } from "./save";
 
 export interface VFile {
   kind: "file";
@@ -115,6 +116,52 @@ export function createComputerState(def: ComputerDef, battery: number | null): C
     knownHosts: [],
     effects: [],
   };
+}
+
+/** A session as a save stores it: everything but the machine definition, with lockouts as time left. */
+export function saveComputer(s: ComputerState, nowMs: number): SavedComputer {
+  return {
+    phase: s.phase,
+    user: s.user,
+    pendingUser: s.pendingUser,
+    cwd: s.cwd,
+    failedLogins: s.failedLogins,
+    lockedForMs: Math.max(0, s.lockedUntil - nowMs),
+    history: s.history.slice(-100),
+    screen: trimScreen(s.screen),
+    battery: s.battery,
+    remote: s.remote ? saveComputer(s.remote, nowMs) : null,
+    remoteHost: s.remoteHost,
+    ssh: s.ssh ? { ...s.ssh } : null,
+    knownHosts: s.knownHosts.slice(),
+  };
+}
+
+/**
+ * Rebuild a session on its (regenerated) machine. `defFor` finds the machine
+ * an open ssh session was on; if it no longer exists the session is dropped.
+ */
+export function restoreComputer(
+  def: ComputerDef,
+  saved: SavedComputer,
+  nowMs: number,
+  defFor: (hostname: string) => ComputerDef | undefined,
+): ComputerState {
+  const s = createComputerState(def, saved.battery);
+  s.phase = saved.phase;
+  s.user = saved.user;
+  s.pendingUser = saved.pendingUser;
+  s.cwd = saved.cwd;
+  s.failedLogins = saved.failedLogins;
+  s.lockedUntil = saved.lockedForMs > 0 ? nowMs + saved.lockedForMs : 0;
+  s.history = saved.history.slice();
+  s.screen = saved.screen.slice();
+  s.remoteHost = saved.remoteHost;
+  s.ssh = saved.ssh ? { ...saved.ssh } : null;
+  s.knownHosts = saved.knownHosts.slice();
+  const remoteDef = saved.remote && saved.remote.remoteHost ? defFor(saved.remote.remoteHost) : undefined;
+  s.remote = saved.remote && remoteDef ? restoreComputer(remoteDef, saved.remote, nowMs, defFor) : null;
+  return s;
 }
 
 /** True while the terminal should hide what is typed (passwords). */
