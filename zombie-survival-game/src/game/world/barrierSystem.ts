@@ -642,6 +642,14 @@ export class BarrierSystem {
     return hit >= d - 0.2 || reachHit.box?.barrierId === s.spec.id;
   }
 
+  /** This barrier as a target, if it's within range and nothing solid is in the way. */
+  target(id: number, pos: THREE.Vector3, range: number): BarrierTarget | null {
+    const p = this.closestPoint(id, pos);
+    const d = Math.hypot(p.x - pos.x, p.z - pos.z);
+    if (d > range || !this.reachable(this.slots[id], pos)) return null;
+    return { id, dist: d, side: this.sideOf(id, pos) };
+  }
+
   /** The keypad within reach that you're facing, scored like other targets (lower is better). */
   nearestKeypad(pos: THREE.Vector3, yaw: number, range: number): { id: number; score: number } | null {
     for (const s of this.specs) {

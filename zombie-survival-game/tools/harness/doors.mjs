@@ -751,5 +751,49 @@ await run("H10", () => {
   return { breachAt: breachAt && +breachAt.toFixed(1), burst: B.broken, attackedAt: attackedAt && +attackedAt.toFixed(1), zState: z.state, dist: +z.pos.distanceTo(P.pos).toFixed(2) };
 });
 
+
+// ---------------------------------------------------------------- H12 aim at a window above a kitchen counter
+await run("H12", () => {
+  const H = window.__h;
+  const { g } = H;
+  const P = g.player;
+  H.clearZombies();
+  const res = [];
+  for (const id of [86, 114, 141, 179, 196, 239]) {
+    const s = g.barriers.specs[id];
+    if (!s || s.kind !== "window") continue;
+    Object.assign(g.barriers.world.barriers[id], { glass: "cleared", boards: [] });
+    g.barriers.syncAll();
+    // Stand inside, 1.3 m back (behind whatever sits under the sill), look at the opening.
+    let ok = false;
+    let lookedAt = null;
+    for (const d of [1.3, 1.6, 1.9]) {
+      const pt = H.stand(id, -1, d);
+      const pr = { x: pt.x, z: pt.z };
+      g.colliders.resolveCylinder(pr, 0.35, 0.05, 1.8);
+      if (Math.hypot(pr.x - pt.x, pr.z - pt.z) > 1e-3) continue;
+      H.put(P, pt);
+      // Turn until the crosshair (over the right shoulder) is on the opening, as a player would.
+      const base = Math.atan2(s.cx - pt.x, s.cz - pt.z);
+      for (let k = 0; k <= 12 && !ok; k++) {
+        P.yaw = base + k * 0.05;
+        P.bodyYaw = P.yaw;
+        P.pitch = 0.05;
+        H.step(0.2);
+        const t = g.nearestInteractable();
+        lookedAt = t ? `${t.type}${t.id !== undefined ? ":" + t.id : ""}` : null;
+        ok = t?.type === "barrier" && t.id === id;
+      }
+      break;
+    }
+    // And looking down at the counter instead picks the counter.
+    P.pitch = -0.6;
+    H.step(0.3);
+    const down = g.nearestInteractable();
+    res.push({ id, window: ok, lookedAt, lookingDown: down ? down.type : null });
+  }
+  return { targeted: res.filter((r) => r.window).length + "/" + res.length, res };
+});
+
 console.log("errors:", errs.length ? errs.slice(0, 8) : "none");
 await b.close();

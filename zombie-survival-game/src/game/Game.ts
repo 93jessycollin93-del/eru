@@ -659,7 +659,9 @@ export class Game {
 
   private barrierTarget() {
     const p = this.player;
-    return this.barriers.nearest(p.pos, p.yaw, INTERACT_RANGE);
+    const aim = this.aimed();
+    const aimedAt = aim?.barrier !== undefined ? this.barriers.target(aim.barrier, p.pos, INTERACT_RANGE) : null;
+    return aimedAt ?? this.barriers.nearest(p.pos, p.yaw, INTERACT_RANGE);
   }
 
   /** Distance and stereo pan from the listener to a point. */
@@ -699,8 +701,9 @@ export class Game {
     if (this.equippedUid !== null && !this.equippedStack()) this.setEquipped(null);
   }
 
-  private startAction(a: Omit<TimedAction, "t" | "nextBeat">) {
-    this.action = { ...a, t: 0, nextBeat: (a.every ?? 0) * 0.5 };
+  private startAction(a: Omit<TimedAction, "t" | "nextBeat" | "heldAtStart">) {
+    const heldAtStart = MOVE_KEYS.filter((k) => this.input.isDown(k));
+    this.action = { ...a, t: 0, nextBeat: (a.every ?? 0) * 0.5, heldAtStart };
     this.emitHud();
   }
 
@@ -708,9 +711,9 @@ export class Game {
     const a = this.action!;
     const input = this.input;
     if (a.hold && !input.isDown(a.hold)) return this.cancelAction(null);
-    if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].some((k) => input.isDown(k))) {
-      return this.cancelAction(null);
-    }
+    // Moving off cancels; a key you were already holding when you started doesn't (you were walking up to it).
+    if (MOVE_KEYS.some((k) => input.isDown(k) && !a.heldAtStart.includes(k))) return this.cancelAction(null);
+    a.heldAtStart = a.heldAtStart.filter((k) => input.isDown(k));
     a.t += dt;
     if (a.every && a.beat) {
       while (a.t >= a.nextBeat && a.nextBeat < a.dur) {
@@ -761,8 +764,14 @@ export class Game {
         this.audio.doorThud(d, pan);
         this.noises.push({ pos: this.atYourSide(id), radius: BARRIER_NOISE.doorClose, ttl: 0.4 });
       } else if (side === -1 && b.bolted) {
-        this.audio.lockClunk(0, 0);
-        this.startAction({ label: "Unbolting", dur: DOOR.unboltSeconds, done: () => this.openDoorNow(id, side) });
+        this.startAction({
+          label: "Unbolting",
+          dur: DOOR.unboltSeconds,
+          done: () => {
+            this.audio.lockClunk(0, 0);
+            this.openDoorNow(id, side);
+          },
+        });
       } else {
         this.openDoorNow(id, side);
       }
@@ -781,7 +790,17 @@ export class Game {
     if (why) {
       if (why === "Locked.") {
         const b = this.barriers.barrier(id);
-        this.message(b.electronic ? "Locked. The keypad's light is red." : b.bolted ? "Locked. Deadbolted from inside." : why, "info");
+        const keypad = !!this.barriers.specs[id].keypad;
+        const text = !b.electronic
+          ? b.bolted
+            ? "Locked. Deadbolted from inside."
+            : why
+          : !keypad
+            ? "Locked. Something electric holds it shut."
+            : b.electronic.powered
+              ? "Locked. The keypad's light is red."
+              : "Locked. The keypad by the door is dark.";
+        this.message(text, "info");
         this.audio.doorBang(0, 0, b.build === "steel" ? "steel" : "wood");
       } else this.message(why, "info");
       return;
@@ -2181,7 +2200,27 @@ export class Game {
   /** No wall or closed door between you and it (no looting through walls). */
   private inReach(c: { x: number; y: number; z: number }) {
     const p = this.player.pos;
-    return this.colliders.lineOfSight(p.x, p.y + 1.2, p.z, c.x, Math.max(c.y, 0.3), c.z);
+    const ox = p.x;
+    const oy = p.y + 1.2;
+    const oz = p.z;
+    const dx = c.x - ox;
+    const dy = Math.max(c.y, 0.3) - oy;
+    const dz = c.z - oz;
+    const total = Math.hypot(dx, dy, dz);
+    if (total < 0.3) return true;
+    const [ux, uy, uz] = [dx / total, dy / total, dz / total];
+    // Walls and closed doors stop a hand, and so do glass and boards; furniture (and the thing itself) doesn't.
+    let start = 0;
+    const end = total - 0.25;
+    for (let i = 0; i < 6 && start < end; i++) {
+      const t = this.colliders.raycast(ox + ux * start, oy + uy * start, oz + uz * start, ux, uy, uz, end - start, false, this.rayHit);
+      const box = this.rayHit.box;
+      if (!box || start + t >= end) return true;
+      if (box.occludes) return false;
+      if (box.barrierId !== undefined && !this.barriers.reachThrough(box.barrierId)) return false;
+      start += t + 0.05;
+    }
+    return true;
   }
 
   private nearestContainer(): LootContainer | null {
@@ -2232,7 +2271,16 @@ export class Game {
         : container
           ? ({ type: "container", container } as const)
           : null;
-    // Whatever you're looking at most squarely wins: distance minus how directly you face it.
+    // What the crosshair rests on wins (a window above a kitchen counter, the counter below it).
+    const aim = this.aimed();
+    if (aim?.barrier !== undefined) {
+      const t = this.barriers.target(aim.barrier, p.pos, INTERACT_RANGE);
+      if (t) return { type: "barrier", id: t.id, side: t.side };
+    }
+    if (aim?.container && this.distanceToContainer(aim.container) <= INTERACT_RANGE && this.inReach(aim.container)) {
+      return { type: "container", container: aim.container };
+    }
+    // Otherwise whatever you face most squarely: distance minus how directly you face it.
     const fwd = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
     let choice: ReturnType<Game["nearestInteractable"]> = thing;
     let bestScore = Infinity;
@@ -2254,6 +2302,32 @@ export class Game {
     const kp = this.barriers.nearestKeypad(p.pos, p.yaw, 1.3);
     if (kp && kp.score < bestScore) choice = { type: "keypad", id: kp.id };
     return choice;
+  }
+
+  /** What the crosshair rests on within reach: a door or window, or a container. */
+  private aimed(): { barrier?: number; container?: LootContainer } | null {
+    const p = this.player;
+    this.camera.updateMatrixWorld();
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir);
+    const o = this.camera.position;
+    // Start level with the player, not at the camera behind their shoulder.
+    const tMin = Math.max(0, (p.pos.x - o.x) * dir.x + (p.pos.y + 1.3 - o.y) * dir.y + (p.pos.z - o.z) * dir.z - 0.3);
+    const sx = o.x + dir.x * tMin;
+    const sy = o.y + dir.y * tMin;
+    const sz = o.z + dir.z * tMin;
+    const t = this.colliders.raycast(sx, sy, sz, dir.x, dir.y, dir.z, INTERACT_RANGE + 1.5, false, this.rayHit);
+    const box = this.rayHit.box;
+    if (!box) return null;
+    const hx = sx + dir.x * t;
+    const hy = sy + dir.y * t;
+    const hz = sz + dir.z * t;
+    if (Math.hypot(hx - p.pos.x, hz - p.pos.z) > INTERACT_RANGE + 0.3) return null;
+    if (box.barrierId !== undefined) return { barrier: box.barrierId };
+    // Walls block sight; containers never do, so a ray that stopped on an occluder isn't on a container.
+    if (box.occludes) return null;
+    const c = this.town.containers.find((k) => Math.abs(hx - k.x) <= k.hx + 0.05 && Math.abs(hz - k.z) <= k.hz + 0.05 && hy <= k.y + 1.3);
+    return c ? { container: c } : null;
   }
 
   /** What E, Q and H would do to a door or window right now. */
@@ -2544,10 +2618,14 @@ interface TimedAction {
   every?: number;
   beat?: () => void;
   nextBeat: number;
+  /** Movement keys already down when it started. */
+  heldAtStart: string[];
   done: () => void;
   /** Still holding the key when it's done: start the next one. */
   repeat?: () => void;
 }
+
+const MOVE_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"];
 
 /** Input that only passes mouse look through (busy hands). */
 const lookOnly = (input: Input) =>
