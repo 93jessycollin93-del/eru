@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boot, createComputerState, isSecretInput, prompt, submit, type ComputerContext, type ComputerEffect, type VDir, type VFile } from "./computer";
+import { boot, complete, createComputerState, isSecretInput, prompt, submit, type ComputerContext, type ComputerEffect, type VDir, type VFile } from "./computer";
 import { gameDate, houseLaptop, pinFrom, policeComputer, storeComputer, type TownFacts } from "./computerContent";
 import { resolveHost, type AccessDoorStatus, type AccessView } from "./network";
 import { mulberry32 } from "./rng";
@@ -234,6 +234,40 @@ describe("clues to the controller", () => {
     expect(mail).not.toContain(conf.match(/pin=(\d+)/)![1]);
     expect(run("dispatch").join("\n")).toContain("10/09 17:55  SYSTEM    LOCKDOWN FAILED: front entrance held open");
     expect(run("cat /etc/hosts").join("\n")).toContain("10.0.4.40\tcpd-acs");
+  });
+});
+
+describe("sessions across reboots and ssh", () => {
+  it("a reboot drops a half-typed ssh login (the far host's password prompt doesn't come back)", () => {
+    const { s, run } = setup();
+    run("ssh admin@cpd-acs");
+    run("yes");
+    expect(isSecretInput(s)).toBe(true);
+    boot(s, { nowMs: 0, dateText: gameDate(4, 600), uptimeMinutes: 0 });
+    expect(s.ssh).toBe(null);
+    expect(s.remote).toBe(null);
+    expect(prompt(s)).toBe("cpd-dispatch-01 login: ");
+    expect(isSecretInput(s)).toBe(false);
+  });
+
+  it("a reboot ends an open remote session", () => {
+    const { s, sshAcs } = setup();
+    sshAcs();
+    expect(s.remote).not.toBe(null);
+    boot(s, { nowMs: 0, dateText: gameDate(4, 600), uptimeMinutes: 0 });
+    expect(s.remote).toBe(null);
+  });
+
+  it("Tab completes on the far machine over ssh, and not at all at its prompts", () => {
+    const { s, run } = setup();
+    run("ssh admin@cpd-acs");
+    expect(complete(s, "di")).toBe("di"); // host-key question
+    run("yes");
+    expect(complete(s, "ad")).toBe("ad"); // password
+    run("admin");
+    expect(complete(s, "do")).toBe("door "); // the controller's own program
+    expect(complete(s, "di")).toBe("di"); // the dispatch box's program isn't there
+    expect(complete(s, "cat /etc/acs/do")).toBe("cat /etc/acs/doors.conf");
   });
 });
 

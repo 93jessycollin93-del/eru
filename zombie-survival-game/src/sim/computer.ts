@@ -236,7 +236,11 @@ export function boot(s: ComputerState, ctx: ComputerContext) {
   s.screen = [];
   s.phase = "login";
   s.user = null;
+  s.pendingUser = null;
   s.cwd = "/";
+  // A reboot kills every session: a half-typed ssh login doesn't survive a power cut.
+  s.ssh = null;
+  s.remote = null;
   const d = s.def;
   print(
     s,
@@ -383,6 +387,16 @@ function login(s: ComputerState, user: string, ctx: ComputerContext) {
 
 /** Tab completion for the last word on the line. */
 export function complete(s: ComputerState, line: string): string {
+  // Over ssh, the far machine completes (its programs, its files); nothing completes at a host-key or password prompt.
+  if (s.ssh) return line;
+  if (s.remote) {
+    const r = s.remote;
+    r.screen = [];
+    const out = complete(r, line);
+    print(s, ...r.screen);
+    r.screen = [];
+    return out;
+  }
   if (s.phase !== "shell") return line;
   const words = line.split(" ");
   const last = words[words.length - 1];

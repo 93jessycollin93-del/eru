@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { HudState } from "@/game/types";
 
 type Slot = "auto" | "1" | "2" | "3";
@@ -69,32 +69,55 @@ const clock = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")
 
 /**
  * Save slots. In the pause menu each player slot can be written; everywhere a
- * filled slot can be loaded. The autosave is its own row.
+ * filled slot can be loaded. The autosave is its own row. Anything that throws
+ * work away (overwriting, deleting, loading over the run you're in) asks for a
+ * second click.
  */
 const SaveSlots = ({ hud, canSave, onSave, onLoad, onDelete }: { hud: HudState; canSave: boolean } & Pick<OverlayProps, "onSave" | "onLoad" | "onDelete">) => {
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(null), 3000);
+    return () => clearTimeout(t);
+  }, [armed]);
   const rows: Slot[] = canSave ? ["auto", "1", "2", "3"] : (["auto", "1", "2", "3"] as Slot[]).filter((s) => hud.saves.some((x) => x.slot === s));
   if (!rows.length) return null;
+  /** Run `act` now, or on a second click within 3 s when `confirm` is set. */
+  const guarded = (key: string, confirm: boolean, act: () => void) => () => {
+    if (!confirm || armed === key) {
+      setArmed(null);
+      act();
+    } else setArmed(key);
+  };
+  const label = (key: string, text: string) => (armed === key ? "Sure?" : text);
   return (
     <div className="rounded-sm bg-black/40 p-4 ring-1 ring-white/10">
       <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-stone-400">{canSave ? "Save / load" : "Load"}</h3>
       {!hud.savesPersistent && (
         <p className="mt-2 text-sm text-amber-300">This browser won't keep saves after you close the tab (private window or blocked storage).</p>
       )}
+      {hud.loadError && hud.status !== "playing" && <p className="mt-2 text-sm text-red-400">{hud.loadError}</p>}
       <ul className="mt-3 flex flex-col gap-2">
         {rows.map((slot) => {
           const s = hud.saves.find((x) => x.slot === slot);
           return (
             <li key={slot} className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span className="w-20 text-sm font-semibold uppercase tracking-[0.15em] text-stone-300">{slot === "auto" ? "Autosave" : `Slot ${slot}`}</span>
-              <span className="min-w-0 flex-1 text-sm tabular-nums text-stone-400">
-                {s ? `Day ${s.day}, ${clock(s.timeOfDay)} · ${s.location ?? "Outdoors"} · ${s.kills} killed` : "Empty"}
+              <span className={`min-w-0 flex-1 text-sm tabular-nums ${s?.broken ? "text-red-400/80" : "text-stone-400"}`}>
+                {s ? `${s.broken ? "Can't load · " : ""}Day ${s.day}, ${clock(s.timeOfDay)} · ${s.location ?? "Outdoors"} · ${s.kills} killed` : "Empty"}
               </span>
               <span className="flex gap-2">
                 {canSave && slot !== "auto" && (
-                  <SmallButton onClick={() => onSave(slot)}>{s ? "Overwrite" : "Save"}</SmallButton>
+                  <SmallButton onClick={guarded(`save:${slot}`, !!s, () => onSave(slot))}>{label(`save:${slot}`, s ? "Overwrite" : "Save")}</SmallButton>
                 )}
-                {s && <SmallButton onClick={() => onLoad(slot)}>Load</SmallButton>}
-                {s && slot !== "auto" && <SmallButton quiet onClick={() => onDelete(slot)}>Delete</SmallButton>}
+                {s && !s.broken && (
+                  <SmallButton onClick={guarded(`load:${slot}`, canSave, () => onLoad(slot))}>{label(`load:${slot}`, "Load")}</SmallButton>
+                )}
+                {s && (slot !== "auto" || !canSave) && (
+                  <SmallButton quiet onClick={guarded(`del:${slot}`, true, () => onDelete(slot))}>
+                    {label(`del:${slot}`, "Delete")}
+                  </SmallButton>
+                )}
               </span>
             </li>
           );
@@ -134,7 +157,7 @@ const QualityToggle = ({ value, onChange }: { value: "low" | "high"; onChange: (
 );
 
 const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }: OverlayProps) => {
-  const newest = [...hud.saves].sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0];
+  const newest = hud.saves.filter((s) => !s.broken).sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0];
   if (hud.status === "playing") {
     // Mouse was released (e.g. Esc closed a menu): one click recaptures it.
     if (!hud.locked && !hud.inventoryOpen && !hud.container && !hud.computer && !hud.reading && !hud.generator && !hud.keypad) {

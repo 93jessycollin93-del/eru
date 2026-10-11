@@ -5,7 +5,7 @@ import { createComputerState, restoreComputer, saveComputer, submit, type Comput
 import { policeComputer, type TownFacts } from "./computerContent";
 import { makeStack } from "./items";
 import { mulberry32 } from "./rng";
-import { SAVE_VERSION, SaveError, deserialise, migrate, serialise, validate, type SaveData } from "./save";
+import { SAVE_VERSION, SaveError, deserialise, migrate, serialise, townFingerprint, validate, type SaveData } from "./save";
 
 const SEED = 1987;
 
@@ -64,6 +64,20 @@ describe("save file", () => {
     expect(broken((d) => ((d.zombies as unknown[])[0] = { seed: "x" }))).toThrow(/zombie/);
     expect(broken((d) => ((d.power as Record<string, unknown>).world = {}))).toThrow(/power/);
     expect(broken((d) => (d.barriers = {}))).toThrow(/doors and windows/);
+    expect(broken((d) => ((d.barriers as { barriers: unknown[] }).barriers[0] = undefined))).toThrow(/doors and windows/);
+  });
+
+  it("refuses a save made on a different town (a game update moved doors or boxes)", () => {
+    const town = townFingerprint(["door:solid:house-front", "3:kitchen"]);
+    expect(town).toMatch(/^[0-9a-f]{8}$/);
+    expect(townFingerprint(["door:solid:house-front", "3:kitchen"])).toBe(town);
+    expect(townFingerprint(["door:solid:house-front", "3:bedroom"])).not.toBe(town);
+    expect(townFingerprint(["ab", "c"])).not.toBe(townFingerprint(["a", "bc"]));
+    const d = { ...sample(), town };
+    expect(deserialise(serialise(d), SEED, town).town).toBe(town);
+    expect(() => deserialise(serialise(d), SEED, "00000000")).toThrow(/town changed/);
+    // The earliest saves carry no fingerprint: they load.
+    expect(() => deserialise(serialise(sample()), SEED, town)).not.toThrow();
   });
 });
 

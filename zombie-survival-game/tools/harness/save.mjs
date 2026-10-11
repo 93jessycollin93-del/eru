@@ -123,8 +123,15 @@ const refused = await p.evaluate(async () => {
   await g.saves.write({ slot: "3", meta: { version: 1, worldSeed: 1987, savedAt: new Date().toISOString(), day: 1, timeOfDay: 0, location: null, survivedMinutes: 0, kills: 0, health: 100 }, data: "{broken" });
   await g.loadGame("3");
   const m1 = g.messages.at(-1)?.text;
+  // A save made on a different town (a game update moved doors): refused, and the run you're in is untouched.
+  const good = JSON.parse((await g.saves.read("1")).data);
+  good.town = "00000000";
+  const zBefore = g.zombies.length;
+  await g.saves.write({ slot: "3", meta: good.meta, data: JSON.stringify(good) });
+  await g.loadGame("3");
+  const m2 = g.messages.at(-1)?.text;
   await g.deleteSave("3");
-  return { damaged: m1, statusAfter: g.status };
+  return { damaged: m1, otherTown: m2, zombiesKept: g.zombies.length === zBefore, statusAfter: g.status };
 });
 console.log("H11b", JSON.stringify(refused));
 console.log("errors:", errs.length ? errs.slice(0, 6) : "none");

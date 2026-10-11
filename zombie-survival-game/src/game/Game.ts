@@ -5,7 +5,7 @@ import { makeHeldItem } from "./entities/humanoid";
 import { Zombie, type NoiseEvent } from "./entities/zombie";
 import { Input } from "./input";
 import { FISTS, ITEMS, makeStack, peekNextUid, rollLoot, setNextUid, stackWeight, type ItemDef, type ItemStack } from "../sim/items";
-import { SAVE_VERSION, SaveError, deserialise, serialise, type SaveData, type SaveMeta } from "../sim/save";
+import { SAVE_VERSION, SaveError, deserialise, serialise, townFingerprint, type SaveData, type SaveMeta } from "../sim/save";
 import { SaveStore, type SlotId } from "./saveStore";
 import { mulberry32, pick, range } from "../sim/rng";
 import {
@@ -164,6 +164,12 @@ export class Game {
   private initialFuel = new Map<number, number>();
   private saves = new SaveStore();
   private saveList: { slot: SlotId; meta: SaveMeta }[] = [];
+  /** Slots that failed to load this session (Continue skips them; the menus offer Delete). */
+  private brokenSlots = new Set<SlotId>();
+  /** Why the last load failed, shown on the menu and death screens (the HUD isn't up there). */
+  private loadError: string | null = null;
+  /** This build's town fingerprint, stamped into saves. */
+  private townPrint = "";
   private autosaveTimer = AUTOSAVE_SECONDS;
   private saving = false;
 
@@ -245,6 +251,11 @@ export class Game {
       if (acs) this.controllers.push({ hostname: acs.hostname, building: b });
     }
     for (const c of this.town.containers) if (c.fuel !== undefined) this.initialFuel.set(c.id, c.fuel);
+    this.townPrint = townFingerprint([
+      ...this.barriers.specs.map((b) => `${b.kind}:${b.build}:${b.role}`),
+      ...this.town.containers.map((c) => `${c.id}:${c.table}`),
+      ...this.town.computers.map((c) => `${c.id}:${c.state.def.hostname}`),
+    ]);
     void this.refreshSaves();
   }
 
@@ -294,6 +305,7 @@ export class Game {
     if (this.status === "loading") return;
     this.audio.init();
     this.resetRun();
+    this.loadError = null;
     this.inventory = [makeStack("water_bottle"), makeStack("cereal_bar"), makeStack("bandage")];
 
     const spawn = this.town.playerSpawn;
@@ -1157,6 +1169,7 @@ export class Game {
     return {
       version: SAVE_VERSION,
       worldSeed: WORLD_SEED,
+      town: this.townPrint,
       meta,
       minutes: this.minutes,
       rng: { game: this.rng.state() },
@@ -1255,27 +1268,52 @@ export class Game {
     if (this.status === "loading") return;
     const rec = await this.saves.read(slot);
     if (!rec) {
-      this.message("That slot is empty.", "warn");
+      this.failLoad(slot, "That slot is empty.");
       return;
     }
     let data: SaveData;
     try {
-      data = deserialise(rec.data, WORLD_SEED);
+      data = deserialise(rec.data, WORLD_SEED, this.townPrint);
+      if (data.barriers.barriers.length !== this.barriers.specs.length) throw new SaveError("This save was made before the town changed in an update, so it can't be loaded.");
     } catch (e) {
-      this.message(e instanceof SaveError ? e.message : "This save is damaged and can't be loaded.", "danger");
-      this.emitHud();
+      this.failLoad(slot, e instanceof SaveError ? e.message : "This save is damaged and can't be loaded.");
+      return;
+    }
+    // Loading is all or nothing: if the save won't apply, the run you were in comes back untouched.
+    const backup = this.status === "playing" || this.status === "paused" ? deserialise(serialise(this.toSave()), WORLD_SEED) : null;
+    try {
+      this.applySave(data);
+    } catch {
+      try {
+        if (!backup) throw new Error("no run to return to");
+        this.applySave(backup);
+      } catch {
+        this.resetRun();
+        this.status = "menu";
+      }
+      this.failLoad(slot, "This save is damaged and can't be loaded.");
       return;
     }
     this.audio.init();
-    this.applySave(data);
+    this.brokenSlots.delete(slot);
+    this.loadError = null;
     this.status = "playing";
     this.message(`Day ${data.meta.day}. You pick up where you left off.`, "info");
     this.requestLock();
     this.emitHud();
   }
 
+  private failLoad(slot: SlotId, why: string) {
+    this.brokenSlots.add(slot);
+    this.loadError = why;
+    this.message(why, "danger");
+    this.emitHud();
+  }
+
   async deleteSave(slot: SlotId) {
     await this.saves.remove(slot);
+    this.brokenSlots.delete(slot);
+    if (!this.brokenSlots.size) this.loadError = null;
     await this.refreshSaves();
   }
 
@@ -2393,7 +2431,8 @@ export class Game {
   }
 
   private openContainer(c: LootContainer) {
-    if (c.items === null) c.items = [...rollLoot(c.table, Math.random), ...(c.preset ?? [])];
+    // Presets are copied: the town's originals must stay pristine for the next run or load.
+    if (c.items === null) c.items = [...rollLoot(c.table, Math.random), ...(c.preset ?? []).map((s) => structuredClone(s))];
     this.container = c;
     this.inventoryOpen = false;
     this.releaseLock();
@@ -2590,7 +2629,8 @@ export class Game {
       freeMouse: this.freeMouse,
       survivedMinutes: this.minutes - START_MINUTES,
       causeOfDeath: this.causeOfDeath,
-      saves: this.saveList.map((s) => ({ slot: s.slot, ...s.meta })),
+      saves: this.saveList.map((s) => ({ slot: s.slot, ...s.meta, broken: this.brokenSlots.has(s.slot) })),
+      loadError: this.loadError,
       savesPersistent: this.saves.persistent,
     });
   }

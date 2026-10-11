@@ -810,14 +810,18 @@ export class BarrierSystem {
     return out;
   }
 
-  /** A console command from the controller's shell. Returns the barrier id it acted on. */
+  /**
+   * A console command from the controller's shell. Returns the barrier id if
+   * its lock actually moved (a command that changes nothing makes no clunk).
+   */
   command(controller: string, door: string, action: "lock" | "unlock" | "pulse"): number | null {
     for (const id of this.electronic) {
       const b = this.world.barriers[id];
       if (b.electronic?.controller !== controller || b.electronic.name !== door) continue;
+      const before = effectiveLocked(b);
       lockCommand(b, action);
       this.refresh(id);
-      return id;
+      return effectiveLocked(b) !== before ? id : null;
     }
     return null;
   }

@@ -119,7 +119,9 @@ export interface HudState {
   /** Pointer lock failed, so the game runs with a free cursor. */
   freeMouse: boolean;
   /** Save slots with something in them ("auto" is the autosave). */
-  saves: (SaveMeta & { slot: "auto" | "1" | "2" | "3" })[];
+  saves: (SaveMeta & { slot: "auto" | "1" | "2" | "3"; broken: boolean })[];
+  /** Why the last load failed (shown on the menu and death screens), or null. */
+  loadError: string | null;
   /** False when the browser won't keep saves after the tab closes (private windows, blocked storage). */
   savesPersistent: boolean;
   /** Survival stats summary for the death screen. */

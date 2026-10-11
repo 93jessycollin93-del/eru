@@ -69,6 +69,12 @@ export interface SavedComputer {
 export interface SaveData {
   version: number;
   worldSeed: number;
+  /**
+   * Fingerprint of the generated town (openings, containers, computers). A
+   * game update that changes the town can't load older saves onto it: ids
+   * would point at the wrong doors and boxes. Absent in the earliest v1 saves.
+   */
+  town?: string;
   meta: SaveMeta;
   /** Game minutes since the start of day 1. */
   minutes: number;
@@ -121,14 +127,30 @@ export function migrate(raw: unknown): unknown {
   return raw;
 }
 
-/** Check the shape of a (migrated) save. Throws SaveError naming what's wrong. */
-export function validate(raw: unknown, worldSeed: number): SaveData {
+/** FNV-1a over the town's parts, as 8 hex digits. */
+export function townFingerprint(parts: readonly string[]): string {
+  let h = 0x811c9dc5;
+  for (const part of parts) {
+    for (let i = 0; i < part.length; i++) h = Math.imul(h ^ part.charCodeAt(i), 0x01000193);
+    h = Math.imul(h ^ 0x7c, 0x01000193); // separator
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+/**
+ * Check the shape of a (migrated) save. Throws SaveError naming what's wrong.
+ * `town` is this build's town fingerprint; a save made on a different town is refused.
+ */
+export function validate(raw: unknown, worldSeed: number, town?: string): SaveData {
   const bad = (what: string): never => {
     throw new SaveError(`This save is damaged (${what}) and can't be loaded.`);
   };
   if (!isObj(raw)) return bad("not an object");
   if (raw.version !== SAVE_VERSION) bad("wrong version");
   if (raw.worldSeed !== worldSeed) throw new SaveError("This save belongs to a different world.");
+  if (town !== undefined && raw.town !== undefined && raw.town !== town) {
+    throw new SaveError("This save was made before the town changed in an update, so it can't be loaded.");
+  }
   if (!isNum(raw.minutes) || raw.minutes < 0) bad("clock");
   if (!isObj(raw.rng) || !isNum(raw.rng.game)) bad("random state");
   const p = raw.player;
@@ -149,6 +171,7 @@ export function validate(raw: unknown, worldSeed: number): SaveData {
   const pw = (power as Record<string, unknown>).world as Record<string, unknown>;
   if (!isNum(pw.gridFailsAt) || !isObj(pw.circuits) || !Array.isArray(pw.generators)) bad("power");
   if (!isObj(raw.barriers) || !Array.isArray(raw.barriers.barriers)) bad("doors and windows");
+  for (const b of (raw.barriers as { barriers: unknown[] }).barriers) if (!isObj(b) || typeof b.kind !== "string") bad("doors and windows");
   return raw as unknown as SaveData;
 }
 
@@ -158,14 +181,14 @@ export function serialise(data: SaveData): string {
 }
 
 /** Parse, migrate and validate stored text. */
-export function deserialise(text: string, worldSeed: number): SaveData {
+export function deserialise(text: string, worldSeed: number, town?: string): SaveData {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch {
     throw new SaveError("This save is damaged (not readable) and can't be loaded.");
   }
-  return validate(migrate(raw), worldSeed);
+  return validate(migrate(raw), worldSeed, town);
 }
 
 /** Keep the last lines of a terminal so a save doesn't carry thousands of them. */
