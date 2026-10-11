@@ -116,6 +116,7 @@ float clothOffset(int z, float t, vec3 p) {
 `;
 
 const VERTEX_HEAD = /* glsl */ `
+uniform float uDecay;
 attribute float zone;
 attribute float limbT;
 varying float vZone;
@@ -129,6 +130,8 @@ const VERTEX_BODY = /* glsl */ `
 #include <begin_vertex>
 vZone = zone; vLimbT = limbT; vRest = position; vRestN = normal;
 transformed += normal * clothOffset(int(zone + 0.5), limbT, position);
+// The long dead's eyes sink into the sockets.
+if (int(zone + 0.5) == 7) transformed.z -= uDecay * 0.0025;
 `;
 
 const FRAGMENT_HEAD = /* glsl */ `
@@ -177,7 +180,7 @@ vec3 skinTone(vec3 p) {
   if (uDecay > 0.0) {
     // Bloodless: desaturated, greyed toward green, a little darker. The living tone shows through.
     float l = dot(s, vec3(0.2126, 0.7152, 0.0722));
-    vec3 dead = mix(s, vec3(l), 0.78) * vec3(0.84, 0.92, 0.86) * 0.8;
+    vec3 dead = mix(s, vec3(l), 0.78) * vec3(0.84, 0.92, 0.86) * (0.66 - 0.3 * l);
     s = mix(s, dead, clamp(0.55 + uDecay * 0.45, 0.0, 1.0));
     if (uDetail > 0.5) {
       s = mix(s, s * vec3(0.8, 0.74, 0.84), smoothstep(0.6, 0.9, vnoise(p * 9.0 - uSeed)) * uDecay);
@@ -543,8 +546,9 @@ if (z == 1) {
   rough = t > 0.5 ? 0.45 : 0.75;
 }
 
-// Frayed rims round tears.
+// Frayed rims round tears; the skin seen through a hole sits in its shadow.
 if (tearRim > 0.0 && layer >= 1 && layer <= 3) col *= 1.0 - tearRim * 0.45;
+if (tear > 0.5 && layer == 0) col *= 0.55;
 
 // Wounds: a dark wet crater, a raw ring, a bruised halo.
 if (wound < 1.9) {
@@ -560,7 +564,8 @@ if (wound < 1.9) {
 // Grime: mud from the feet up, and patches.
 float n1 = vnoise(p * 9.0 + uSeed);
 float grime = smoothstep(0.55, 0.85, n1 + (0.6 - p.y) * 0.3) * uCond.x;
-col = mix(col, col * vec3(0.45, 0.4, 0.33), grime * (metal > 0.5 ? 0.5 : 1.0));
+// On skin it's greyer and lighter (smears, not caked mud).
+col = layer == 0 ? mix(col, col * vec3(0.66, 0.64, 0.6), grime * 0.6) : mix(col, col * vec3(0.45, 0.4, 0.33), grime * (metal > 0.5 ? 0.5 : 1.0));
 
 // Blood: dried brown with fresher, wetter blood round the mouth and wounds; drips run down.
 if (uCond.y > 0.0) {

@@ -66,6 +66,9 @@ Zombies build awareness gradually (they stop and stare before they charge), path
 - **Glass gives you away.** Breaking a window is loud (20 m). Climbing through shards can slice your arm or leg; knock them out first (Q, 2 s). Zombies climb through broken windows too, slowly: hit one mid-climb and it falls back out.
 - **Board up.** Hold H with a hammer to nail a plank across a door or window (8 s and 4 nails per plank; a wide shop window needs two planks per board). Hammering carries 18 m. Boards on the outside get torn off before the zombies reach the glass; boards nailed inside are only reached after the glass shatters, which is your warning. Three boards on a window or four on a door also block the view. The hardware store has hammers, nails and planks.
 - **The armory.** The police station's armory has a steel door on an electric strike and a keypad. The door controller is on the station network, still on its factory login. A strike stays locked when the power dies (fail-secure); the lobby's maglock lets go (fail-safe). Read the manual on the file server.
+- **Read the dead.** Every zombie was someone, and dressed for where it happened: officers in navy (or the sheriff's tan) with duty belts and radios round the police station, clerks in red store polos and aprons, hi-vis and hard hats near the hardware store, people in pyjamas and bare feet in the houses, hikers with packs and hunters in blaze orange out in the woods. The holsters are empty: they drew before they went down.
+- **Fresh ones are fast.** The recently turned still have wet, red blood, little decay and bloodshot eyes, and they're the runners. The long dead are grey, mottled and milky-eyed, and they shamble.
+- **What you carry shows.** Your pistol rides in a hip holster, a bat or axe on your back, a knife in a sheath, and a pack appears once you're loaded down.
 - **Nights are cold.** Stay indoors after dark. Rest when you're tired (Z), but never with zombies nearby.
 - **Watch your weight.** Carrying more than 20 kg slows you down and stops you sprinting.
 
@@ -87,7 +90,10 @@ src/
     tuning.ts          Every gameplay number, with design targets in tuning.test.ts
     power.ts           Building circuits, grid, generators (fuel, breakers, auto-start), UPS
     items.ts           Item definitions and loot tables
-    rng.ts             Seeded random numbers (with a saveable position)
+    rng.ts             Seeded random numbers (with a saveable position, and derived streams)
+    appearance.ts      Who each person was: role by place, clothes, face, hair, gear, the state of the dead
+    appearanceData.ts  Garment, palette, role and gear tables
+    zombies.ts         A zombie's gameplay traits from its seed (height, speeds, runner)
     save.ts            The save file: versioned plain JSON, migration and validation
   game/
     Game.ts            Main loop: connects world, player, zombies, combat, loot and HUD
@@ -98,12 +104,16 @@ src/
     entities/
       player.ts        Movement, stamina, survival stats, third-person camera
       zombie.ts        Zombie senses and behaviour
-      humanoid.ts      Procedural skinned human (19 bones, generated body, clothing shader, procedural animation)
+      humanoid.ts      Procedural skinned human (19 bones, procedural animation, held items)
+      humanoidGeometry.ts  Body kits: lofted body plus hoods, caps, hair, packs, belts, holsters as index ranges
+      humanoidShader.ts    The character shader: clothes, uniforms, faces, eyes, hair, wounds, blood, grime
+      humanoidLook.ts      Appearance to shader codes and geometry pieces
     render/
       textures.ts      Procedural surface textures (albedo, normal, roughness)
       postfx.ts        Ambient occlusion, bloom, Tarkov-style colour grade and grain
       sky.ts           Overcast sky dome
       cctv.ts          Live CCTV: renders world cameras offscreen with auto-exposure and IR
+      faceAtlas.ts     Sixteen painted faces and uniform decals in one texture array
     world/
       terrain.ts       Heightmap terrain (the town area is flat)
       town.ts          Procedural town: roads, buildings with interiors, cars, loot

@@ -41,10 +41,10 @@ Each session below is roughly one working session. The order can change based on
 - Zomboid-style status indicators ("moodles"); health panel with a body diagram and per-wound treatment
 - First engine-agnostic module in `src/sim/`
 
-## Session 7 (was 2): Characters and animation — first pass done in session 5 ✅ (procedural skinned bodies)
-- Replace box people with rigged, animated models (CC0 packs such as Quaternius or Kenney, loaded as glTF)
+## Session 7 (was 2): Characters and animation — first pass in session 5, detail pass in session 8 ✅
+- Replace box people with rigged, animated models (CC0 packs such as Quaternius or Kenney, loaded as glTF) — still procedural (asset hosts are blocked)
 - Animation blending: idle, walk, run, crouch, melee swings, aim, hit reactions, death
-- Zombie variety in clothing and body type
+- Zombie variety in clothing and body type ✅ (session 8: roles by place, garment tables, uniforms, faces, gear on the body, fresh vs long dead)
 
 ## Session 3: Usable computers + Tarkov-style graphics pass (owner request) ✅
 - Computers in police stations, shops and houses (laptops): boot, log in, a real shell (`ls`, `cd`, `cat`, `grep`, pipes, `mail`, programs), with lore and gameplay leads (supply caches, power-grid status)
@@ -127,7 +127,7 @@ Each session below is roughly one working session. The order can change based on
 
 ## Session 16: Zombie variety
 - Crawlers, sprinters at night, armoured riot zombies
-- Zombie corpses you can search
+- Zombie corpses you can search (the gear they wear is already data: `GEAR_LOOT`; holstered guns and hammers can then show on the dead)
 - Zombies in vehicles and behind fences
 
 ## Session 17: Utilities and the world winding down

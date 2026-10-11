@@ -134,6 +134,7 @@ const res = await p.evaluate(async () => {
     faces5: face((X(14) + X(15)) / 2),
     portrait1: { pos: V(X(14), y0 + 1.66, base.z + 0.75), look: V(X(14), y0 + 1.62, base.z), fov: 30 },
     portrait2: { pos: V(X(1), y0 + 1.6, base.z + 0.75), look: V(X(1), y0 + 1.5, base.z), fov: 34 },
+    backclose: { pos: V((X(0) + X(2)) / 2, y0 + 1.35, base.z + 2.6), look: V((X(0) + X(2)) / 2, y0 + 1.15, base.z), fov: 40, back: true },
     portrait3: { pos: V(X(15), y0 + 1.62, base.z + 0.75), look: V(X(15), y0 + 1.58, base.z), fov: 30 },
   };
 
