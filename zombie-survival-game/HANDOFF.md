@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: session 8 — saving, plus review fixes for doors and access control (2026-10-11)_
+_Last updated: session 8 — saving, review fixes, character detail pass (2026-10-11)_
 
 ## The project
 
@@ -99,6 +99,16 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - The `zombieContext()` visibility formula in `Game.ts`
 
 ## Status
+
+**Character detail pass (session 8, continuing).** Design: a 3-design judge panel (spec kept in the session scratchpad as `design-spec.md`); this build follows it.
+- **Who they were** (`src/sim/appearance.ts` + `appearanceData.ts`, engine-agnostic): `rollAppearance(seed, role, {zombie, fresh})` gives body, face, hair, clothes (top/outer/bottom/feet from garment tables with palettes and patterns), headwear, gear, uniform marks, condition (grime, blood, tears, decay, wounds) and gait. Every facet draws from its own `deriveSeed(seed, salt)` stream; nothing is saved but the role. Roles: civilian, sleepwear, office, store_clerk, hardware_worker, tradesman, police (city/sheriff), hiker, hunter, jogger, survivor (the player). `chooseRole(seed, siteAt(...))` picks by where they spawned (house, store, hardware, police, near_police, street, woods); the spawn point before jitter decides.
+- **Gameplay traits unchanged:** `rollZombieTraits(seed)` (`src/sim/zombies.ts`) replays the old draw order, so every seed keeps its height, speeds and runner flag (`zombies.test.ts` checks 2,000 seeds against the old code; `snap.mjs` H14 checks a whole new game against the old build). The fresh dead are the runners: wet blood, little decay, bloodshot eyes (a tell).
+- **If the player can see it, it has state:** the dead never show a gun in the holster, a hammer, or a slung weapon (`LIVING_ONLY_GEAR`), because corpses can't be searched yet. `GEAR_LOOT` holds the future corpse loot as data only.
+- **Renderer:** `humanoidGeometry.ts` builds one kit per body (sex × build) with the body plus every piece (hoods, caps, hard hat, long hair, ponytail, bun, packs, belts, holster, radio, tool belt, sheath, slung bat/axe, hammer loop) as index ranges; each character's geometry shares the kit's buffers with its own index (one draw call + shadow; `mesh.boundingSphere` + frustum culling). `humanoidShader.ts` paints clothes (layering, collars, plackets, buttons, zips, pockets, seams, patterns, hi-vis, badges, patches, "POLICE"/"SHERIFF" decals, straps, lanyard, watch, glasses), skin (living or dead: pallor, mottling, veins, lividity), eyes, hair, beard/stubble, wounds, tears, grime and wet/dried blood, and gives clothes thickness with a vertex offset. `faceAtlas.ts` paints 16 faces + decals into one `DataArrayTexture`. `humanoidLook.ts` maps Appearance → shader codes and pieces. **Shader colour constants are linear: write them with `L("#hex")`.** Output is clamped (a near-mirror highlight past half-float range used to bloom into black blocks).
+- **Player:** `PLAYER_APPEARANCE` (olive field jacket over a henley, jeans, boots); `Game.wearGear()` at the 10 Hz HUD tick shows what you carry (`playerGear`): holstered pistol (empty holster while drawn), bat or axe on the back, knife sheath, hammer loop, a daypack from 3 kg and a big pack above 12 kg. Held items are one merged mesh each.
+- **Saves:** `SAVE_VERSION` 2, `SavedZombie.role` (null for v1 zombies; inferred on load from where they stand).
+- Harness: `tools/harness/lineup.mjs` (H13) renders a cast of every role (front, back, close-ups, portraits) to `tools/harness/out/`; `snap.mjs` adds H14; `save.mjs` adds H11c (a v1 save loads with identical gameplay).
+- Handedness: bones named "R" sit at +x and the model faces +z, so `handR` is anatomically the left hand. Gear sides are defined by "weapon side = +x".
 
 **Session 8 (saving) is complete and pushed.**
 - Format: `src/sim/save.ts` (see the code map). Zombies are rebuilt from their seed (`Zombie.toSave`/`fromSave`; each zombie owns `mulberry32(seed)`), so the save never carries meshes. The game's own rng position is saved, so a loaded run continues the same random stream. Terminal lockouts are stored as real milliseconds left.

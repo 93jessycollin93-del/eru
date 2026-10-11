@@ -66,6 +66,8 @@ export const ZOMBIE = {
   /** ...but about one in eight are runners that only a sprint escapes. */
   runnerChance: 0.12,
   runnerSpeed: [4.2, 4.9] as const,
+  /** Height multiplier (1 = 1.8 m-ish frame); shot hit volumes scale with it. */
+  height: [0.93, 1.05] as const,
   /** Last stretch before an attack is a lunge. */
   lungeRange: 2.2,
   lungeFactor: 1.35,

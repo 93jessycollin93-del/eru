@@ -25,3 +25,15 @@ export function mulberry32(seed: number): SeededRng {
 
 export const range = (rng: () => number, min: number, max: number) => min + rng() * (max - min);
 export const pick = <T,>(rng: () => number, list: readonly T[]): T => list[Math.floor(rng() * list.length)];
+
+/**
+ * A new seed from a seed and a salt (murmur3 finaliser), so one seed can feed
+ * several independent streams: changing what one stream draws never shifts
+ * another. Plain uint32 maths, so it ports to C++ as is.
+ */
+export function deriveSeed(seed: number, salt: number): number {
+  let h = (seed ^ Math.imul(salt, 0x9e3779b9)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
+}

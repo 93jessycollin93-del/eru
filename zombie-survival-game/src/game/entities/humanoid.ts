@@ -1,516 +1,16 @@
 import * as THREE from "three";
+import type { Appearance, GearId } from "../../sim/appearance";
+import { BONES, SHAPES, geometryFor, restPositions, type BoneName } from "./humanoidGeometry";
+import { piecesFor, strapMask } from "./humanoidLook";
+import { humanoidUniforms, makeHumanoidMaterial, type HumanoidUniforms } from "./humanoidShader";
 
 /**
- * Procedural skinned human: a 19-bone skeleton and a smooth body generated
- * from lofted cross-sections, skinned to the bones, with clothing, hair, dirt
- * and blood drawn by a shader from per-character uniforms. One draw call per
- * character. Animation is procedural (see animate()).
+ * Procedural skinned human: a 19-bone skeleton and a body generated from
+ * lofted cross-sections (humanoidGeometry.ts), dressed by a shader from an
+ * engine-agnostic Appearance (humanoidShader.ts): clothes, face, hair, gear,
+ * and the state of the dead. One draw call per character. Animation is
+ * procedural (see animate()).
  */
-
-export interface HumanoidColors {
-  skin: string;
-  shirt: string;
-  pants: string;
-  shoes?: string;
-  hair?: string;
-}
-
-export interface HumanoidLook {
-  build?: "slim" | "average" | "heavy";
-  sex?: "m" | "f";
-  /** 0 = sleeveless .. 1 = long sleeves. */
-  sleeve?: number;
-  /** 0 = bald .. 1 = full hair. */
-  hair?: number;
-  grime?: number;
-  blood?: number;
-  /** Height multiplier around 1. */
-  height?: number;
-  zombie?: boolean;
-}
-
-// ----------------------------------------------------------------- skeleton
-
-const BONES = [
-  ["hips", -1, [0, 0.95, 0]],
-  ["spine", 0, [0, 0.12, 0]],
-  ["chest", 1, [0, 0.18, 0]],
-  ["neck", 2, [0, 0.2, 0]],
-  ["head", 3, [0, 0.08, 0]],
-  ["shoulderL", 2, [-0.12, 0.15, 0]],
-  ["upperArmL", 5, [-0.075, 0, 0]],
-  ["forearmL", 6, [0, -0.28, 0]],
-  ["handL", 7, [0, -0.25, 0]],
-  ["shoulderR", 2, [0.12, 0.15, 0]],
-  ["upperArmR", 9, [0.075, 0, 0]],
-  ["forearmR", 10, [0, -0.28, 0]],
-  ["handR", 11, [0, -0.25, 0]],
-  ["thighL", 0, [-0.095, -0.04, 0]],
-  ["shinL", 13, [0, -0.43, 0]],
-  ["footL", 14, [0, -0.42, 0]],
-  ["thighR", 0, [0.095, -0.04, 0]],
-  ["shinR", 16, [0, -0.43, 0]],
-  ["footR", 17, [0, -0.42, 0]],
-] as const;
-
-type BoneName = (typeof BONES)[number][0];
-const BI = Object.fromEntries(BONES.map((b, i) => [b[0], i])) as Record<BoneName, number>;
-
-/** Clothing zones, read by the shader. */
-const Z_ARM = 0;
-const Z_TORSO = 1;
-const Z_LEG = 2;
-const Z_SHOE = 3;
-const Z_HEAD = 4;
-const Z_SKIN = 5;
-
-interface BuildShape {
-  shoulder: number;
-  hip: number;
-  girth: number;
-  chest: number;
-}
-
-const SHAPES: Record<string, BuildShape> = {
-  "m-slim": { shoulder: 1.0, hip: 0.95, girth: 0.88, chest: 1.0 },
-  "m-average": { shoulder: 1.05, hip: 1.0, girth: 1.0, chest: 1.05 },
-  "m-heavy": { shoulder: 1.08, hip: 1.1, girth: 1.28, chest: 1.12 },
-  "f-slim": { shoulder: 0.88, hip: 1.05, girth: 0.86, chest: 1.0 },
-  "f-average": { shoulder: 0.9, hip: 1.1, girth: 0.96, chest: 1.06 },
-  "f-heavy": { shoulder: 0.94, hip: 1.18, girth: 1.22, chest: 1.12 },
-};
-
-function restPositions(shape: BuildShape): THREE.Vector3[] {
-  const out: THREE.Vector3[] = [];
-  BONES.forEach(([name, parent, off], i) => {
-    const o = new THREE.Vector3(...off);
-    if (name.startsWith("shoulder")) o.x *= shape.shoulder;
-    if (name.startsWith("thigh")) o.x *= shape.hip;
-    out[i] = parent < 0 ? o : o.add(out[parent]);
-  });
-  return out;
-}
-
-// ----------------------------------------------------------------- geometry
-
-type Weights = [[number, number], [number, number]];
-
-class GeoBuilder {
-  pos: number[] = [];
-  skinIdx: number[] = [];
-  skinW: number[] = [];
-  zone: number[] = [];
-  limbT: number[] = [];
-  index: number[] = [];
-
-  vertex(p: THREE.Vector3, bones: [number, number], weights: [number, number], zone: number, t: number) {
-    this.pos.push(p.x, p.y, p.z);
-    this.skinIdx.push(bones[0], bones[1], 0, 0);
-    this.skinW.push(weights[0], weights[1], 0, 0);
-    this.zone.push(zone);
-    this.limbT.push(t);
-    return this.pos.length / 3 - 1;
-  }
-
-  /**
-   * A lofted tube along from→to. profile(t) gives the cross-section radii
-   * (side, front); weights(t, p) gives two bones and their weights; tMap maps
-   * the local t to the stored limbT (for sleeve and cuff lengths).
-   */
-  tube(
-    from: THREE.Vector3,
-    to: THREE.Vector3,
-    rings: number,
-    around: number,
-    profile: (t: number) => [number, number],
-    weights: (t: number, p: THREE.Vector3) => Weights,
-    zone: number,
-    capStart = true,
-    capEnd = true,
-    tMap: (t: number) => number = (t) => t,
-  ) {
-    const dir = to.clone().sub(from).normalize();
-    let front = new THREE.Vector3(0, 0, 1);
-    front.addScaledVector(dir, -front.dot(dir));
-    if (front.lengthSq() < 0.01) front = new THREE.Vector3(1, 0, 0);
-    front.normalize();
-    const side = new THREE.Vector3().crossVectors(front, dir).normalize();
-    const base = this.pos.length / 3;
-    for (let r = 0; r <= rings; r++) {
-      const t = r / rings;
-      const c = from.clone().lerp(to, t);
-      const [rs, rf] = profile(t);
-      for (let a = 0; a < around; a++) {
-        const ang = (a / around) * Math.PI * 2;
-        const p = c.clone().addScaledVector(side, Math.cos(ang) * rs).addScaledVector(front, Math.sin(ang) * rf);
-        const [b, w] = weights(t, p);
-        this.vertex(p, b, w, zone, tMap(t));
-      }
-    }
-    for (let r = 0; r < rings; r++) {
-      for (let a = 0; a < around; a++) {
-        const i0 = base + r * around + a;
-        const i1 = base + r * around + ((a + 1) % around);
-        const i2 = i0 + around;
-        const i3 = i1 + around;
-        this.index.push(i0, i1, i2, i1, i3, i2);
-      }
-    }
-    const cap = (ring: number, center: THREE.Vector3, atStart: boolean) => {
-      const t = atStart ? 0 : 1;
-      const [b, w] = weights(t, center);
-      const ci = this.vertex(center, b, w, zone, tMap(t));
-      for (let a = 0; a < around; a++) {
-        const i0 = base + ring * around + a;
-        const i1 = base + ring * around + ((a + 1) % around);
-        if (atStart) this.index.push(ci, i1, i0);
-        else this.index.push(ci, i0, i1);
-      }
-    };
-    if (capStart) cap(0, from, true);
-    if (capEnd) cap(rings, to, false);
-  }
-
-  /** Ellipsoid around a centre, bound to one bone (optionally blended with a second below a height). */
-  ellipsoid(
-    center: THREE.Vector3,
-    radii: THREE.Vector3,
-    lat: number,
-    lon: number,
-    bone: number,
-    zone: number,
-    shape?: (p: THREE.Vector3, n: THREE.Vector3) => void,
-    blend?: { bone: number; belowY: number; range: number },
-  ) {
-    const base = this.pos.length / 3;
-    for (let i = 0; i <= lat; i++) {
-      const v = i / lat;
-      const phi = v * Math.PI;
-      for (let j = 0; j <= lon; j++) {
-        const theta = (j / lon) * Math.PI * 2;
-        const n = new THREE.Vector3(Math.sin(phi) * Math.sin(theta), Math.cos(phi), Math.sin(phi) * Math.cos(theta));
-        const p = new THREE.Vector3(n.x * radii.x, n.y * radii.y, n.z * radii.z);
-        shape?.(p, n);
-        p.add(center);
-        let w: [number, number] = [1, 0];
-        let b: [number, number] = [bone, bone];
-        if (blend && p.y < blend.belowY) {
-          const k = Math.min(1, (blend.belowY - p.y) / blend.range) * 0.5;
-          b = [bone, blend.bone];
-          w = [1 - k, k];
-        }
-        this.vertex(p, b, w, zone, 1 - v);
-      }
-    }
-    for (let i = 0; i < lat; i++) {
-      for (let j = 0; j < lon; j++) {
-        const a = base + i * (lon + 1) + j;
-        const b = a + lon + 1;
-        this.index.push(a, b, a + 1, a + 1, b, b + 1);
-      }
-    }
-  }
-
-  build(): THREE.BufferGeometry {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(this.pos, 3));
-    g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(this.skinIdx, 4));
-    g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(this.skinW, 4));
-    g.setAttribute("zone", new THREE.Float32BufferAttribute(this.zone, 1));
-    g.setAttribute("limbT", new THREE.Float32BufferAttribute(this.limbT, 1));
-    g.setIndex(this.index);
-    g.computeVertexNormals();
-    g.computeBoundingSphere();
-    return g;
-  }
-}
-
-/** Weight to `bone`, easing in from `parent` over the first part of a segment and out to `child` at the end. */
-const segW =
-  (bone: number, parent: number, child = -1, blendIn = 0.18, blendOut = 0.15) =>
-  (t: number): Weights => {
-    if (t < blendIn) {
-      const k = 0.5 * (1 - t / blendIn);
-      return [[bone, parent], [1 - k, k]];
-    }
-    if (child >= 0 && t > 1 - blendOut) {
-      const k = 0.5 * ((t - (1 - blendOut)) / blendOut);
-      return [[bone, child], [1 - k, k]];
-    }
-    return [[bone, parent], [1, 0]];
-  };
-
-const templates = new Map<string, THREE.BufferGeometry>();
-
-function buildTemplate(key: string): THREE.BufferGeometry {
-  const shape = SHAPES[key];
-  const female = key.startsWith("f");
-  const R = restPositions(shape);
-  const gb = new GeoBuilder();
-  const g = shape.girth;
-  const AR = 10;
-
-  // Torso: crotch to the base of the neck, weighted hips → spine → chest by height.
-  const torsoBottom = new THREE.Vector3(0, 0.8, 0);
-  const torsoTop = new THREE.Vector3(0, R[BI.neck].y - 0.02, 0);
-  const keys: [number, number, number][] = [
-    [0.0, 0.11, 0.09],
-    [0.12, 0.165 * shape.hip, 0.11],
-    [0.3, (female ? 0.13 : 0.145) * g, 0.1 * g],
-    [0.5, 0.155 * g, 0.11 * g],
-    [0.7, 0.175 * shape.chest * Math.max(1, g * 0.95), (female ? 0.125 : 0.115) * shape.chest * g],
-    [0.88, 0.19 * shape.shoulder, 0.1],
-    [1.0, 0.075, 0.07],
-  ];
-  const torsoProfile = (t: number): [number, number] => {
-    for (let i = 0; i < keys.length - 1; i++) {
-      const [t0, a0, b0] = keys[i];
-      const [t1, a1, b1] = keys[i + 1];
-      if (t <= t1) {
-        const k = (t - t0) / (t1 - t0);
-        const s = k * k * (3 - 2 * k);
-        return [a0 + (a1 - a0) * s, b0 + (b1 - b0) * s];
-      }
-    }
-    return [keys[keys.length - 1][1], keys[keys.length - 1][2]];
-  };
-  gb.tube(
-    torsoBottom,
-    torsoTop,
-    14,
-    14,
-    torsoProfile,
-    (_t, p) => {
-      const y = p.y;
-      if (y < 0.98) return [[BI.hips, BI.spine], [1, 0]];
-      if (y < 1.1) {
-        const k = (y - 0.98) / 0.12;
-        return [[BI.hips, BI.spine], [1 - k, k]];
-      }
-      if (y < 1.25) {
-        const k = (y - 1.1) / 0.15;
-        return [[BI.spine, BI.chest], [1 - k, k]];
-      }
-      return [[BI.chest, BI.chest], [1, 0]];
-    },
-    Z_TORSO,
-  );
-
-  // Neck and head.
-  gb.tube(
-    R[BI.neck].clone().setY(R[BI.neck].y - 0.04),
-    R[BI.head].clone().add(new THREE.Vector3(0, 0.04, 0)),
-    3,
-    AR,
-    () => [0.05, 0.055],
-    segW(BI.head, BI.neck, -1, 0.6),
-    Z_SKIN,
-  );
-  const headC = R[BI.head].clone().add(new THREE.Vector3(0, 0.095, 0.01));
-  gb.ellipsoid(
-    headC,
-    new THREE.Vector3(female ? 0.083 : 0.09, 0.115, 0.1),
-    12,
-    16,
-    BI.head,
-    Z_HEAD,
-    (p, n) => {
-      // Jaw narrows towards the chin; a nose; brow ridge; ears.
-      if (n.y < 0) {
-        const k = 1 + n.y * 0.28;
-        p.x *= k;
-        p.z *= 0.92 + 0.08 * k;
-      }
-      if (n.z > 0.75 && Math.abs(n.x) < 0.18 && n.y > -0.35 && n.y < 0.15) {
-        p.z += 0.022 * (1 - Math.abs(n.x) / 0.18) * Math.max(0, 1 - Math.abs(n.y + 0.1) / 0.25);
-      }
-      if (n.z > 0.6 && n.y > 0.12 && n.y < 0.3) p.z += 0.006;
-      if (Math.abs(n.x) > 0.93 && Math.abs(n.y) < 0.18 && n.z < 0.1 && n.z > -0.3) p.x += Math.sign(n.x) * 0.012;
-    },
-    { bone: BI.neck, belowY: headC.y - 0.07, range: 0.06 },
-  );
-
-  // Arms. limbT runs 0 (shoulder) → 1 (wrist) so the shader can cut sleeves.
-  const armScale = female ? 0.88 : 1;
-  const gArm = Math.sqrt(g);
-  for (const s of ["L", "R"] as const) {
-    const sh = R[BI[`shoulder${s}`]];
-    const ua = R[BI[`upperArm${s}`]];
-    const fa = R[BI[`forearm${s}`]];
-    const ha = R[BI[`hand${s}`]];
-    const UA = BI[`upperArm${s}`];
-    const FA = BI[`forearm${s}`];
-    const HA = BI[`hand${s}`];
-    // Shoulder cap (part of the shirt).
-    gb.tube(sh.clone().setY(sh.y - 0.01), ua.clone().setY(ua.y - 0.03), 3, AR, () => [0.07 * gArm, 0.062 * gArm], () => [[UA, BI.chest], [0.6, 0.4]], Z_TORSO, false, false);
-    gb.tube(
-      ua.clone().setY(ua.y - 0.03),
-      fa,
-      6,
-      AR,
-      (t) => [(0.066 - t * 0.014) * gArm * armScale, (0.062 - t * 0.012) * gArm * armScale],
-      segW(UA, BI.chest, FA, 0.15, 0.15),
-      Z_ARM,
-      false,
-      false,
-      (t) => t * 0.5,
-    );
-    gb.tube(
-      fa,
-      ha.clone().setY(ha.y + 0.02),
-      6,
-      AR,
-      (t) => {
-        const forearm = Math.sin(Math.min(1, t * 2) * Math.PI) * 0.006; // forearm muscle near the elbow
-        return [(0.05 - t * 0.014 + forearm) * armScale, (0.047 - t * 0.016 + forearm) * armScale];
-      },
-      segW(FA, UA, HA, 0.2, 0.1),
-      Z_ARM,
-      false,
-      true,
-      (t) => 0.5 + t * 0.5,
-    );
-    // Hand: palm and fingers as one rounded mitt, thumb side slightly wider.
-    gb.ellipsoid(ha.clone().add(new THREE.Vector3(0, -0.055, 0.008)), new THREE.Vector3(0.04 * armScale, 0.058, 0.024), 6, 8, HA, Z_SKIN, (p, n) => {
-      if (n.y < -0.3) p.z += 0.008; // fingers curl forward
-    });
-  }
-
-  // Legs: thigh, shin (with a calf), shoe.
-  const gLeg = Math.pow(g, 0.6) * (female ? 1.02 : 1);
-  for (const s of ["L", "R"] as const) {
-    const th = R[BI[`thigh${s}`]];
-    const sn = R[BI[`shin${s}`]];
-    const ft = R[BI[`foot${s}`]];
-    const TH = BI[`thigh${s}`];
-    const SH = BI[`shin${s}`];
-    const FT = BI[`foot${s}`];
-    gb.tube(th.clone().setY(th.y + 0.06), sn, 8, AR, (t) => [(0.092 - t * 0.035) * gLeg, (0.09 - t * 0.03) * gLeg], segW(TH, BI.hips, SH, 0.25, 0.12), Z_LEG, false, false);
-    gb.tube(
-      sn,
-      ft.clone().setY(ft.y + 0.07),
-      7,
-      AR,
-      (t) => {
-        const calf = Math.sin(Math.min(1, t * 2.2) * Math.PI) * 0.012;
-        return [0.055 - t * 0.017 + calf, 0.055 - t * 0.014 + calf * 1.4];
-      },
-      segW(SH, TH, FT, 0.15, 0.12),
-      Z_LEG,
-      false,
-      true,
-    );
-    gb.ellipsoid(ft.clone().add(new THREE.Vector3(0, 0.035, 0.05)), new THREE.Vector3(0.05, 0.045, 0.13), 6, 10, FT, Z_SHOE, (p) => {
-      if (p.y < -0.025) p.y = -0.025 - (p.y + 0.025) * 0.15; // flat sole
-    });
-  }
-
-  return gb.build();
-}
-
-function template(build: string, sex: string) {
-  const key = `${sex}-${build}`;
-  let g = templates.get(key);
-  if (!g) {
-    g = buildTemplate(key);
-    templates.set(key, g);
-  }
-  return g;
-}
-
-// ----------------------------------------------------------------- material
-
-function makeMaterial(colors: HumanoidColors, look: Required<HumanoidLook>, headY: number) {
-  const mat = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.82, metalness: 0 });
-  const u = {
-    cSkin: { value: new THREE.Color(colors.skin) },
-    cTop: { value: new THREE.Color(colors.shirt) },
-    cBottom: { value: new THREE.Color(colors.pants) },
-    cShoes: { value: new THREE.Color(colors.shoes ?? "#2a2622") },
-    cHair: { value: new THREE.Color(colors.hair ?? "#2b2420") },
-    uSleeve: { value: look.sleeve },
-    uHair: { value: look.hair },
-    uGrime: { value: look.grime },
-    uBlood: { value: look.blood },
-    uSeed: { value: Math.random() * 100 },
-    uHeadY: { value: headY },
-  };
-  mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, u);
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        "#include <common>",
-        `#include <common>
-        attribute float zone;
-        attribute float limbT;
-        varying float vZone;
-        varying float vLimbT;
-        varying vec3 vRest;`,
-      )
-      .replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
-        vZone = zone; vLimbT = limbT; vRest = position;`,
-      );
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        "#include <common>",
-        `#include <common>
-        uniform vec3 cSkin, cTop, cBottom, cShoes, cHair;
-        uniform float uSleeve, uHair, uGrime, uBlood, uSeed, uHeadY;
-        varying float vZone;
-        varying float vLimbT;
-        varying vec3 vRest;
-        float hhash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
-        float vnoise(vec3 x) {
-          vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
-          return mix(mix(mix(hhash(i), hhash(i + vec3(1,0,0)), f.x), mix(hhash(i + vec3(0,1,0)), hhash(i + vec3(1,1,0)), f.x), f.y),
-                     mix(mix(hhash(i + vec3(0,0,1)), hhash(i + vec3(1,0,1)), f.x), mix(hhash(i + vec3(0,1,1)), hhash(i + vec3(1,1,1)), f.x), f.y), f.z);
-        }`,
-      )
-      .replace(
-        "#include <color_fragment>",
-        `#include <color_fragment>
-        int z = int(vZone + 0.5);
-        vec3 col = cSkin;
-        float cloth = 0.0;
-        if (z == 0) { if (vLimbT < uSleeve) { col = cTop; cloth = 1.0; } }
-        else if (z == 1) { col = cTop; cloth = 1.0; }
-        else if (z == 2) { col = cBottom; cloth = 1.0; }
-        else if (z == 3) { col = cShoes; cloth = 0.5; }
-        else if (z == 4) {
-          vec3 h = vRest - vec3(0.0, uHeadY, 0.0);
-          bool hairTop = h.y > 0.035 + (1.0 - uHair) * 0.2;
-          bool hairBack = h.z < -0.02 && h.y > -0.04 + (1.0 - uHair) * 0.3;
-          if (uHair > 0.01 && (hairTop || hairBack)) col = cHair;
-          // Eyebrows, eye sockets and lips.
-          if (h.z > 0.07 && h.y > 0.02 && h.y < 0.03 && abs(abs(h.x) - 0.035) < 0.022) col = mix(col, cHair * 0.8, 0.8);
-          if (h.z > 0.07 && abs(h.y) < 0.018 && abs(abs(h.x) - 0.035) < 0.018) col *= 0.55;
-          if (h.z > 0.075 && h.y < -0.045 && h.y > -0.06 && abs(h.x) < 0.025) col *= 0.75;
-        }
-        float n1 = vnoise(vRest * 9.0 + uSeed);
-        float n2 = vnoise(vRest * 23.0 - uSeed);
-        col *= 0.9 + 0.2 * mix(n2, n1, 0.5);
-        // Grime gathers low on the body and in patches.
-        float grime = smoothstep(0.55, 0.85, n1 + (0.6 - vRest.y) * 0.25) * uGrime;
-        col = mix(col, col * vec3(0.42, 0.38, 0.32), grime);
-        // Blood: dark red-brown splotches, mostly around the mouth, chest and hands; not on shoes.
-        float bzone = z == 3 ? 0.0 : 1.0;
-        // On the head, blood stays around the mouth and chin.
-        if (z == 4) bzone = smoothstep(-0.02, -0.07, vRest.y - uHeadY) * step(0.03, vRest.z);
-        float bmask = smoothstep(0.72, 0.9, vnoise(vRest * 6.0 + uSeed * 1.7) + max(vRest.z, 0.0) * 0.8) * uBlood * bzone;
-        col = mix(col, vec3(0.22, 0.03, 0.02), bmask);
-        diffuseColor.rgb *= col;`,
-      )
-      .replace(
-        "#include <roughnessmap_fragment>",
-        `#include <roughnessmap_fragment>
-        roughnessFactor = mix(0.62, 0.95, cloth);`,
-      );
-  };
-  mat.customProgramCacheKey = () => "humanoid-v1";
-  return mat;
-}
 
 // ----------------------------------------------------------------- humanoid
 
@@ -524,7 +24,10 @@ export class Humanoid {
   readonly head: THREE.Object3D;
   /** Attach held items here; it sits in the right palm. */
   readonly hand = new THREE.Group();
+  readonly appearance: Appearance;
   private material: THREE.MeshStandardMaterial;
+  private uniforms: HumanoidUniforms;
+  private bodyKey: string;
   private phase = Math.random() * Math.PI * 2;
   private time = Math.random() * 100;
   private zombie: boolean;
@@ -540,21 +43,11 @@ export class Humanoid {
   private pose = new Map<THREE.Bone, THREE.Euler>();
   private hipsY = 0;
 
-  constructor(colors: HumanoidColors, look: HumanoidLook = {}) {
-    const full: Required<HumanoidLook> = {
-      build: look.build ?? "average",
-      sex: look.sex ?? "m",
-      sleeve: look.sleeve ?? 0.95,
-      hair: look.hair ?? 0.8,
-      grime: look.grime ?? 0.25,
-      blood: look.blood ?? 0,
-      height: look.height ?? 1,
-      zombie: look.zombie ?? false,
-    };
-    this.zombie = full.zombie;
-    const shape = SHAPES[`${full.sex}-${full.build}`];
-    const rest = restPositions(shape);
-    const geo = template(full.build, full.sex);
+  constructor(app: Appearance, opts: { zombie: boolean; height?: number }) {
+    this.appearance = app;
+    this.zombie = opts.zombie;
+    this.bodyKey = `${app.sex}-${app.build}`;
+    const rest = restPositions(SHAPES[this.bodyKey]);
 
     const boneObjs: THREE.Bone[] = BONES.map(([name]) => {
       const b = new THREE.Bone();
@@ -568,16 +61,20 @@ export class Humanoid {
     });
     this.bones = Object.fromEntries(BONES.map(([name], i) => [name, boneObjs[i]])) as Record<BoneName, THREE.Bone>;
 
-    this.material = makeMaterial(colors, full, rest[BI.head].y + 0.095);
-    this.mesh = new THREE.SkinnedMesh(geo, this.material);
+    this.uniforms = humanoidUniforms(app, opts.zombie, rest);
+    this.material = makeHumanoidMaterial(this.uniforms);
+    this.mesh = new THREE.SkinnedMesh(geometryFor(this.bodyKey, piecesFor(app)), this.material);
     this.mesh.add(boneObjs[0]);
     this.mesh.bind(new THREE.Skeleton(boneObjs));
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
-    this.mesh.frustumCulled = false;
+    // Culled by a sphere round the body (a SkinnedMesh uses its own, not the geometry's), so
+    // zombies behind the camera skip the main and AO passes. Big enough for reaching arms and a fall.
+    this.mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0.2), 1.35);
+    this.mesh.frustumCulled = true;
     this.body.add(this.mesh);
     this.root.add(this.body);
-    this.root.scale.setScalar(full.height);
+    this.root.scale.setScalar(opts.height ?? 1);
     this.hipsY = this.bones.hips.position.y;
 
     this.head = new THREE.Object3D();
@@ -586,21 +83,24 @@ export class Humanoid {
     this.hand.position.set(0, -0.08, 0.02);
     this.bones.handR.add(this.hand);
 
-    // Eyes: dark for the living, pale and cloudy for the dead.
-    const eyeMat = new THREE.MeshBasicMaterial({ color: this.zombie ? "#cfcaa0" : "#1a1612" });
-    for (const x of [-0.033, 0.033]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.011, 6, 4), eyeMat);
-      eye.position.set(x, 0.005, 0.085);
-      this.head.add(eye);
-    }
-
-    if (this.zombie) {
-      this.limp = Math.random() < 0.5 ? (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.5) : 0;
-      this.hunch = 0.15 + Math.random() * 0.25;
-      const r = Math.random();
-      this.reach = r < 0.4 ? 0.85 + Math.random() * 0.15 : r < 0.75 ? 0.45 + Math.random() * 0.2 : Math.random() * 0.15;
-    }
+    this.limp = app.gait.limp;
+    this.hunch = app.gait.hunch;
+    this.reach = app.gait.reach;
     for (const b of boneObjs) this.pose.set(b, new THREE.Euler());
+  }
+
+  /** Change what's carried on the body (the player's holster, slung weapons, pack). */
+  setGear(gear: readonly GearId[]) {
+    const key = [...gear].sort().join(",");
+    if (key === this.appearance.gear.join(",")) return;
+    this.appearance.gear = [...gear].sort();
+    this.mesh.geometry = geometryFor(this.bodyKey, piecesFor(this.appearance));
+    this.uniforms.uStraps.value = strapMask(this.appearance.gear);
+  }
+
+  /** Far away, skip the fine detail (faces, patterns, seams, tears). */
+  setDetail(near: boolean) {
+    this.uniforms.uDetail.value = near ? 1 : 0;
   }
 
   setTint(hex: number) {
@@ -751,61 +251,105 @@ export class Humanoid {
   }
 
   dispose() {
-    // Geometry is a shared template; only the material is per character.
+    // Geometry shares its body kit's buffers; only the material is per character.
     this.material.dispose();
   }
 }
 
-/** Simple held-item meshes. */
-export function makeHeldItem(id: string): THREE.Object3D | null {
-  const g = new THREE.Group();
-  const box = (w: number, h: number, d: number, color: string, y: number, z = 0, metalness = 0.2) => {
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, d),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness }),
-    );
-    m.position.set(0, y, z);
-    m.castShadow = true;
-    g.add(m);
-    return m;
-  };
-  switch (id) {
-    case "pistol":
-      box(0.03, 0.11, 0.045, "#1d1d1d", -0.02);
-      box(0.032, 0.05, 0.19, "#262626", 0.025, 0.07);
-      // Barrel (local +z) points out of the fist along the forearm.
-      g.rotation.x = Math.PI / 2;
-      return g;
-    case "baseball_bat":
-      box(0.04, 0.85, 0.04, "#8a6a42", -0.38);
-      box(0.065, 0.35, 0.065, "#8a6a42", -0.7);
-      g.rotation.x = -Math.PI / 2;
-      return g;
-    case "fire_axe":
-      box(0.04, 0.9, 0.04, "#7a2a20", -0.4);
-      box(0.03, 0.18, 0.26, "#9aa0a6", -0.8, 0.1);
-      g.rotation.x = -Math.PI / 2;
-      return g;
-    case "hammer": {
+/** Held-item geometry, one merged vertex-coloured mesh per item (built once, shared). */
+const heldGeometry = new Map<string, THREE.BufferGeometry | null>();
+let heldMaterial: THREE.MeshStandardMaterial | null = null;
+
+type Part = { w: number; h: number; d: number; color: string; y: number; z?: number; rotX?: number };
+
+const HELD: Record<string, { parts: Part[]; rotX: number }> = {
+  pistol: {
+    // Barrel (local +z) points out of the fist along the forearm.
+    rotX: Math.PI / 2,
+    parts: [
+      { w: 0.03, h: 0.11, d: 0.045, color: "#1d1d1d", y: -0.02 },
+      { w: 0.032, h: 0.05, d: 0.19, color: "#262626", y: 0.025, z: 0.07 },
+    ],
+  },
+  baseball_bat: {
+    rotX: -Math.PI / 2,
+    parts: [
+      { w: 0.04, h: 0.85, d: 0.04, color: "#8a6a42", y: -0.38 },
+      { w: 0.065, h: 0.35, d: 0.065, color: "#8a6a42", y: -0.7 },
+    ],
+  },
+  fire_axe: {
+    rotX: -Math.PI / 2,
+    parts: [
+      { w: 0.04, h: 0.9, d: 0.04, color: "#7a2a20", y: -0.4 },
+      { w: 0.03, h: 0.18, d: 0.26, color: "#9aa0a6", y: -0.8, z: 0.1 },
+    ],
+  },
+  hammer: {
+    rotX: -Math.PI / 2,
+    parts: [
       // 0.33 m hickory handle, thicker at the grip and slimming towards the head.
-      box(0.032, 0.17, 0.026, "#9a7a52", -0.045);
-      box(0.024, 0.16, 0.019, "#9a7a52", -0.21);
-      // Steel head across the end: striking face on the axe-blade side (+z), claw behind.
-      const steel = "#5d6166";
-      box(0.024, 0.028, 0.06, steel, -0.3, 0.01, 0.6);
-      box(0.03, 0.03, 0.015, steel, -0.3, 0.0475, 0.6);
-      // The claw tilts back towards the grip, suggesting its curve.
-      const claw = box(0.022, 0.012, 0.042, steel, -0.296, -0.038, 0.6);
-      claw.rotation.x = 0.4;
-      g.rotation.x = -Math.PI / 2;
-      return g;
+      { w: 0.032, h: 0.17, d: 0.026, color: "#9a7a52", y: -0.045 },
+      { w: 0.024, h: 0.16, d: 0.019, color: "#9a7a52", y: -0.21 },
+      // Steel head across the end: striking face on the axe-blade side (+z), claw behind, tilted back.
+      { w: 0.024, h: 0.028, d: 0.06, color: "#5d6166", y: -0.3, z: 0.01 },
+      { w: 0.03, h: 0.03, d: 0.015, color: "#5d6166", y: -0.3, z: 0.0475 },
+      { w: 0.022, h: 0.012, d: 0.042, color: "#5d6166", y: -0.296, z: -0.038, rotX: 0.4 },
+    ],
+  },
+  kitchen_knife: {
+    rotX: -Math.PI / 2,
+    parts: [
+      { w: 0.025, h: 0.1, d: 0.025, color: "#222222", y: -0.03 },
+      { w: 0.012, h: 0.19, d: 0.035, color: "#c0c4c8", y: -0.16 },
+    ],
+  },
+};
+
+function buildHeld(id: string): THREE.BufferGeometry | null {
+  const def = HELD[id];
+  if (!def) return null;
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const m = new THREE.Matrix4();
+  const nm = new THREE.Matrix3();
+  for (const part of def.parts) {
+    const box = new THREE.BoxGeometry(part.w, part.h, part.d);
+    m.makeRotationX(part.rotX ?? 0).setPosition(0, part.y, part.z ?? 0);
+    box.applyMatrix4(m);
+    nm.getNormalMatrix(m);
+    const c = new THREE.Color(part.color).convertSRGBToLinear();
+    const base = pos.length / 3;
+    const bp = box.getAttribute("position");
+    const bn = box.getAttribute("normal");
+    for (let i = 0; i < bp.count; i++) {
+      pos.push(bp.getX(i), bp.getY(i), bp.getZ(i));
+      nor.push(bn.getX(i), bn.getY(i), bn.getZ(i));
+      col.push(c.r, c.g, c.b);
     }
-    case "kitchen_knife":
-      box(0.025, 0.1, 0.025, "#222", -0.03);
-      box(0.012, 0.19, 0.035, "#c0c4c8", -0.16);
-      g.rotation.x = -Math.PI / 2;
-      return g;
-    default:
-      return null;
+    for (const i of box.getIndex()!.array) idx.push(base + i);
+    box.dispose();
   }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+/** The mesh for an item held in the hand: one draw call, geometry and material shared. */
+export function makeHeldItem(id: string): THREE.Object3D | null {
+  if (!heldGeometry.has(id)) heldGeometry.set(id, buildHeld(id));
+  const geo = heldGeometry.get(id);
+  if (!geo) return null;
+  heldMaterial ??= new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.3 });
+  const mesh = new THREE.Mesh(geo, heldMaterial);
+  mesh.castShadow = true;
+  const g = new THREE.Group();
+  g.add(mesh);
+  g.rotation.x = HELD[id].rotX;
+  return g;
 }

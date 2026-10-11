@@ -26,7 +26,7 @@ const INSTALL_FINGERPRINT = () => {
     inventory: g.inventory.map((s) => `${s.id}x${s.count}${s.fuel !== undefined ? `@${s.fuel}` : ""}`).sort(),
     equipped: g.equippedStack()?.id ?? null,
     kills: g.kills,
-    zombies: g.zombies.map((z) => `${z.seed}:${z.state}:${r(z.pos.x)},${r(z.pos.z)}:${r(z.hp)}:${z.breach}`).sort(),
+    zombies: g.zombies.map((z) => `${z.seed}:${z.role}:${z.state}:${r(z.pos.x)},${r(z.pos.z)}:${r(z.hp)}:${z.breach}:${z.model.appearance.top.id}`).sort(),
     barriers: JSON.stringify(g.barriers.world),
     colliders: g.barriers.slots.map((s) => (g.colliders.boxes[s.collider].enabled !== false ? 1 : 0) + (s.box.occludes ? 2 : 0)).join(""),
     nav: Array.from(g.nav.cost).reduce((h, v, i) => (h * 31 + v * (i + 1)) % 1000000007, 7),
@@ -134,5 +134,26 @@ const refused = await p.evaluate(async () => {
   return { damaged: m1, otherTown: m2, zombiesKept: g.zombies.length === zBefore, statusAfter: g.status };
 });
 console.log("H11b", JSON.stringify(refused));
+
+// H11c: a save from before zombies had roles (v1) still loads: every gameplay value is kept,
+// and who each zombie was is inferred from where it stands.
+const migrated = await p.evaluate(async () => {
+  const g = window.__game;
+  const gameplay = () => g.zombies.map((z) => [z.seed, z.state, Math.round(z.pos.x * 1000), Math.round(z.pos.z * 1000), z.hp, z.runner, z.walkSpeed, z.chaseSpeed, z.model.root.scale.y].join(":")).sort();
+  await g.loadGame("1");
+  const before = gameplay();
+  const old = JSON.parse((await g.saves.read("1")).data);
+  old.version = 1;
+  old.meta.version = 1;
+  for (const z of old.zombies) delete z.role;
+  await g.saves.write({ slot: "3", meta: old.meta, data: JSON.stringify(old) });
+  await g.loadGame("3");
+  const after = gameplay();
+  const roles = {};
+  for (const z of g.zombies) roles[z.role] = (roles[z.role] ?? 0) + 1;
+  await g.deleteSave("3");
+  return { loaded: g.status, gameplaySame: JSON.stringify(before) === JSON.stringify(after), roles, msg: g.messages.at(-1)?.text };
+});
+console.log("H11c", JSON.stringify(migrated));
 console.log("errors:", errs.length ? errs.slice(0, 6) : "none");
 await b.close();

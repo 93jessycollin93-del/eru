@@ -5,6 +5,7 @@ import { makeHeldItem } from "./entities/humanoid";
 import { Zombie, type NoiseEvent } from "./entities/zombie";
 import { Input } from "./input";
 import { FISTS, ITEMS, makeStack, peekNextUid, rollLoot, setNextUid, stackWeight, type ItemDef, type ItemStack } from "../sim/items";
+import { chooseRole, playerGear, resolveRole, siteAt, townRect, type SpawnSite } from "../sim/appearance";
 import { SAVE_VERSION, SaveError, deserialise, serialise, townFingerprint, type SaveData, type SaveMeta } from "../sim/save";
 import { SaveStore, type SlotId } from "./saveStore";
 import { mulberry32, pick, range } from "../sim/rng";
@@ -162,6 +163,8 @@ export class Game {
   private rayHit: RayHit = { box: null };
   /** Car tanks as the town was generated, for a new game. */
   private initialFuel = new Map<number, number>();
+  /** The town's buildings' bounds plus a margin: inside is "street", outside is "woods". */
+  private townBounds = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
   private saves = new SaveStore();
   private saveList: { slot: SlotId; meta: SaveMeta }[] = [];
   /** Slots that failed to load this session (Continue skips them; the menus offer Delete). */
@@ -251,6 +254,7 @@ export class Game {
       if (acs) this.controllers.push({ hostname: acs.hostname, building: b });
     }
     for (const c of this.town.containers) if (c.fuel !== undefined) this.initialFuel.set(c.id, c.fuel);
+    this.townBounds = townRect(this.town.buildings.map((b) => b.rect));
     this.townPrint = townFingerprint([
       ...this.barriers.specs.map((b) => `${b.kind}:${b.build}:${b.role}`),
       ...this.town.containers.map((c) => `${c.id}:${c.table}`),
@@ -313,14 +317,15 @@ export class Game {
       const p = pick(this.rng, this.town.spawnPoints);
       const pos = new THREE.Vector3(p.x + range(this.rng, -3, 3), 0, p.z + range(this.rng, -3, 3));
       if (pos.distanceTo(spawn) < 45) continue;
-      this.spawnZombie(pos);
+      // Who they were depends on where they died: the spawn point, before the jitter pushes it through a wall.
+      this.spawnZombie(pos, this.siteAt(p.x, p.z));
     }
     // A few stragglers in the woods along the highway.
     for (let i = 0; i < 12; i++) {
       const x = range(this.rng, -280, 280);
       const z = range(this.rng, -40, 40);
       if (Math.abs(x - spawn.x) < 50) continue;
-      this.spawnZombie(new THREE.Vector3(x, 0, z));
+      this.spawnZombie(new THREE.Vector3(x, 0, z), this.siteAt(x, z));
     }
 
     this.status = "playing";
@@ -1242,7 +1247,8 @@ export class Game {
     this.barriers.world = d.barriers;
     this.barriers.syncAll();
     for (const zs of d.zombies) {
-      const z = Zombie.fromSave(zs);
+      // Zombies from v1 saves had no role: who they were follows from where they are.
+      const z = Zombie.fromSave(zs, zs.role === null ? chooseRole(zs.seed, this.siteAt(zs.pos[0], zs.pos[2])) : resolveRole(zs.role));
       this.zombies.push(z);
       this.scene.add(z.model.root);
     }
@@ -1404,6 +1410,7 @@ export class Game {
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
       this.hudTimer = 0.1;
+      this.wearGear();
       this.emitHud();
     }
     this.input.endFrame();
@@ -1927,9 +1934,17 @@ export class Game {
 
   // -------------------------------------------------------------- zombies
 
-  private spawnZombie(pos: THREE.Vector3) {
+  /** Who you'd find at a spot (see siteAt in sim/appearance). Draws no random numbers. */
+  private siteAt(x: number, z: number): SpawnSite {
+    return siteAt(x, z, this.town.buildings, this.townBounds);
+  }
+
+  /** `who` is the spawn site (the role is rolled from the zombie's own seed) or "survivor" for the player turning. */
+  private spawnZombie(pos: THREE.Vector3, who: SpawnSite | "survivor") {
     pos.y = this.terrain.height(pos.x, pos.z);
-    const z = new Zombie(pos, Math.floor(this.rng() * 4294967296));
+    // Exactly one game-rng draw per zombie, as always: everything else comes from its seed.
+    const seed = Math.floor(this.rng() * 4294967296);
+    const z = new Zombie(pos, seed, who === "survivor" ? "survivor" : chooseRole(seed, who));
     this.zombies.push(z);
     this.scene.add(z.model.root);
     return z;
@@ -2108,6 +2123,7 @@ export class Game {
       const d = z.pos.distanceTo(p.pos);
       z.model.root.visible = d < 115;
       z.model.setShadows(d < 40);
+      z.model.setDetail(d < 25);
       if (d > ZOMBIE_ACTIVE_RANGE && z.alive) continue;
       const wasHunting = z.hunting;
       z.update(ctx);
@@ -2156,7 +2172,7 @@ export class Game {
         const inside = this.buildingObj(sp.x, sp.z);
         if (inside && this.barriers.sealed(inside.address)) continue;
         if (this.colliders.lineOfSight(sp.x, 1.6, sp.z, p.pos.x, p.pos.y + 1.6, p.pos.z) && sp.distanceTo(p.pos) < 100) continue;
-        this.spawnZombie(sp.clone().add(new THREE.Vector3(range(this.rng, -2, 2), 0, range(this.rng, -2, 2))));
+        this.spawnZombie(sp.clone().add(new THREE.Vector3(range(this.rng, -2, 2), 0, range(this.rng, -2, 2))), this.siteAt(sp.x, sp.z));
         break;
       }
     }
@@ -2211,7 +2227,7 @@ export class Game {
     // Project Zomboid rules: the infected come back.
     this.turned = cause === "The infection took you";
     if (this.turned) {
-      const corpse = this.spawnZombie(this.player.pos.clone());
+      const corpse = this.spawnZombie(this.player.pos.clone(), "survivor");
       corpse.yaw = this.player.bodyYaw;
       this.player.model.root.visible = false;
     }
@@ -2469,6 +2485,12 @@ export class Game {
 
   private carryWeight() {
     return this.inventory.reduce((w, s) => w + stackWeight(s), 0);
+  }
+
+  /** What you carry shows on your body: holstered pistol, slung bat or axe, knife sheath, a pack once you're loaded. */
+  private wearGear() {
+    const load = this.inventory.reduce((w, s) => w + (["melee", "firearm"].includes(ITEMS[s.id].category) ? 0 : stackWeight(s)), 0);
+    this.player.model.setGear(playerGear(this.inventory, this.equippedStack()?.id ?? null, load));
   }
 
   private hotbar() {

@@ -22,7 +22,7 @@ function sample(): SaveData {
     respawnTimer: 12,
     nextUid: 99,
     zombies: [
-      { seed: 42, pos: [5, 0, 5], yaw: 1, state: "chase", hp: 60, awareness: 1.2, target: [1, 0, 2], stateTimer: 3, lastSeen: 0.4, deadTime: 0, downTimer: 0, breach: 20, clamber: null },
+      { seed: 42, role: "police", pos: [5, 0, 5], yaw: 1, state: "chase", hp: 60, awareness: 1.2, target: [1, 0, 2], stateTimer: 3, lastSeen: 0.4, deadTime: 0, downTimer: 0, breach: 20, clamber: null },
     ],
     containers: [{ id: 3, items: [makeStack("water_bottle")] }, { id: 9, items: null, fuel: 1.5 }],
     ground: [{ id: 100002, pos: [3, 0.1, 4], items: [makeStack("plank", 2)] }],
@@ -78,6 +78,28 @@ describe("save file", () => {
     expect(() => deserialise(serialise(d), SEED, "00000000")).toThrow(/town changed/);
     // The earliest saves carry no fingerprint: they load.
     expect(() => deserialise(serialise(sample()), SEED, town)).not.toThrow();
+  });
+});
+
+describe("migration", () => {
+  it("v1 saves load: zombies get no role (inferred on load), nothing else changes", () => {
+    const d = JSON.parse(serialise(sample()));
+    d.version = 1;
+    d.meta.version = 1;
+    delete d.zombies[0].role;
+    const back = deserialise(JSON.stringify(d), SEED);
+    expect(back.version).toBe(SAVE_VERSION);
+    expect(back.meta.version).toBe(SAVE_VERSION);
+    expect(back.zombies[0].role).toBe(null);
+    expect(back.zombies[0].seed).toBe(42);
+    expect(back.zombies[0].hp).toBe(60);
+  });
+
+  it("a zombie with a broken role is damage, a v2 role round-trips", () => {
+    const d = JSON.parse(serialise(sample()));
+    expect(deserialise(JSON.stringify(d), SEED).zombies[0].role).toBe("police");
+    d.zombies[0].role = 7;
+    expect(() => validate(d, SEED)).toThrow(/zombie/);
   });
 });
 

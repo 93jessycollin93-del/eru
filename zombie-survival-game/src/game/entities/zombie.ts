@@ -1,5 +1,7 @@
 import * as THREE from "three";
-import { mulberry32, pick, range } from "../../sim/rng";
+import { range } from "../../sim/rng";
+import { resolveRole, rollAppearance, type RoleId } from "../../sim/appearance";
+import { rollZombieTraits } from "../../sim/zombies";
 import type { ZombieAccess } from "../../sim/barriers";
 import type { SavedZombie, Vec3 } from "../../sim/save";
 import { BARRIER, SENSES, WINDOW, ZOMBIE, sightRate } from "../../sim/tuning";
@@ -70,12 +72,6 @@ export interface ZombieContext {
   clamberPoints: (z: Zombie, id: number) => { from: THREE.Vector3; to: THREE.Vector3; dur: number; peak: number } | null;
 }
 
-// Grey-green, waxy skin; clothes from ordinary life, now filthy.
-const SKINS = ["#8c9180", "#9a9584", "#7f8676", "#a39a88", "#868b7e", "#8d8478"];
-const HAIR = ["#1f1a16", "#3a2c22", "#5a4a3a", "#7a6a55", "#2a2a2a", "#8a8070"];
-const SHIRTS = ["#4d4a44", "#5a3e34", "#3c4a55", "#6b6452", "#7a6b5a", "#3e3a36", "#58584f", "#6d3030"];
-const PANTS = ["#2f3238", "#3a3530", "#46413a", "#2b3340", "#4a4a40"];
-
 const SENSE_INTERVAL = 0.2;
 /** Feeler angles tried when the way ahead is blocked. */
 const STEER_ANGLES = [0.6, -0.6, 1.2, -1.2, 1.8, -1.8];
@@ -130,33 +126,22 @@ export class Zombie {
   private noClimb = { id: -1, t: 0 };
 
   /**
-   * Everything about who this zombie was (looks, build, gait, runner or not)
-   * comes from `seed`, so a saved zombie comes back as the same person.
+   * Everything about who this zombie was comes from `seed` and `role`: how it
+   * moves (zombies.ts) and what it looks like (appearance.ts), so a saved
+   * zombie comes back as the same person.
    */
   constructor(
     position: THREE.Vector3,
     readonly seed: number,
+    readonly role: RoleId = "civilian",
   ) {
-    const rng = mulberry32(seed);
     this.pos = position.clone();
     this.lastPos.copy(this.pos);
-    const r = rng();
-    this.model = new Humanoid(
-      { skin: pick(rng, SKINS), shirt: pick(rng, SHIRTS), pants: pick(rng, PANTS), shoes: "#1e1c1a", hair: pick(rng, HAIR) },
-      {
-        zombie: true,
-        sex: rng() < 0.42 ? "f" : "m",
-        build: r < 0.3 ? "slim" : r < 0.8 ? "average" : "heavy",
-        sleeve: pick(rng, [0.3, 0.5, 0.95, 1]),
-        hair: rng() < 0.15 ? 0 : 0.5 + rng() * 0.5,
-        grime: 0.6 + rng() * 0.4,
-        blood: 0.35 + rng() * 0.65,
-        height: 0.93 + rng() * 0.12,
-      },
-    );
-    this.walkSpeed = range(rng, ...ZOMBIE.wanderSpeed);
-    this.runner = rng() < ZOMBIE.runnerChance;
-    this.chaseSpeed = this.runner ? range(rng, ...ZOMBIE.runnerSpeed) : range(rng, ...ZOMBIE.chaseSpeed);
+    const traits = rollZombieTraits(seed);
+    this.model = new Humanoid(rollAppearance(seed, role, { zombie: true, fresh: traits.runner }), { zombie: true, height: traits.height });
+    this.walkSpeed = traits.walkSpeed;
+    this.runner = traits.runner;
+    this.chaseSpeed = traits.chaseSpeed;
     this.model.root.position.copy(this.pos);
   }
 
@@ -170,6 +155,7 @@ export class Zombie {
     const c = this.clamber;
     return {
       seed: this.seed,
+      role: this.role,
       pos: v(this.pos),
       yaw: this.yaw,
       state: this.state,
@@ -185,9 +171,10 @@ export class Zombie {
     };
   }
 
-  static fromSave(d: SavedZombie): Zombie {
+  /** `role` overrides the saved one (v1 saves have none; the game infers it from where the zombie stands). */
+  static fromSave(d: SavedZombie, role: RoleId = resolveRole(d.role)): Zombie {
     const v = (a: Vec3) => new THREE.Vector3(a[0], a[1], a[2]);
-    const z = new Zombie(v(d.pos), d.seed);
+    const z = new Zombie(v(d.pos), d.seed, role);
     z.yaw = d.yaw;
     z.state = d.state;
     z.hp = d.hp;

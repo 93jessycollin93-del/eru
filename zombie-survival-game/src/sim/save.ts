@@ -12,7 +12,7 @@ import type { ComputerPhase } from "./computer";
 import type { ItemStack } from "./items";
 import type { PowerWorld } from "./power";
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export type Vec3 = [number, number, number];
 
@@ -33,6 +33,8 @@ export interface SaveMeta {
 
 export interface SavedZombie {
   seed: number;
+  /** Who they were (police officer, store clerk...): looks come from seed + role. Added in v2; null for zombies from v1 saves (inferred from where they stand when loaded). */
+  role: string | null;
   pos: Vec3;
   yaw: number;
   state: "idle" | "wander" | "investigate" | "chase" | "down" | "dead";
@@ -118,13 +120,20 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
 
 /**
  * Bring an older save up to the current version. Each step takes the
- * previous version's shape to the next; there is only version 1 so far.
+ * previous version's shape to the next.
  */
 export function migrate(raw: unknown): unknown {
   if (!isObj(raw) || !isNum(raw.version)) throw new SaveError("This file isn't a save from this game.");
   if (raw.version > SAVE_VERSION) throw new SaveError("This save comes from a newer version of the game.");
-  // Future: if (raw.version === 1) raw = v1to2(raw); ...
+  if (raw.version === 1) v1to2(raw);
   return raw;
+}
+
+/** v2: zombies remember who they were. v1 zombies had no role: it's inferred from where they are when loaded. */
+function v1to2(raw: Record<string, unknown>) {
+  if (Array.isArray(raw.zombies)) for (const z of raw.zombies) if (isObj(z) && z.role === undefined) z.role = null;
+  if (isObj(raw.meta)) raw.meta.version = 2;
+  raw.version = 2;
 }
 
 /** FNV-1a over the town's parts, as 8 hex digits. */
@@ -163,7 +172,7 @@ export function validate(raw: unknown, worldSeed: number, town?: string): SaveDa
   if (!isNum(raw.nextUid)) bad("item counter");
   if (!Array.isArray(raw.zombies)) bad("zombies");
   for (const z of raw.zombies as unknown[]) {
-    if (!isObj(z) || !isNum(z.seed) || !isVec(z.pos) || typeof z.state !== "string" || !isNum(z.hp)) bad("zombie");
+    if (!isObj(z) || !isNum(z.seed) || !isVec(z.pos) || typeof z.state !== "string" || !isNum(z.hp) || (z.role !== null && typeof z.role !== "string")) bad("zombie");
   }
   if (!Array.isArray(raw.containers) || !Array.isArray(raw.ground) || !Array.isArray(raw.computers)) bad("world objects");
   const power = raw.power;

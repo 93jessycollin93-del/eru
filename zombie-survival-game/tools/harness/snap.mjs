@@ -6,7 +6,7 @@ const p = await b.newPage({ viewport: { width: 640, height: 360 } });
 const errs = [];
 p.on("pageerror", (e) => errs.push("pageerror: " + e.message));
 await p.goto(`http://127.0.0.1:${port}`);
-await p.getByRole("button", { name: "Begin" }).waitFor({ timeout: 120000 });
+await p.getByRole("button", { name: /Begin|New game/ }).waitFor({ timeout: 120000 });
 const snap = await p.evaluate(() => {
   const g = window.__game;
   g.renderer.setAnimationLoop(null);
@@ -20,6 +20,15 @@ const snap = await p.evaluate(() => {
     facts: g.town.facts,
     hosts: g.town.buildings.filter((b) => b.network).map((b) => b.network.hosts.map((h) => `${h.ip} ${h.hostname} ${(h.def?.users ?? []).map((u) => u.password).join(",")}`)),
   };
+});
+// H14: start a game; every zombie's seed, place and gameplay traits, and the game rng position, must not change.
+await p.getByRole("button", { name: /Begin|New game/ }).click();
+await p.waitForTimeout(300);
+snap.zombies = await p.evaluate(() => {
+  const g = window.__game;
+  g.renderer.setAnimationLoop(null);
+  const r = (v) => Math.round(v * 1e6) / 1e6;
+  return { rng: g.rng.state(), list: g.zombies.map((z) => [z.seed, r(z.pos.x), r(z.pos.z), z.runner, r(z.walkSpeed), r(z.chaseSpeed), r(z.model.root.scale.y)]) };
 });
 console.log(JSON.stringify({ snap, errs }));
 await b.close();

@@ -6,6 +6,7 @@ import { WORLD_HALF } from "../world/terrain";
 import { aimSway, createBody, mobility, spendStamina, type BodyState } from "../../sim/body";
 import { FIREARM, FOOTSTEPS, MOVE, STAMINA } from "../../sim/tuning";
 import { Humanoid } from "./humanoid";
+import { PLAYER_APPEARANCE } from "../../sim/appearance";
 
 const RADIUS = 0.35;
 const HEIGHT = 1.8;
@@ -14,10 +15,7 @@ const MOUSE_SENS = 0.0022;
 export type Gait = "still" | "crouch" | "walk" | "jog" | "sprint";
 
 export class Player {
-  readonly model = new Humanoid(
-    { skin: "#c49a78", shirt: "#5a6148", pants: "#3e4a5c", shoes: "#3a3128", hair: "#3b2e24" },
-    { build: "average", sex: "m", sleeve: 1, hair: 0.85, grime: 0.2 },
-  );
+  readonly model = new Humanoid(structuredClone(PLAYER_APPEARANCE), { zombie: false });
   readonly pos = new THREE.Vector3();
   /** Horizontal velocity (m/s). */
   readonly vel = new THREE.Vector3();
