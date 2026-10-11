@@ -27,7 +27,16 @@ See [ROADMAP.md](ROADMAP.md) for the 20-session plan.
 | Lights on/off (inside a building) | L |
 | Switch weapons | 1–5, 0 to holster |
 | Flashlight | F |
-| Pause | Esc |
+| Pause (save and load from here) | Esc |
+
+### Saving
+
+- **Continue** on the title screen loads your newest save. **New game** starts a fresh run.
+- **Esc** pauses: save to slot 1, 2 or 3, load any slot, or delete one.
+- **Autosave** writes the "auto" slot every 2 minutes of play, when you lie down to sleep, and when you switch away from the tab, but never while a zombie is hunting you, a menu is open, or you're mid-climb or mid-hammer.
+- **Death is permanent:** dying erases the autosave. Your own slots are kept, so a manual save is a deliberate checkpoint.
+- Saves live in the browser (IndexedDB). In a private window, or with site data blocked, saves only last until you close the tab, and the menu says so.
+- A save holds everything that changed: your body, wounds and inventory, every zombie, opened containers and dropped piles, boarded and broken doors and windows, generators and fuel, and logged-in terminal sessions (even an open ssh session).
 
 ### How the mechanics are tuned
 
@@ -78,12 +87,14 @@ src/
     tuning.ts          Every gameplay number, with design targets in tuning.test.ts
     power.ts           Building circuits, grid, generators (fuel, breakers, auto-start), UPS
     items.ts           Item definitions and loot tables
-    rng.ts             Seeded random numbers
+    rng.ts             Seeded random numbers (with a saveable position)
+    save.ts            The save file: versioned plain JSON, migration and validation
   game/
     Game.ts            Main loop: connects world, player, zombies, combat, loot and HUD
     audio.ts           Synthesised sound effects
     input.ts           Keyboard and mouse
     electricity.ts     Runtime power: generator objects, interior lights, generator noise, light lure
+    saveStore.ts       Save slots in IndexedDB (memory fallback when storage is blocked)
     entities/
       player.ts        Movement, stamina, survival stats, third-person camera
       zombie.ts        Zombie senses and behaviour

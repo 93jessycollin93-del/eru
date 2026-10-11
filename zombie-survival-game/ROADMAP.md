@@ -75,10 +75,10 @@ Each session below is roughly one working session. The order can change based on
 - Hordes that migrate across the map; noise draws crowds
 - Zombies remember the last place they heard something
 
-## Session 5: Saving and persistence
-- Save and load to the browser (IndexedDB)
-- Looted containers, dropped items, corpses and barricades persist
-- Several save slots
+## Session 5 (done in session 8): Saving and persistence ✅
+- Save and load to the browser (IndexedDB), versioned plain-JSON save files that are validated on load
+- Looted containers, dropped items, zombies (alive, down or dead), barricades, broken glass, generators and terminal sessions persist
+- Three manual slots plus an autosave; the autosave is erased on death (permadeath)
 
 ## Session 6: Inventory 2.0
 - DayZ-style grid inventory with clothing slots: backpack, jacket, pants pockets, vest

@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: session 7 — doors, windows, barricades, access control (2026-10-10)_
+_Last updated: session 8 — saving, plus review fixes for doors and access control (2026-10-11)_
 
 ## The project
 
@@ -50,7 +50,7 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - Software rendering runs at about 2 fps, so test logic by stepping the simulation: call `renderer.setAnimationLoop(null)`, then call `g.update(1/30)` in a loop.
 - For screenshots, call `g.renderer.render(g.scene, g.camera)` after positioning the player.
 
-**Committed harness:** `tools/harness/` (see its README): `doors.mjs` runs the door/window/barricade/police scenarios H0–H8, `perf.mjs` measures draw calls and AI cost, `snap.mjs` snapshots everything the town random stream decides (diff it against an older commit's build to prove determinism). Copy their pattern for new systems.
+**Committed harness:** `tools/harness/` (see its README): `doors.mjs` runs the door/window/barricade/police scenarios H0–H12 (H9 loot through walls, H10 hiding behind a glass door, H12 aiming at windows over counters), `save.mjs` runs H11 (change everything → save → reload the page → load → compare a whole-world fingerprint) and H11b (a damaged save is refused with a message), `perf.mjs` measures draw calls and AI cost, `snap.mjs` snapshots everything the town random stream decides (diff it against an older commit's build to prove determinism). Copy their pattern for new systems.
 
 **Gotchas:**
 - Don't run `pkill -f vite`; it kills the calling shell. Run servers as background tasks instead.
@@ -69,7 +69,9 @@ In dev builds, `window.__game` exposes the `Game` instance.
 | `src/sim/barriers.ts` | **Engine-agnostic doors/windows/barricades.** `Barrier` state (open, latch, bolted, electronic lock, glass, damage, broken, boards + side). Layered `hitBarrier` (near boards → core → far boards), `coreStrength` (min of leaf and hold), `zombieAccess` (passable/pushable/climbable/blocking), `colliderEnabled`, `occludes`, `navCost`, door actions (free egress from side -1), glass (`climbCut`), boards (`boardCost`, `canBoard`, `addBoard`, `removeBoard`), electric locks (`setLockPower`, `lockCommand`, `keypadEnter`, `tickBarrier`). `createBarrierWorld(seeds, rng)` draws exactly 2 numbers per barrier. Side +1 = the spec normal's side (street / main room) |
 | `src/sim/power.ts` | **Engine-agnostic power**: `PowerWorld` (gridFailsAt, circuits keyed by building address, generators), `stepPower` resolves grid → generator → UPS (critical loads only), burns fuel (`fuelPerHour`), trips breakers, auto-starts standby units; `defaultLoads(type)` per building type |
 | `src/sim/climate.ts` | Air temperature by time of day, day number and shelter |
-| `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables; seeded RNG |
+| `src/sim/items.ts`, `src/sim/rng.ts` | Item data and loot tables (`peekNextUid`/`setNextUid` for saves); seeded RNG (`mulberry32` returns a `SeededRng` with `state()`/`setState()`) |
+| `src/sim/save.ts` | **The save file.** `SaveData` is versioned plain JSON (`SAVE_VERSION`) holding only what the seed can't rebuild: clock, game rng position, player (pos, body, inventory), zombies (by seed), opened containers, ground piles, terminal sessions (`SavedComputer`, minus the machine def), power world + portable generator positions, and the barrier world. `migrate` (step-by-step upgrades), `validate` (throws `SaveError` naming the damaged part), `serialise`/`deserialise`, `trimScreen` |
+| `src/game/saveStore.ts` | `SaveStore`: IndexedDB DB "zombie-survival", store "saves", slots `auto`/`1`/`2`/`3`; one transaction per write; falls back to memory and sets `persistent = false` when storage is refused |
 | `src/game/Game.ts` | Main loop and orchestration: pointer lock, combat, looting, inventory, zombie management, HUD emission (10 Hz via `onHud`) |
 | `src/game/entities/player.ts` | Movement, stamina, jump/gravity, survival stat drain, over-the-shoulder camera with collision |
 | `src/game/entities/zombie.ts` | Zombie AI. States: idle, wander, investigate, chase, dead. Senses run every 0.25 s: sight cone + line of sight, footsteps, noise events |
@@ -97,6 +99,14 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - The `zombieContext()` visibility formula in `Game.ts`
 
 ## Status
+
+**Session 8 (saving) is complete and pushed.**
+- Format: `src/sim/save.ts` (see the code map). Zombies are rebuilt from their seed (`Zombie.toSave`/`fromSave`; each zombie owns `mulberry32(seed)`), so the save never carries meshes. The game's own rng position is saved, so a loaded run continues the same random stream. Terminal lockouts are stored as real milliseconds left.
+- `Game.resetRun()` is shared by `start()` and loading; `toSave()`/`applySave()` are the two halves; `Electricity.toSave()/restore()` and `saveComputer()/restoreComputer()` do their parts; `barriers.syncAll()` rebuilds colliders, nav costs and meshes from the barrier world.
+- Autosave ("auto" slot): every 120 real seconds (`AUTOSAVE_SECONDS`) when nothing is hunting you, no UI is open, and you're not mid-climb or mid-action; on lying down to sleep; when the tab is hidden. **Permadeath:** dying deletes the autosave; manual slots 1–3 are kept. This is my reading of "permadeath" plus "saving"; ask the owner if they want slots erased too (pure permadeath) or the autosave kept (no permadeath).
+- UI: title screen Continue (newest save) / New game / load list; pause menu save, overwrite, load, delete; death screen load list. A warning shows when the browser won't persist saves.
+- Verified: `save.mjs` H11 gives an identical fingerprint after a page reload (clock, rng, player, body, inventory, zombies, barriers, colliders, nav costs, containers, car fuel, ground piles, police terminal session, power world, generators); H11b refuses a damaged save with a message; 6 unit tests in `save.test.ts` plus rng golden values in `rng.test.ts`.
+- A review pass after session 7 fixed: door leaves sitting on the step/floor; burst doors hanging inside the frame; crosshair-first targeting (`aimed()`); no looting through walls or glass (`inReach()`); windows over counters targetable; zombie breach/noise handling.
 
 **Session 7 (doors, windows, barricades, access control) is complete and pushed.**
 - Design: a 3-approach judge panel produced the spec (kept in the session scratchpad; the decisions are summarised in DESIGN.md "Matter and objects" and "Access control").
@@ -183,7 +193,7 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 ### Known issues / not yet done
 - Frame rate has not been measured on a real GPU. There are about 670 draw calls; zombies are about 13 meshes each, which is the main cost. Shadows are skipped beyond 40 m and zombies are hidden beyond 115 m.
 - Barriers: keys/lockpicking, openable sash windows, crowbars, holding cells, sound occlusion by closed doors, and zombies reaching through gaps between boards are deferred (see ROADMAP).
-- No saving yet (next). The barrier world is plain JSON and `BarrierSystem.syncAll()` is the restore path.
+- Saving: corpses are saved as dead zombies (they still despawn on the normal timer). There is no cloud sync or export/import of save files yet.
 - No mobile/touch controls.
 - When pointer lock is refused twice after clicks, the game falls back to free-mouse mode.
 
@@ -193,8 +203,8 @@ Session 1 is also complete. Everything in ROADMAP "Session 1" works and was veri
 2. Ask the owner if anything felt off when playing the artifact (performance, controls, difficulty).
 3. **Recommended next, in order (owner approved this order):**
    - ~~(b) Doors and access control~~ done in session 7.
-   - **(c) Saving** (serialise `BodyState`, inventory, computers (state incl. remote sessions), containers and ground piles, the power world and generators, the barrier world (`barriers.world` + `syncAll()`), zombies, clock). IndexedDB, several slots.
-   - **(d) Character detail pass:** face textures, clothing variety (jackets, hoodies, uniforms on police zombies), carried gear visible on the body.
+   - ~~(c) Saving~~ done in session 8. When adding new state anywhere, add it to `SaveData` (bump `SAVE_VERSION` and write a `migrate` step if the shape changes) and to `save.mjs`'s fingerprint.
+   - **(d) Character detail pass (next):** face textures, clothing variety (jackets, hoodies, uniforms on police zombies), carried gear visible on the body. Keep it deterministic per zombie seed (the save rebuilds zombies from their seed).
    Note for (a): **Characters and animation** (roadmap session 7, pulled forward).** The blocky people are now the biggest gap against the Tarkov look. `raw.githubusercontent.com` is reachable, so look for CC0 rigged glTF characters hosted on GitHub. Then do doors, windows and barricades (session 3b) and saving. Put any new rules in `src/sim/`.
 4. (Old note, kept for session 7) **Characters and animation**: Use rigged glTF models (CC0, e.g. Quaternius), loaded with `GLTFLoader`, with an `AnimationMixer` per character. Keep the `Humanoid` interface (`root`, `hand`, `animate()`, `fall()`) so `Player` and `Zombie` barely change. Check that model hosts are reachable through the network proxy; if they're blocked, the owner may need to download the assets.
 5. Before ending: run `npm test` and `npm run build`, commit, push, update the artifact, and update this file.
