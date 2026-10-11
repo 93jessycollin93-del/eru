@@ -473,12 +473,21 @@ export class BarrierSystem {
       // d: from the hinge to the free edge; back: the thickness direction (into the reveal when closed).
       const d = new THREE.Vector3().copy(s.along).multiplyScalar(-leaf.hinge * Math.cos(theta)).addScaledVector(swingN, Math.sin(theta));
       const back = new THREE.Vector3().copy(swingN).multiplyScalar(-Math.cos(theta)).addScaledVector(s.along, -leaf.hinge * Math.sin(theta));
-      pivot.addScaledVector(back, leaf.thick / 2).setY(0.01);
+      pivot.addScaledVector(back, leaf.thick / 2).setY(leafBase(s.spec));
       const yaw = Math.atan2(-d.z, d.x);
       tmpM.makeRotationY(yaw).setPosition(pivot);
       if (broken) {
-        // Hanging off the top hinge with the bottom one torn out.
-        tmpM2.makeTranslation(0, leaf.height, 0).multiply(new THREE.Matrix4().makeRotationZ(DOOR.burstTilt)).multiply(new THREE.Matrix4().makeTranslation(0, -leaf.height, 0));
+        // Hanging off the top hinge with the bottom one torn out: the free edge sags onto the floor
+        // and the torn hinge corner swings clear of the jamb.
+        // It tilts until the free corner touches what's under it (the floor, or the entrance step).
+        const base = leafBase(s.spec);
+        const clearance = (s.spec.role === "shopfront" || s.spec.role === "police-front" ? base - 0.12 : base) - 0.005;
+        const t = Math.min(DOOR.burstTilt, Math.asin(Math.max(0, Math.min(1, clearance / leaf.width))));
+        tmpM2
+          .makeTranslation(leaf.height * Math.sin(t), 0, 0)
+          .multiply(new THREE.Matrix4().makeTranslation(0, leaf.height, 0))
+          .multiply(new THREE.Matrix4().makeRotationZ(-t))
+          .multiply(new THREE.Matrix4().makeTranslation(0, -leaf.height, 0));
         tmpM.multiply(tmpM2);
       }
       if (leaf.glass >= 0) {
@@ -834,8 +843,16 @@ function leafWidth(s: BarrierSpec) {
   return (s.width - 2 * JAMB) / s.leaves - (s.leaves === 2 ? 0.004 : 0.006);
 }
 
+/**
+ * Height of a leaf's bottom edge: clear of the concrete step for shop and
+ * station doors that swing out over it, clear of the floor slab otherwise.
+ */
+function leafBase(s: BarrierSpec) {
+  return s.role === "shopfront" || s.role === "police-front" ? 0.125 : 0.065;
+}
+
 function leafHeight(s: BarrierSpec) {
-  return s.top - 0.04 - 0.01;
+  return s.top - 0.04 - leafBase(s);
 }
 
 /** A box with a flat vertex colour, for merging into one leaf geometry. Paintable parts take the door's paint. */

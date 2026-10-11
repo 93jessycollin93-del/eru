@@ -2198,20 +2198,23 @@ export class Game {
   }
 
   /** No wall or closed door between you and it (no looting through walls). */
-  private inReach(c: { x: number; y: number; z: number }) {
+  private inReach(c: { x: number; y: number; z: number; hx?: number; hz?: number }) {
     const p = this.player.pos;
     const ox = p.x;
     const oy = p.y + 1.2;
     const oz = p.z;
-    const dx = c.x - ox;
+    // Aim at the nearest point of its footprint (a long shelf is reached at its end, not its middle).
+    const hx = c.hx ?? 0;
+    const hz = c.hz ?? 0;
+    const dx = Math.max(c.x - hx, Math.min(c.x + hx, ox)) - ox;
     const dy = Math.max(c.y, 0.3) - oy;
-    const dz = c.z - oz;
+    const dz = Math.max(c.z - hz, Math.min(c.z + hz, oz)) - oz;
     const total = Math.hypot(dx, dy, dz);
-    if (total < 0.3) return true;
+    if (Math.hypot(dx, dz) < 0.3) return true;
     const [ux, uy, uz] = [dx / total, dy / total, dz / total];
     // Walls and closed doors stop a hand, and so do glass and boards; furniture (and the thing itself) doesn't.
     let start = 0;
-    const end = total - 0.25;
+    const end = total - 0.05;
     for (let i = 0; i < 6 && start < end; i++) {
       const t = this.colliders.raycast(ox + ux * start, oy + uy * start, oz + uz * start, ux, uy, uz, end - start, false, this.rayHit);
       const box = this.rayHit.box;
