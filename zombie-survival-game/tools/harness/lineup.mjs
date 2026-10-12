@@ -89,7 +89,7 @@ const res = await p.evaluate(async () => {
     [1, A.rollAppearance(find("civilian", (a) => a.outer?.id === "puffer", false), "civilian", { zombie: false })],
   ]) {
     const m = new H(app, { zombie: false });
-    if (k === 0) m.setGear(A.playerGear([{ id: "pistol", count: 1 }, { id: "baseball_bat", count: 1 }, { id: "kitchen_knife", count: 1 }, { id: "water_bottle", count: 1 }], null, 4));
+    if (k === 0) m.setGear(A.playerGear([{ uid: 1, id: "pistol", count: 1 }, { uid: 2, id: "baseball_bat", count: 1 }, { uid: 3, id: "kitchen_knife", count: 1 }, { uid: 4, id: "water_bottle", count: 1 }], null, 4));
     const x = base.x + ((cast.length + 1) / 2 + k) * spacing;
     m.root.position.set(x, g.terrain.height(x, base.z), base.z);
     g.scene.add(m.root);

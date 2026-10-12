@@ -2490,7 +2490,7 @@ export class Game {
   /** What you carry shows on your body: holstered pistol, slung bat or axe, knife sheath, a pack once you're loaded. */
   private wearGear() {
     const load = this.inventory.reduce((w, s) => w + (["melee", "firearm"].includes(ITEMS[s.id].category) ? 0 : stackWeight(s)), 0);
-    this.player.model.setGear(playerGear(this.inventory, this.equippedStack()?.id ?? null, load));
+    this.player.model.setGear(playerGear(this.inventory, this.equippedUid, load));
   }
 
   private hotbar() {

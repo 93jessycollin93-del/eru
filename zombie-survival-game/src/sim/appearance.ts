@@ -379,16 +379,18 @@ export const PLAYER_APPEARANCE: Appearance = rollAppearance(1, "survivor", { zom
 
 /**
  * What the player's inventory puts on their body: a holstered pistol, a bat or
- * axe slung on the back, a knife sheath, a hammer in a belt loop, and a pack
- * once they're carrying a real load. The item in hand isn't also on the body.
+ * axe slung on the back, a knife in its sheath, a hammer in a belt loop, and a
+ * pack once they're carrying a real load. The stack in hand isn't also on the
+ * body, but a second copy of the same weapon is.
  */
-export function playerGear(inventory: readonly { id: string; count: number }[], equippedId: string | null, carriedKg: number): GearId[] {
+export function playerGear(inventory: readonly { uid: number; id: string; count: number }[], equippedUid: number | null, carriedKg: number): GearId[] {
   const gear = new Set<GearId>();
   const spots = new Set<string>();
   for (const rule of PLAYER_GEAR_RULES) {
     if (spots.has(rule.spot)) continue;
-    if (!inventory.some((s) => s.id === rule.item && s.count > 0)) continue;
-    const worn = rule.item === equippedId ? rule.equipped : rule.stowed;
+    const copies = inventory.filter((s) => s.id === rule.item && s.count > 0);
+    if (!copies.length) continue;
+    const worn = copies.some((s) => s.uid !== equippedUid) ? rule.stowed : rule.equipped;
     // A weapon in hand leaves its spot free (an axe in hand, the bat goes on the back).
     if (!worn.length) continue;
     spots.add(rule.spot);

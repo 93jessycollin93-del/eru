@@ -47,6 +47,7 @@ export function piecesFor(app: Appearance): PieceId[] {
     radio: "radio",
     tool_belt: "tool_belt",
     knife_sheath: "knife_sheath",
+    knife_sheath_knife: "knife_sheath_knife",
     sling_bat: "sling_bat",
     sling_axe: "sling_axe",
     hammer_loop: "hammer_loop",

@@ -121,6 +121,7 @@ describe("appearance", () => {
             expect(a.marks.badge).not.toBe("none");
           }
           if (zombie) for (const g of LIVING_ONLY_GEAR) expect(a.gear, `${role} ${g}`).not.toContain(g);
+          if (a.age < 16 || a.sex === "f") expect(a.face.beard).toBe(0);
           if (!zombie) {
             expect(a.condition.decay).toBe(0);
             expect(a.condition.wounds).toEqual([]);
@@ -170,8 +171,11 @@ describe("appearance", () => {
     expect(ok / N).toBeGreaterThan(0.7);
   });
 
-  it("gear loot hooks only name real items", () => {
+  it("gear loot hooks only name real items, and loot you could see is never on the dead", () => {
     for (const [id, l] of Object.entries(GEAR_LOOT)) expect(ITEMS[l!.item], id).toBeDefined();
+    // Closed pouches and packs can hold loot unseen; anything else shows its contents.
+    const closed = ["tool_belt", "daypack", "hikepack"];
+    for (const id of Object.keys(GEAR_LOOT)) if (!closed.includes(id)) expect(LIVING_ONLY_GEAR, id).toContain(id);
   });
 
   it("an unknown role from a newer save becomes a civilian", () => {
@@ -191,18 +195,32 @@ describe("appearance", () => {
 });
 
 describe("playerGear", () => {
-  const inv = (...ids: string[]) => ids.map((id) => ({ id, count: 1 }));
+  let uid = 0;
+  const inv = (...ids: string[]) => ids.map((id) => ({ uid: ++uid, id, count: 1 }));
+  const held = (list: { uid: number; id: string }[], id: string) => list.find((s) => s.id === id)!.uid;
   it("puts what you carry on your body", () => {
     expect(playerGear([], null, 0)).toEqual([]);
     expect(playerGear(inv("pistol"), null, 1)).toEqual(["belt", "holster", "holster_gun"]);
-    expect(playerGear(inv("pistol"), "pistol", 1)).toEqual(["belt", "holster"]);
+    const p = inv("pistol");
+    expect(playerGear(p, held(p, "pistol"), 1)).toEqual(["belt", "holster"]);
     expect(playerGear(inv("baseball_bat", "fire_axe"), null, 1)).toEqual(["sling_axe"]);
-    expect(playerGear(inv("baseball_bat", "fire_axe"), "fire_axe", 1)).toEqual(["sling_bat"]);
-    expect(playerGear(inv("kitchen_knife"), null, 0)).toEqual(["belt", "knife_sheath"]);
+    const ba = inv("baseball_bat", "fire_axe");
+    expect(playerGear(ba, held(ba, "fire_axe"), 1)).toEqual(["sling_bat"]);
+    expect(playerGear(inv("kitchen_knife"), null, 0)).toEqual(["belt", "knife_sheath", "knife_sheath_knife"]);
+    const k = inv("kitchen_knife");
+    expect(playerGear(k, held(k, "kitchen_knife"), 0)).toEqual(["belt", "knife_sheath"]);
     expect(playerGear(inv("hammer"), null, 0)).toEqual(["belt", "hammer_loop"]);
-    expect(playerGear(inv("hammer"), "hammer", 0)).toEqual([]);
+    const h = inv("hammer");
+    expect(playerGear(h, held(h, "hammer"), 0)).toEqual([]);
     expect(playerGear(inv("water_bottle"), null, 3.2)).toEqual(["daypack"]);
     expect(playerGear(inv("jerry_can"), null, 14)).toEqual(["hikepack"]);
+  });
+
+  it("a second copy of the weapon in hand still shows", () => {
+    const two = inv("pistol", "pistol");
+    expect(playerGear(two, two[0].uid, 1)).toEqual(["belt", "holster", "holster_gun"]);
+    const axes = inv("fire_axe", "fire_axe");
+    expect(playerGear(axes, axes[1].uid, 1)).toEqual(["sling_axe"]);
   });
 
   it("only names items that exist", () => {

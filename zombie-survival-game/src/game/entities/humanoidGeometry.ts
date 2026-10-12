@@ -320,6 +320,7 @@ export const PIECES = [
   "radio",
   "tool_belt",
   "knife_sheath",
+  "knife_sheath_knife",
   "sling_bat",
   "sling_axe",
   "hammer_loop",
@@ -669,10 +670,13 @@ function buildKit(key: string): Kit {
       gb.box(p.clone().add(new THREE.Vector3(0, 0.07, 0)).addScaledVector(new THREE.Vector3(Math.sin(a), 0, Math.cos(a)), 0.012), new THREE.Vector3(0.12, 0.012, 0.07), BI.hips, Z.LEATHER, 1, a);
     }
   });
+  const sheathAt = new THREE.Vector3(-(hipSide(0.93) + 0.025), 0.9, 0.03);
   piece("knife_sheath", () => {
-    const p = new THREE.Vector3(-(hipSide(0.93) + 0.025), 0.9, 0.03);
-    gb.box(p, new THREE.Vector3(0.025, 0.2, 0.05), BI.hips, Z.LEATHER, 0, 0, -0.08);
-    gb.box(p.clone().add(new THREE.Vector3(0, 0.14, 0)), new THREE.Vector3(0.028, 0.09, 0.03), BI.hips, Z.HARD, 0, 0, -0.08);
+    gb.box(sheathAt, new THREE.Vector3(0.025, 0.2, 0.05), BI.hips, Z.LEATHER, 0, 0, -0.08);
+  });
+  piece("knife_sheath_knife", () => {
+    // The handle of a knife in the sheath (separate, so an empty sheath can be shown).
+    gb.box(sheathAt.clone().add(new THREE.Vector3(-0.011, 0.14, 0)), new THREE.Vector3(0.028, 0.09, 0.03), BI.hips, Z.HARD, 0, 0, -0.08);
   });
   piece("sling_bat", () => {
     gb.tube(new THREE.Vector3(-0.17, 0.82, backZ - 0.045), new THREE.Vector3(0.2, 1.62, backZ - 0.06), 4, 8, (t) => [0.016 + t * 0.018, 0.016 + t * 0.018], () => [[BI.chest, BI.chest], [1, 0]], Z.WOOD, true, true, () => 0);

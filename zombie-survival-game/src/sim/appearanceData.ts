@@ -39,6 +39,7 @@ export type GearId =
   | "radio"
   | "tool_belt"
   | "knife_sheath"
+  | "knife_sheath_knife"
   | "sling_bat"
   | "sling_axe"
   | "hammer_loop"
@@ -229,7 +230,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
   },
   sleepwear: {
     female: 0.5,
-    age: [5, 90],
+    age: [16, 90],
     build: BUILDS,
     top: [["pajama_top", 45], ["tank", 20], ["tshirt", 35]],
     outer: { chance: 0.15, options: [["hoodie", 2], ["cardigan", 1]] },
@@ -448,7 +449,7 @@ export const PLAYER_GEAR_RULES: readonly { item: string; stowed: GearId[]; equip
   { item: "pistol", stowed: ["belt", "holster", "holster_gun"], equipped: ["belt", "holster"], spot: "hipR" },
   { item: "fire_axe", stowed: ["sling_axe"], equipped: [], spot: "back" },
   { item: "baseball_bat", stowed: ["sling_bat"], equipped: [], spot: "back" },
-  { item: "kitchen_knife", stowed: ["belt", "knife_sheath"], equipped: ["belt"], spot: "hipL" },
+  { item: "kitchen_knife", stowed: ["belt", "knife_sheath", "knife_sheath_knife"], equipped: ["belt", "knife_sheath"], spot: "hipL" },
   { item: "hammer", stowed: ["belt", "hammer_loop"], equipped: [], spot: "belt" },
 ];
 
@@ -466,8 +467,8 @@ export const GEAR_LOOT: Partial<Record<GearId, { item: string; chance: number; c
   holster_gun: { item: "pistol", chance: 1 },
   hammer_loop: { item: "hammer", chance: 1 },
   tool_belt: { item: "nails", chance: 0.7, count: [10, 30] },
-  knife_sheath: { item: "kitchen_knife", chance: 0.6 },
+  knife_sheath_knife: { item: "kitchen_knife", chance: 1 },
 };
 
 /** Gear the dead never show this session (it would have to be lootable). */
-export const LIVING_ONLY_GEAR: readonly GearId[] = ["holster_gun", "hammer_loop", "sling_bat", "sling_axe"];
+export const LIVING_ONLY_GEAR: readonly GearId[] = ["holster_gun", "hammer_loop", "sling_bat", "sling_axe", "knife_sheath_knife"];
