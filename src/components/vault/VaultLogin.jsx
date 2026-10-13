@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Lock, Unlock, ShieldCheck, KeyRound, Eye, EyeOff } from 'lucide-react';
-import { isPinConfigured, setPin, verifyPin } from '@/lib/secretAreaPin';
+// Aliased: the component's own `pin` state setter is also called setPin and
+// would otherwise shadow this, so the PIN was never actually saved.
+import { isPinConfigured, setPin as savePin, verifyPin } from '@/lib/secretAreaPin';
 
 /**
  * VaultLayer
@@ -34,7 +36,7 @@ function VaultLayer({ level, total, title, description, children }) {
     if (pin !== confirm) { setError('PINs do not match.'); return; }
     setBusy(true);
     try {
-      await setPin(pin);
+      await savePin(pin);
       setConfigured(true);
       setUnlocked(true);
       setMode('idle');
