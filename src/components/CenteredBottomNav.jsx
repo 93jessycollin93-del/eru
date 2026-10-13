@@ -210,6 +210,16 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   const [lockedToTicker, setLockedToTicker] = useState(() => {
     try { return JSON.parse(localStorage.getItem(NAV_LOCKED_TO_TICKER_KEY)) || false; } catch { return false; }
   });
+  // Mobile portrait: statically pin the nav at the bottom safe-area and
+  // disable free-drag so it stays reachable inside constrained WebView port.
+  const [isMobilePortrait, setIsMobilePortrait] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px) and (orientation: portrait)');
+    const handler = (e) => setIsMobilePortrait(e.matches);
+    handler(mq);
+    mq.addEventListener?.('change', handler);
+    return () => mq.removeEventListener?.('change', handler);
+  }, []);
 
   useEffect(() => {
     const handleUnavailable = () => {
@@ -302,7 +312,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   }, []);
 
   const onPointerDown = useCallback((e) => {
-    if (lockedToTicker) return;
+    if (lockedToTicker || isMobilePortrait) return;
     // Hold anywhere on the bar (including buttons/links) to start dragging.
     const rect = navRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -316,7 +326,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
       VIBRATE.toggle?.();
       playSound('toggle');
     }, HOLD_MS);
-  }, [lockedToTicker, clearHold]);
+  }, [lockedToTicker, clearHold, isMobilePortrait]);
 
   const onPointerMove = useCallback((e) => {
     // Cancel hold if the user moves too far before the timer fires (it's a scroll/tap, not a hold).
@@ -384,7 +394,20 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
   // re-enabled only on the nav itself so the rest of the overlay stays
   // click-through.
   const isFloating = pos?.x != null && pos?.y != null;
-  const innerStyle = isFloating
+  const innerStyle = isMobilePortrait
+    ? {
+        // Mobile portrait: statically pinned at the bottom safe-area,
+        // above the fixed MobileTabBar. No drag, no absolute coordinates.
+        position: 'fixed',
+        left: '50%',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+        transform: 'translateX(-50%)',
+        width: 'fit-content',
+        pointerEvents: 'auto',
+        touchAction: 'auto',
+        userSelect: 'none',
+      }
+    : isFloating
     ? {
         position: 'absolute',
         left: pos.x,
@@ -421,8 +444,8 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onClickCapture={onClickCapture}
-        title={lockedToTicker ? '' : 'Press and hold to move'}
-        className={`eru-skin-nav-floating relative bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${lockedToTicker ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
+        title={(lockedToTicker || isMobilePortrait) ? '' : 'Press and hold to move'}
+        className={`eru-skin-nav-floating relative bg-card/95 text-foreground backdrop-blur-md border border-border rounded-2xl px-2 py-1.5 shadow-2xl transition-shadow ${(lockedToTicker || isMobilePortrait) ? 'cursor-default' : isHoldReady ? 'cursor-grabbing ring-2 ring-primary/60 shadow-primary/20' : 'cursor-pointer'} ${orientation === 'horizontal' ? 'flex items-center gap-0.5' : 'flex flex-col gap-0.5'}`}
       >
         {/* Drag handle + orientation toggle + rows toggle + edit */}
         {/* Handle strip: always flex-row so the icon grid can start right
@@ -663,7 +686,7 @@ export default function FloatingNav({ onSearchOpen, prefs, updateWidget }) {
         {/* Centered "hold to snap" reminder — pinned to the bottom-center of the
             bar so the hint sits in the middle (not tucked in the left control
             strip). pointer-events-none keeps the icons underneath tappable. */}
-        {!isControlsOnly && !collapsed && !lockedToTicker && (
+        {!isControlsOnly && !collapsed && !lockedToTicker && !isMobilePortrait && (
           <span
             aria-hidden="true"
             className="pointer-events-none absolute bottom-[1px] left-1/2 -translate-x-1/2 rounded-full bg-card/85 px-1.5 text-[7px] font-medium leading-none text-muted-foreground/60 whitespace-nowrap"
