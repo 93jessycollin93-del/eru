@@ -108,7 +108,6 @@
   "src/components/bazar/BazarCheckoutDialog.jsx": 9,
   "src/components/bazar/BazarProductCard.jsx": 1,
   "src/components/bazar/BazarStandDock.jsx": 1,
-  "src/components/bazar/TonPaymentPanel.jsx": 11,
   "src/components/bot-farm/BotFarmAssignmentPanel.jsx": 3,
   "src/components/bot-farm/BotFarmBotCard.jsx": 12,
   "src/components/bot-farm/BotFarmControlPanel.jsx": 12,
