@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { GitBranch, RotateCcw, Rocket, ExternalLink, ShieldCheck, Send } from 'lucide-react';
+import MobileSelect from '@/components/mobile/MobileSelect';
 
 const ENVIRONMENTS = ['draft', 'staging', 'live'];
 const PAGE_OPTIONS = [
@@ -168,10 +169,13 @@ export default function BotDeploymentPipelinePanel({ bots, trainingBot, training
       </div>
 
       {!trainingBot && (
-        <select value={selectedBotId} onChange={(e) => setSelectedBotId(e.target.value)} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none">
-          <option value="">Choose bot</option>
-          {bots.map((bot) => <option key={bot.id} value={bot.id}>{bot.name}</option>)}
-        </select>
+        <MobileSelect
+          value={selectedBotId}
+          onChange={setSelectedBotId}
+          placeholder="Choose bot"
+          title="Choose bot"
+          options={[{ value: '', label: 'Choose bot' }, ...bots.map((bot) => ({ value: bot.id, label: bot.name }))]}
+        />
       )}
 
       {activeBot && (

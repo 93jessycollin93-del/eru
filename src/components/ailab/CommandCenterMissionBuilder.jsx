@@ -1,4 +1,5 @@
 import { Link2, Sparkles, ShieldAlert } from 'lucide-react';
+import MobileSelect from '@/components/mobile/MobileSelect';
 
 export default function CommandCenterMissionBuilder({ form, setForm, commanders = [], squads = [], securityBots = [], onCreate, creating }) {
   const toggleSelection = (field, value) => {
@@ -23,17 +24,31 @@ export default function CommandCenterMissionBuilder({ form, setForm, commanders 
       <textarea aria-label="Mission objective" value={form.objective} onChange={(e) => setForm((p) => ({ ...p, objective: e.target.value }))} placeholder="Mission objective" className="min-h-[80px] w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none resize-none" />
       <textarea aria-label="Mission description" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="Mission description and desired outcome" className="min-h-[72px] w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none resize-none" />
       <div className="grid gap-2 sm:grid-cols-2">
-        <select aria-label="Mission priority" value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none">
-          <option value="low">Low priority</option>
-          <option value="medium">Medium priority</option>
-          <option value="high">High priority</option>
-          <option value="critical">Critical priority</option>
-        </select>
-        <select aria-label="Mission mode" value={form.mission_mode} onChange={(e) => setForm((p) => ({ ...p, mission_mode: e.target.value }))} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none">
-          <option value="manual">Manual</option>
-          <option value="semi_auto">Semi-auto</option>
-          <option value="auto">Auto</option>
-        </select>
+        <MobileSelect
+          ariaLabel="Mission priority"
+          value={form.priority}
+          onChange={(value) => setForm((p) => ({ ...p, priority: value }))}
+          placeholder="Priority"
+          title="Mission priority"
+          options={[
+            { value: 'low', label: 'Low priority' },
+            { value: 'medium', label: 'Medium priority' },
+            { value: 'high', label: 'High priority' },
+            { value: 'critical', label: 'Critical priority' },
+          ]}
+        />
+        <MobileSelect
+          ariaLabel="Mission mode"
+          value={form.mission_mode}
+          onChange={(value) => setForm((p) => ({ ...p, mission_mode: value }))}
+          placeholder="Mode"
+          title="Mission mode"
+          options={[
+            { value: 'manual', label: 'Manual' },
+            { value: 'semi_auto', label: 'Semi-auto' },
+            { value: 'auto', label: 'Auto' },
+          ]}
+        />
       </div>
       <input aria-label="Mission deadline" value={form.deadline} onChange={(e) => setForm((p) => ({ ...p, deadline: e.target.value }))} placeholder="Deadline (ISO or note)" className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none" />
       <textarea aria-label="Success criteria" value={form.success_criteria} onChange={(e) => setForm((p) => ({ ...p, success_criteria: e.target.value }))} placeholder="Success criteria" className="min-h-[72px] w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none resize-none" />

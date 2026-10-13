@@ -1,7 +1,8 @@
 import { Plus, Pencil, Copy, Trash2, MessageSquare, Bot as BotIcon, Loader2, Sparkles } from 'lucide-react';
+import PullToRefresh from '@/components/mobile/PullToRefresh';
 
 /** BotGallery — grid of bot cards with Activate / Edit / Duplicate / Delete. */
-export default function BotGallery({ bots, pods, loading, onNew, onActivate, onEdit, onDuplicate, onDelete }) {
+export default function BotGallery({ bots, pods, loading, onNew, onActivate, onEdit, onDuplicate, onDelete, onRefresh }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -28,7 +29,7 @@ export default function BotGallery({ bots, pods, loading, onNew, onActivate, onE
     );
   }
 
-  return (
+  const content = (
     <div>
       <div className="mb-3 flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">
@@ -56,6 +57,7 @@ export default function BotGallery({ bots, pods, loading, onNew, onActivate, onE
       </div>
     </div>
   );
+  return onRefresh ? <PullToRefresh onRefresh={onRefresh}>{content}</PullToRefresh> : content;
 }
 
 function BotCard({ bot, podCount, onActivate, onEdit, onDuplicate, onDelete }) {

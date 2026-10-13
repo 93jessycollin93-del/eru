@@ -136,6 +136,7 @@ export default function BotStudio() {
                 onEdit={handleEdit}
                 onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
+                onRefresh={refresh}
               />
             ) : view === 'chat' && activeBot ? (
               <div className="eru-theme-card rounded-2xl border border-border p-3">

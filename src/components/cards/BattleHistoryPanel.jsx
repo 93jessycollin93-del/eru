@@ -1,9 +1,10 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { History, Swords, Shield, Crown } from 'lucide-react';
 import BattleReplayViewer from './BattleReplayViewer';
+import PullToRefresh from '@/components/mobile/PullToRefresh';
 
-export default function BattleHistoryPanel({ matches, selectedMatch, onSelect, loading }) {
-  return (
+export default function BattleHistoryPanel({ matches, selectedMatch, onSelect, loading, onRefresh }) {
+  const content = (
     <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="border-b border-border px-4 py-3">
@@ -134,4 +135,5 @@ export default function BattleHistoryPanel({ matches, selectedMatch, onSelect, l
       </div>
     </div>
   );
+  return onRefresh ? <PullToRefresh onRefresh={onRefresh}>{content}</PullToRefresh> : content;
 }
