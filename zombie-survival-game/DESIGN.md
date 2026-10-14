@@ -79,6 +79,27 @@ Boot, login, real shell, filesystem with permissions, mail, programs, battery.
 - `ps`/`kill`, logs that record *your* actions (and can be read by others later)
 - USB drives as physical items that carry files between machines
 
+**Every era of computing, as working infrastructure (owner, 2026-10-14).** The town's machines are as old as the businesses that bought them, so the player meets every generation of operating system, each with its own rules:
+
+| Era | Where you find it | What makes it different |
+| --- | --- | --- |
+| 1970s mainframe | power plant or county records basement | operator console, batch jobs, tape drives |
+| Early Unix-style | university lab, telephone exchange | the ancestor of the modern shell, terse and powerful |
+| 8-bit home computers | attics, a school store room | boot straight into BASIC: `10 PRINT "HELLO"` |
+| DOS-style | the hardware store's stock PC, old offices | `C:\>` prompt, 8.3 filenames, floppies, `AUTOEXEC.BAT` |
+| Dial-up bulletin boards | a hobbyist's basement | modems, message boards, file areas |
+| Modern Linux-style | police servers, workstations | what exists today, deepened |
+| Embedded firmware | routers, cameras, door controllers, cash registers | tiny systems with default passwords |
+| Industrial controllers | the water plant | logic that runs pumps and valves |
+| SANDi drones | built by the player | qpdb, the eYe protocol, job packs (QPDB.md) |
+
+- **Simulated, not copied.** Each OS is our own recreation of how that kind of system behaved, under our own names. Real operating systems are trademarked and licensed, and far too large to ship in a browser game. (Open-source ones like Linux can be named honestly.)
+- **One machine model underneath.** Every OS runs on the same simulated hardware: power, firmware self-test, disks, boot loader, then that OS's own kernel personality and shell. Old disks hold old file systems, and moving files between eras takes the right media and tools.
+- **Code you write really runs, inside the game.** Shell scripts, BASIC on the old machines, assembly and qpdb machine code all run in the game's own interpreters on the simulated machine. They never run as real code on the player's computer: that sandbox is a hard rule for safety, saves and the Unreal port.
+- **Viruses as part of the world.** Some machines were infected before the outbreak: a boot-sector virus spread on floppies, a worm crossing a LAN through default passwords, a logic bomb left by a fired employee set to go off on a date, ransomware that locked a dentist's records, harmless joke programs. Players can find antivirus tools, clean machines, or write their own viruses and worms in the in-game languages to take over a building's network. Infection, spread and damage follow the simulated machines' real rules.
+- **Easter eggs everywhere.** Original text adventures and arcade games on old machines, sysadmin jokes in manual pages, a machine that never got its Y2K fix and thinks it is 1900, hidden directories with a previous owner's story. All original writing.
+- **Order:** the machine model and boot chain first, proven with two OSes (modern Linux-style and DOS-style); then the other eras one at a time; viruses once machines can share files over disks and networks.
+
 ### Networks (done: session 4)
 - **qpdb** (the owner's language) is what travels over the cables: letters encrypted by turning them with the router's secret key, hidden authenticator symbols, compression, and notches you can read like a barcode. See [QPDB.md](QPDB.md).
 - Each building with electronics has a LAN with real addressing (`10.0.4.0/24`, `192.168.1.0/24`), a router, and devices.
