@@ -220,9 +220,35 @@ class GeoBuilder {
         this.index.push(base + a, base + b, base + a + 1, base + a + 1, base + b, base + b + 1);
       }
     }
-    for (let i = 1; i < lat; i++) this.welds.push([base + i * (lon + 1), base + i * (lon + 1) + lon]);
-    this.welds.push(Array.from({ length: lon + 1 }, (_, j) => base + j));
-    this.welds.push(Array.from({ length: lon + 1 }, (_, j) => base + lat * (lon + 1) + j));
+    const weld = (b0: number) => {
+      for (let i = 1; i < lat; i++) this.welds.push([b0 + i * (lon + 1), b0 + i * (lon + 1) + lon]);
+      this.welds.push(Array.from({ length: lon + 1 }, (_, j) => b0 + j));
+      this.welds.push(Array.from({ length: lon + 1 }, (_, j) => b0 + lat * (lon + 1) + j));
+    };
+    weld(base);
+    if (!keep) return;
+    // An open shell (long hair, a raised hood, a cap) is seen from inside through its opening.
+    // The material is single-sided, so give it a lining: the same vertices again (their own,
+    // or averaging would cancel the normals to zero) wound the other way, facing in.
+    const lining = this.pos.length / 3;
+    const count = (lat + 1) * (lon + 1);
+    for (let i = 0; i < count; i++) {
+      const s = base + i;
+      this.pos.push(this.pos[s * 3], this.pos[s * 3 + 1], this.pos[s * 3 + 2]);
+      this.skinIdx.push(...this.skinIdx.slice(s * 4, s * 4 + 4));
+      this.skinW.push(...this.skinW.slice(s * 4, s * 4 + 4));
+      this.zone.push(this.zone[s]);
+      this.limbT.push(this.limbT[s]);
+    }
+    for (let i = 0; i < lat; i++) {
+      for (let j = 0; j < lon; j++) {
+        const a = i * (lon + 1) + j;
+        const b = a + lon + 1;
+        if (!kept[a] && !kept[b] && !kept[a + 1] && !kept[b + 1]) continue;
+        this.index.push(lining + a, lining + a + 1, lining + b, lining + a + 1, lining + b + 1, lining + b);
+      }
+    }
+    weld(lining);
   }
 
   /** A hard-edged box (4 vertices per face, so faces shade flat), rotated about y then x, rigid to one bone. */
@@ -323,6 +349,10 @@ export const PIECES = [
   "knife_sheath_knife",
   "sling_bat",
   "sling_axe",
+  "sling_bat_pack",
+  "sling_axe_pack",
+  "sling_bat_hike",
+  "sling_axe_hike",
   "hammer_loop",
 ] as const;
 export type PieceId = (typeof PIECES)[number];
@@ -615,18 +645,41 @@ function buildKit(key: string): Kit {
   piece("bun", () => {
     gb.ellipsoid(headC.clone().add(new THREE.Vector3(0, 0.055, -headR.z + 0.005)), new THREE.Vector3(0.038, 0.033, 0.035), 6, 10, BI.head, Z.HAIR);
   });
+  /**
+   * Where a pack's front face rests on this body's back between two heights: a plane through
+   * the back at both ends, pushed out past wherever the back bulges in between (the ribcage),
+   * so a pack lies against a heavy build instead of floating off its lower back.
+   */
+  const packRest = (yb: number, yt: number) => {
+    const back = (y: number) => -torsoAt(y)[1];
+    const zb = back(yb);
+    const zt = back(yt);
+    let push = 0;
+    for (let k = 0; k <= 10; k++) {
+      const y = yb + ((yt - yb) * k) / 10;
+      push = Math.max(push, zb + ((zt - zb) * k) / 10 - back(y));
+    }
+    return { mid: (zb + zt) / 2 - push - 0.006, tilt: Math.atan2(zt - zb, yt - yb), ym: (yb + yt) / 2 };
+  };
+  /** A box hung behind a rest plane: `depth` deep, its centre `along` up the plane from the middle. */
+  const packBox = (rest: ReturnType<typeof packRest>, size: THREE.Vector3, along = 0, out = 0, t = 0) => {
+    const up = new THREE.Vector3(0, Math.cos(rest.tilt), Math.sin(rest.tilt));
+    const back = new THREE.Vector3(0, Math.sin(rest.tilt), -Math.cos(rest.tilt));
+    const c = new THREE.Vector3(0, rest.ym, rest.mid).addScaledVector(up, along).addScaledVector(back, out + size.z / 2);
+    gb.box(c, size, BI.chest, Z.GEAR, t, 0, rest.tilt);
+  };
+  const dayRest = packRest(1.01, 1.39);
+  const hikeRest = packRest(0.88, 1.44);
   piece("daypack", () => {
-    const c = new THREE.Vector3(0, 1.2, backZ - 0.07);
-    gb.box(c, new THREE.Vector3(0.28, 0.38, 0.12), BI.chest, Z.GEAR, 0, 0, -0.06);
-    // Front pocket.
-    gb.box(c.clone().add(new THREE.Vector3(0, -0.09, -0.07)), new THREE.Vector3(0.22, 0.16, 0.04), BI.chest, Z.GEAR, 0, 0, -0.06);
+    packBox(dayRest, new THREE.Vector3(0.28, 0.38, 0.12));
+    packBox(dayRest, new THREE.Vector3(0.22, 0.16, 0.04), -0.09, 0.12); // front pocket
   });
   piece("hikepack", () => {
-    const c = new THREE.Vector3(0, 1.16, backZ - 0.095);
-    gb.box(c, new THREE.Vector3(0.32, 0.56, 0.17), BI.chest, Z.GEAR, 0, 0, -0.08);
-    gb.box(c.clone().add(new THREE.Vector3(0, 0.27, 0.005)), new THREE.Vector3(0.3, 0.06, 0.18), BI.chest, Z.GEAR, 0, 0, -0.08);
+    packBox(hikeRest, new THREE.Vector3(0.32, 0.56, 0.17));
+    packBox(hikeRest, new THREE.Vector3(0.3, 0.06, 0.18), 0.27, -0.005); // lid
     // Bedroll strapped across the top.
-    gb.tube(new THREE.Vector3(-0.19, 1.5, backZ - 0.1), new THREE.Vector3(0.19, 1.5, backZ - 0.1), 1, 10, () => [0.055, 0.055], () => [[BI.chest, BI.chest], [1, 0]], Z.GEAR, true, true, () => 1);
+    const bz = hikeRest.mid - 0.1;
+    gb.tube(new THREE.Vector3(-0.19, 1.5, bz), new THREE.Vector3(0.19, 1.5, bz), 1, 10, () => [0.055, 0.055], () => [[BI.chest, BI.chest], [1, 0]], Z.GEAR, true, true, () => 1);
   });
   piece("belt", () => {
     band(waistY - 0.018, waistY + 0.018, 0.008, Z.LEATHER);
@@ -657,9 +710,16 @@ function buildKit(key: string): Kit {
     gb.box(p.clone().add(new THREE.Vector3(0.002, -0.03, 0.05)), new THREE.Vector3(0.032, 0.035, 0.08), BI.hips, Z.HARD, 0, 0, 0);
   });
   piece("radio", () => {
-    const p = new THREE.Vector3(-0.1, 1.3, chestFront + 0.025);
-    gb.box(p, new THREE.Vector3(0.06, 0.1, 0.035), BI.chest, Z.HARD, 0);
-    gb.box(p.clone().add(new THREE.Vector3(0.018, 0.09, 0)), new THREE.Vector3(0.008, 0.08, 0.008), BI.chest, Z.HARD, 0);
+    // On the chest surface where it is (10 cm off the centreline the chest curves away), lying
+    // along its slope: placed from the deepest point of the chest it hung in the air.
+    const surface = (y: number) => {
+      const [s, f] = torsoAt(y);
+      return f * Math.sqrt(Math.max(0, 1 - (0.1 / s) ** 2));
+    };
+    const tilt = -Math.atan2(surface(1.25) - surface(1.35), 0.1);
+    const p = new THREE.Vector3(-0.1, 1.3, surface(1.3) + 0.0175 + 0.004);
+    gb.box(p, new THREE.Vector3(0.06, 0.1, 0.035), BI.chest, Z.HARD, 0, 0, tilt);
+    gb.box(p.clone().add(new THREE.Vector3(0.018, 0.09, -Math.sin(-tilt) * 0.09)), new THREE.Vector3(0.008, 0.08, 0.008), BI.chest, Z.HARD, 0, 0, tilt);
   });
   piece("tool_belt", () => {
     band(waistY - 0.025, waistY + 0.025, 0.012, Z.LEATHER);
@@ -678,17 +738,26 @@ function buildKit(key: string): Kit {
     // The handle of a knife in the sheath (separate, so an empty sheath can be shown).
     gb.box(sheathAt.clone().add(new THREE.Vector3(-0.011, 0.14, 0)), new THREE.Vector3(0.028, 0.09, 0.03), BI.hips, Z.HARD, 0, 0, -0.08);
   });
-  piece("sling_bat", () => {
-    gb.tube(new THREE.Vector3(-0.17, 0.82, backZ - 0.045), new THREE.Vector3(0.2, 1.62, backZ - 0.06), 4, 8, (t) => [0.016 + t * 0.018, 0.016 + t * 0.018], () => [[BI.chest, BI.chest], [1, 0]], Z.WOOD, true, true, () => 0);
-  });
-  piece("sling_axe", () => {
-    const a = new THREE.Vector3(0.17, 0.84, backZ - 0.045);
-    const b = new THREE.Vector3(-0.18, 1.66, backZ - 0.055);
+  // A slung weapon lies on the back, or on the outside of a pack (through it, otherwise).
+  const slingBat = (z: number) => {
+    gb.tube(new THREE.Vector3(-0.17, 0.82, z), new THREE.Vector3(0.2, 1.62, z - 0.015), 4, 8, (t) => [0.016 + t * 0.018, 0.016 + t * 0.018], () => [[BI.chest, BI.chest], [1, 0]], Z.WOOD, true, true, () => 0);
+  };
+  const slingAxe = (z: number) => {
+    const a = new THREE.Vector3(0.17, 0.84, z);
+    const b = new THREE.Vector3(-0.18, 1.66, z - 0.01);
     gb.tube(a, b, 3, 8, () => [0.018, 0.016], () => [[BI.chest, BI.chest], [1, 0]], Z.WOOD, true, true, () => 1);
     const dir = b.clone().sub(a);
     const ang = Math.atan2(dir.x, dir.y);
     gb.box(b.clone().add(new THREE.Vector3(0.02, -0.06, 0)), new THREE.Vector3(0.24, 0.13, 0.025), BI.chest, Z.HARD, 0.5, 0, 0, -ang);
-  });
+  };
+  const overDay = dayRest.mid - 0.12 - 0.04 - 0.022;
+  const overHike = hikeRest.mid - 0.17 - 0.03;
+  piece("sling_bat", () => slingBat(backZ - 0.045));
+  piece("sling_axe", () => slingAxe(backZ - 0.045));
+  piece("sling_bat_pack", () => slingBat(overDay));
+  piece("sling_axe_pack", () => slingAxe(overDay));
+  piece("sling_bat_hike", () => slingBat(overHike));
+  piece("sling_axe_hike", () => slingAxe(overHike));
   piece("hammer_loop", () => {
     const hp = new THREE.Vector3(hipSide(0.95) + 0.02, waistY - 0.04, -0.04);
     gb.tube(hp.clone().add(new THREE.Vector3(0, 0.03, 0)), hp.clone().add(new THREE.Vector3(0, -0.24, 0)), 1, 6, () => [0.013, 0.011], () => [[BI.hips, BI.hips], [1, 0]], Z.WOOD, true, true, () => 0);

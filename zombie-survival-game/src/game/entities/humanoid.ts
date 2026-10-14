@@ -320,7 +320,8 @@ function buildHeld(id: string): THREE.BufferGeometry | null {
     m.makeRotationX(part.rotX ?? 0).setPosition(0, part.y, part.z ?? 0);
     box.applyMatrix4(m);
     nm.getNormalMatrix(m);
-    const c = new THREE.Color(part.color).convertSRGBToLinear();
+    // Already linear: with colour management on (three's default), Color(hex) converts from sRGB.
+    const c = new THREE.Color(part.color);
     const base = pos.length / 3;
     const bp = box.getAttribute("position");
     const bn = box.getAttribute("normal");

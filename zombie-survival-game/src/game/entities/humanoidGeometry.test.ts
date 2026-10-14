@@ -38,8 +38,10 @@ describe("character kits", () => {
         const verts = new Set(geo.getIndex()!.array).size;
         const tris = geo.getIndex()!.count / 3;
         worst = Math.max(worst, verts);
-        expect(verts, role).toBeLessThanOrEqual(2600);
-        expect(tris, role).toBeLessThanOrEqual(4400);
+        // Open shells (hair, hoods, caps) carry an inside lining; the worst outfit (an officer
+        // with a cap, long hair and the full duty belt) is 2,820 vertices and 4,604 triangles.
+        expect(verts, role).toBeLessThanOrEqual(3000);
+        expect(tris, role).toBeLessThanOrEqual(5000);
       }
     }
     expect(worst).toBeGreaterThan(1500);

@@ -65,7 +65,7 @@ const res = await p.evaluate(async () => {
     ["hiker", (a) => a.gear.includes("hikepack") && a.head?.id === "beanie"],
     ["hunter", (a) => a.outer?.id === "blaze_vest" && a.head?.id === "blaze_cap"],
     ["sleepwear", (a) => a.feet.id === "barefoot" && a.top.pattern !== "plain"],
-    ["office", (a) => a.gear.includes("lanyard") && a.gear.includes("glasses")],
+    ["office", (a) => a.gear.includes("lanyard") && a.gear.includes("glasses") && a.hair.style === "long"],
     ["jogger", (a) => a.bottom.id === "shorts" && a.sex === "f" && a.hair.style === "ponytail"],
     ["tradesman", (a) => a.head?.id === "hard_hat" && a.outer?.id === "hi_vis_vest"],
     ["civilian", (a, s) => runner(s) && a.outer?.id === "puffer"],
@@ -134,6 +134,9 @@ const res = await p.evaluate(async () => {
     faces5: face((X(14) + X(15)) / 2),
     portrait1: { pos: V(X(14), y0 + 1.66, base.z + 0.75), look: V(X(14), y0 + 1.62, base.z), fov: 30 },
     portrait2: { pos: V(X(1), y0 + 1.6, base.z + 0.75), look: V(X(1), y0 + 1.5, base.z), fov: 34 },
+    beanie: { pos: V(X(5), y0 + 1.62, base.z + 0.8), look: V(X(5), y0 + 1.52, base.z), fov: 34 },
+    longhair: { pos: V(X(8), y0 + 1.5, base.z + 1.6), look: V(X(8), y0 + 1.4, base.z), fov: 34 },
+    playerback: { pos: V(X(14), y0 + 1.4, base.z + 2.2), look: V(X(14), y0 + 1.15, base.z), fov: 40, back: true },
     backclose: { pos: V((X(0) + X(2)) / 2, y0 + 1.35, base.z + 2.6), look: V((X(0) + X(2)) / 2, y0 + 1.15, base.z), fov: 40, back: true },
     portrait3: { pos: V(X(15), y0 + 1.62, base.z + 0.75), look: V(X(15), y0 + 1.58, base.z), fov: 30 },
   };

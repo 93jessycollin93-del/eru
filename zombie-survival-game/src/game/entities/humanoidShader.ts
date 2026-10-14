@@ -108,7 +108,8 @@ float clothOffset(int z, float t, vec3 p) {
   if (z == 4) {
     vec3 h = p - vec3(0.0, uHeadY, 0.01);
     float o = hairCover(h) * uHairS.z;
-    if (uHairS.y > 0.5) o = max(o, smoothstep(-0.005, 0.01, h.y) * 0.011);
+    // A beanie sits above the brows (the highest brow reaches h.y ~0.036).
+    if (uHairS.y > 0.5) o = max(o, smoothstep(0.035, 0.05, h.y) * 0.011);
     return o;
   }
   return 0.0;
@@ -468,9 +469,9 @@ if (z == 1) {
     rough = mix(rough, 0.5, a);
   }
   if (uHairS.y > 0.5) {
-    float b = smoothstep(-0.005, 0.0, h.y);
+    float b = smoothstep(0.04, 0.045, h.y);
     vec3 knit = cHead * (0.85 + 0.25 * step(0.5, fract(atan(h.x, h.z) * 28.0)));
-    knit *= 1.0 - (1.0 - smoothstep(0.03, 0.035, h.y)) * 0.15;
+    knit *= 1.0 - (1.0 - smoothstep(0.075, 0.08, h.y)) * 0.15;
     col = mix(col, knit, b);
     rough = mix(rough, 0.95, b);
     layer = b > 0.5 ? 5 : layer;

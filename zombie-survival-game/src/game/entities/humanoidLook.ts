@@ -52,9 +52,12 @@ export function piecesFor(app: Appearance): PieceId[] {
     sling_axe: "sling_axe",
     hammer_loop: "hammer_loop",
   };
+  // A weapon slung over a pack rides on the pack's outside.
+  const over = app.gear.includes("hikepack") ? "_hike" : app.gear.includes("daypack") ? "_pack" : "";
   for (const g of app.gear) {
     const p = gearPieces[g];
-    if (p) out.push(p);
+    if (!p) continue;
+    out.push(over && (p === "sling_bat" || p === "sling_axe") ? (`${p}${over}` as PieceId) : p);
   }
   return out;
 }

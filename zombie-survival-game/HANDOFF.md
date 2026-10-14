@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: session 8 — saving, review fixes, character detail pass (2026-10-11)_
+_Last updated: session 8 — saving, review fixes, character detail pass, render review fixes (2026-10-14)_
 
 ## The project
 
@@ -30,8 +30,10 @@ The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
   - Never merge it into `eru` main: that repo is synced to Base44.
 - **Pending:** the owner will create a dedicated GitHub repo, `zombie-survival-game`. Claude can't create repos (the GitHub integration returns 403). Once it exists, move this folder's contents to that repo's root and update this file.
   - The owner's target GitHub account is **`yyb84ycgt6-oss`**. As of the end of session 1, Claude had no access to it: Claude's GitHub connection only covers `93jessycollin93-del`. The owner needs to install the Claude GitHub App on `yyb84ycgt6-oss` (via https://claude.ai/connect-github), create the repo, then start a session with that repo selected or attach it with `add_repo`.
-- **Embedded in the Jackie app (owner request, session 8):** repo `93jessycollin93-del/sas-jacky`, branch `SAS-JACKY` (a Lovable app). Left menu → **Games & Worlds → 🧟 Zombie Survival** opens `/zombie-survival` (`src/pages/ZombieSurvival.tsx`), which frames this game's production build from `public/zombie-survival/` the same way `/pc` frames `public/pc-os/`. The game stays independent: no Supabase/Base44 code, saves in that origin's IndexedDB. The integration is on sas-jacky branch `claude/zombie-survival-game` (merge into `SAS-JACKY` pending the owner's go-ahead).
-  - To refresh the embedded copy after game changes: `npm run build:embed -- /home/user/sas-jacky/public/zombie-survival` (clone sas-jacky first), then commit that folder in sas-jacky. See `docs/zombie-survival.md` there.
+- **Embedded in the Jackie app (owner request, session 8):** the owner's app is **`yyb84ycgt6-oss/sasjacky777-d1033916`, branch `SAS-JACKY`** (a Lovable app; its left menu's "Games & Worlds" group already holds CollinSurvivalCraft at `/craft` and the PZ Realism Overhaul page). The game goes in that group right after CollinSurvivalCraft as **☣️ Zombie Survival** → `/zombie-survival` (`src/pages/ZombieSurvival.tsx`), which frames this game's production build from `public/zombie-survival/` the same way `/pc` frames `public/pc-os/`. The game stays independent: no Supabase/Base44 code, saves in that origin's IndexedDB.
+  - That repo was not writable from session 8 (GitHub app not installed on it), so the integration was prepared as a local branch and handed to the owner; check whether it landed before redoing it.
+  - An earlier copy went to `93jessycollin93-del/sas-jacky` branch `claude/zombie-survival-game` by mistake (wrong app); it can be deleted.
+  - To refresh the embedded copy after game changes: `npm run build:embed -- <app clone>/public/zombie-survival`, then commit that folder in the app. See `docs/zombie-survival.md` there.
 - **Playable build:** published as a private Claude artifact at https://claude.ai/artifact/Rb7QJzHErrwfXWtoFxTHtH
   - To update it from a new session: build with `npx vite build --base ./`, then publish with the Artifact tool, passing `url`.
   - The page is a small HTML file that references `./assets/*.js` and `./assets/*.css` from the build. Pass those files via `files`, and set the old asset paths to `null`.
@@ -110,6 +112,7 @@ In dev builds, `window.__game` exposes the `Game` instance.
 - **Player:** `PLAYER_APPEARANCE` (olive field jacket over a henley, jeans, boots); `Game.wearGear()` at the 10 Hz HUD tick shows what you carry (`playerGear`): holstered pistol (empty holster while drawn), bat or axe on the back, knife sheath, hammer loop, a daypack from 3 kg and a big pack above 12 kg. Held items are one merged mesh each.
 - **Saves:** `SAVE_VERSION` 2, `SavedZombie.role` (null for v1 zombies; inferred on load from where they stand).
 - Harness: `tools/harness/lineup.mjs` (H13) renders a cast of every role (front, back, close-ups, portraits) to `tools/harness/out/`; `snap.mjs` adds H14; `save.mjs` adds H11c (a v1 save loads with identical gameplay).
+- Render review fixes (2026-10-14): open shells (long hair, hoods, caps) get an inward-facing lining so you can't see through them from inside; packs rest on a plane past the ribcage (`packRest`/`packBox`) instead of floating off heavy builds; a slung bat/axe rides on the outside of a daypack or big pack (`sling_*_pack`, `sling_*_hike`, swapped in by `humanoidLook.ts`); the radio lies on the chest surface; held-item colours are no longer converted to linear twice; the beanie's paint and thickness agree at its edge. Worst case per character is now 2,820 vertices / 4,604 triangles (test budget 3,000/5,000).
 - Handedness: bones named "R" sit at +x and the model faces +z, so `handR` is anatomically the left hand. Gear sides are defined by "weapon side = +x".
 
 **Session 8 (saving) is complete and pushed.**
