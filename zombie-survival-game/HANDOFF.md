@@ -15,6 +15,8 @@ The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 **Read [DESIGN.md](DESIGN.md)**: it holds the realism rules and the system-by-system plan for both worlds.
 **Read [QPDB.md](QPDB.md)** before touching computers or networks: it is the owner's own language for them, recorded as they described it.
 
+**Working style (owner, 2026-10-14):** maximum efficiency and token economy in research, coding and orchestration. Read only what the task needs, prefer one targeted check over broad sweeps, no multi-agent fan-outs unless asked, short replies. Never at the cost of correctness: still test and verify before pushing.
+
 **Current direction (owner, 2026-10-14):** mechanics first, graphics after. Next is a real simulated computer (hardware, firmware self-test, boot loader, OS with services, filesystem with permissions, processes, logs, a fuller shell with an editor and scripts, USB drives), with qpdb as its network layer; then zombie navigation and hordes.
 
 ### Decisions already made (don't re-ask)
