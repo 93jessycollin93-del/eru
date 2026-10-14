@@ -58,6 +58,7 @@ import { TextureLibrary } from "./render/textures";
 import { Terrain } from "./world/terrain";
 import { generateTown, type Building, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
 import { generateVegetation } from "./world/vegetation";
+import type { ExitVerdict } from "./embedBridge";
 
 const WORLD_SEED = 1987;
 /** Real seconds between autosaves (only when nothing is hunting you and no menu is open). */
@@ -1255,19 +1256,36 @@ export class Game {
   }
 
   /** Write the run to a slot. Quiet saves (autosave) only speak up when they fail. */
-  async saveGame(slot: SlotId, quiet = false) {
-    if ((this.status !== "playing" && this.status !== "paused") || this.saving) return;
+  /** Saves the run to a slot; true once it is stored. */
+  async saveGame(slot: SlotId, quiet = false): Promise<boolean> {
+    if ((this.status !== "playing" && this.status !== "paused") || this.saving) return false;
     this.saving = true;
     try {
       const data = this.toSave();
       await this.saves.write({ slot, meta: data.meta, data: serialise(data) });
       if (!quiet) this.message(slot === "auto" ? "Autosaved." : `Saved to slot ${slot}.`, "good");
       await this.refreshSaves();
+      return true;
     } catch {
       this.message("Couldn't save: the browser refused to store it (storage full or blocked).", "danger");
+      return false;
     } finally {
       this.saving = false;
     }
+  }
+
+  /**
+   * The autosave, asked for by the page framing the game before it closes this one (see
+   * `embedBridge.ts`). Same rules as the timed autosave, so leaving is never a way to save
+   * mid-fight or mid-climb; when they say no, the answer says why and the frame asks you.
+   */
+  async saveForExit(): Promise<ExitVerdict> {
+    // A save already under way (the timer or a slot) finishes first; it is milliseconds.
+    for (let waited = 0; this.saving && waited < 3000; waited += 50) await new Promise((r) => setTimeout(r, 50));
+    if (this.status !== "playing" && this.status !== "paused") return { saved: false, reason: "nothing" };
+    if (this.zombies.some((z) => z.hunting)) return { saved: false, reason: "hunted" };
+    if (this.player.traversing || this.action) return { saved: false, reason: "busy" };
+    return (await this.saveGame("auto", true)) ? { saved: true, reason: null } : { saved: false, reason: "failed" };
   }
 
   async loadGame(slot: SlotId) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Game } from "@/game/Game";
+import { listenForFrame } from "@/game/embedBridge";
 import type { HudState } from "@/game/types";
 import Hud from "@/components/Hud";
 import Inventory, { type InventoryActions } from "@/components/Inventory";
@@ -21,7 +22,9 @@ const Index = () => {
     gameRef.current = game;
     // Debug handle for local testing only; stripped from production builds.
     if (import.meta.env.DEV) (window as unknown as { __game: Game }).__game = game;
+    const stopFrame = listenForFrame(window, () => game.saveForExit());
     return () => {
+      stopFrame();
       game.destroy();
       gameRef.current = null;
     };
