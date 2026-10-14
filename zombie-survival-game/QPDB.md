@@ -35,8 +35,9 @@ What follows from that:
 
 ## eYe protocol and SANDi drones (owner, 2026-10-14)
 
-- The letters are sent "completely encrypted using the eYe protocol" to the owner's **SANDi** drones, written `<S<A<N>D>I>`, read as **Specialized Atomic Neutron Drones**.
-- The owner has forgotten what eYe stands for. Their Jackie app never spells it out either: there, eYe is the "24-pod compression intelligence system" with SHA-256 integrity checks, a ring of pods each passing condensed data to the next. Working reading here: the eYe protocol is the whole sending pipeline (compress, encrypt, authenticate), because those are the jobs eYe does in the app.
+- The letters are sent "completely encrypted using the eYe protocol" to the owner's **SANDi** drones, written `<S<A<N>D>I>`: **S**pecialized **A**tomic **N**eutron **D**rones, plus an **I** whose meaning the owner has forgotten. (Correction from the owner: it is the I they forgot, not eYe.)
+- A lead for the I, not confirmed: in the owner's Jackie app SANDi is "the index router", grown out of the "Index Pill", so the i may be **index**.
+- eYe in the Jackie app is the "24-pod compression intelligence system" with SHA-256 integrity checks, a ring of pods each passing condensed data to the next. Working reading here: the eYe protocol is the whole sending pipeline (compress, encrypt, authenticate), because those are the jobs eYe does in the app.
 - Open: the nested brackets in `<S<A<N>D>I>` may mean layers, each wrapping the next (like layers of encryption). To confirm with the owner.
 - In the game, SANDi drones are devices on the network that take eYe-protected qpdb commands. They come with the programmable-devices work (DESIGN.md: "programmable logic ... and later drones").
 
