@@ -1,6 +1,8 @@
 # qpdb: the owner's language
 
-The language of the game's computers and networks, designed by the owner. This file records the design as the owner gave it, so every session builds the same thing. Where something is my reading rather than the owner's words, it says so.
+The language of the game's computers and networks, designed by the owner.
+
+**Motto (owner): "A little packs a lot."** Four small letters carry everything: numbers, encryption, authentication, compression, notches. Design choices should keep it that way: small and dense. This file records the design as the owner gave it, so every session builds the same thing. Where something is my reading rather than the owner's words, it says so.
 
 ## The letters
 
