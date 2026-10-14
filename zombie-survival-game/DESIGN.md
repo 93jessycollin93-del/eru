@@ -80,6 +80,7 @@ Boot, login, real shell, filesystem with permissions, mail, programs, battery.
 - USB drives as physical items that carry files between machines
 
 ### Networks (done: session 4)
+- **qpdb** (the owner's language) is what travels over the cables: letters encrypted by turning them with the router's secret key, hidden authenticator symbols, compression, and notches you can read like a barcode. See [QPDB.md](QPDB.md).
 - Each building with electronics has a LAN with real addressing (`10.0.4.0/24`, `192.168.1.0/24`), a router, and devices.
 - Commands: `ip addr`, `ping`, `nmap`, `ssh`, `scp`.
 - The internet is down; inter-building links come later (radio bridges, long Ethernet runs you lay yourself).

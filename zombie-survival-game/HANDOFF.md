@@ -13,6 +13,9 @@ The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 
 **North star (owner's words):** "the best realistic survival game ever created"; "the physical and CYBERNETIC world in this game should be more realistic than any other game ever created. Using the best of the best."
 **Read [DESIGN.md](DESIGN.md)**: it holds the realism rules and the system-by-system plan for both worlds.
+**Read [QPDB.md](QPDB.md)** before touching computers or networks: it is the owner's own language for them, recorded as they described it.
+
+**Current direction (owner, 2026-10-14):** mechanics first, graphics after. Next is a real simulated computer (hardware, firmware self-test, boot loader, OS with services, filesystem with permissions, processes, logs, a fuller shell with an editor and scripts, USB drives), with qpdb as its network layer; then zombie navigation and hordes.
 
 ### Decisions already made (don't re-ask)
 - **Browser now, port to Unreal Engine 5 later.** All simulation rules go in `src/sim/` as engine-agnostic TypeScript (no `three`, React or DOM imports; injected RNG; serialisable state). Rendering, input and UI are a thin client. See the top of ROADMAP.md.
