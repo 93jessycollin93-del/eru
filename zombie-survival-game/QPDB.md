@@ -15,6 +15,31 @@ Each letter is a circle (0) joined to a stick (1), and the four letters are one 
 
 Two letters make one hex digit and four letters make one byte. Example: `qpdbdbqppqbd` is 3 2 1 0 1 0 3 2 2 3 0 1, which is the bytes `E4 4E B1`.
 
+## The owner's numbers (2026-10-14, replaces the 0–3 values above)
+
+The owner assigned each letter a power of two:
+
+| Letter | Value | Bit |
+|---|---|---|
+| q | 2 | 00010 |
+| p | 4 | 00100 |
+| d | 8 | 01000 |
+| b | 16 | 10000 |
+
+What follows from that:
+
+- Each letter is one bit. Any group of different letters adds up to a number no other group makes (`qp` = 6, `db` = 24, `qpdb` = 30), so a sum can always be read back into its letters.
+- Rotation becomes literal: rotating the bit one place turns q → p → d → b → q. A key is a stream of rotations (0 to 3 places per letter), and decrypting rotates back.
+- 1 (the bit below q) is not assigned yet. Open: does it belong to something, such as the bare circle or the bare stick?
+- The 0–3 table and the turning moves below are kept as a record of the earlier reading. Where they disagree, the owner's numbers win.
+
+## eYe protocol and SANDi drones (owner, 2026-10-14)
+
+- The letters are sent "completely encrypted using the eYe protocol" to the owner's **SANDi** drones, written `<S<A<N>D>I>`, read as **Specialized Atomic Neutron Drones**.
+- The owner has forgotten what eYe stands for. Their Jackie app never spells it out either: there, eYe is the "24-pod compression intelligence system" with SHA-256 integrity checks, a ring of pods each passing condensed data to the next. Working reading here: the eYe protocol is the whole sending pipeline (compress, encrypt, authenticate), because those are the jobs eYe does in the app.
+- Open: the nested brackets in `<S<A<N>D>I>` may mean layers, each wrapping the next (like layers of encryption). To confirm with the owner.
+- In the game, SANDi drones are devices on the network that take eYe-protected qpdb commands. They come with the programmable-devices work (DESIGN.md: "programmable logic ... and later drones").
+
 ## Turning the letters is the encryption
 
 Each letter becomes any other letter with one of four moves:
