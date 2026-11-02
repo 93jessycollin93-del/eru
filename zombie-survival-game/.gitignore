@@ -1,0 +1,5 @@
+node_modules
+dist
+*.local
+.env
+tools/harness/out/

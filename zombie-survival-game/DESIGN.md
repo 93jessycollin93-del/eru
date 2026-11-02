@@ -1,0 +1,126 @@
+# Design Guide: Realism
+
+**Goal (owner's words):** the physical *and cybernetic* world in this game should be more realistic than any game ever made, using the best ideas from everywhere.
+
+This document defines what that means, so every session builds toward the same thing. ROADMAP.md says *when*; this says *what* and *why*.
+
+## The rules every system follows
+
+1. **Simulate, don't fake.** If the player can see it, it has state and causes. A light is on because a circuit has power because a generator has fuel. A zombie heard you because sound travelled there. No scripted "events" pretending to be systems.
+2. **Everything is connected.** Systems feed each other. The power grid drives computers, networks, cameras, lights, fridges and water pumps. Weather drives temperature, sound and visibility. Wounds drive aim and speed.
+3. **Information is diegetic.** The world tells you things the way reality would: notes, emails, logs, radio broadcasts, a camera feed, a dripping tap. The UI shows only what your character could know (infection stays hidden until you feel symptoms).
+4. **Real procedures, real knowledge.** A Linux shell behaves like Linux. A network behaves like TCP/IP. A wound needs pressure, cleaning and dressing. Players who know the real thing get rewarded for it, and players who don't can learn it in-game.
+5. **Consequences persist.** What you break stays broken, what you take is gone, and what you burn leaves ash. Permadeath.
+6. **The simulation is portable.** Rules live in `src/sim/` (engine-agnostic TypeScript, deterministic with an injected RNG, serialisable state) so they survive the port to Unreal Engine 5.
+
+## Best-of-the-best: what we take from where
+
+| Source | What we take |
+| ------ | ------------ |
+| **DayZ** | Open world tension; blood vs health; colour drains as blood drops; scavenging; strangers as the scariest thing |
+| **Escape from Tarkov** | Visual grit and lighting; per-body-part damage; deep weapon handling and ballistics; inventory as Tetris with weight |
+| **Project Zomboid** | Hidden infection with no cure; moodles; the power and water shutoff; skills learned by doing; "this is how you died" |
+| **Vein** | Every building enterable; dense, believable towns; electricity and appliances that work |
+| **SCUM** | Metabolism (calories, nutrients), body simulation detail |
+| **Arma** | Realistic ballistics, sound propagation over distance, terrain scale |
+| **Kenshi / Dwarf Fortress** | Systemic world that doesn't revolve around the player; emergent stories |
+| **S.T.A.L.K.E.R.** | Atmosphere, A-life (the world simulates offscreen) |
+| **Uplink / Hacknet / Grey Hack** | Real-feeling hacking: scanning, credentials, logs, traces |
+| **EXAPUNKS / Shenzhen I/O / Stationeers** | Programmable devices, circuits and logic you actually build |
+| **Duskers / Quadrilateral Cowboy** | Using terminals to control the physical world (doors, drones, cameras) |
+| **Real life** | Linux, TCP/IP, SSH, NVR camera systems, UPS batteries, electrical load, radio propagation, field medicine |
+
+## The physical world
+
+### Body (done: session 2; extend)
+Blood volume, wounds per body part, clotting, hidden infection and reanimation, body temperature, fatigue, pain, panic.
+**Next:**
+- fractures and splints, wound infection and disinfecting, food poisoning, nutrients (SCUM)
+- calories instead of a single hunger bar
+- carried weight affecting stamina and joint injuries
+
+### Matter and objects
+- Every item has weight, volume, condition and material.
+- Food spoils on a real timeline, faster without a working fridge.
+- Containers have capacity.
+- Doors and windows have health, lock state and noise; glass breaks and can cut you. **(done: session 7)**
+  - A barrier is a stack of layers met in the order a real attacker meets them: boards on the striker's side, then the core (glass, or the closed door), then boards on the far side. Damage doesn't carry over between layers.
+  - A closed door holds until damage reaches the weaker of its leaf (hollow 120, glass 260, solid 1400, steel 3000) and what keeps it shut (latch 300, deadbolt 900, maglock 1500, strike 2400). At 8 damage per zombie blow every 1.15 s, those read as seconds of pounding: a latched door lasts ~44 s against one zombie.
+  - Zombies never use handles. A maglock door with no power has no latch, so it swings open from its push side and only the door stop holds from the other.
+  - Crossing a window is always a scripted climb (no jumping through); glass is a non-occluding collider that bullets pass through and break.
+  - Noise from a barrier being pounded lures others to just past it, so they path through and join in; zombies pounding on it ignore that noise, so a siege can't sustain itself.
+
+### Energy (key system linking both worlds) (done: session 6)
+- The town grid goes down on a set day.
+- Each building has a **circuit with a load**: lights, fridge, computers, network gear.
+- **UPS batteries** keep critical equipment alive for hours. Generators burn real fuel per kW, make noise that attracts zombies, and must be wired to a building.
+- Car batteries and solar panels come later.
+
+### Sound and light
+- Sound propagates and is blocked by walls. Gunshots carry hundreds of metres.
+- Light makes you visible: flashlights, lit windows, computer screens.
+- Zombies reason about both.
+
+### Weather and time
+Rain (wet clothes chill you, rain masks sound), fog, wind, seasons getting colder.
+
+### The world lives without you
+Zombies migrate, things decay, power fails, and other survivors' traces appear and change.
+
+## The cybernetic world
+
+The goal is that **every electronic device is a real, working system** with its own state, power needs, network address and software, and that controlling electronics changes the physical world.
+
+### Computers (done: session 3; extend)
+Boot, login, real shell, filesystem with permissions, mail, programs, battery.
+**Next:**
+- text editor (`nano`) and writing your own files
+- shell scripts you can run
+- `ps`/`kill`, logs that record *your* actions (and can be read by others later)
+- USB drives as physical items that carry files between machines
+
+**Every era of computing, as working infrastructure (owner, 2026-10-14).** The town's machines are as old as the businesses that bought them, so the player meets every generation of operating system, each with its own rules:
+
+| Era | Where you find it | What makes it different |
+| --- | --- | --- |
+| 1970s mainframe | power plant or county records basement | operator console, batch jobs, tape drives |
+| Early Unix-style | university lab, telephone exchange | the ancestor of the modern shell, terse and powerful |
+| 8-bit home computers | attics, a school store room | boot straight into BASIC: `10 PRINT "HELLO"` |
+| DOS-style | the hardware store's stock PC, old offices | `C:\>` prompt, 8.3 filenames, floppies, `AUTOEXEC.BAT` |
+| Dial-up bulletin boards | a hobbyist's basement | modems, message boards, file areas |
+| Modern Linux-style | police servers, workstations | what exists today, deepened |
+| Embedded firmware | routers, cameras, door controllers, cash registers | tiny systems with default passwords |
+| Industrial controllers | the water plant | logic that runs pumps and valves |
+| SANDi drones | built by the player | qpdb, the eYe protocol, job packs (QPDB.md) |
+
+- **Simulated, not copied.** Each OS is our own recreation of how that kind of system behaved, under our own names. Real operating systems are trademarked and licensed, and far too large to ship in a browser game. (Open-source ones like Linux can be named honestly.)
+- **One machine model underneath.** Every OS runs on the same simulated hardware: power, firmware self-test, disks, boot loader, then that OS's own kernel personality and shell. Old disks hold old file systems, and moving files between eras takes the right media and tools.
+- **Code you write really runs, inside the game.** Shell scripts, BASIC on the old machines, assembly and qpdb machine code all run in the game's own interpreters on the simulated machine. They never run as real code on the player's computer: that sandbox is a hard rule for safety, saves and the Unreal port.
+- **Viruses as part of the world.** Some machines were infected before the outbreak: a boot-sector virus spread on floppies, a worm crossing a LAN through default passwords, a logic bomb left by a fired employee set to go off on a date, ransomware that locked a dentist's records, harmless joke programs. Players can find antivirus tools, clean machines, or write their own viruses and worms in the in-game languages to take over a building's network. Infection, spread and damage follow the simulated machines' real rules.
+- **The JACKY virus (owner, 2026-10-14).** The owner's signature virus. Its calling card, exactly as given: `[]_[8}-<\JACKY/ \<VIRUS>/ >-{8]_[]`. The emblem is mirror-symmetric, like the qpdb letters: the right end `>-{8]_[]` is the left end `[]_[8}-<` reversed and flipped. In the game the emblem is both what the virus shows when it triggers and the byte pattern antivirus tools scan for. Open with the owner: what JACKY does (an ally that spreads through the town's machines and works for the player, or a hostile one), how it spreads, and what sets it off.
+- **Easter eggs everywhere.** Original text adventures and arcade games on old machines, sysadmin jokes in manual pages, a machine that never got its Y2K fix and thinks it is 1900, hidden directories with a previous owner's story. All original writing.
+- **Order:** the machine model and boot chain first, proven with two OSes (modern Linux-style and DOS-style); then the other eras one at a time; viruses once machines can share files over disks and networks.
+
+### Networks (done: session 4)
+- **qpdb** (the owner's language) is what travels over the cables: letters encrypted by turning them with the router's secret key, hidden authenticator symbols, compression, and notches you can read like a barcode. See [QPDB.md](QPDB.md).
+- Each building with electronics has a LAN with real addressing (`10.0.4.0/24`, `192.168.1.0/24`), a router, and devices.
+- Commands: `ip addr`, `ping`, `nmap`, `ssh`, `scp`.
+- The internet is down; inter-building links come later (radio bridges, long Ethernet runs you lay yourself).
+- Devices only respond while they have power.
+
+### Devices that touch the physical world
+- **CCTV:** network cameras streaming **live views of the 3D world** to an NVR you can watch from a terminal. Scout before you step outside.
+- **Access control:** door controllers you can unlock from the network (with credentials). **(done: session 7)** The police station's VistaGuard ACS-4 (`cpd-acs`, 10.0.4.40) is still on its factory login (found in the manual on the file server). Its `door` CLI locks, unlocks and pulses real doors. The lobby maglock fails safe (releases when power dies) and the armory strike fails secure (stays locked; lever egress inside). The keypad needs controller power. The armory PIN is derived from existing secrets so the content random stream never shifts.
+- **Building systems:** lights, alarms (which make noise and draw zombies), water pumps.
+- **Radio:** scanners, emergency broadcasts on a schedule, transmitting to other survivors (multiplayer era).
+- **Programmable logic:** a simple PLC or microcontroller language to automate generators, lights and doors (EXAPUNKS-style), and later drones.
+
+### Security and realism
+- Credentials are found, not given: notes, mail, bash history, config files, default passwords on cheap devices.
+- Failed logins lock out and are logged. Actions leave traces.
+- No magic "hack" button. If you get in, you got in the way a real person would.
+
+## Engineering approach
+- Each system first as a pure model in `src/sim/` with tests, then wired into the client.
+- Data-driven content (items, devices, networks, documents) generated from world facts, so the world stays coherent: the email names the real address, the camera shows the real street.
+- Performance budgets: the browser build must stay playable on a mid-range laptop. High/Low quality, and offscreen work (like CCTV renders) is throttled.
