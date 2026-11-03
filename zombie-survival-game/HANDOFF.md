@@ -17,7 +17,10 @@ The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 
 **Working style (owner, 2026-10-14):** maximum efficiency and token economy in research, coding and orchestration. Read only what the task needs, prefer one targeted check over broad sweeps, no multi-agent fan-outs unless asked, short replies. Never at the cost of correctness: still test and verify before pushing.
 
-**Current direction (owner, 2026-10-14):** mechanics first, graphics after. Next is a real simulated computer (hardware, firmware self-test, boot loader, OS with services, filesystem with permissions, processes, logs, a fuller shell with an editor and scripts, USB drives), with qpdb as its network layer; then zombie navigation and hordes.
+**Current direction (owner, 2026-11-03):** beat VEIN: at least 2× its mechanics, features and micromanagement, then graphics. **Read [VEIN.md](VEIN.md)** for the sourced comparison and the ordered plan; step 1 (water and cooking depth) has begun.
+- Provisions v1 (2026-11-03): `src/sim/freshness.ts` (spoilage by temperature, Q10 = 3; fridges warm toward the room after power loss, τ 24 h; meal effects and food poisoning), `src/sim/crafting.ts` (recipes as data; heat from a powered kitchen stove or a camping stove burning gas by the minute), `BodyState.foodPoison` (optional, old saves fine), perishables and tools in `items.ts`, town water via `waterRunning()` in `power.ts` (mains last 36 h past the grid). Game: food ages every 5 game minutes (`ageFood`), found food is pre-aged (`ageFoundFood`), drinking leaves an empty bottle, kitchen taps refill bottles, Cook & craft panel in the inventory. Harness: `tools/harness/provisions.mjs` (H15).
+
+**Earlier direction (owner, 2026-10-14):** mechanics first, graphics after. Next is a real simulated computer (hardware, firmware self-test, boot loader, OS with services, filesystem with permissions, processes, logs, a fuller shell with an editor and scripts, USB drives), with qpdb as its network layer; then zombie navigation and hordes.
 
 ### Decisions already made (don't re-ask)
 - **Browser now, port to Unreal Engine 5 later.** All simulation rules go in `src/sim/` as engine-agnostic TypeScript (no `three`, React or DOM imports; injected RNG; serialisable state). Rendering, input and UI are a thin client. See the top of ROADMAP.md.

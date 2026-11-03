@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ITEMS, type ItemStack } from "@/sim/items";
+import { freshStage } from "@/sim/freshness";
 import type { HudState } from "@/game/types";
 import HealthPanel from "./HealthPanel";
 
@@ -11,8 +12,12 @@ export interface InventoryActions {
   put: (uid: number) => void;
   treat: (woundId: number) => void;
   siphon: () => void;
+  fillBottles: () => void;
+  craft: (id: string) => void;
   close: () => void;
 }
+
+const FRESH_STYLE = { fresh: "text-emerald-400", stale: "text-amber-300", spoiled: "text-orange-500", rotten: "text-red-500" } as const;
 
 const categoryLabel: Record<string, string> = {
   food: "Food",
@@ -66,15 +71,19 @@ const ItemRow = ({ stack, children }: { stack: ItemStack; children: ReactNode })
         ? `${(stack.fuel ?? 0).toFixed(1)} L in tank`
         : def.category === "firearm"
       ? `${stack.loaded ?? 0}/${def.magSize} loaded`
+      : stack.id === "camping_stove"
+        ? `${Math.round(stack.charge ?? 0)} min of gas fitted`
       : stack.count > 1
         ? `×${stack.count}`
         : "";
+  const stage = stack.fresh === undefined ? null : freshStage(stack.fresh);
   return (
     <li className="flex items-center gap-3 border-b border-white/5 px-3 py-2 last:border-0">
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className="truncate text-base font-semibold text-stone-100">{def.name}</span>
           {detail && <span className="text-sm tabular-nums text-stone-400">{detail}</span>}
+          {stage && <span className={`text-xs font-semibold uppercase tracking-wider ${FRESH_STYLE[stage]}`}>{stage}</span>}
         </div>
         <div className="truncate text-xs text-stone-500">
           {categoryLabel[def.category]} · {(def.weight * stack.count + (stack.fuel ?? 0) * 0.74).toFixed(2)} kg · {def.description}
@@ -138,6 +147,11 @@ const Inventory = ({ hud, actions }: { hud: HudState; actions: InventoryActions 
               title={hud.container.name}
               aside={
                 <div className="flex gap-1">
+                  {hud.tap && (
+                    <Btn quiet onClick={actions.fillBottles}>
+                      {hud.tap.running ? "Fill bottles at tap" : "Tap is dry"}
+                    </Btn>
+                  )}
                   {hud.containerFuel !== null && (
                     <Btn quiet onClick={actions.siphon}>
                       Siphon fuel ({hud.containerFuel.toFixed(1)} L)
@@ -156,6 +170,26 @@ const Inventory = ({ hud, actions }: { hud: HudState; actions: InventoryActions 
             </Panel>
           )}
         </div>
+        {!hud.container && hud.recipes.length > 0 && (
+          <section className="rounded-sm bg-stone-950/90 ring-1 ring-white/10">
+            <h2 className="border-b border-white/10 px-3 py-2 text-lg font-bold uppercase tracking-[0.2em] text-stone-200">Cook & craft</h2>
+            <ul>
+              {hud.recipes.map((r) => (
+                <li key={r.id} className="flex items-center gap-3 border-b border-white/5 px-3 py-2 last:border-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-base font-semibold text-stone-100">
+                      {r.name} <span className="text-sm font-normal text-stone-400">· {r.minutes} min</span>
+                    </div>
+                    <div className={`truncate text-xs ${r.missing.length ? "text-stone-500" : "text-emerald-400"}`}>
+                      {r.missing.length ? `Needs ${r.missing.join(", ")}` : "You have everything. Stay put while you work."}
+                    </div>
+                  </div>
+                  {!r.missing.length && <Btn onClick={() => actions.craft(r.id)}>Make</Btn>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <div className="flex items-center justify-between text-sm text-stone-400">
           <span>Zombies keep moving while you rummage.</span>
           <Btn onClick={actions.close}>Close (Tab)</Btn>

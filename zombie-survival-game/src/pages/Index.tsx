@@ -39,6 +39,8 @@ const Index = () => {
       put: (uid) => gameRef.current?.putInContainer(uid),
       treat: (woundId) => gameRef.current?.treatWound(woundId),
       siphon: () => gameRef.current?.siphonFuel(),
+      fillBottles: () => gameRef.current?.fillBottles(),
+      craft: (id) => gameRef.current?.craftRecipe(id),
       close: () => gameRef.current?.closeUi(),
     }),
     [],

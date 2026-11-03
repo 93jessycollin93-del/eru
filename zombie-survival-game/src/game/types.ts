@@ -98,6 +98,10 @@ export interface HudState {
   power: "grid" | "generator" | "ups" | "none" | null;
   /** Litres left in the car being searched. */
   containerFuel: number | null;
+  /** Searching a kitchen: whether its tap still runs. */
+  tap: { running: boolean } | null;
+  /** Everything you could cook or craft, with what's missing for each. */
+  recipes: { id: string; name: string; minutes: number; missing: string[] }[];
   /** Camera viewer opened from a terminal. */
   cctv: { nvr: string; channels: { channel: number; label: string; online: boolean }[] } | null;
   /** Street address when inside a building. */

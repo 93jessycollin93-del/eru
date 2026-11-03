@@ -25,6 +25,8 @@ export interface LootContainer {
   preset?: ItemStack[];
   /** Litres left in a car's tank, for siphoning. */
   fuel?: number;
+  /** Fridges: air temperature inside (not saved; rebuilt from power on load). */
+  tempC?: number;
 }
 
 export interface ComputerSpot {

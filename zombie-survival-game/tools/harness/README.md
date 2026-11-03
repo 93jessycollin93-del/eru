@@ -40,3 +40,4 @@ Scenarios in `doors.mjs` (pass criteria in the session 7 entry of HANDOFF.md):
 | H12 | Aiming at windows over counters targets the window, looking down targets the counter |
 
 Playwright comes from `npm i --no-save playwright`, or the container's global install.
+- `provisions.mjs` (H15): food found in a fridge is aged since the outbreak; cooking on a camping stove burns gas and inherits freshness; rag bandages; tap refills; drinking leaves a bottle; carried food spoils. Prints a JSON summary and saves `out/provisions-inventory.png`.

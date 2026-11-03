@@ -20,6 +20,7 @@ import {
   isBleeding,
   moodles,
   pain,
+  poisonFood,
   spendStamina,
   strength,
   takePainkillers,
@@ -27,6 +28,8 @@ import {
   zombieHit,
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
+import { craft, missingFor, RECIPES } from "../sim/crafting";
+import { ageFresh, freshAtFind, freshStage, fridgeTemp, mealEffect, FRIDGE_C } from "../sim/freshness";
 import { BARRICADE, BARRIER, BARRIER_NOISE, DOOR, MELEE, FIREARM, WINDOW, ZOMBIE, meleeDamage, shotSpread, visibilityRange } from "../sim/tuning";
 import {
   attackSlots,
@@ -51,7 +54,7 @@ import { PostFX, type Quality } from "./render/postfx";
 import { SkyDome } from "./render/sky";
 import { CctvSystem } from "./render/cctv";
 import { Electricity, type GeneratorObject } from "./electricity";
-import { refuel, resetBreaker, startGenerator } from "../sim/power";
+import { refuel, resetBreaker, startGenerator, waterRunning } from "../sim/power";
 import type { AccessView, NetworkSpec, NetworkView } from "../sim/network";
 import { blockBox, createNavGrid, findPath, type NavGrid } from "../sim/nav";
 import { TextureLibrary } from "./render/textures";
@@ -155,6 +158,8 @@ export class Game {
   private breachers = new Set<Zombie>();
   /** Timed work in progress (boarding up, breaking glass...): you stand still until it's done. */
   private action: TimedAction | null = null;
+  /** Game minutes since food last aged (it ages in 5-minute steps). */
+  private spoilClock = 0;
   private keypadId: number | null = null;
   private keypadEntry = "";
   private keypadStatus: KeypadStatus = "idle";
@@ -441,12 +446,22 @@ export class Game {
     const p = this.player;
     switch (def.category) {
       case "food":
-      case "drink":
-        eat(p.body, def.hunger ?? 0, def.thirst ?? 0);
+      case "drink": {
+        // Turned food feeds you less and can make you sick; raw meat can however fresh it is.
+        const eff = mealEffect(stack.fresh, def.perish?.raw);
+        const stage = stack.fresh === undefined ? "fresh" : freshStage(stack.fresh);
+        eat(p.body, (def.hunger ?? 0) * eff.nourish, (def.thirst ?? 0) * (def.thirst && def.thirst > 0 ? eff.nourish : 1));
+        const sick = this.rng() < eff.poisonChance;
+        if (sick) poisonFood(p.body, eff.poisonSeverity);
         this.audio.eat();
-        this.message(`${def.category === "food" ? "Ate" : "Drank"} ${def.name}.`, "good");
+        const verb = def.category === "food" ? "Ate" : "Drank";
+        if (def.perish?.raw) this.message(`${verb} ${def.name}, raw.${sick ? " Your stomach turns." : ""}`, "warn");
+        else if (stage === "fresh") this.message(`${verb} ${def.name}.`, "good");
+        else this.message(`${verb} ${def.name}. It tasted ${stage === "stale" ? "stale" : "rotten"}.${sick ? " Your stomach turns." : ""}`, "warn");
         this.consume(stack);
+        if (def.leaves) this.addToInventory(makeStack(def.leaves));
         break;
+      }
       case "medical":
         if (def.medical === "painkillers") {
           takePainkillers(p.body);
@@ -651,6 +666,106 @@ export class Game {
       }
     }
     this.emitHud();
+  }
+
+  /** Is the town water still running? Gravity storage keeps taps going a day and a half after the grid fails. */
+  private tapRunning() {
+    return waterRunning(this.elec.world.gridFailsAt, this.minutes);
+  }
+
+  /** Fill every empty bottle you carry at the kitchen tap you're searching. */
+  fillBottles() {
+    const c = this.container;
+    if (!c || c.table !== "kitchen") return;
+    const empty = this.countItem("empty_bottle");
+    if (!empty) {
+      this.message("You have no empty bottles.", "warn");
+      return;
+    }
+    if (!this.tapRunning()) {
+      this.message("The tap coughs air. The town water has stopped.", "warn");
+      return;
+    }
+    this.takeItems("empty_bottle", empty);
+    for (let i = 0; i < empty; i++) this.addToInventory(makeStack("water_bottle"));
+    this.message(`You fill ${empty} bottle${empty === 1 ? "" : "s"} at the tap.`, "good");
+    this.emitHud();
+  }
+
+  /** Cook or craft: a timed job where you stand still, using a powered kitchen stove or a camping stove for heat. */
+  craftRecipe(id: string) {
+    const r = RECIPES.find((x) => x.id === id);
+    if (!r) return;
+    const ctx = { kitchenStove: this.kitchenStoveHere() };
+    const missing = missingFor(r, this.inventory, ctx);
+    if (missing.length) {
+      this.message(`You need ${missing.join(", ")}.`, "warn");
+      return;
+    }
+    this.inventoryOpen = false;
+    this.container = null;
+    this.requestLock(false);
+    this.startAction({
+      label: r.heat ? `${r.name} (${ctx.kitchenStove ? "stove" : "camping stove"})` : r.name,
+      dur: r.minutes / TIME_SCALE,
+      done: () => {
+        const now = { kitchenStove: this.kitchenStoveHere() };
+        if (missingFor(r, this.inventory, now).length) return this.message("You couldn't finish.", "warn");
+        const res = craft(r, this.inventory, now);
+        this.inventory = res.inventory;
+        this.addToInventory(res.output);
+        if (this.equippedUid !== null && !this.equippedStack()) this.setEquipped(null);
+        this.message(`${ITEMS[res.output.id].name} ready.`, "good");
+      },
+    });
+    this.emitHud();
+  }
+
+  /** Standing by a kitchen whose stove has power. */
+  private kitchenStoveHere() {
+    if (!this.town || !this.elec) return false; // the HUD asks before the world is built
+    const p = this.player.pos;
+    const near = this.town.containers.some((c) => c.table === "kitchen" && Math.hypot(c.x - p.x, c.z - p.z) < 2.5);
+    return near && this.elec.powered(this.buildingObj(p.x, p.z), "appliances");
+  }
+
+  /** Food rolled into a container has been sitting there since the outbreak: in a fridge until the grid went, then warm. */
+  private ageFoundFood(c: LootContainer) {
+    const day = Math.floor(this.minutes / 1440) + 1;
+    const room = airTemperature(this.minutes % 1440, day, c.table !== "car");
+    const since = this.minutes - START_MINUTES + 1440; // shop stock was already a day old
+    const failedAgo = this.minutes - this.elec.world.gridFailsAt;
+    for (const s of c.items ?? []) {
+      const per = ITEMS[s.id].perish;
+      if (!per || s.fresh !== undefined) continue;
+      s.fresh = Math.max(0, freshAtFind(per.lifeH, c.table === "fridge", since, failedAgo, room) - Math.random() * 0.15);
+    }
+  }
+
+  /** Everything perishable ages: what you carry at the air around you, what's in containers at theirs. */
+  private ageFood(gameMinutes: number) {
+    this.spoilClock += gameMinutes;
+    if (this.spoilClock < 5) return;
+    const m = this.spoilClock;
+    this.spoilClock = 0;
+    const day = Math.floor(this.minutes / 1440) + 1;
+    const indoor = airTemperature(this.minutes % 1440, day, true);
+    const outdoor = airTemperature(this.minutes % 1440, day, false);
+    const age = (items: ItemStack[], tempC: number) => {
+      for (const s of items) {
+        const per = ITEMS[s.id].perish;
+        if (per) s.fresh = ageFresh(s.fresh ?? 1, per.lifeH, tempC, m);
+      }
+    };
+    age(this.inventory, this.airTemp);
+    for (const c of this.town.containers) {
+      if (!c.items?.length) continue;
+      if (c.table === "fridge") {
+        const powered = this.elec.powered(this.buildingObj(c.x, c.z), "appliances");
+        c.tempC = fridgeTemp(c.tempC ?? (powered ? FRIDGE_C : indoor), indoor, powered, m);
+        age(c.items, c.tempC);
+      } else age(c.items, c.table === "car" || c.table === "ground" ? outdoor : indoor);
+    }
   }
 
   /** Siphon fuel from the car you're searching into a jerry can. */
@@ -1490,6 +1605,7 @@ export class Game {
     this.airTemp = airTemperature(this.minutes % 1440, day, this.sheltered);
     const threats = this.zombies.filter((z) => z.hunting && z.pos.distanceTo(p.pos) < 25).length;
     const death = updateBody(p.body, dt, gameMinutes, { ambientTemp: this.airTemp, exertion: p.exertion, threats });
+    this.ageFood(gameMinutes);
     if (death) this.die(death);
     if (asleep) {
       if (p.body.fatigue < 3) this.wake("You wake up rested.");
@@ -2466,7 +2582,10 @@ export class Game {
 
   private openContainer(c: LootContainer) {
     // Presets are copied: the town's originals must stay pristine for the next run or load.
-    if (c.items === null) c.items = [...rollLoot(c.table, Math.random), ...(c.preset ?? []).map((s) => structuredClone(s))];
+    if (c.items === null) {
+      c.items = [...rollLoot(c.table, Math.random), ...(c.preset ?? []).map((s) => structuredClone(s))];
+      this.ageFoundFood(c);
+    }
     this.container = c;
     this.inventoryOpen = false;
     this.releaseLock();
@@ -2645,6 +2764,8 @@ export class Game {
         return b && st ? st.source : null;
       })(),
       containerFuel: this.container?.table === "car" ? this.container.fuel ?? 0 : null,
+      tap: this.container?.table === "kitchen" && this.elec ? { running: this.tapRunning() } : null,
+      recipes: RECIPES.map((r) => ({ id: r.id, name: r.name, minutes: r.minutes, missing: missingFor(r, this.inventory, { kitchenStove: this.kitchenStoveHere() }) })),
       cctv:
         this.cctvOpen && this.computerSpot
           ? { nvr: this.cctv.nvrName, channels: this.cctv.channels.map((ch) => ({ channel: ch.channel, label: ch.label, online: ch.online })) }

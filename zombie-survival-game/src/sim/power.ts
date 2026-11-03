@@ -82,6 +82,13 @@ export function fuelPerHour(ratedW: number, loadW: number): number {
 
 export const gridUp = (w: PowerWorld, minute: number) => minute < w.gridFailsAt;
 
+/**
+ * Town water: the pumps stop with the grid, but the water tower keeps the mains pressurised for
+ * about a day and a half of nobody refilling it.
+ */
+export const WATER_AFTER_GRID_MINUTES = 36 * 60;
+export const waterRunning = (gridFailsAt: number, minute: number) => minute < gridFailsAt + WATER_AFTER_GRID_MINUTES;
+
 export function demand(c: Circuit, criticalOnly = false): number {
   return c.loads.filter((l) => l.on && (!criticalOnly || l.critical)).reduce((s, l) => s + l.watts, 0);
 }

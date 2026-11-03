@@ -66,6 +66,8 @@ export interface BodyState {
   painkillers: number;
   asleep: boolean;
   nextWoundId: number;
+  /** Food poisoning: game minutes left and how bad (0..1). Absent in older saves. */
+  foodPoison?: { minutes: number; severity: number };
 }
 
 export interface BodyEnvironment {
@@ -124,6 +126,7 @@ export function createBody(): BodyState {
     painkillers: 0,
     asleep: false,
     nextWoundId: 1,
+    foodPoison: { minutes: 0, severity: 0 },
   };
 }
 
@@ -192,9 +195,17 @@ export function maxStamina(b: BodyState): number {
 export function updateBody(b: BodyState, realSeconds: number, gameMinutes: number, env: BodyEnvironment): string | null {
   // Nutrition. Sleeping slows hunger and thirst.
   const sleepFactor = b.asleep ? 0.5 : 1;
-  const queasy = infectionStage(b) >= 1 ? 0.6 : 1;
+  const fp = b.foodPoison && b.foodPoison.minutes > 0 ? b.foodPoison : null;
+  const queasy = infectionStage(b) >= 1 || fp ? 0.6 : 1;
   b.hunger = clamp(b.hunger - gameMinutes * 0.045 * sleepFactor * queasy, 0, 100);
   b.thirst = clamp(b.thirst - gameMinutes * (0.07 + env.exertion * 0.08) * sleepFactor * (b.bodyTemp > 38 ? 1.6 : 1), 0, 100);
+
+  // Food poisoning: vomiting and diarrhoea dehydrate you; a bad case wears you down if you can't keep water in.
+  if (fp) {
+    b.thirst = clamp(b.thirst - gameMinutes * 0.06 * fp.severity, 0, 100);
+    if (fp.severity > 0.7 && b.thirst < 25) b.health = clamp(b.health - gameMinutes * 0.02, 0, 100);
+    fp.minutes = Math.max(0, fp.minutes - gameMinutes);
+  }
 
   // Fatigue builds over ~18 hours awake and clears in ~7 hours of sleep.
   if (b.asleep) b.fatigue = clamp(b.fatigue - gameMinutes * 0.24, 0, 100);
@@ -341,6 +352,12 @@ export function eat(b: BodyState, hunger: number, thirst: number) {
   b.thirst = clamp(b.thirst + thirst, 0, 100);
 }
 
+/** Caught food poisoning: 6 to 36 hours depending on how bad. A second bout extends the first. */
+export function poisonFood(b: BodyState, severity: number) {
+  const cur = b.foodPoison ?? { minutes: 0, severity: 0 };
+  b.foodPoison = { minutes: Math.max(cur.minutes, 360 + severity * 1800), severity: Math.max(cur.minutes > 0 ? cur.severity : 0, severity) };
+}
+
 export function heal(b: BodyState, amount: number) {
   b.health = clamp(b.health + amount, 0, 100);
 }
@@ -369,6 +386,8 @@ export function moodles(b: BodyState): Moodle[] {
   if (stage === 1) add("queasy", "Queasy", 1, "Your stomach is turning. You don't feel hungry.");
   if (stage === 2) add("nauseous", "Nauseous", 2, "You feel sick and feverish.");
   if (stage >= 3) add("fever", stage === 4 ? "Dying" : "High fever", stage === 4 ? 4 : 3, "Your body is burning up.");
+  if (b.foodPoison && b.foodPoison.minutes > 0)
+    add("foodpoison", b.foodPoison.severity > 0.7 ? "Violently ill" : "Food poisoning", b.foodPoison.severity > 0.7 ? 3 : 2, "Something you ate. Keep drinking water; it passes in a day or so.");
   if (b.hunger < 35) add("hunger", b.hunger < 10 ? "Starving" : b.hunger < 20 ? "Very hungry" : "Hungry", b.hunger < 10 ? 4 : b.hunger < 20 ? 3 : 1, "Find something to eat.");
   if (b.thirst < 35) add("thirst", b.thirst < 10 ? "Dehydrated" : b.thirst < 20 ? "Parched" : "Thirsty", b.thirst < 10 ? 4 : b.thirst < 20 ? 3 : 1, "Find something to drink.");
   if (b.bodyTemp < 36.2) add("cold", b.bodyTemp < 34.5 ? "Hypothermic" : b.bodyTemp < 35.5 ? "Freezing" : "Chilly", b.bodyTemp < 34.5 ? 4 : b.bodyTemp < 35.5 ? 3 : 1, "Get indoors and stay out of the night air.");

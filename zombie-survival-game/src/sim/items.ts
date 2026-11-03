@@ -34,6 +34,10 @@ export interface ItemDef {
   fuelCapacity?: number;
   /** Placeable generator rating (W) and tank (L). */
   generator?: { ratedW: number; tankL: number; noise: number };
+  /** Perishable: hours until rotten at 20 °C (see freshness.ts); raw meat makes you sick until cooked. */
+  perish?: { lifeH: number; raw?: boolean };
+  /** What's left in your hands when it's used up (a bottle you can refill). */
+  leaves?: string;
 }
 
 /** Petrol weighs about 0.74 kg per litre. */
@@ -72,7 +76,94 @@ export const ITEMS: Record<string, ItemDef> = {
     category: "drink",
     weight: 0.5,
     thirst: 45,
+    leaves: "empty_bottle",
     description: "Clean drinking water.",
+  },
+  empty_bottle: {
+    id: "empty_bottle",
+    name: "Empty Bottle",
+    category: "tool",
+    weight: 0.03,
+    stackable: true,
+    description: "Fill it at a kitchen tap while the town water still runs.",
+  },
+  bread: {
+    id: "bread",
+    name: "Loaf of Bread",
+    category: "food",
+    weight: 0.5,
+    hunger: 25,
+    thirst: -3,
+    perish: { lifeH: 120 },
+    description: "Going stale by the day. Mould by the week.",
+  },
+  apple: {
+    id: "apple",
+    name: "Apple",
+    category: "food",
+    weight: 0.2,
+    hunger: 8,
+    thirst: 3,
+    perish: { lifeH: 500 },
+    description: "Keeps for weeks, longer in the cold.",
+  },
+  milk: {
+    id: "milk",
+    name: "Carton of Milk",
+    category: "drink",
+    weight: 1,
+    hunger: 10,
+    thirst: 30,
+    perish: { lifeH: 40 },
+    description: "A week in a fridge. A day or two without one.",
+  },
+  raw_chicken: {
+    id: "raw_chicken",
+    name: "Raw Chicken",
+    category: "food",
+    weight: 0.6,
+    hunger: 30,
+    perish: { lifeH: 8, raw: true },
+    description: "Cook it first, or pay for it later.",
+  },
+  cooked_chicken: {
+    id: "cooked_chicken",
+    name: "Cooked Chicken",
+    category: "food",
+    weight: 0.5,
+    hunger: 40,
+    perish: { lifeH: 14 },
+    description: "Eat it today, or keep it cold.",
+  },
+  rag: {
+    id: "rag",
+    name: "Rag",
+    category: "tool",
+    weight: 0.05,
+    stackable: true,
+    description: "Torn cloth. Two make a rough bandage.",
+  },
+  cooking_pot: {
+    id: "cooking_pot",
+    name: "Cooking Pot",
+    category: "tool",
+    weight: 0.8,
+    description: "For anything that needs heat.",
+  },
+  camping_stove: {
+    id: "camping_stove",
+    name: "Camping Stove",
+    category: "tool",
+    weight: 0.9,
+    description: "Butane burner. Cooks anywhere, if you have gas.",
+  },
+  gas_canister: {
+    id: "gas_canister",
+    name: "Gas Canister",
+    category: "tool",
+    weight: 0.35,
+    stackable: true,
+    description: "Butane. About an hour and a half of flame.",
   },
   soda: {
     id: "soda",
@@ -257,6 +348,10 @@ export interface ItemStack {
   /** Handwritten notes. */
   title?: string;
   text?: string;
+  /** Perishables: 1 fresh, 0 rotten. */
+  fresh?: number;
+  /** Camping stove: minutes of gas left in the fitted canister. */
+  charge?: number;
 }
 
 let nextUid = 1;
@@ -290,13 +385,21 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["soda", 4, 1, 2],
       ["kitchen_knife", 2, 1, 1],
       ["hammer", 0.6, 1, 1],
+      ["bread", 3, 1, 1],
+      ["apple", 3, 1, 3],
+      ["cooking_pot", 1.5, 1, 1],
+      ["rag", 2, 1, 2],
     ],
   },
   fridge: {
-    rolls: [0, 2],
+    rolls: [0, 3],
     entries: [
       ["water_bottle", 5, 1, 2],
       ["soda", 5, 1, 2],
+      ["milk", 4, 1, 1],
+      ["raw_chicken", 3, 1, 1],
+      ["cooked_chicken", 1, 1, 1],
+      ["apple", 2, 1, 3],
     ],
   },
   bedroom: {
@@ -308,6 +411,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["baseball_bat", 2, 1, 1],
       ["ammo_9mm", 1, 4, 10],
       ["pistol", 0.4, 1, 1],
+      ["rag", 3, 1, 3],
     ],
   },
   store_shelf: {
@@ -320,6 +424,9 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["soda", 5, 1, 3],
       ["bandage", 2, 1, 2],
       ["painkillers", 2, 1, 1],
+      ["bread", 3, 1, 2],
+      ["apple", 2, 1, 4],
+      ["gas_canister", 1, 1, 2],
     ],
   },
   police_locker: {
@@ -343,6 +450,8 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       // Each arrives as one stack within its range; a repeat roll tops it up only to max (rollLoot).
       ["nails", 3, 20, 50],
       ["plank", 3, 2, 4],
+      ["camping_stove", 1.2, 1, 1],
+      ["gas_canister", 2, 1, 3],
     ],
   },
   car: {
