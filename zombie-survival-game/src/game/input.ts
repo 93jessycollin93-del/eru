@@ -52,6 +52,28 @@ export class Input {
     this.leftDown = this.rightDown = this.leftPressed = false;
   }
 
+  /** On-screen controls press and release keys the way a keyboard would. */
+  setVirtual(code: string, down: boolean) {
+    if (down) {
+      if (!this.down.has(code)) this.pressed.add(code);
+      this.down.add(code);
+    } else this.down.delete(code);
+  }
+
+  /** A finger dragged across the screen turns the camera like a mouse would. */
+  addLook(dx: number, dy: number) {
+    if (!this.capturing) return;
+    this.mouseDX += dx;
+    this.mouseDY += dy;
+  }
+
+  setMouse(button: "left" | "right", down: boolean) {
+    if (button === "left") {
+      if (down && !this.leftDown) this.leftPressed = true;
+      this.leftDown = down;
+    } else this.rightDown = down;
+  }
+
   private onKeyDown = (e: KeyboardEvent) => {
     // Don't steal keys from form fields.
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;

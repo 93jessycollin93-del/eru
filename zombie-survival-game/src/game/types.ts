@@ -122,6 +122,8 @@ export interface HudState {
   crosshair: boolean;
   /** Pointer lock failed, so the game runs with a free cursor. */
   freeMouse: boolean;
+  /** Touch-screen device: show on-screen controls. */
+  touch: boolean;
   /** Save slots with something in them ("auto" is the autosave). */
   saves: (SaveMeta & { slot: "auto" | "1" | "2" | "3"; broken: boolean })[];
   /** Why the last load failed (shown on the menu and death screens), or null. */

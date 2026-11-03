@@ -11,6 +11,22 @@ body,
 body {
   @apply bg-neutral-950 text-neutral-100 antialiased font-ui;
   overflow: hidden;
+  /* Phones: no rubber-band scrolling, no long-press callouts or text selection mid-fight. */
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+canvas {
+  touch-action: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 @keyframes pulse-red {

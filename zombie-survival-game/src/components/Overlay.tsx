@@ -36,7 +36,24 @@ const CONTROLS: [string, string][] = [
   ["Pause", "Esc"],
 ];
 
-const Controls = () => (
+const TOUCH_CONTROLS: [string, string][] = [
+  ["Move", "Left stick (push to the edge to sprint)"],
+  ["Look", "Drag anywhere on the right"],
+  ["Attack / aim / use", "Buttons on the right"],
+  ["Inventory, light, pause", "Buttons at the top"],
+  ["Search, doors, terminals", "Use"],
+];
+
+const Controls = ({ touch }: { touch?: boolean }) => touch ? (
+  <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-0.5 text-left text-base">
+    {TOUCH_CONTROLS.map(([action, how]) => (
+      <div key={action} className="contents">
+        <dt className="uppercase tracking-wider text-stone-400">{action}</dt>
+        <dd className="text-stone-100">{how}</dd>
+      </div>
+    ))}
+  </dl>
+) : (
   <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-0.5 text-left text-base">
     {CONTROLS.map(([action, key]) => (
       <div key={action} className="contents">
@@ -175,7 +192,7 @@ const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }
 
   return (
     <div className="absolute inset-0 overflow-y-auto bg-gradient-to-t from-black/90 via-black/60 to-black/30 font-ui">
-      <div className="mx-auto flex min-h-full max-w-5xl flex-col justify-center gap-10 px-6 py-10">
+      <div className="mx-auto flex min-h-full max-w-5xl flex-col justify-center gap-10 px-6 py-10 [@media(max-height:500px)]:gap-5 [@media(max-height:500px)]:py-4">
         {hud.status === "loading" && (
           <p className="text-center text-xl uppercase tracking-[0.3em] text-stone-300">Building the town…</p>
         )}
@@ -184,7 +201,7 @@ const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }
           <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
             <div className="max-w-xl">
               <p className="mb-3 text-sm uppercase tracking-[0.35em] text-stone-400">Coldwater, Marlow County · Day 1</p>
-              <h1 className="font-display text-7xl font-black uppercase leading-[0.85] text-stone-100 sm:text-8xl">
+              <h1 className="font-display text-7xl font-black uppercase leading-[0.85] text-stone-100 sm:text-8xl [@media(max-height:500px)]:text-5xl">
                 Zombie
                 <br />
                 Survival
@@ -203,7 +220,7 @@ const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }
               </div>
             </div>
             <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
-              <Controls />
+              <Controls touch={hud.touch} />
             </div>
           </div>
         )}
@@ -222,7 +239,7 @@ const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }
               </div>
             </div>
             <div className="rounded-sm bg-black/40 p-5 ring-1 ring-white/10">
-              <Controls />
+              <Controls touch={hud.touch} />
             </div>
           </div>
         )}

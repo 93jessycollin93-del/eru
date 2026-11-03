@@ -3,7 +3,7 @@
 **Read this first if you are a new Claude Code session picking up this project.**
 Keep this file current: update it in the same commit as any meaningful change, so the project can move to a new session at any moment.
 
-_Last updated: session 8 — saving, review fixes, character detail pass, render review fixes (2026-10-14)_
+_Last updated: 2026-11-03: provisions v1, phone and tablet controls, lineage graph, world plan_
 
 ## The project
 
@@ -19,6 +19,9 @@ The owner plans about 20 sessions. The plan is in [ROADMAP.md](ROADMAP.md).
 
 **Current direction (owner, 2026-11-03):** beat VEIN: at least 2× its mechanics, features and micromanagement, then graphics. **Read [VEIN.md](VEIN.md)** for the sourced comparison and the ordered plan; step 1 (water and cooking depth) has begun.
 - Provisions v1 (2026-11-03): `src/sim/freshness.ts` (spoilage by temperature, Q10 = 3; fridges warm toward the room after power loss, τ 24 h; meal effects and food poisoning), `src/sim/crafting.ts` (recipes as data; heat from a powered kitchen stove or a camping stove burning gas by the minute), `BodyState.foodPoison` (optional, old saves fine), perishables and tools in `items.ts`, town water via `waterRunning()` in `power.ts` (mains last 36 h past the grid). Game: food ages every 5 game minutes (`ageFood`), found food is pre-aged (`ageFoundFood`), drinking leaves an empty bottle, kitchen taps refill bottles, Cook & craft panel in the inventory. Harness: `tools/harness/provisions.mjs` (H15).
+- Phones and tablets (2026-11-03): touch is detected (`pointer: coarse` + touch points), which turns on free mouse, low quality and pixel ratio 1. `src/components/TouchControls.tsx` adds a move stick (push to the edge to sprint), drag-anywhere look, and buttons for Attack, Aim, Use, Jump, Crouch, Reload, Light, Bag and Pause, plus Wake while asleep. Its listeners are native and non-passive so taps don't become mouse clicks. Input has `setVirtual`/`addLook`/`setMouse`. A portrait overlay asks you to rotate the phone. Harness: `tools/harness/mobile.mjs` (H16) covers iPhone 14 and Pixel 7 emulation and a Windows desktop. Only Chromium exists in the container, so real Safari and Firefox still need a check on a real device.
+- Lineage (2026-11-03): `src/sim/lineage.ts` is a causal graph from nature to every item and system, with real dates. `lineage.test.ts` enforces no orphans, no cycles, no dead ends, chronological order and a lineage for every item. **Every new item or system must add its nodes.** Tap an item's name in the inventory to see its origin line.
+- World (2026-11-03): **read [WORLD.md](WORLD.md)**. The plan is real maps from OSM (imported offline into 256 m chunks), Natural Earth for planet scale, and CC0 assets. OSM, Geofabrik, Poly Haven and Kenney are blocked in this container until the owner allows them under Network access.
 
 **Earlier direction (owner, 2026-10-14):** mechanics first, graphics after. Next is a real simulated computer (hardware, firmware self-test, boot loader, OS with services, filesystem with permissions, processes, logs, a fuller shell with an editor and scripts, USB drives), with qpdb as its network layer; then zombie navigation and hordes.
 

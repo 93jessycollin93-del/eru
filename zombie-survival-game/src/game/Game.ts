@@ -98,6 +98,8 @@ export class Game {
   private status: GameStatus = "loading";
   private locked = false;
   private freeMouse = false;
+  /** A touch-screen device: the HUD shows on-screen controls. */
+  readonly touch: boolean;
   private inventoryOpen = false;
   private container: LootContainer | null = null;
 
@@ -187,7 +189,12 @@ export class Game {
     private onHud: (hud: HudState) => void,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // Phones and tablets: no pointer lock (iPhone Safari has none), no keyboard. Touch controls instead,
+    // free look from the start, and a lighter render, since a 3x phone screen at full resolution is
+    // nine times the pixels for a GPU a fraction of a desktop's.
+    this.touch = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches && navigator.maxTouchPoints > 0;
+    if (this.touch) this.freeMouse = true;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.touch ? 1 : 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -200,7 +207,7 @@ export class Game {
     this.scene.add(this.sky.mesh);
     const saved = loadQuality();
     this.qualityChosen = saved !== null;
-    this.quality = saved ?? "high";
+    this.quality = saved ?? (this.touch ? "low" : "high");
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.quality);
     this.cctv = new CctvSystem(this.renderer, this.scene);
 
@@ -690,6 +697,20 @@ export class Game {
     for (let i = 0; i < empty; i++) this.addToInventory(makeStack("water_bottle"));
     this.message(`You fill ${empty} bottle${empty === 1 ? "" : "s"} at the tap.`, "good");
     this.emitHud();
+  }
+
+  // ------------------------------------------------------------- touch input
+
+  touchKey(code: string, down: boolean) {
+    this.input.setVirtual(code, down);
+  }
+
+  touchLook(dx: number, dy: number) {
+    this.input.addLook(dx, dy);
+  }
+
+  touchMouse(button: "left" | "right", down: boolean) {
+    this.input.setMouse(button, down);
   }
 
   /** Cook or craft: a timed job where you stand still, using a powered kitchen stove or a camping stove for heat. */
@@ -2788,6 +2809,7 @@ export class Game {
       damageFlash: this.damageFlash,
       crosshair: weapon.category === "firearm" || p.aiming,
       freeMouse: this.freeMouse,
+      touch: this.touch,
       survivedMinutes: this.minutes - START_MINUTES,
       causeOfDeath: this.causeOfDeath,
       saves: this.saveList.map((s) => ({ slot: s.slot, ...s.meta, broken: this.brokenSlots.has(s.slot) })),

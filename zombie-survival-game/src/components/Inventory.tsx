@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ITEMS, type ItemStack } from "@/sim/items";
 import { freshStage } from "@/sim/freshness";
+import { itemOrigin } from "@/sim/lineage";
 import type { HudState } from "@/game/types";
 import HealthPanel from "./HealthPanel";
 
@@ -64,6 +65,8 @@ const Btn = ({ onClick, children, quiet }: { onClick: () => void; children: Reac
 
 const ItemRow = ({ stack, children }: { stack: ItemStack; children: ReactNode }) => {
   const def = ITEMS[stack.id];
+  const [showOrigin, setShowOrigin] = useState(false);
+  const origin = showOrigin ? itemOrigin(stack.id) : null;
   const detail =
     def.fuelCapacity !== undefined
       ? `${(stack.fuel ?? 0).toFixed(1)} / ${def.fuelCapacity} L`
@@ -81,13 +84,26 @@ const ItemRow = ({ stack, children }: { stack: ItemStack; children: ReactNode })
     <li className="flex items-center gap-3 border-b border-white/5 px-3 py-2 last:border-0">
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="truncate text-base font-semibold text-stone-100">{def.name}</span>
+          <button
+            type="button"
+            title="Where this came from"
+            onClick={() => setShowOrigin((v) => !v)}
+            className="truncate text-left text-base font-semibold text-stone-100 underline decoration-white/20 decoration-dotted underline-offset-4"
+          >
+            {def.name}
+          </button>
           {detail && <span className="text-sm tabular-nums text-stone-400">{detail}</span>}
           {stage && <span className={`text-xs font-semibold uppercase tracking-wider ${FRESH_STYLE[stage]}`}>{stage}</span>}
         </div>
         <div className="truncate text-xs text-stone-500">
           {categoryLabel[def.category]} · {(def.weight * stack.count + (stack.fuel ?? 0) * 0.74).toFixed(2)} kg · {def.description}
         </div>
+        {origin && (
+          <div className="mt-1 text-xs leading-snug text-amber-200/80">
+            <div>{origin.line}</div>
+            <div className="italic text-stone-400">{origin.note}</div>
+          </div>
+        )}
       </div>
       <div className="flex shrink-0 gap-1">{children}</div>
     </li>

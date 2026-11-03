@@ -10,6 +10,7 @@ import NoteView from "@/components/NoteView";
 import CctvViewer from "@/components/CctvViewer";
 import GeneratorPanel from "@/components/GeneratorPanel";
 import Keypad from "@/components/Keypad";
+import TouchControls, { type TouchApi } from "@/components/TouchControls";
 
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,6 +50,15 @@ const Index = () => {
   const onKeypad = useMemo(() => (k: string) => gameRef.current?.keypadPress(k), []);
   const onCloseUi = useMemo(() => () => gameRef.current?.closeUi(), []);
 
+  const touchApi = useMemo<TouchApi>(
+    () => ({
+      key: (code, down) => gameRef.current?.touchKey(code, down),
+      look: (dx, dy) => gameRef.current?.touchLook(dx, dy),
+      mouse: (b, down) => gameRef.current?.touchMouse(b, down),
+    }),
+    [],
+  );
+
   const getCanvas = useMemo(() => (ch: number) => gameRef.current?.cctvCanvas(ch) ?? null, []);
 
   const playing = hud && (hud.status === "playing" || hud.status === "paused");
@@ -57,6 +67,21 @@ const Index = () => {
     <main className="relative h-full w-full overflow-hidden bg-black">
       <canvas ref={canvasRef} className="block h-full w-full" />
       {hud && playing && <Hud hud={hud} />}
+      {hud?.touch &&
+        hud.status === "playing" &&
+        hud.locked &&
+        !hud.inventoryOpen &&
+        !hud.container &&
+        !hud.computer &&
+        !hud.reading &&
+        !hud.generator &&
+        !hud.keypad &&
+        !hud.cctv && <TouchControls api={touchApi} asleep={hud.asleep} />}
+      {hud?.touch && (
+        <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/90 p-8 text-center font-ui text-2xl uppercase tracking-[0.2em] text-stone-200 portrait:flex">
+          Turn your phone sideways to play
+        </div>
+      )}
       {hud && hud.status === "playing" && <Inventory hud={hud} actions={actions} />}
       {hud && hud.status === "playing" && hud.cctv && (
         <CctvViewer cctv={hud.cctv} getCanvas={getCanvas} onClose={() => gameRef.current?.closeCctv()} />
