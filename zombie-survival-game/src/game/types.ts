@@ -58,6 +58,21 @@ export interface HudState {
   horde: { text: string; level: "calm" | "soon" | "tonight" | "now" };
   /** Heat where you stand, 0–100: at 50 an area draws scouts. */
   heat: number;
+  /** The car you're driving. */
+  vehicle: {
+    name: string;
+    /** km/h */
+    speed: number;
+    fuel: number;
+    tank: number;
+    running: boolean;
+    engine: number;
+    body: number;
+    headlights: boolean;
+    canStart: boolean;
+  } | null;
+  /** A car's trunk is open and you carry fuel to pour in. */
+  canFillTank: boolean;
   day: number;
   /** Minutes since midnight, 0..1440 */
   timeOfDay: number;

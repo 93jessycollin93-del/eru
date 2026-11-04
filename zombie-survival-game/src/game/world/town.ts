@@ -7,6 +7,7 @@ import { mulberry32, pick, range } from "../../sim/rng";
 import type { TextureLibrary } from "../render/textures";
 import { MeshBuilder } from "./builder";
 import type { ColliderWorld } from "./colliders";
+import type { VehicleSpot } from "../vehicles";
 import { WORLD_HALF, type Terrain } from "./terrain";
 
 export interface LootContainer {
@@ -123,6 +124,10 @@ export interface TownData {
   facts: TownFacts;
   /** Street lamp bulbs: glow at night while the grid is up. */
   lampMaterial: THREE.MeshStandardMaterial;
+  /** Abandoned cars: where they stand and what the town rolled for them. */
+  vehicles: VehicleSpot[];
+  /** Road surfaces (tarmac grips better than grass). */
+  roads: { minX: number; maxX: number; minZ: number; maxZ: number }[];
 }
 
 export type BuildingType = "house" | "store" | "hardware" | "police";
@@ -147,6 +152,7 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
   const mb = new MeshBuilder(textures);
   const containers: LootContainer[] = [];
   const spawnPoints: THREE.Vector3[] = [];
+  const vehicles: VehicleSpot[] = [];
   const occupied: Rect[] = [];
   const lots: Rect[] = [];
   let containerId = 1;
@@ -756,39 +762,16 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
 
   // ---------- street props ----------
 
+  // Cars are vehicles now (game/vehicles.ts builds, parks and drives them). The draws below stay
+  // exactly as they were, colour then fuel, so every other thing the town rolls stays put.
   const carBody = (x: number, z: number, yaw: number) => {
-    const color = mb.material(pick(rng, CAR_COLORS), { roughness: 0.6, metalness: 0.3 });
-    const glass = mb.material("#1c2226", { roughness: 0.2, metalness: 0.5 });
-    const tire = mb.material("#151515");
-    const m = new THREE.Matrix4().makeRotationY(yaw).setPosition(x, terrain.height(x, z), z);
-    const add = (w: number, h: number, d: number, px: number, py: number, pz: number, mat: string) => {
-      const g = new THREE.BoxGeometry(w, h, d);
-      g.translate(px, py, pz);
-      g.applyMatrix4(m);
-      mb.add(g, mat);
-    };
-    add(1.8, 0.7, 4.3, 0, 0.65, 0, color);
-    add(1.6, 0.55, 2.2, 0, 1.27, -0.2, glass);
-    add(1.5, 0.08, 2.1, 0, 1.58, -0.2, color);
-    for (const [wx, wz] of [
-      [-0.85, 1.3],
-      [0.85, 1.3],
-      [-0.85, -1.3],
-      [0.85, -1.3],
-    ]) {
-      const g = new THREE.CylinderGeometry(0.33, 0.33, 0.25, 10);
-      g.rotateZ(Math.PI / 2);
-      g.translate(wx, 0.33, wz);
-      g.applyMatrix4(m);
-      mb.add(g, tire);
-    }
-    // Collider covers the rotated footprint.
+    const color = pick(rng, CAR_COLORS);
     const hx = Math.abs(Math.cos(yaw)) * 0.9 + Math.abs(Math.sin(yaw)) * 2.15;
     const hz = Math.abs(Math.sin(yaw)) * 0.9 + Math.abs(Math.cos(yaw)) * 2.15;
     const y = terrain.height(x, z);
-    colliders.add({ minX: x - hx, maxX: x + hx, minY: y, maxY: y + 1.6, minZ: z - hz, maxZ: z + hz, occludes: false });
     // Most tanks were drained in the evacuation; a few still hold something.
     const fuel = rng() < 0.45 ? 0 : Math.round(range(rng, 1.5, 22) * 10) / 10;
+    vehicles.push({ id: containerId, x, z, yaw, color, fuel });
     containers.push({ id: containerId++, name: "Car", table: "car", x, y: y + 0.8, z, hx, hz, items: null, fuel });
   };
 
@@ -847,6 +830,11 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     containers,
     spawnPoints,
     occupied,
+    vehicles,
+    roads: [
+      ...hRoads.map((r) => ({ minX: r.x0, maxX: r.x1, minZ: r.z - ROAD_HALF, maxZ: r.z + ROAD_HALF })),
+      ...vRoads.map((r) => ({ minX: r.x - ROAD_HALF, maxX: r.x + ROAD_HALF, minZ: r.z0, maxZ: r.z1 })),
+    ],
     // Arrive on the highway, just west of town.
     playerSpawn: new THREE.Vector3(-140, terrain.height(-140, 2), 2),
   };

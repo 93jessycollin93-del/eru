@@ -99,6 +99,8 @@ export interface SaveData {
   heat?: unknown;
   /** Tonight's horde, if one is on, and the last day you were warned of one (optional for older saves). */
   horde?: { night: number | null; spawned: number; warnedDay: number };
+  /** Where each car is and what state it's in (optional: older saves have none; sim/vehicle.ts loadVehicle makes any value safe). */
+  vehicles?: unknown[];
   /** The next item stack uid, so new stacks never collide with loaded ones. */
   nextUid: number;
   zombies: SavedZombie[];

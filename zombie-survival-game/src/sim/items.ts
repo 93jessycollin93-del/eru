@@ -143,6 +143,13 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: true,
     description: "Torn cloth. Two make a rough bandage.",
   },
+  screwdriver: {
+    id: "screwdriver",
+    name: "Screwdriver",
+    category: "tool",
+    weight: 0.15,
+    description: "Flat-head. Opens panels, and the steering column under a car's dash.",
+  },
   cooking_pot: {
     id: "cooking_pot",
     name: "Cooking Pot",
@@ -447,6 +454,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["water_bottle", 1, 1, 1],
       ["jerry_can", 3, 1, 1],
       ["hammer", 2, 1, 1],
+      ["screwdriver", 3, 1, 1],
       // Each arrives as one stack within its range; a repeat roll tops it up only to max (rollLoot).
       ["nails", 3, 20, 50],
       ["plank", 3, 2, 4],
@@ -463,6 +471,7 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["bandage", 2, 1, 1],
       ["ammo_9mm", 1, 3, 8],
       ["jerry_can", 1, 1, 1],
+      ["screwdriver", 1, 1, 1],
     ],
   },
 };

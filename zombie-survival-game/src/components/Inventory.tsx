@@ -13,6 +13,7 @@ export interface InventoryActions {
   put: (uid: number) => void;
   treat: (woundId: number) => void;
   siphon: () => void;
+  fillTank: () => void;
   fillBottles: () => void;
   craft: (id: string) => void;
   close: () => void;
@@ -171,6 +172,11 @@ const Inventory = ({ hud, actions }: { hud: HudState; actions: InventoryActions 
                   {hud.containerFuel !== null && (
                     <Btn quiet onClick={actions.siphon}>
                       Siphon fuel ({hud.containerFuel.toFixed(1)} L)
+                    </Btn>
+                  )}
+                  {hud.canFillTank && (
+                    <Btn quiet onClick={actions.fillTank}>
+                      Fill tank from jerry can
                     </Btn>
                   )}
                   {hud.container.items.length > 1 && <Btn onClick={actions.takeAll}>Take all</Btn>}

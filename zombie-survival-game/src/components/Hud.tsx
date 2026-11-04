@@ -142,6 +142,18 @@ const Hud = ({ hud }: HudProps) => {
       )}
 
       {/* Interaction prompt */}
+      {/* Driving: the car's keys, in a row above the dashboard (phones have buttons instead). */}
+      {hud.vehicle && !hud.touch && !hud.action && (
+        <div className="absolute bottom-[5.6rem] left-1/2 flex -translate-x-1/2 gap-2">
+          {hud.altPrompts.map((a) => (
+            <div key={a.key} className="rounded bg-black/40 px-2.5 py-1 text-sm text-stone-300 ring-1 ring-white/5">
+              <Key k={a.key} />
+              {a.label}
+            </div>
+          ))}
+        </div>
+      )}
+
       {hud.prompt && !hud.action && (
         <div className="absolute left-1/2 top-[58%] flex -translate-x-1/2 flex-col items-center gap-1">
           <div className="rounded bg-black/55 px-3 py-1.5 text-base text-stone-100 ring-1 ring-white/10">
@@ -217,8 +229,52 @@ const Hud = ({ hud }: HudProps) => {
         </div>
       </div>
 
+      {/* Driving: speed, fuel, engine and body. On phones it sits up top, clear of the controls. */}
+      {/* Phones: one compact strip beside the stick, clear of the buttons and warnings. */}
+      {hud.vehicle && hud.touch && (
+        <div
+          className="absolute flex items-center gap-2.5 rounded-sm bg-black/50 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.12em] ring-1 ring-white/10"
+          style={{ left: "calc(env(safe-area-inset-left) + 160px)", bottom: 142 }}
+        >
+          <span className="text-2xl tabular-nums text-stone-100">{hud.vehicle.speed}</span>
+          <span className="text-stone-400">km/h</span>
+          <span className="inline-block h-1.5 w-12 overflow-hidden rounded-sm bg-black/60">
+            <span
+              className={`block h-full ${hud.vehicle.fuel / hud.vehicle.tank < 0.15 ? "bg-red-500" : "bg-stone-200"}`}
+              style={{ width: `${Math.min(100, (hud.vehicle.fuel / hud.vehicle.tank) * 100)}%` }}
+            />
+          </span>
+          <span className="tabular-nums text-stone-400">{hud.vehicle.fuel.toFixed(1)} L</span>
+          <span className={hud.vehicle.running ? "text-lime-300/90" : "text-stone-500"}>{hud.vehicle.running ? "On" : "Off"}</span>
+          {hud.vehicle.body < 60 && <span className="text-orange-400">Body {hud.vehicle.body}%</span>}
+        </div>
+      )}
+      {hud.vehicle && !hud.touch && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-sm bg-black/50 px-4 py-2 text-center ring-1 ring-white/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+          <div className="flex items-baseline justify-center gap-1.5">
+            <span className="text-4xl font-semibold tabular-nums text-stone-100">{hud.vehicle.speed}</span>
+            <span className="text-sm uppercase tracking-[0.2em] text-stone-400">km/h</span>
+          </div>
+          <div className="mt-1 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.15em]">
+            <span className="flex items-center gap-1.5 text-stone-300">
+              Fuel
+              <span className="inline-block h-1.5 w-16 overflow-hidden rounded-sm bg-black/60">
+                <span
+                  className={`block h-full ${hud.vehicle.fuel / hud.vehicle.tank < 0.15 ? "bg-red-500" : "bg-stone-200"}`}
+                  style={{ width: `${Math.min(100, (hud.vehicle.fuel / hud.vehicle.tank) * 100)}%` }}
+                />
+              </span>
+              <span className="tabular-nums text-stone-400">{hud.vehicle.fuel.toFixed(1)} L</span>
+            </span>
+            <span className={hud.vehicle.running ? "text-lime-300/90" : "text-stone-500"}>{hud.vehicle.running ? "Engine on" : "Engine off"}</span>
+            <span className={hud.vehicle.engine < 35 ? "text-orange-400" : "text-stone-400"}>Engine {hud.vehicle.engine}%</span>
+            <span className={hud.vehicle.body < 40 ? "text-orange-400" : "text-stone-400"}>Body {hud.vehicle.body}%</span>
+          </div>
+        </div>
+      )}
+
       {/* Hotbar. Hidden on phones, where it would cover the health bars and buttons; Swap cycles it instead. */}
-      <div className={`absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1 ${hud.touch ? "hidden" : ""}`}>
+      <div className={`absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1 ${hud.touch || hud.vehicle ? "hidden" : ""}`}>
         {[1, 2, 3, 4, 5].map((slot) => {
           const item = hud.hotbar.find((h) => h.slot === slot);
           return (

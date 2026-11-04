@@ -17,7 +17,16 @@ const LOOK_GAIN = 1.6;
  * buttons on the right. Native listeners, not React's: React attaches touch handlers as passive, and a
  * passive handler can't stop the browser turning taps into mouse clicks (a tap to look would also swing).
  */
-const TouchControls = ({ api, asleep }: { api: TouchApi; asleep: boolean }) => {
+interface Props {
+  api: TouchApi;
+  asleep: boolean;
+  /** In a car: the stick drives, and the buttons become the car's. */
+  driving?: boolean;
+  /** A second action for what you're facing (search a car, pry a board): its own button. */
+  alt?: { key: string; label: string } | null;
+}
+
+const TouchControls = ({ api, asleep, driving = false, alt = null }: Props) => {
   const look = useRef<HTMLDivElement>(null);
   const stick = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState<{ x: number; y: number } | null>(null);
@@ -113,6 +122,14 @@ const TouchControls = ({ api, asleep }: { api: TouchApi; asleep: boolean }) => {
     };
   }, [api]);
 
+  // Getting into a car drops the aim: there's no Aim button to let go of in there.
+  useEffect(() => {
+    if (driving) {
+      setAiming(false);
+      api.mouse("right", false);
+    }
+  }, [driving, api]);
+
   // Leaving the controls (a menu opened) must not leave the aim held.
   useEffect(() => () => api.mouse("right", false), [api]);
 
@@ -132,25 +149,41 @@ const TouchControls = ({ api, asleep }: { api: TouchApi; asleep: boolean }) => {
       </div>
 
       <div className="absolute flex flex-col items-end gap-2" style={{ right: "calc(env(safe-area-inset-right) + 14px)", bottom: 64 }}>
-        <div className="flex gap-2">
-          <Pad label="Reload" onDown={() => api.key("KeyR", true)} onUp={() => api.key("KeyR", false)} />
-          <Pad label="Crouch" onDown={() => api.key("KeyC", true)} onUp={() => api.key("KeyC", false)} />
-          <Pad label="Jump" onDown={() => api.key("Space", true)} onUp={() => api.key("Space", false)} />
-          <Pad label="Swap" onDown={() => api.key("SwapItem", true)} onUp={() => api.key("SwapItem", false)} />
-        </div>
-        <div className="flex items-end gap-2">
-          <Pad label="Use" onDown={() => api.key("KeyE", true)} onUp={() => api.key("KeyE", false)} />
-          <Pad
-            label={aiming ? "Aiming" : "Aim"}
-            active={aiming}
-            onDown={() => {
-              const next = !aiming;
-              setAiming(next);
-              api.mouse("right", next);
-            }}
-          />
-          <Pad big label="Attack" onDown={() => api.mouse("left", true)} onUp={() => api.mouse("left", false)} />
-        </div>
+        {driving ? (
+          <>
+            <div className="flex gap-2">
+              <Pad label="Engine" onDown={() => api.key("KeyR", true)} onUp={() => api.key("KeyR", false)} />
+              <Pad label="Horn" onDown={() => api.key("KeyH", true)} onUp={() => api.key("KeyH", false)} />
+            </div>
+            <div className="flex items-end gap-2">
+              <Pad label="Get out" onDown={() => api.key("KeyE", true)} onUp={() => api.key("KeyE", false)} />
+              <Pad big label="Brake" onDown={() => api.key("Space", true)} onUp={() => api.key("Space", false)} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex gap-2">
+              {alt && <Pad label={alt.label.split(" ")[0]} onDown={() => api.key(`Key${alt.key}`, true)} onUp={() => api.key(`Key${alt.key}`, false)} />}
+              <Pad label="Reload" onDown={() => api.key("KeyR", true)} onUp={() => api.key("KeyR", false)} />
+              <Pad label="Crouch" onDown={() => api.key("KeyC", true)} onUp={() => api.key("KeyC", false)} />
+              <Pad label="Jump" onDown={() => api.key("Space", true)} onUp={() => api.key("Space", false)} />
+              <Pad label="Swap" onDown={() => api.key("SwapItem", true)} onUp={() => api.key("SwapItem", false)} />
+            </div>
+            <div className="flex items-end gap-2">
+              <Pad label="Use" onDown={() => api.key("KeyE", true)} onUp={() => api.key("KeyE", false)} />
+              <Pad
+                label={aiming ? "Aiming" : "Aim"}
+                active={aiming}
+                onDown={() => {
+                  const next = !aiming;
+                  setAiming(next);
+                  api.mouse("right", next);
+                }}
+              />
+              <Pad big label="Attack" onDown={() => api.mouse("left", true)} onUp={() => api.mouse("left", false)} />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="absolute flex gap-2" style={{ right: "calc(env(safe-area-inset-right) + 176px)", top: 10 }}>

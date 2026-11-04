@@ -74,6 +74,8 @@ export const LINEAGE: LineageNode[] = [
   N("oil_drilling", "Oil drilling and refining", "infrastructure", 1859, ["oil", "steam_power"], "Drake's well in Pennsylvania; refineries split crude into kerosene, then petrol."),
   N("combustion_engine", "Internal combustion engine", "invention", 1876, ["oil_drilling", "metalworking"], "Otto's four-stroke engine: cars, and later portable generators."),
   N("generator", "Portable generator", "product", 1950, ["combustion_engine", "dynamo"], "An engine and an alternator on a frame: the grid in a box, loud and thirsty."),
+  N("automobile", "Automobile", "invention", 1886, ["combustion_engine", "metalworking"], "Karl Benz's Patent-Motorwagen; by 1913 Ford's moving assembly line made cars for everyone, and towns grew around them."),
+  N("lead_acid_battery", "Lead-acid battery", "invention", 1859, ["electromagnetism", "chemistry"], "Gaston Planté's rechargeable cell; every car still starts on one, and a week unused drains it."),
   N("jerrycan", "Jerrycan", "product", 1937, ["combustion_engine", "metalworking"], "A German army design for carrying fuel that the whole world copied."),
   N("ups", "Battery backup (UPS)", "product", 1970, ["power_grid", "transistor"], "Keeps servers and cameras alive for hours after the grid drops."),
   N("municipal_water", "Pressurised town water", "infrastructure", 1850, ["water", "steam_power"], "Pumps fill a tower; gravity keeps the taps running for a day after the pumps stop."),
@@ -131,6 +133,7 @@ export const ITEM_LINEAGE: Record<string, string> = {
   bandage: "weaving",
   first_aid_kit: "antisepsis",
   painkillers: "aspirin",
+  screwdriver: "steel_tools",
   kitchen_knife: "steel_tools",
   baseball_bat: "baseball",
   fire_axe: "steel_tools",
@@ -160,6 +163,8 @@ export const SYSTEM_LINEAGE: Record<string, string> = {
   terminals: "personal_computer",
   germ_infection: "germ_theory",
   qpdb: "qpdb",
+  vehicles: "automobile",
+  car_batteries: "lead_acid_battery",
 };
 
 const byId = new Map(LINEAGE.map((n) => [n.id, n]));

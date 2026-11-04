@@ -41,6 +41,7 @@ export class AudioSystem {
   }
 
   private hum: GainNode | null = null;
+  private engine: { gain: GainNode; o1: OscillatorNode; o2: OscillatorNode; lp: BiquadFilterNode } | null = null;
 
   /** Continuous engine drone for nearby generators (0 = silent). */
   setHum(level: number) {
@@ -66,6 +67,57 @@ export class AudioSystem {
       o2.start();
     }
     this.hum.gain.setTargetAtTime(level * 0.12, this.ctx.currentTime, 0.2);
+  }
+
+  /**
+   * The car you're in: two detuned oscillators an octave apart through a low-pass, pitched by revs.
+   * rpm 0–1; level 0 silences it (engine off or you got out).
+   */
+  setEngine(rpm: number, level: number) {
+    if (!this.ctx || !this.master) return;
+    if (!this.engine) {
+      const o1 = this.ctx.createOscillator();
+      o1.type = "sawtooth";
+      const o2 = this.ctx.createOscillator();
+      o2.type = "square";
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.Q.value = 2;
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+      const mix = this.ctx.createGain();
+      mix.gain.value = 0.35;
+      o1.connect(lp);
+      o2.connect(mix).connect(lp);
+      lp.connect(gain).connect(this.master);
+      o1.start();
+      o2.start();
+      this.engine = { gain, o1, o2, lp };
+    }
+    const t = this.ctx.currentTime;
+    const f = 28 + rpm * 95;
+    this.engine.o1.frequency.setTargetAtTime(f, t, 0.08);
+    this.engine.o2.frequency.setTargetAtTime(f * 0.5 + 1.3, t, 0.08);
+    this.engine.lp.frequency.setTargetAtTime(220 + rpm * 900, t, 0.1);
+    this.engine.gain.gain.setTargetAtTime(level * (0.05 + rpm * 0.09), t, 0.12);
+  }
+
+  /** The starter motor grinding: a rapid rough buzz. */
+  starter() {
+    for (let i = 0; i < 5; i++) setTimeout(() => this.noise(0.12, 260, "bandpass", 0.35, 0, 1.2), i * 150);
+  }
+
+  horn() {
+    this.tone(415, 410, 0.7, 0.35, "square");
+    this.tone(330, 328, 0.7, 0.3, "square");
+  }
+
+  /** Metal meeting something, louder the harder the hit (0–1). */
+  crash(intensity: number) {
+    const k = Math.min(1, Math.max(0.15, intensity));
+    this.noise(0.35 + k * 0.4, 900, "lowpass", 0.5 + k * 0.5);
+    this.noise(0.25, 3200, "highpass", 0.25 * k);
+    this.tone(90, 40, 0.3, 0.4 * k, "triangle");
   }
 
   suspend() {

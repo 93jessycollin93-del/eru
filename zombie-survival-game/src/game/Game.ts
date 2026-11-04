@@ -29,6 +29,8 @@ import {
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
 import { craft, missingFor, RECIPES } from "../sim/crafting";
+import { HORN_NOISE, HOTWIRE_MINUTES, crash, engineNoise, hitPedestrian, saveVehicle, startEngine, stepVehicle } from "../sim/vehicle";
+import { VehicleSystem, resolveVehicle, type VehicleObject } from "./vehicles";
 import {
   addHeat,
   coolHeat,
@@ -138,6 +140,16 @@ export class Game {
   private hordeAlertTimer = 0;
   private scoutTimer = 5;
   private hordeWarnedDay = 0;
+  private vehicles!: VehicleSystem;
+  /** The car you're driving, if any. */
+  private driving: VehicleObject | null = null;
+  private carLookYaw = 0;
+  private carLookPitch = 0;
+  private engineNoiseTimer = 0;
+  /** A zombie just hit by the car isn't hit again by the same contact. */
+  private carHitAt = new WeakMap<Zombie, number>();
+  private carClawMsgAt = 0;
+  private carBeam: THREE.SpotLight;
   private damageFlash = 0;
   private causeOfDeath = "";
   private menuAngle = 0;
@@ -238,6 +250,9 @@ export class Game {
 
     this.flashlight = new THREE.SpotLight("#fff4d6", 0, 45, 0.45, 0.5, 1);
     this.scene.add(this.flashlight, this.flashlight.target);
+    // The driven car's headlight beam (the lenses glow on their own; this lights the road).
+    this.carBeam = new THREE.SpotLight("#fff1d6", 0, 55, 0.62, 0.45, 1.2);
+    this.scene.add(this.carBeam, this.carBeam.target);
     this.muzzle = new THREE.PointLight("#ffcf7a", 0, 14, 2);
     this.scene.add(this.muzzle);
 
@@ -270,6 +285,9 @@ export class Game {
     this.town = generateTown(rng, this.terrain, this.colliders, this.textures);
     this.scene.add(this.town.group);
     this.scene.add(generateVegetation(rng, this.terrain, this.colliders, this.town.occupied));
+    // Cars park (add their colliders) before the nav grid is built, so paths go round them.
+    this.vehicles = new VehicleSystem(this.scene, this.colliders, this.terrain);
+    this.vehicles.build(this.town.vehicles, this.town.containers);
     for (const b of this.town.buildings) {
       if (b.network && b.cameraMounts) this.cctv.setup(b.network, b.cameraMounts);
     }
@@ -419,6 +437,8 @@ export class Game {
     this.causeOfDeath = "";
     this.respawnTimer = 30;
     this.autosaveTimer = AUTOSAVE_SECONDS;
+    if (this.driving) this.exitVehicle(true);
+    this.vehicles.reset();
     this.heat = createHeat();
     this.horde = { night: null, spawned: 0, timer: 0 };
     this.hordeZombies.clear();
@@ -836,8 +856,246 @@ export class Game {
     const take = Math.min(car.fuel, (ITEMS.jerry_can.fuelCapacity ?? 20) - (can.fuel ?? 0));
     car.fuel = Math.round((car.fuel - take) * 10) / 10;
     can.fuel = Math.round(((can.fuel ?? 0) + take) * 10) / 10;
+    const v = this.vehicles.byId(car.id);
+    if (v) v.state.fuel = car.fuel;
     this.message(`You siphon ${take.toFixed(1)} L. It tastes awful.`, "good");
     this.emitHud();
+  }
+
+  /** Pour a jerry can into the car whose trunk is open. */
+  fillTank() {
+    const car = this.container;
+    const v = car && car.table === "car" ? this.vehicles.byId(car.id) : undefined;
+    if (!car || !v) return;
+    const can = this.inventory.find((s) => s.id === "jerry_can" && (s.fuel ?? 0) > 0.05);
+    if (!can) return this.message("You need a jerry can with fuel in it.", "warn");
+    const room = v.spec.tankL - v.state.fuel;
+    if (room < 0.1) return this.message("The tank is full.", "info");
+    const pour = Math.min(room, can.fuel ?? 0);
+    can.fuel = Math.round(((can.fuel ?? 0) - pour) * 10) / 10;
+    v.state.fuel = Math.round((v.state.fuel + pour) * 10) / 10;
+    car.fuel = v.state.fuel;
+    this.message(`You pour ${pour.toFixed(1)} L into the tank. It holds ${v.spec.tankL} L.`, "good");
+    this.emitHud();
+  }
+
+  // ----------------------------------------------------------------- driving
+
+  private enterVehicle(v: VehicleObject) {
+    if (this.player.traversing) return;
+    this.container = null;
+    this.driving = v;
+    this.vehicles.unpark(v);
+    this.player.model.root.visible = false;
+    this.flashlightOn = false;
+    this.carLookYaw = 0;
+    this.carLookPitch = 0;
+    this.audio.doorThud(1, 0);
+    const s = v.state;
+    const gauge = s.fuel <= 0.1 ? "on empty" : s.fuel / v.spec.tankL < 0.2 ? "low" : s.fuel / v.spec.tankL < 0.6 ? "about half" : "near full";
+    const keys = s.keys ? "The keys are in the ignition." : s.hotwired ? "The wires you twisted together still hang under the dash." : "No keys.";
+    this.message(`You get into the ${v.spec.name.toLowerCase()}. ${keys} Fuel gauge ${gauge}.`, "info");
+    this.emitHud();
+  }
+
+  private exitVehicle(force = false) {
+    const v = this.driving;
+    if (!v) return;
+    if (!force && Math.abs(v.state.speed) > 1.5) return this.message("Slow down first.", "warn");
+    const p = this.player;
+    if (v.state.running && !force) this.message("You switch the engine off and get out.", "info");
+    v.state.running = false;
+    v.state.speed = 0;
+    v.state.steer = 0;
+    v.state.headlights = false;
+    v.setLights(false, false, false);
+    this.carBeam.intensity = 0;
+    this.audio.setEngine(0, 0);
+    this.vehicles.park(v);
+    // Out the driver's door, or the passenger's if a wall is in the way.
+    let spot = v.doorPoint(1);
+    for (const side of [1, -1] as const) {
+      const d = v.doorPoint(side);
+      const pos = { x: d.x, z: d.z };
+      this.colliders.resolveCylinder(pos, 0.35, this.terrain.height(d.x, d.z), 1.7);
+      spot = pos;
+      if (Math.hypot(pos.x - d.x, pos.z - d.z) < 0.25) break;
+    }
+    p.pos.set(spot.x, this.terrain.height(spot.x, spot.z), spot.z);
+    p.vel.set(0, 0, 0);
+    p.yaw = v.state.yaw + this.carLookYaw;
+    p.model.root.visible = true;
+    this.driving = null;
+    this.audio.doorThud(1, 0);
+    this.emitHud();
+  }
+
+  private handleDrivingActions() {
+    const input = this.input;
+    const v = this.driving!;
+    if (input.wasPressed("KeyE")) return this.exitVehicle();
+    if (input.wasPressed("KeyR")) this.ignition();
+    if (input.wasPressed("KeyF")) {
+      v.state.headlights = !v.state.headlights;
+      this.audio.dryFire();
+    }
+    if (input.wasPressed("KeyH")) {
+      this.audio.horn();
+      this.noises.push({ pos: this.player.pos.clone(), radius: HORN_NOISE, ttl: 0.6 });
+    }
+  }
+
+  /** R: start the engine, switch it off, or (no keys) hotwire it with a screwdriver. */
+  private ignition() {
+    const v = this.driving!;
+    const s = v.state;
+    if (s.running) {
+      s.running = false;
+      this.audio.setEngine(0, 0);
+      return this.message("You switch the engine off.", "info");
+    }
+    if (!s.keys && !s.hotwired) {
+      if (!this.inventory.some((it) => it.id === "screwdriver")) {
+        return this.message("No keys, and nothing to get under the dash with. A screwdriver would do it.", "warn");
+      }
+      this.startAction({
+        label: "Hotwiring",
+        dur: HOTWIRE_MINUTES / TIME_SCALE,
+        done: () => {
+          s.hotwired = true;
+          this.message("Two wires spark together. It's hotwired: crank it with R.", "good");
+        },
+      });
+      return;
+    }
+    this.audio.starter();
+    // Cranking a cold engine is loud.
+    this.noises.push({ pos: this.player.pos.clone(), radius: 18, ttl: 0.4 });
+    const r = startEngine(s, this.rng);
+    this.message(r.message, r.ok ? "good" : "warn");
+  }
+
+  private updateDriving(dt: number, controlling: boolean) {
+    const v = this.driving!;
+    const p = this.player;
+    const input = this.input;
+    const key = (...codes: string[]) => (controlling && !this.action && codes.some((c) => input.isDown(c)) ? 1 : 0);
+    const drive = {
+      throttle: key("KeyW", "ArrowUp"),
+      reverse: key("KeyS", "ArrowDown"),
+      steer: key("KeyD", "ArrowRight") - key("KeyA", "ArrowLeft"),
+      handbrake: !controlling || key("Space") === 1,
+    };
+    const speed0 = v.state.speed;
+    const yaw0 = v.state.yaw;
+    const groundY = this.terrain.height(v.state.x, v.state.z);
+    const r = stepVehicle(v.state, v.spec, drive, dt, this.onRoad(v.state.x, v.state.z) ? "road" : "grass", TIME_SCALE * 60);
+    if (r.stalled) this.message("The engine sputters and dies. Out of fuel.", "warn");
+    const impact = resolveVehicle(v, this.colliders, groundY);
+    if (impact > 0) this.onCarCrash(v, impact);
+    this.carHitsZombies(v);
+    const accel = (v.state.speed - speed0) / Math.max(dt, 1e-3);
+    const lateral = ((v.state.yaw - yaw0) / Math.max(dt, 1e-3)) * v.state.speed;
+    v.pose(this.terrain, dt, accel, lateral);
+    v.setLights(v.state.headlights, r.braking, drive.reverse > 0 && v.state.speed < -0.2);
+    this.vehicles.syncContainer(v);
+    const fx = Math.sin(v.state.yaw);
+    const fz = Math.cos(v.state.yaw);
+    const nose = v.spec.length / 2;
+    this.carBeam.position.set(v.state.x + fx * nose, this.terrain.height(v.state.x, v.state.z) + 0.75, v.state.z + fz * nose);
+    this.carBeam.target.position.set(v.state.x + fx * (nose + 18), this.terrain.height(v.state.x + fx * 18, v.state.z + fz * 18), v.state.z + fz * (nose + 18));
+    this.carBeam.intensity = v.state.headlights ? 140 : 0;
+
+    // The driver goes where the car goes: zombies hunt the car.
+    p.pos.set(v.state.x, this.terrain.height(v.state.x, v.state.z), v.state.z);
+    p.vel.set(Math.sin(v.state.yaw) * v.state.speed, 0, Math.cos(v.state.yaw) * v.state.speed);
+    this.engineNoiseTimer -= dt;
+    if (v.state.running && this.engineNoiseTimer <= 0) {
+      this.engineNoiseTimer = 1;
+      this.noises.push({ pos: p.pos.clone(), radius: engineNoise(v.state), ttl: 0.4, heat: 0.25 });
+    }
+    this.audio.setEngine(v.state.rpm, v.state.running ? 1 : 0);
+
+    // Look around with the mouse (or a drag); the view settles back behind the car once you're moving.
+    if (controlling) {
+      this.carLookYaw -= input.mouseDX * 0.0022;
+      this.carLookPitch = Math.max(-0.35, Math.min(0.6, this.carLookPitch - input.mouseDY * 0.0022));
+    }
+    if (input.mouseDX === 0 && Math.abs(v.state.speed) > 3) this.carLookYaw *= 1 - Math.min(1, dt * 1.5);
+    p.yaw = v.state.yaw + this.carLookYaw;
+  }
+
+  /** On a road or the highway: tarmac grips, grass doesn't. */
+  private onRoad(x: number, z: number) {
+    return this.town.roads.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
+  }
+
+  private onCarCrash(v: VehicleObject, impact: number) {
+    const p = this.player;
+    const r = crash(v.state, impact);
+    this.audio.crash(impact / 14);
+    this.noises.push({ pos: p.pos.clone(), radius: 20 + impact * 3, ttl: 0.5 });
+    if (r.injury > 0) {
+      p.body.health = Math.max(0, p.body.health - r.injury);
+      this.damageFlash = 1;
+      this.audio.hurt();
+      if (p.body.health <= 0) return this.die("Killed in a car crash");
+      this.message(r.injury > 25 ? "The wheel slams into your chest. Something cracked." : "You're thrown against the belt. That hurt.", "danger");
+    } else if (impact > 5) {
+      this.message(v.state.engine <= 0 ? "Crunch. The engine dies with a clank." : r.engine > 15 ? "Crunch. Steam hisses from under the hood." : "Crunch. That'll leave a mark.", "warn");
+    }
+  }
+
+  /** Anything in the car's path: knocked down and hurt at speed, shoved aside at a crawl. */
+  private carHitsZombies(v: VehicleObject) {
+    const circles = v.hitCircles();
+    const now = performance.now();
+    for (const z of this.zombies) {
+      if (!z.alive) continue;
+      for (const c of circles) {
+        const dx = z.pos.x - c.x;
+        const dz = z.pos.z - c.z;
+        const min = c.r + z.radius;
+        if (dx * dx + dz * dz >= min * min) continue;
+        const d = Math.hypot(dx, dz) || 0.01;
+        const hit = hitPedestrian(v.state.speed);
+        if (hit.knockdown && now - (this.carHitAt.get(z) ?? 0) > 600) {
+          this.carHitAt.set(z, now);
+          if (z.hit(hit.damage, new THREE.Vector3(v.state.x, z.pos.y, v.state.z), Math.min(12, Math.abs(v.state.speed) * 0.9), true)) this.onZombieKilled();
+          v.state.body = Math.max(0, v.state.body - hit.carDamage);
+          v.state.speed *= 0.85;
+          this.audio.hit();
+          this.audio.crash(Math.abs(v.state.speed) / 25);
+        }
+        z.pos.x = c.x + (dx / d) * min;
+        z.pos.z = c.z + (dz / d) * min;
+        break;
+      }
+    }
+  }
+
+  /** Chase camera: behind and above the car, pulled back a little with speed, never through walls. */
+  private carCamera(dt: number) {
+    const v = this.driving!;
+    const s = v.spec;
+    const yaw = v.state.yaw + this.carLookYaw;
+    const pitch = 0.2 + this.carLookPitch;
+    const dist = s.length + 2.4 + Math.min(3, Math.abs(v.state.speed) * 0.08);
+    const pivot = new THREE.Vector3(v.state.x, this.terrain.height(v.state.x, v.state.z) + s.height + 0.4, v.state.z);
+    const back = new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
+    const hit = this.colliders.raycast(pivot.x, pivot.y, pivot.z, back.x, back.y, back.z, dist + 0.3);
+    const d = Math.max(1.5, Math.min(dist, hit - 0.3));
+    const desired = pivot.clone().addScaledVector(back, d);
+    desired.y = Math.max(desired.y, this.terrain.height(desired.x, desired.z) + 0.6);
+    if (this.camera.position.distanceTo(desired) > 25) this.camera.position.copy(desired);
+    else this.camera.position.lerp(desired, Math.min(1, dt * 7));
+    const look = pivot.clone().add(new THREE.Vector3(Math.sin(yaw) * 4, -0.7, Math.cos(yaw) * 4));
+    this.camera.lookAt(look);
+    const fov = Math.min(80, 66 + Math.abs(v.state.speed) * 0.3);
+    if (Math.abs(this.camera.fov - fov) > 0.05) {
+      this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 4);
+      this.camera.updateProjectionMatrix();
+    }
   }
 
   // ------------------------------------------------- doors and windows
@@ -1361,6 +1619,7 @@ export class Game {
       respawnTimer: this.respawnTimer,
       heat: this.heat,
       horde: { ...this.horde, warnedDay: this.hordeWarnedDay },
+      vehicles: this.vehicles.list.map((v) => saveVehicle(v.state)),
       nextUid: peekNextUid(),
       zombies: this.zombies.map((z) => z.toSave()),
       containers: this.town.containers
@@ -1394,6 +1653,7 @@ export class Game {
     this.flashlightOn = d.player.flashlight;
     this.kills = d.kills;
     this.respawnTimer = d.respawnTimer;
+    if (this.driving) this.exitVehicle(true);
     this.heat = loadHeat(d.heat);
     // Older saves have no horde record; a run loaded mid-horde carries on where it was.
     const h = d.horde;
@@ -1408,6 +1668,8 @@ export class Game {
       target.items = c.items;
       if (c.fuel !== undefined) target.fuel = c.fuel;
     }
+    // Cars after their trunks: a trunk's fuel record is the tank.
+    this.vehicles.load(d.vehicles);
     for (const g of d.ground) {
       const pile = this.makePile(g.id, g.pos[0], g.pos[1], g.pos[2]);
       pile.items = g.items;
@@ -1633,9 +1895,11 @@ export class Game {
 
     const swinging = this.swingTime > 0;
     // Busy hands: you can look around but not walk off mid-job.
-    if (controlling && !this.action) p.update(dt, this.input, this.colliders, this.terrain, swinging);
+    if (this.driving) this.updateDriving(dt, controlling);
+    else if (controlling && !this.action) p.update(dt, this.input, this.colliders, this.terrain, swinging);
     else if (controlling) p.update(dt, lookOnly(this.input), this.colliders, this.terrain, swinging);
     else p.update(dt, NO_INPUT, this.colliders, this.terrain, swinging);
+    this.vehicles.updateDetail(p.pos.x, p.pos.z);
     for (const id of this.barriers.update(dt)) this.lockSound(id);
     p.overweight = this.carryWeight() > MAX_WEIGHT;
 
@@ -1693,7 +1957,8 @@ export class Game {
     const daylight = this.env.daylight(this.minutes % 1440);
     this.env.update(this.minutes % 1440, p.pos);
     this.updateFlashlight(daylight);
-    p.updateCamera(this.camera, this.colliders, dt);
+    if (this.driving) this.carCamera(dt);
+    else p.updateCamera(this.camera, this.colliders, dt);
 
     this.damageFlash = Math.max(0, this.damageFlash - dt * 2);
     if (this.muzzleTimer > 0) {
@@ -1799,6 +2064,10 @@ export class Game {
       return;
     }
     if (this.player.traversing || this.action) return;
+    if (this.driving) {
+      this.handleDrivingActions();
+      return;
+    }
 
     if (input.wasPressed("KeyF")) {
       this.flashlightOn = !this.flashlightOn;
@@ -1822,13 +2091,21 @@ export class Game {
       const target = this.nearestInteractable();
       if (target?.type === "generator") this.openGenerator(target.generator);
       else if (target?.type === "computer") this.useComputer(target.computer);
-      else if (target?.type === "container") this.openContainer(target.container);
+      else if (target?.type === "container" && target.container.table === "car") {
+        const car = this.vehicles.byId(target.container.id);
+        if (car) this.enterVehicle(car);
+        else this.openContainer(target.container);
+      } else if (target?.type === "container") this.openContainer(target.container);
       else if (target?.type === "barrier") this.useBarrier(target.id, target.side);
       else if (target?.type === "keypad") this.openKeypad(target.id);
     }
     if (input.wasPressed("KeyQ")) {
-      const t = this.barrierTarget();
-      if (t) this.altBarrier(t.id, t.side);
+      const near = this.nearestInteractable();
+      if (near?.type === "container" && near.container.table === "car") this.openContainer(near.container);
+      else {
+        const t = this.barrierTarget();
+        if (t) this.altBarrier(t.id, t.side);
+      }
     }
     if (input.wasPressed("KeyH")) {
       const t = this.barrierTarget();
@@ -2475,6 +2752,16 @@ export class Game {
 
   private onZombieAttack(z: Zombie) {
     if (this.status !== "playing") return;
+    // In a car, they have to get through it first.
+    if (this.driving && this.driving.state.body > 35) {
+      this.driving.state.body = Math.max(0, this.driving.state.body - 2.5);
+      this.audio.doorThud(1.5, 0);
+      if (performance.now() - this.carClawMsgAt > 6000) {
+        this.carClawMsgAt = performance.now();
+        this.message(this.driving.state.body > 55 ? "They're clawing at the windows." : "The glass is cracking.", "danger");
+      }
+      return;
+    }
     const p = this.player;
     const w = zombieHit(p.body, Math.random);
     if (this.action) this.cancelAction("Interrupted!");
@@ -2872,6 +3159,20 @@ export class Game {
       aiming: p.aiming,
       noise: Math.min(1, p.footstepRadius / 15),
       hunted: this.zombies.some((z) => z.hunting),
+      vehicle: this.driving
+        ? {
+            name: this.driving.spec.name,
+            speed: Math.round(Math.abs(this.driving.state.speed) * 3.6),
+            fuel: this.driving.state.fuel,
+            tank: this.driving.spec.tankL,
+            running: this.driving.state.running,
+            engine: Math.round(this.driving.state.engine),
+            body: Math.round(this.driving.state.body),
+            headlights: this.driving.state.headlights,
+            canStart: this.driving.state.keys || this.driving.state.hotwired,
+          }
+        : null,
+      canFillTank: this.container?.table === "car" && this.inventory.some((s) => s.id === "jerry_can" && (s.fuel ?? 0) > 0.05),
       horde: hordeLabel(this.minutes),
       heat: Math.round(heatAt(this.heat, p.pos.x, p.pos.z)),
       day: Math.floor(this.minutes / 1440) + 1,
@@ -2885,8 +3186,12 @@ export class Game {
         reloading: this.reloadTimer > 0,
       },
       hotbar: this.hotbar().map((s, i) => ({ slot: i + 1, name: ITEMS[s.id].name, active: s.uid === this.equippedUid })),
-      prompt: !target
+      prompt: this.driving
         ? null
+        : !target
+        ? null
+        : target.type === "container" && target.container.table === "car"
+          ? `Get in the ${target.container.name.toLowerCase()}`
         : target.type === "generator"
           ? `Inspect ${target.generator.gen.portable ? "generator" : "standby generator"}`
           : target.type === "computer"
@@ -2896,7 +3201,21 @@ export class Game {
               : target.type === "keypad"
                 ? "Use keypad"
                 : `Search ${target.container.name}`,
-      altPrompts: target?.type === "barrier" ? this.barrierPrompt(target.id, target.side).alts : [],
+      altPrompts: this.driving
+        ? [
+            {
+              key: "R",
+              label: this.driving.state.running ? "Engine off" : this.driving.state.keys || this.driving.state.hotwired ? "Start engine" : "Hotwire (screwdriver)",
+            },
+            { key: "E", label: "Get out" },
+            { key: "F", label: this.driving.state.headlights ? "Headlights off" : "Headlights" },
+            { key: "H", label: "Horn" },
+          ]
+        : target?.type === "barrier"
+          ? this.barrierPrompt(target.id, target.side).alts
+          : target?.type === "container" && target.container.table === "car"
+            ? [{ key: "Q", label: "Search it" }]
+            : [],
       barrier: target?.type === "barrier" ? this.barrierView(target.id) : null,
       action: this.action ? { label: this.action.label, progress: Math.min(1, this.action.t / this.action.dur) } : null,
       keypad:
