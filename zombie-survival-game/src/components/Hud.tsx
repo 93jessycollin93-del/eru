@@ -202,8 +202,8 @@ const Hud = ({ hud }: HudProps) => {
         </div>
       </div>
 
-      {/* Hotbar */}
-      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1">
+      {/* Hotbar. Hidden on phones, where it would cover the health bars and buttons; Swap cycles it instead. */}
+      <div className={`absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1 ${hud.touch ? "hidden" : ""}`}>
         {[1, 2, 3, 4, 5].map((slot) => {
           const item = hud.hotbar.find((h) => h.slot === slot);
           return (

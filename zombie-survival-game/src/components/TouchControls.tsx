@@ -136,6 +136,7 @@ const TouchControls = ({ api, asleep }: { api: TouchApi; asleep: boolean }) => {
           <Pad label="Reload" onDown={() => api.key("KeyR", true)} onUp={() => api.key("KeyR", false)} />
           <Pad label="Crouch" onDown={() => api.key("KeyC", true)} onUp={() => api.key("KeyC", false)} />
           <Pad label="Jump" onDown={() => api.key("Space", true)} onUp={() => api.key("Space", false)} />
+          <Pad label="Swap" onDown={() => api.key("SwapItem", true)} onUp={() => api.key("SwapItem", false)} />
         </div>
         <div className="flex items-end gap-2">
           <Pad label="Use" onDown={() => api.key("KeyE", true)} onUp={() => api.key("KeyE", false)} />

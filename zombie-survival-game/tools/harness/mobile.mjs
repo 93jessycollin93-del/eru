@@ -68,6 +68,17 @@ for (const [name, dev] of DEVICES) {
     await touch("touchEnd", []);
     const s2 = await state();
     r.turned = +(s2.yaw - s1.yaw).toFixed(3);
+    // Phones hide the hotbar (no room) and cycle it with Swap: fists -> kitchen knife (if carried) -> fists.
+    r.hotbarHidden = await p.evaluate(() => !document.querySelector(".absolute.bottom-4.left-1\\/2:not(.hidden)"));
+    r.swap = await p.evaluate(() => {
+      const g = window.__game;
+      g.inventory.push({ uid: 999001, id: "kitchen_knife", count: 1 });
+      return g.equippedUid ?? null;
+    });
+    await p.getByLabel("Swap").tap();
+    await p.evaluate(() => window.__step(0.1));
+    const afterOne = await p.evaluate(() => window.__game.equippedUid ?? null);
+    r.swap = { before: r.swap, after: afterOne };
     r.controlsShot = `out/device-${name}-play.png`;
     await p.evaluate(() => window.__game.renderer.render(window.__game.scene, window.__game.camera));
     await p.screenshot({ path: `tools/harness/${r.controlsShot}` });

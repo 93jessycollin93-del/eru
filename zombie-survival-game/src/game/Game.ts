@@ -1797,6 +1797,11 @@ export class Game {
       }
     }
     if (input.wasPressed("Digit0") || input.wasPressed("Backquote")) this.setEquipped(null);
+    // Phones have no number keys: the Swap button steps through the hotbar, then back to fists.
+    if (input.wasPressed("SwapItem") && hotbar.length) {
+      const i = hotbar.findIndex((s) => s.uid === this.equippedUid);
+      this.setEquipped(i + 1 < hotbar.length ? hotbar[i + 1].uid : null);
+    }
 
     const weapon = this.weaponDef();
     if (weapon.category === "firearm") {
