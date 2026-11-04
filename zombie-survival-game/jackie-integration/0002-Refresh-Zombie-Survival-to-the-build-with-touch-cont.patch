@@ -1,0 +1,85 @@
+From 1903359e8c47b31339c25ca2d29a06635d068b10 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 4 Nov 2026 01:00:20 +0000
+Subject: [PATCH 2/2] Refresh Zombie Survival to the build with touch controls
+
+The game now plays on phones and tablets: a move stick, drag anywhere to
+look, and buttons for attack, aim, use, jump, crouch, reload, swap, light,
+bag and pause. The page's notice on touch devices used to say there were no
+touch controls; it now tells the player to turn the phone sideways and use
+Full screen, which is how the controls fit. This build also brings food
+spoilage and cooking, and each item's real-world history in the bag.
+
+Checked in iPhone 14 and Pixel 7 emulation against the files served from
+public/zombie-survival/: the game starts, the touch controls appear, and no
+errors are thrown. Real Safari still needs a check on a device.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UMWgxx6nuAv1vkwbcenTSG
+---
+ docs/ZOMBIE_SURVIVAL.md           | 6 ++++--
+ public/zombie-survival/index.html | 9 ++++++---
+ src/pages/ZombieSurvival.tsx      | 4 ++--
+ 3 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/docs/ZOMBIE_SURVIVAL.md b/docs/ZOMBIE_SURVIVAL.md
+index 0a3fab8e..576ded24 100644
+--- a/docs/ZOMBIE_SURVIVAL.md
++++ b/docs/ZOMBIE_SURVIVAL.md
+@@ -61,8 +61,10 @@ wherever this repo is checked out.) Then run
+ 
+ ## Known limitations
+ 
+-- No touch controls yet. On a phone or tablet the page opens the game and says
+-  so plainly.
++- Touch controls arrived in the game build of 2026-11-03 (move stick, drag to
++  look, buttons). On a phone or tablet the page suggests landscape and Full
++  screen. Tested in iPhone and Android emulation only; real Safari still needs a
++  check on a device.
+ - Saves stay on the device and browser they were made in; there is no cloud
+   save.
+ - Every game update can change the town. A save made before such an update is
+diff --git a/public/zombie-survival/index.html b/public/zombie-survival/index.html
+index d61af8d2..79b26429 100644
+--- a/public/zombie-survival/index.html
++++ b/public/zombie-survival/index.html
+@@ -2,15 +2,18 @@
+ <html lang="en">
+   <head>
+     <meta charset="UTF-8" />
+-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
++    <meta name="apple-mobile-web-app-capable" content="yes" />
++    <meta name="mobile-web-app-capable" content="yes" />
++    <meta name="theme-color" content="#0a0a0a" />
+     <title>Zombie Survival</title>
+     <meta name="description" content="Third-person zombie survival. Scavenge, stay quiet, and survive as long as you can." />
+     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Big+Shoulders+Stencil+Display:wght@700;900&family=Special+Elite&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+-    <script type="module" crossorigin src="./assets/index-BW17Bnxo.js"></script>
++    <script type="module" crossorigin src="./assets/index-CVskN4v5.js"></script>
+     <link rel="modulepreload" crossorigin href="./assets/three-B8ZKvaRL.js">
+-    <link rel="stylesheet" crossorigin href="./assets/index-D5yKrEoa.css">
++    <link rel="stylesheet" crossorigin href="./assets/index-CfDOa1jh.css">
+   </head>
+   <body>
+     <div id="root"></div>
+diff --git a/src/pages/ZombieSurvival.tsx b/src/pages/ZombieSurvival.tsx
+index 4f50fea3..7a4e5e27 100644
+--- a/src/pages/ZombieSurvival.tsx
++++ b/src/pages/ZombieSurvival.tsx
+@@ -273,8 +273,8 @@ const ZombieSurvival = () => {
+         <div className="flex flex-shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+           <TriangleAlert size={14} className="flex-shrink-0 text-primary" aria-hidden />
+           <span className="flex-1">
+-            Zombie Survival is played with a keyboard and mouse. It opens on this device, but there are no touch
+-            controls yet.
++            On a phone or tablet, turn it sideways and tap Full screen: the game shows a move stick on the left,
++            drag anywhere to look, and buttons on the right.
+           </span>
+           <button type="button" onClick={() => setTouchNote(false)} className={iconButton} aria-label="Dismiss">
+             <X size={14} />
+-- 
+2.43.0
+
