@@ -15,6 +15,10 @@ export interface NoiseEvent {
   pos: THREE.Vector3;
   radius: number;
   ttl: number;
+  /** Heat this noise adds to its area (defaults to one from its radius). Periodic sources set their own. */
+  heat?: number;
+  /** Already counted toward heat. */
+  heated?: boolean;
   /** Where hearers should head instead of pos (just past a barrier being pounded, so newcomers join in). */
   lure?: THREE.Vector3;
   /** The barrier making the noise: zombies already pounding on it don't keep themselves going with it. */

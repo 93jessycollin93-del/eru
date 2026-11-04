@@ -29,6 +29,23 @@ import {
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
 import { craft, missingFor, RECIPES } from "../sim/crafting";
+import {
+  addHeat,
+  coolHeat,
+  createHeat,
+  dayOf,
+  daysToHorde,
+  gamestage,
+  heatAt,
+  hordeLabel,
+  hordeNight,
+  hordePlan,
+  loadHeat,
+  noiseHeat,
+  scoutCount,
+  takeScoutTarget,
+  type HeatState,
+} from "../sim/horde";
 import { ageFresh, freshAtFind, freshStage, fridgeTemp, mealEffect, FRIDGE_C } from "../sim/freshness";
 import { BARRICADE, BARRIER, BARRIER_NOISE, DOOR, MELEE, FIREARM, WINDOW, ZOMBIE, meleeDamage, shotSpread, visibilityRange } from "../sim/tuning";
 import {
@@ -113,6 +130,14 @@ export class Game {
   private messageId = 1;
   private hudTimer = 0;
   private respawnTimer = 30;
+  /** Heat from your activity, by area: hot areas draw scouts (sim/horde.ts). */
+  private heat: HeatState = createHeat();
+  /** Tonight's horde, if one is on: which night, how many have come, seconds to the next group. */
+  private horde: { night: number | null; spawned: number; timer: number } = { night: null, spawned: 0, timer: 0 };
+  private hordeZombies = new Set<Zombie>();
+  private hordeAlertTimer = 0;
+  private scoutTimer = 5;
+  private hordeWarnedDay = 0;
   private damageFlash = 0;
   private causeOfDeath = "";
   private menuAngle = 0;
@@ -394,6 +419,10 @@ export class Game {
     this.causeOfDeath = "";
     this.respawnTimer = 30;
     this.autosaveTimer = AUTOSAVE_SECONDS;
+    this.heat = createHeat();
+    this.horde = { night: null, spawned: 0, timer: 0 };
+    this.hordeZombies.clear();
+    this.hordeWarnedDay = 0;
   }
 
   resume() {
@@ -737,6 +766,8 @@ export class Game {
         this.addToInventory(res.output);
         if (this.equippedUid !== null && !this.equippedStack()) this.setEquipped(null);
         this.message(`${ITEMS[res.output.id].name} ready.`, "good");
+        // Cooking smells and a stove's hiss carry: a little heat where you cooked.
+        if (res.heat) addHeat(this.heat, this.player.pos.x, this.player.pos.z, 3);
       },
     });
     this.emitHud();
@@ -1328,6 +1359,8 @@ export class Game {
       },
       kills: this.kills,
       respawnTimer: this.respawnTimer,
+      heat: this.heat,
+      horde: { ...this.horde, warnedDay: this.hordeWarnedDay },
       nextUid: peekNextUid(),
       zombies: this.zombies.map((z) => z.toSave()),
       containers: this.town.containers
@@ -1361,6 +1394,12 @@ export class Game {
     this.flashlightOn = d.player.flashlight;
     this.kills = d.kills;
     this.respawnTimer = d.respawnTimer;
+    this.heat = loadHeat(d.heat);
+    // Older saves have no horde record; a run loaded mid-horde carries on where it was.
+    const h = d.horde;
+    this.horde = h && (h.night === null || Number.isFinite(h.night)) && Number.isFinite(h.spawned) ? { night: h.night, spawned: h.spawned, timer: 3 } : { night: null, spawned: 0, timer: 0 };
+    this.hordeWarnedDay = h && Number.isFinite(h.warnedDay) ? h.warnedDay : 0;
+    this.hordeZombies.clear();
 
     const byId = new Map(this.town.containers.map((c) => [c.id, c]));
     for (const c of d.containers) {
@@ -1634,6 +1673,14 @@ export class Game {
     }
 
     this.updateZombies(dt);
+    // Your noise heats the area it happens in; the dead's own pounding doesn't count.
+    for (const n of this.noises) {
+      if (n.heated) continue;
+      n.heated = true;
+      if (!n.barrierId) addHeat(this.heat, n.pos.x, n.pos.z, n.heat ?? noiseHeat(n.radius));
+    }
+    coolHeat(this.heat, gameMinutes);
+    this.updateHorde(dt);
     this.noises = this.noises.filter((n) => (n.ttl -= dt) > 0);
 
     // Autosave in quiet moments: never mid-fight, mid-climb, mid-job or with a menu open.
@@ -2338,6 +2385,94 @@ export class Game {
     }
   }
 
+  /**
+   * Every seventh night the dead come for you in waves, wherever you are, and keep coming until dawn;
+   * the rest of the time, areas you've made hot draw a few scouts to the latest noise.
+   */
+  private updateHorde(dt: number) {
+    const p = this.player;
+    const night = hordeNight(this.minutes);
+    const stage = gamestage(this.minutes, this.kills);
+    const day = dayOf(this.minutes);
+    if (night === null && daysToHorde(this.minutes) === 0 && this.minutes % 1440 >= 6 * 60 && this.hordeWarnedDay !== day) {
+      this.hordeWarnedDay = day;
+      this.message(`Day ${day}. Every seventh night they come in numbers, and tonight is one. From 22:00. Get ready.`, "warn");
+    }
+    if (night !== this.horde.night) {
+      if (night !== null) {
+        this.horde = { night, spawned: 0, timer: 3 };
+        this.message("They're coming. From every direction.", "danger");
+      } else {
+        this.horde = { night: null, spawned: 0, timer: 0 };
+        this.hordeZombies.clear();
+        this.message("Dawn. The horde is breaking up.", "good");
+      }
+    }
+
+    if (night !== null) {
+      const plan = hordePlan(stage);
+      // They always know where you are: hiding buys time, not safety.
+      this.hordeAlertTimer -= dt;
+      if (this.hordeAlertTimer <= 0) {
+        this.hordeAlertTimer = 4;
+        for (const z of this.hordeZombies) {
+          if (z.alive) z.alert(p.pos, 0.9);
+          else this.hordeZombies.delete(z);
+        }
+      }
+      this.horde.timer -= dt;
+      if (this.horde.timer > 0 || this.horde.spawned >= plan.total) return;
+      const alive = [...this.hordeZombies].filter((z) => z.alive).length;
+      const room = Math.min(plan.group, plan.total - this.horde.spawned, plan.maxAlive - alive, this.zombieRoom());
+      if (room <= 0) {
+        this.horde.timer = 3;
+        return;
+      }
+      const placed = this.spawnGroup(p.pos, room, 55, 120);
+      this.horde.timer = placed.length ? plan.interval : 3;
+      this.horde.spawned += placed.length;
+      for (const z of placed) {
+        this.hordeZombies.add(z);
+        z.alert(p.pos, 0.9);
+      }
+      return;
+    }
+
+    this.scoutTimer -= dt;
+    if (this.scoutTimer > 0) return;
+    this.scoutTimer = 5;
+    const t = takeScoutTarget(this.heat);
+    if (!t) return;
+    const target = new THREE.Vector3(t.x, 0, t.z);
+    const placed = this.spawnGroup(target, Math.min(scoutCount(stage), this.zombieRoom()), 50, 100);
+    for (const z of placed) z.alert(target, 0.9);
+    if (placed.length && target.distanceTo(p.pos) < 80) this.message("All that noise carried. Something is coming to see what it was.", "warn");
+  }
+
+  /** How many more dead the client can carry right now (fewer on phones). */
+  private zombieRoom() {
+    return Math.max(0, (this.touch ? 120 : 170) - this.zombies.filter((z) => z.alive).length);
+  }
+
+  /** Up to n dead at one town spawn point between minR and maxR from a spot: out of your sight if possible, never inside a sealed building. */
+  private spawnGroup(around: THREE.Vector3, n: number, minR: number, maxR: number): Zombie[] {
+    if (n <= 0) return [];
+    const p = this.player;
+    const pts = this.town.spawnPoints.filter((sp) => {
+      const d = sp.distanceTo(around);
+      if (d < minR || d > maxR || sp.distanceTo(p.pos) < 40) return false;
+      const inside = this.buildingObj(sp.x, sp.z);
+      return !(inside && this.barriers.sealed(inside.address));
+    });
+    const hidden = pts.filter((sp) => !this.colliders.lineOfSight(sp.x, 1.6, sp.z, p.pos.x, p.pos.y + 1.6, p.pos.z));
+    const pool = hidden.length ? hidden : pts;
+    if (!pool.length) return [];
+    const sp = pick(this.rng, pool);
+    const out: Zombie[] = [];
+    for (let i = 0; i < n; i++) out.push(this.spawnZombie(sp.clone().add(new THREE.Vector3(range(this.rng, -3, 3), 0, range(this.rng, -3, 3))), this.siteAt(sp.x, sp.z)));
+    return out;
+  }
+
   private onZombieAttack(z: Zombie) {
     if (this.status !== "playing") return;
     const p = this.player;
@@ -2737,6 +2872,8 @@ export class Game {
       aiming: p.aiming,
       noise: Math.min(1, p.footstepRadius / 15),
       hunted: this.zombies.some((z) => z.hunting),
+      horde: hordeLabel(this.minutes),
+      heat: Math.round(heatAt(this.heat, p.pos.x, p.pos.z)),
       day: Math.floor(this.minutes / 1440) + 1,
       timeOfDay: this.minutes % 1440,
       equippedUid: this.equippedUid,

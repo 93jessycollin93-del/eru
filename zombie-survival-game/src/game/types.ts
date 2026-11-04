@@ -54,6 +54,10 @@ export interface HudState {
   noise: number;
   /** Whether any zombie is currently chasing the player. */
   hunted: boolean;
+  /** "Horde night in 3 days" and how urgent that is. */
+  horde: { text: string; level: "calm" | "soon" | "tonight" | "now" };
+  /** Heat where you stand, 0–100: at 50 an area draws scouts. */
+  heat: number;
   day: number;
   /** Minutes since midnight, 0..1440 */
   timeOfDay: number;

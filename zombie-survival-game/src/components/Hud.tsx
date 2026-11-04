@@ -75,9 +75,24 @@ const Hud = ({ hud }: HudProps) => {
         </div>
         <div className="text-sm tabular-nums text-stone-300">
           {Math.round(hud.airTemp)}°C {hud.sheltered ? "· indoors" : ""}
+          {hud.touch && hud.power && ` · ${hud.power === "grid" ? "mains" : hud.power === "generator" ? "generator" : hud.power === "ups" ? "battery" : "no power"}`}
         </div>
-        <div className="max-w-[16rem] truncate text-sm text-stone-300">{hud.location ?? hud.townName}</div>
-        {hud.power && (
+        {/* Phones drop the place name and fold heat into the horde line: the panel must stay above the buttons. */}
+        {!hud.touch && <div className="max-w-[16rem] truncate text-sm text-stone-300">{hud.location ?? hud.townName}</div>}
+        <div
+          className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+            hud.horde.level === "now" ? "animate-pulse-red text-red-500" : hud.horde.level === "tonight" ? "text-red-400" : hud.horde.level === "soon" ? "text-amber-300" : "text-stone-400"
+          }`}
+        >
+          {hud.horde.text}
+          {hud.touch && hud.heat >= 15 && <span className={hud.heat >= 40 ? "text-orange-400" : ""}> · {hud.heat >= 40 ? "area hot" : "warming"}</span>}
+        </div>
+        {!hud.touch && hud.heat >= 15 && (
+          <div className={`text-xs uppercase tracking-[0.2em] ${hud.heat >= 40 ? "text-orange-400" : "text-stone-400"}`}>
+            {hud.heat >= 40 ? "This area is hot" : "This area is warming up"}
+          </div>
+        )}
+        {hud.power && !hud.touch && (
           <div className={`text-xs uppercase tracking-[0.2em] ${hud.power === "none" ? "text-stone-500" : hud.power === "ups" ? "text-amber-300/80" : "text-lime-300/80"}`}>
             {hud.power === "grid" ? "Mains power" : hud.power === "generator" ? "Generator power" : hud.power === "ups" ? "Battery backup" : "No power"}
           </div>

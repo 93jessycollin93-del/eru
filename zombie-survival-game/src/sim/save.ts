@@ -95,6 +95,10 @@ export interface SaveData {
   };
   kills: number;
   respawnTimer: number;
+  /** Heat by area (optional: older saves have none; sim/horde.ts loadHeat makes any value safe). */
+  heat?: unknown;
+  /** Tonight's horde, if one is on, and the last day you were warned of one (optional for older saves). */
+  horde?: { night: number | null; spawned: number; warnedDay: number };
   /** The next item stack uid, so new stacks never collide with loaded ones. */
   nextUid: number;
   zombies: SavedZombie[];

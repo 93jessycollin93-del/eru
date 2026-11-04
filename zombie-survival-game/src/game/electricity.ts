@@ -162,7 +162,7 @@ export class Electricity {
     if (this.noiseTimer <= 0) {
       this.noiseTimer = 1.5;
       for (const g of this.generators) {
-        if (g.gen.running) noises.push({ pos: new THREE.Vector3(g.x, g.y, g.z), radius: g.gen.noiseRadius, ttl: 0.4 });
+        if (g.gen.running) noises.push({ pos: new THREE.Vector3(g.x, g.y, g.z), radius: g.gen.noiseRadius, ttl: 0.4, heat: 0.6 });
       }
     }
 
@@ -176,7 +176,7 @@ export class Electricity {
       this.lureTimer -= dt;
       if (this.lureTimer <= 0) {
         this.lureTimer = 3;
-        for (const { c } of litNearby(90)) noises.push({ pos: c.clone().setY(0), radius: LIGHT_LURE_RADIUS, ttl: 0.4 });
+        for (const { c } of litNearby(90)) noises.push({ pos: c.clone().setY(0), radius: LIGHT_LURE_RADIUS, ttl: 0.4, heat: 0.4 });
       }
     }
 

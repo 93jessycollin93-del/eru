@@ -42,3 +42,4 @@ Scenarios in `doors.mjs` (pass criteria in the session 7 entry of HANDOFF.md):
 Playwright comes from `npm i --no-save playwright`, or the container's global install.
 - `provisions.mjs` (H15): food found in a fridge is aged since the outbreak; cooking on a camping stove burns gas and inherits freshness; rag bandages; tap refills; drinking leaves a bottle; carried food spoils. Prints a JSON summary and saves `out/provisions-inventory.png`.
 - `mobile.mjs` (H16): iPhone 14 and Pixel 7 (landscape, touch) and a Windows desktop. Taps Begin, drags the move stick and the look area, opens the bag; desktop walks with W. Pass a device name (`iphone`, `android`, `windows`) to run one. Saves `out/device-<name>-title.png` and `-play.png`.
+- `horde.mjs` (H17): gunfire heats an area and draws scouts; the day-7 warning, horde start at 22:00, waves closing in on a silent player, the alive cap, dawn at 04:00, and heat and horde in the save. Prints JSON.
