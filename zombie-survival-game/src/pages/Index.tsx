@@ -41,6 +41,7 @@ const Index = () => {
       treat: (woundId) => gameRef.current?.treatWound(woundId),
       siphon: () => gameRef.current?.siphonFuel(),
       fillTank: () => gameRef.current?.fillTank(),
+      repairCar: (id: string) => gameRef.current?.repairVehicle(id),
       fillBottles: () => gameRef.current?.fillBottles(),
       craft: (id) => gameRef.current?.craftRecipe(id),
       close: () => gameRef.current?.closeUi(),
@@ -77,7 +78,7 @@ const Index = () => {
         !hud.reading &&
         !hud.generator &&
         !hud.keypad &&
-        !hud.cctv && <TouchControls api={touchApi} asleep={hud.asleep} driving={!!hud.vehicle} alt={hud.altPrompts.find((a) => a.key === "Q") ?? null} />}
+        !hud.cctv && <TouchControls api={touchApi} asleep={hud.asleep} driving={!!hud.vehicle} police={!!hud.vehicle?.police} alts={hud.vehicle ? [] : hud.altPrompts.filter((a) => a.key === "Q" || (a.key === "H" && a.label.startsWith("Smash")))} />}
       {hud?.touch && (
         <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/90 p-8 text-center font-ui text-2xl uppercase tracking-[0.2em] text-stone-200 portrait:flex">
           Turn your phone sideways to play

@@ -22,11 +22,13 @@ interface Props {
   asleep: boolean;
   /** In a car: the stick drives, and the buttons become the car's. */
   driving?: boolean;
-  /** A second action for what you're facing (search a car, pry a board): its own button. */
-  alt?: { key: string; label: string } | null;
+  /** Extra actions for what you're facing (search a car, smash its window): a button each. */
+  alts?: { key: string; label: string }[];
+  /** Driving a police cruiser: it has a siren. */
+  police?: boolean;
 }
 
-const TouchControls = ({ api, asleep, driving = false, alt = null }: Props) => {
+const TouchControls = ({ api, asleep, driving = false, alts = [], police = false }: Props) => {
   const look = useRef<HTMLDivElement>(null);
   const stick = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState<{ x: number; y: number } | null>(null);
@@ -152,6 +154,7 @@ const TouchControls = ({ api, asleep, driving = false, alt = null }: Props) => {
         {driving ? (
           <>
             <div className="flex gap-2">
+              {police && <Pad label="Siren" onDown={() => api.key("KeyG", true)} onUp={() => api.key("KeyG", false)} />}
               <Pad label="Engine" onDown={() => api.key("KeyR", true)} onUp={() => api.key("KeyR", false)} />
               <Pad label="Horn" onDown={() => api.key("KeyH", true)} onUp={() => api.key("KeyH", false)} />
             </div>
@@ -163,7 +166,9 @@ const TouchControls = ({ api, asleep, driving = false, alt = null }: Props) => {
         ) : (
           <>
             <div className="flex gap-2">
-              {alt && <Pad label={alt.label.split(" ")[0]} onDown={() => api.key(`Key${alt.key}`, true)} onUp={() => api.key(`Key${alt.key}`, false)} />}
+              {alts.slice(0, 2).map((a) => (
+                <Pad key={a.key} label={a.label.split(" ")[0]} onDown={() => api.key(`Key${a.key}`, true)} onUp={() => api.key(`Key${a.key}`, false)} />
+              ))}
               <Pad label="Reload" onDown={() => api.key("KeyR", true)} onUp={() => api.key("KeyR", false)} />
               <Pad label="Crouch" onDown={() => api.key("KeyC", true)} onUp={() => api.key("KeyC", false)} />
               <Pad label="Jump" onDown={() => api.key("Space", true)} onUp={() => api.key("Space", false)} />

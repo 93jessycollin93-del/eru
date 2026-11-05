@@ -245,8 +245,8 @@ const Hud = ({ hud }: HudProps) => {
             />
           </span>
           <span className="tabular-nums text-stone-400">{hud.vehicle.fuel.toFixed(1)} L</span>
-          <span className={hud.vehicle.running ? "text-lime-300/90" : "text-stone-500"}>{hud.vehicle.running ? "On" : "Off"}</span>
-          {hud.vehicle.body < 60 && <span className="text-orange-400">Body {hud.vehicle.body}%</span>}
+          <span className={hud.vehicle.running ? "text-lime-300/90" : "text-stone-500"}>{hud.vehicle.gear}</span>
+          {hud.vehicle.warnings[0] && <span className="text-orange-400">{hud.vehicle.warnings[0]}</span>}
         </div>
       )}
       {hud.vehicle && !hud.touch && (
@@ -254,6 +254,9 @@ const Hud = ({ hud }: HudProps) => {
           <div className="flex items-baseline justify-center gap-1.5">
             <span className="text-4xl font-semibold tabular-nums text-stone-100">{hud.vehicle.speed}</span>
             <span className="text-sm uppercase tracking-[0.2em] text-stone-400">km/h</span>
+            <span className={`ml-2 text-lg font-semibold tabular-nums ${hud.vehicle.running ? "text-lime-300/90" : "text-stone-500"}`}>{hud.vehicle.gear}</span>
+            <span className={`ml-2 text-sm tabular-nums ${hud.vehicle.temp > 112 ? "text-red-400" : "text-stone-400"}`}>{hud.vehicle.temp} °C</span>
+            {hud.vehicle.siren && <span className="ml-2 animate-pulse-red text-sm font-semibold uppercase tracking-[0.2em] text-red-400">Siren</span>}
           </div>
           <div className="mt-1 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.15em]">
             <span className="flex items-center gap-1.5 text-stone-300">
@@ -270,6 +273,9 @@ const Hud = ({ hud }: HudProps) => {
             <span className={hud.vehicle.engine < 35 ? "text-orange-400" : "text-stone-400"}>Engine {hud.vehicle.engine}%</span>
             <span className={hud.vehicle.body < 40 ? "text-orange-400" : "text-stone-400"}>Body {hud.vehicle.body}%</span>
           </div>
+          {hud.vehicle.warnings.length > 0 && (
+            <div className="mt-1 text-xs font-semibold uppercase tracking-[0.15em] text-orange-400">{hud.vehicle.warnings.join(" · ")}</div>
+          )}
         </div>
       )}
 

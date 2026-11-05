@@ -817,6 +817,30 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     spawnPoints.push(new THREE.Vector3(r.x + range(rng, -3, 3), 0, range(rng, r.z0, r.z1)));
   }
 
+  // The police cruiser waits at the kerb outside the station: placed by arithmetic, no random draws,
+  // and with no trunk container, so nothing the town rolls or fingerprints moves.
+  const station = buildings.find((b) => b.type === "police");
+  if (station) {
+    const cx = (station.rect.minX + station.rect.maxX) / 2;
+    const cz = (station.rect.minZ + station.rect.maxZ) / 2;
+    const lanes = [
+      ...hRoads.filter((r) => cx > r.x0 + 10 && cx < r.x1 - 10).map((r) => ({ d: Math.abs(cz - r.z), along: "x" as const, line: r.z, side: Math.sign(cz - r.z) })),
+      ...vRoads.filter((r) => cz > r.z0 + 10 && cz < r.z1 - 10).map((r) => ({ d: Math.abs(cx - r.x), along: "z" as const, line: r.x, side: Math.sign(cx - r.x) })),
+    ].sort((a, b) => a.d - b.d);
+    const lane = lanes[0];
+    if (lane) {
+      const kerb = lane.line + lane.side * (ROAD_HALF - 1.4);
+      for (const shift of [0, 7, -7, 14, -14, 21]) {
+        const x = lane.along === "x" ? cx + shift : kerb;
+        const z = lane.along === "x" ? kerb : cz + shift;
+        if (vehicles.every((v) => Math.hypot(v.x - x, v.z - z) > 6.5)) {
+          vehicles.push({ id: 900001, x, z, yaw: lane.along === "x" ? Math.PI / 2 : 0, color: "#16181a", fuel: 46, kind: "police" });
+          break;
+        }
+      }
+    }
+  }
+
   const group = mb.build();
   for (const c of computers) group.add(c.screen);
 

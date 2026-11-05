@@ -23,6 +23,8 @@ const out = await p.evaluate(() => {
   };
   const key = (code, down) => g.input.setVirtual(code, down);
   const tap = (code) => {
+    // Opening a container frees the mouse, as in real play; a player would click back in.
+    if (!g.uiOpen()) g.locked = true;
     key(code, true);
     step(1 / 30);
     key(code, false);
@@ -39,7 +41,7 @@ const out = await p.evaluate(() => {
   r.kinds = [...new Set(g.vehicles.list.map((v) => v.state.kind))];
   // A car on Main Street with clear road ahead: put the player at its door.
   const car = g.vehicles.list.reduce((best, v) => (Math.abs(v.state.z) < Math.abs(best.state.z) && Math.abs(v.state.x) < 90 ? v : best));
-  Object.assign(car.state, { keys: true, battery: 90, fuel: 30, engine: 90, yaw: Math.PI / 2 });
+  Object.assign(car.state, { keys: true, locked: false, battery: 90, fuel: 30, engine: 90, yaw: Math.PI / 2, tyres: [90, 90, 90, 90], radiator: 100, coolant: 100, tank: 100 });
   car.pose(g.terrain, 1);
   g.vehicles.park(car);
   const door = car.doorPoint(1);
@@ -58,13 +60,18 @@ const out = await p.evaluate(() => {
   const blocked = (x0, x1, z0, z1) =>
     g.colliders.boxes.some((bx) => bx.enabled !== false && bx.maxX > x0 && bx.minX < x1 && bx.maxZ > z0 && bx.minZ < z1 && bx.maxY - g.terrain.height((bx.minX + bx.maxX) / 2, (bx.minZ + bx.maxZ) / 2) > 0.4);
   let start = null;
-  for (let x = -145; x < 60 && !start; x += 5) {
-    for (const zz of [-2, 2, 0, -3, 3]) {
-      if (!blocked(x - 3, x + 85, zz - 1.6, zz + 1.6)) {
-        start = { x, z: zz };
-        break;
+  for (const road of [0, -60, 60]) {
+    for (let x = -145; x < 60 && !start; x += 5) {
+      for (const zz of [road - 2, road + 2]) {
+        // Lamps line the kerbs, so only the carriageway itself must be clear, and no parked car within reach of a swerve.
+        const carsNear = g.vehicles.list.some((v) => v !== car && v.state.x > x - 5 && v.state.x < x + 60 && Math.abs(v.state.z - zz) < 5);
+        if (!carsNear && !blocked(x - 3, x + 58, zz - 2.2, zz + 2.2)) {
+          start = { x, z: zz };
+          break;
+        }
       }
     }
+    if (start) break;
   }
   r.clearRoadAt = start;
   if (start) {
@@ -139,6 +146,148 @@ const out = await p.evaluate(() => {
   const s = g.toSave();
   const sv = s.vehicles.find((v) => v.id === car.state.id);
   r.saved = !!sv && Math.abs(sv.x - car.state.x) < 0.01;
+
+  const standAt = (v) => {
+    const d = v.doorPoint(1);
+    g.player.pos.set(d.x, g.terrain.height(d.x, d.z), d.z);
+    g.player.yaw = Math.atan2(v.state.x - d.x, v.state.z - d.z);
+    step(0.1);
+  };
+  const msgs = () => g.messages.map((m) => m.text).join(" | ");
+
+  // A locked car: E only says so; H puts a window through (noise, maybe the alarm), then you're in.
+  const locked = g.vehicles.list.find((v) => v.state.locked && !v.state.keys && v.spec.kind !== "police" && v !== car);
+  r.lockedFound = !!locked;
+  if (locked) {
+    Object.assign(locked.state, { alarm: true, hasBattery: true, battery: 60 });
+    standAt(locked);
+    tap("KeyE");
+    r.lockedBlocks = g.driving === null && msgs().includes("locked");
+    tap("KeyH");
+    r.smashUnlocks = !locked.state.locked && locked.state.windows <= 55;
+    r.alarmSounding = g.alarms.has(locked);
+    const n0 = g.noises.length;
+    step(1.2);
+    r.alarmMakesNoise = g.noises.some((n) => n.radius >= 80);
+    tap("KeyE");
+    r.inAfterSmash = g.driving === locked;
+    // Hotwire needs a screwdriver: give one and do it, then crank; the alarm stops once it runs.
+    g.inventory.push({ uid: 990001, id: "screwdriver", count: 1 });
+    Object.assign(locked.state, { battery: 90, fuel: 20, engine: 90 });
+    tap("KeyR");
+    step(9);
+    r.hotwired = locked.state.hotwired;
+    for (let i = 0; i < 6 && !locked.state.running; i++) tap("KeyR");
+    r.alarmStopsWhenRunning = locked.state.running && !g.alarms.has(locked);
+    g.exitVehicle(true);
+  }
+
+  // The police cruiser: keys hang in a station locker; the siren is a lure heard from 140 m.
+  const cop = g.vehicles.list.find((v) => v.spec.kind === "police");
+  r.cruiser = !!cop;
+  if (cop) {
+    const locker = g.town.containers.find((c) => c.table === "police_locker");
+    if (locker) {
+      locker.items = null;
+      g.openContainer(locker);
+      const keys = locker.items.find((i) => i.id === "car_keys");
+      r.cruiserKeysInLocker = !!keys;
+      if (keys) {
+        g.inventory.push(keys);
+        locker.items = locker.items.filter((i) => i !== keys);
+      }
+      g.closeUi(false);
+    }
+    Object.assign(cop.state, { hasBattery: true, battery: 80 });
+    standAt(cop);
+    tap("KeyE");
+    r.cruiserKeysOpenIt = g.driving === cop && cop.state.keys;
+    tap("KeyG");
+    r.sirenOn = cop.state.siren;
+    let heard = false;
+    for (let i = 0; i < 45; i++) {
+      step(1 / 30);
+      heard = heard || g.noises.some((n) => n.radius >= 140);
+    }
+    r.sirenNoise = heard;
+    tap("KeyG");
+    g.exitVehicle(true);
+  }
+
+  // Keys in houses: each set fits exactly one car, by its plate.
+  let keysFound = 0;
+  let keysFitACar = true;
+  for (const c of g.town.containers.filter((c) => c.table === "bedroom" || c.table === "kitchen")) {
+    c.items = null;
+    g.openContainer(c);
+    for (const k of c.items.filter((i) => i.id === "car_keys")) {
+      keysFound++;
+      const fits = g.vehicles.list.filter((v) => k.text.includes(v.state.plate));
+      if (fits.length !== 1) keysFitACar = false;
+    }
+    g.closeUi(false);
+  }
+  r.houseKeys = keysFound;
+  r.houseKeysFitOneCarEach = keysFitACar;
+
+  // Repairs from the car panel: a flat changed for a spare, a battery taken for salvage.
+  const fix = g.vehicles.list.find((v) => v !== car && v.spec.kind !== "police" && !v.state.locked);
+  fix.state.tyres[0] = 2;
+  g.inventory.push({ uid: 990002, id: "wrench", count: 1 }, { uid: 990003, id: "spare_tyre", count: 1, charge: 88 });
+  standAt(fix);
+  tap("KeyQ");
+  const panel = g.carPanel();
+  r.panelShowsParts = !!panel && panel.parts.length >= 12;
+  r.panelOffersTyre = !!panel && panel.repairs.some((o) => o.id === "tyre:swap:0" && o.ok);
+  g.repairVehicle("tyre:swap:0");
+  g.locked = true;
+  step(13);
+  r.tyreChanged = fix.state.tyres[0] === 88;
+  standAt(fix);
+  tap("KeyQ");
+  g.repairVehicle("battery:take");
+  g.locked = true;
+  step(6);
+  const bat = g.inventory.find((i) => i.id === "car_battery");
+  r.batterySalvaged = !fix.state.hasBattery && !!bat && bat.charge > 0;
+  g.closeUi(false);
+
+  // Jump-start: a flat battery borrows charge through cables from a car parked alongside.
+  const dead = car;
+  const donor = fix;
+  Object.assign(donor.state, { hasBattery: true, battery: 80 });
+  g.vehicles.unpark(donor);
+  donor.state.x = dead.state.x + Math.cos(dead.state.yaw) * 2.4;
+  donor.state.z = dead.state.z - Math.sin(dead.state.yaw) * 2.4;
+  donor.state.yaw = dead.state.yaw;
+  g.vehicles.park(donor);
+  Object.assign(dead.state, { battery: 3, keys: true, locked: false, running: false });
+  g.inventory.push({ uid: 990004, id: "jumper_cables", count: 1 });
+  standAt(dead);
+  tap("KeyE");
+  tap("KeyR");
+  step(5);
+  r.jumpStarted = dead.state.battery >= 15;
+
+  // Overheating: a holed radiator and no coolant cook the engine until it seizes.
+  Object.assign(dead.state, { radiator: 5, coolant: 0, temp: 120, engine: 40, running: true, fuel: 30 });
+  key("KeyW", true);
+  let seized = false;
+  for (let i = 0; i < 40 && !seized; i++) {
+    step(0.5);
+    seized = !dead.state.running;
+  }
+  key("KeyW", false);
+  r.overheatSeizes = seized && msgs().includes("seized");
+
+  // Skid marks: a hard stop from speed lays rubber.
+  Object.assign(dead.state, { engine: 90, running: true, temp: 90, radiator: 100, coolant: 100, speed: 15, yaw: Math.PI / 2 });
+  const marks0 = g.vehicles.skids.mesh.count;
+  key("KeyS", true);
+  step(1.5);
+  key("KeyS", false);
+  r.skidMarks = g.vehicles.skids.mesh.count - marks0;
+  g.exitVehicle(true);
   return r;
 });
 out.errors = errs;

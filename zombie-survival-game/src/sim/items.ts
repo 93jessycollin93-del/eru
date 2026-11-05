@@ -38,6 +38,8 @@ export interface ItemDef {
   perish?: { lifeH: number; raw?: boolean };
   /** What's left in your hands when it's used up (a bottle you can refill). */
   leaves?: string;
+  /** Starts with this `charge`: a car battery's percent, a tyre's tread. */
+  chargeDefault?: number;
 }
 
 /** Petrol weighs about 0.74 kg per litre. */
@@ -142,6 +144,57 @@ export const ITEMS: Record<string, ItemDef> = {
     weight: 0.05,
     stackable: true,
     description: "Torn cloth. Two make a rough bandage.",
+  },
+  wrench: {
+    id: "wrench",
+    name: "Socket Wrench",
+    category: "tool",
+    weight: 0.7,
+    description: "A ratchet and a few sockets: wheel nuts, battery clamps, engine bolts.",
+  },
+  car_battery: {
+    id: "car_battery",
+    name: "Car Battery",
+    category: "tool",
+    weight: 14,
+    chargeDefault: 85,
+    description: "Twelve volts of lead and acid. Heavy. Starts a car, if it has the charge.",
+  },
+  spare_tyre: {
+    id: "spare_tyre",
+    name: "Tyre",
+    category: "tool",
+    weight: 10,
+    chargeDefault: 90,
+    description: "On a steel rim, ready to bolt on.",
+  },
+  duct_tape: {
+    id: "duct_tape",
+    name: "Duct Tape",
+    category: "tool",
+    weight: 0.25,
+    description: "Patches a leaking tank or radiator for a while. Patches most things for a while.",
+  },
+  engine_parts: {
+    id: "engine_parts",
+    name: "Engine Parts",
+    category: "tool",
+    weight: 3,
+    description: "Gaskets, belts, plugs and hoses: enough to bring a tired engine back.",
+  },
+  jumper_cables: {
+    id: "jumper_cables",
+    name: "Jumper Cables",
+    category: "tool",
+    weight: 1.5,
+    description: "Red to red, black to ground. Borrow a charge from another car's battery.",
+  },
+  car_keys: {
+    id: "car_keys",
+    name: "Car Keys",
+    category: "tool",
+    weight: 0.05,
+    description: "A keyring with a fob.",
   },
   screwdriver: {
     id: "screwdriver",
@@ -357,7 +410,7 @@ export interface ItemStack {
   text?: string;
   /** Perishables: 1 fresh, 0 rotten. */
   fresh?: number;
-  /** Camping stove: minutes of gas left in the fitted canister. */
+  /** Camping stove: minutes of gas left in the fitted canister. Car battery: percent charge. Tyre: percent tread. */
   charge?: number;
 }
 
@@ -368,6 +421,7 @@ export const makeStack = (id: string, count = 1, loaded?: number, note?: { title
   count,
   loaded,
   ...(note ?? {}),
+  ...(ITEMS[id]?.chargeDefault !== undefined ? { charge: ITEMS[id].chargeDefault } : {}),
 });
 
 /** The uid the next stack will get; saved so loaded stacks never collide with new ones. */
@@ -455,6 +509,11 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["jerry_can", 3, 1, 1],
       ["hammer", 2, 1, 1],
       ["screwdriver", 3, 1, 1],
+      ["wrench", 3, 1, 1],
+      ["duct_tape", 3, 1, 1],
+      ["jumper_cables", 2, 1, 1],
+      ["engine_parts", 1, 1, 1],
+      ["car_battery", 1, 1, 1],
       // Each arrives as one stack within its range; a repeat roll tops it up only to max (rollLoot).
       ["nails", 3, 20, 50],
       ["plank", 3, 2, 4],
@@ -472,6 +531,10 @@ export const LOOT_TABLES: Record<string, { rolls: [number, number]; entries: Loo
       ["ammo_9mm", 1, 3, 8],
       ["jerry_can", 1, 1, 1],
       ["screwdriver", 1, 1, 1],
+      ["spare_tyre", 2, 1, 1],
+      ["jumper_cables", 1.5, 1, 1],
+      ["duct_tape", 1, 1, 1],
+      ["wrench", 1, 1, 1],
     ],
   },
 };

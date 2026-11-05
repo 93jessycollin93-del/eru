@@ -27,7 +27,7 @@ Sources: [Steam store](https://store.steampowered.com/app/1857950/VEIN/), [0.016
 | Water | simulated system | mains run 36 h past the grid, tap refills, empty bottles kept | behind: no rain, wells, boiling or toilet tanks yet |
 | Food | cooking | spoilage by temperature (Q10), fridges warming after power loss, staleness, food poisoning, raw meat risk | ahead on spoilage, behind on recipes |
 | Crafting | yes | 2 recipes, real heat (powered kitchen or gas stove burning by the minute) | **behind on breadth** |
-| Vehicles | drive, refuel, parts | four kinds you drive (real specs and physics), keys or hotwiring, battery, fuel, crashes, headlights, horn, running zombies down; per-part repair still to come | near parity |
+| Vehicles | drive, refuel, parts | five kinds incl. a police cruiser (siren lure); per-part model (4 tyres, battery, engine, radiator/coolant/heat, tank leaks, windows, lights); locks, alarms, keys matched by plate, hotwiring, jump-starts; repairs and salvage from other cars; gearbox, crashes by side, skid marks, smoke | ahead |
 | Farming | yes | none | **behind** |
 | Base building | yes | barricades only | **behind** |
 | Skills / levelling | yes | none | **behind** |

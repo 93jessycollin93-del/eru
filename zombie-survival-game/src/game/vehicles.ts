@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { VEHICLES, loadVehicle, rollVehicle, type VehicleKind, type VehicleSpec, type VehicleState } from "../sim/vehicle";
+import { FLAT, NO_WHEEL, VEHICLES, loadVehicle, rollVehicle, type VehicleKind, type VehicleSpec, type VehicleState } from "../sim/vehicle";
 import type { ColliderWorld } from "./world/colliders";
 import type { Terrain } from "./world/terrain";
 import type { LootContainer } from "./world/town";
@@ -13,6 +13,8 @@ export interface VehicleSpot {
   yaw: number;
   color: string;
   fuel: number;
+  /** Set for cars that aren't rolled from the town's mix (the police cruiser). */
+  kind?: VehicleKind;
 }
 
 /**
@@ -35,6 +37,8 @@ const profile = (s: VehicleSpec): Profile => {
   switch (s.kind) {
     case "sedan":
       return { hoodEnd: L2 - 1.25, roofFront: L2 - 2.0, roofRear: -L2 + 1.35, glassBase: -L2 + 0.95, belt: 0.92 };
+    case "police":
+      return { hoodEnd: L2 - 1.4, roofFront: L2 - 2.2, roofRear: -L2 + 1.5, glassBase: -L2 + 1.05, belt: 0.94 };
     case "hatchback":
       return { hoodEnd: L2 - 1.0, roofFront: L2 - 1.7, roofRear: -L2 + 0.5, glassBase: -L2 + 0.14, belt: 0.92 };
     case "van":
@@ -45,7 +49,7 @@ const profile = (s: VehicleSpec): Profile => {
 };
 
 /** Material slots, in the order body geometry groups use them. */
-const SLOT = { body: 0, glass: 1, trim: 2, chrome: 3, head: 4, tail: 5, plate: 6 } as const;
+const SLOT = { body: 0, glass: 1, trim: 2, chrome: 3, head: 4, tail: 5, plate: 6, livery: 7, barRed: 8, barBlue: 9 } as const;
 
 type Parts = THREE.BufferGeometry[][];
 
@@ -154,6 +158,20 @@ function bodyGeometry(s: VehicleSpec): THREE.BufferGeometry {
   // Underbody shadow catcher.
   box(parts, SLOT.trim, W - 0.15, 0.08, s.length - 0.4, 0, sill + 0.02, 0);
 
+  if (s.kind === "police") {
+    // Black and white: white doors and roof, a push bar, and a light bar across the roof.
+    for (const sx of [-1, 1]) box(parts, SLOT.livery, 0.02, p.belt - sill - 0.08, bPillar - p.roofRear + 0.9, sx * (W / 2 + 0.006), (p.belt + sill) / 2 + 0.02, (bPillar + p.roofRear) / 2 + 0.25);
+    box(parts, SLOT.livery, cw + 0.03, 0.02, p.roofFront - p.roofRear, 0, s.height + 0.0, (p.roofFront + p.roofRear) / 2);
+    box(parts, SLOT.trim, W * 0.7, 0.08, 0.06, 0, s.height + 0.04, (p.roofFront + p.roofRear) / 2);
+    box(parts, SLOT.barRed, W * 0.33, 0.1, 0.24, W * 0.18, s.height + 0.1, (p.roofFront + p.roofRear) / 2);
+    box(parts, SLOT.barBlue, W * 0.33, 0.1, 0.24, -W * 0.18, s.height + 0.1, (p.roofFront + p.roofRear) / 2);
+    box(parts, SLOT.trim, W * 0.7, 0.32, 0.06, 0, 0.55, L2 + 0.12);
+    for (const sx of [-1, 1]) box(parts, SLOT.trim, 0.06, 0.32, 0.18, sx * W * 0.3, 0.55, L2 + 0.04);
+  } else {
+    // Other kinds carry the extra slots as specks hidden inside the body, so every geometry has the same groups.
+    for (const slot of [SLOT.livery, SLOT.barRed, SLOT.barBlue]) box(parts, slot, 0.001, 0.001, 0.001, 0, 0.6, 0);
+  }
+
   // Every slot has parts, so group i of the merged geometry is material slot i.
   const merged = mergeGeometries(parts.map((list) => mergeGeometries(list, false)!), true)!;
   merged.computeBoundingSphere();
@@ -198,16 +216,22 @@ const shared = {
   chrome: new THREE.MeshStandardMaterial({ color: "#c3c7ca", roughness: 0.25, metalness: 0.9 }),
   plate: new THREE.MeshStandardMaterial({ color: "#d9d6c8", roughness: 0.6 }),
   tyre: new THREE.MeshStandardMaterial({ color: "#121212", roughness: 0.95 }),
+  // Glass in its states: crazed (still there, milky with cracks), smashed (just the dark cabin), boarded.
+  cracked: new THREE.MeshStandardMaterial({ color: "#8d9ba5", roughness: 0.55, metalness: 0.2 }),
+  smashed: new THREE.MeshStandardMaterial({ color: "#0c0d0e", roughness: 1 }),
+  boards: new THREE.MeshStandardMaterial({ color: "#6e5538", roughness: 0.92 }),
+  livery: new THREE.MeshStandardMaterial({ color: "#e9e7e1", roughness: 0.4, metalness: 0.3 }),
+  deadLamp: new THREE.MeshStandardMaterial({ color: "#2a2a28", roughness: 0.9 }),
 };
 const paintCache = new Map<string, THREE.MeshStandardMaterial>();
 
-/** Paint weathered by days in the open: dustier, duller, a little faded. */
-const paint = (color: string, wear: number) => {
-  const key = `${color}:${wear}`;
+/** Paint weathered by days in the open (dustier, duller, a little faded), or burnt out on a wreck. */
+const paint = (color: string, wear: number, wreck = false) => {
+  const key = `${color}:${wear}:${wreck}`;
   let m = paintCache.get(key);
   if (!m) {
-    const c = new THREE.Color(color).lerp(new THREE.Color("#8a8472"), wear * 0.12);
-    m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.32 + wear * 0.14, metalness: 0.45 - wear * 0.08 });
+    const c = wreck ? new THREE.Color("#2b2724") : new THREE.Color(color).lerp(new THREE.Color("#8a8472"), wear * 0.12);
+    m = new THREE.MeshStandardMaterial({ color: c, roughness: wreck ? 0.95 : 0.32 + wear * 0.14, metalness: wreck ? 0.1 : 0.45 - wear * 0.08 });
     paintCache.set(key, m);
   }
   return m;
@@ -222,8 +246,12 @@ export class VehicleObject {
   readonly wheels: { pivot: THREE.Group; mesh: THREE.Mesh; front: boolean }[] = [];
   readonly headMat: THREE.MeshStandardMaterial;
   readonly tailMat: THREE.MeshStandardMaterial;
+  readonly barRed: THREE.MeshStandardMaterial;
+  readonly barBlue: THREE.MeshStandardMaterial;
   collider = -1;
   private spin = 0;
+  /** What the materials last showed, so they're only swapped when the car's state changes. */
+  private look = "";
 
   constructor(
     public state: VehicleState,
@@ -234,9 +262,9 @@ export class VehicleObject {
     const s = this.spec;
     this.headMat = new THREE.MeshStandardMaterial({ color: "#e9e4d0", emissive: "#fff3d0", emissiveIntensity: 0, roughness: 0.2 });
     this.tailMat = new THREE.MeshStandardMaterial({ color: "#5a0d0b", emissive: "#ff1a10", emissiveIntensity: 0, roughness: 0.3 });
-    const wear = Math.round((100 - state.body) / 25);
-    const mats = [paint(state.color, wear), shared.glass, shared.trim, shared.chrome, this.headMat, this.tailMat, shared.plate];
-    this.body = new THREE.Mesh(bodyGeometry(s), mats);
+    this.barRed = new THREE.MeshStandardMaterial({ color: "#5c0b0b", emissive: "#ff2020", emissiveIntensity: 0.05, roughness: 0.3 });
+    this.barBlue = new THREE.MeshStandardMaterial({ color: "#0b1a5c", emissive: "#2050ff", emissiveIntensity: 0.05, roughness: 0.3 });
+    this.body = new THREE.Mesh(bodyGeometry(s), this.materials());
     this.body.castShadow = true;
     this.body.receiveShadow = true;
     this.chassis.add(this.body);
@@ -259,6 +287,40 @@ export class VehicleObject {
     this.root.add(this.chassis);
   }
 
+  /** The body's material list for its current state: paint wear, wreck, glass, lamps. */
+  private materials(): THREE.Material[] {
+    const st = this.state;
+    const wear = Math.round((100 - st.body) / 25);
+    const glass = st.boarded ? shared.boards : st.windows <= 0 ? shared.smashed : st.windows < 50 ? shared.cracked : shared.glass;
+    return [paint(st.color, wear, st.body < 12), glass, shared.trim, shared.chrome, st.lights < 25 ? shared.deadLamp : this.headMat, this.tailMat, shared.plate, shared.livery, this.barRed, this.barBlue];
+  }
+
+  /** Swap materials and wheels to match damage and repairs (cheap when nothing changed). */
+  refresh() {
+    const st = this.state;
+    const look = `${Math.round((100 - st.body) / 25)}|${st.body < 12}|${st.boarded}|${st.windows <= 0}|${st.windows < 50}|${st.lights < 25}|${st.tyres.join(",")}`;
+    if (look === this.look) return;
+    this.look = look;
+    this.body.material = this.materials();
+    this.wheels.forEach((w, i) => {
+      const t = st.tyres[i];
+      w.mesh.visible = t !== NO_WHEEL;
+      // A flat squats on its rim.
+      const flat = t !== NO_WHEEL && t <= FLAT;
+      w.mesh.scale.set(1, flat ? 0.78 : 1, flat ? 1.06 : 1);
+      w.pivot.position.y = this.spec.wheelRadius - (flat ? 0.08 : 0);
+    });
+  }
+
+  /** The light bar's red and blue alternate while the siren runs. */
+  updateSiren(t: number) {
+    if (this.spec.kind !== "police") return;
+    const on = this.state.siren;
+    const phase = Math.floor(t * 6) % 2;
+    this.barRed.emissiveIntensity = on ? (phase ? 5 : 0.2) : 0.05;
+    this.barBlue.emissiveIntensity = on ? (phase ? 0.2 : 5) : 0.05;
+  }
+
   /** Corner offsets of the footprint, for terrain tilt and collisions. */
   private corner(sx: number, sz: number) {
     const s = this.spec;
@@ -271,9 +333,14 @@ export class VehicleObject {
 
   /** Sit the car on the ground, tilted to the terrain; lean the body with acceleration (m/s²). */
   pose(terrain: Terrain, dt: number, accel = 0, lateral = 0) {
+    this.refresh();
+    const wheelIndex = (sx: number, sz: number) => (sz > 0 ? 0 : 2) + (sx > 0 ? 0 : 1);
     const h = (sx: number, sz: number) => {
       const c = this.corner(sx, sz);
-      return terrain.height(c.x, c.z);
+      const t = this.state.tyres[wheelIndex(sx, sz)];
+      // A flat drops that corner a little; a missing wheel drops it onto the brake disc.
+      const drop = t === NO_WHEEL ? this.spec.wheelRadius - 0.14 : t <= FLAT ? 0.08 : 0;
+      return terrain.height(c.x, c.z) - drop;
     };
     const fl = h(1, 1);
     const fr = h(-1, 1);
@@ -298,7 +365,7 @@ export class VehicleObject {
   }
 
   setLights(head: boolean, brake: boolean, reversing: boolean) {
-    this.headMat.emissiveIntensity = head ? 2.2 : 0;
+    this.headMat.emissiveIntensity = head && this.state.lights >= 25 ? 2.2 : 0;
     this.tailMat.emissiveIntensity = brake ? 2.4 : head ? 0.8 : 0;
     this.tailMat.emissive.set(reversing ? "#fff6e8" : "#ff1a10");
   }
@@ -340,17 +407,22 @@ export class VehicleObject {
 /** Every car in town: building, parking (colliders), saving. Driving itself lives in Game. */
 export class VehicleSystem {
   readonly list: VehicleObject[] = [];
+  readonly skids: SkidMarks;
+  readonly smoke: Smoke;
 
   constructor(
     private scene: THREE.Object3D,
     private colliders: ColliderWorld,
     private terrain: Terrain,
-  ) {}
+  ) {
+    this.skids = new SkidMarks(scene);
+    this.smoke = new Smoke(scene);
+  }
 
   build(spots: VehicleSpot[], containers: LootContainer[]) {
     const byId = new Map(containers.map((c) => [c.id, c]));
     for (const spot of spots) {
-      const v = new VehicleObject(rollVehicle(spot.id, spot.x, spot.z, spot.yaw, spot.color, spot.fuel), spot, byId.get(spot.id));
+      const v = new VehicleObject(rollVehicle(spot.id, spot.x, spot.z, spot.yaw, spot.color, spot.fuel, spot.kind), spot, byId.get(spot.id));
       this.list.push(v);
       this.scene.add(v.root);
       v.pose(this.terrain, 1);
@@ -365,7 +437,7 @@ export class VehicleSystem {
   /** Back to where the town left them, as found. */
   reset() {
     for (const v of this.list) {
-      v.state = rollVehicle(v.spot.id, v.spot.x, v.spot.z, v.spot.yaw, v.spot.color, v.container?.fuel ?? v.spot.fuel);
+      v.state = rollVehicle(v.spot.id, v.spot.x, v.spot.z, v.spot.yaw, v.spot.color, v.container?.fuel ?? v.spot.fuel, v.spot.kind);
       v.setLights(false, false, false);
       v.pose(this.terrain, 1);
       this.park(v);
@@ -376,7 +448,7 @@ export class VehicleSystem {
     const list = Array.isArray(saved) ? saved : [];
     for (const v of this.list) {
       const raw = list.find((r) => r && typeof r === "object" && (r as { id?: unknown }).id === v.state.id);
-      v.state = loadVehicle(rollVehicle(v.spot.id, v.spot.x, v.spot.z, v.spot.yaw, v.spot.color, v.container?.fuel ?? v.spot.fuel), raw);
+      v.state = loadVehicle(rollVehicle(v.spot.id, v.spot.x, v.spot.z, v.spot.yaw, v.spot.color, v.container?.fuel ?? v.spot.fuel, v.spot.kind), raw);
       // The trunk's fuel record is the tank: siphoning and driving both write it.
       if (v.container?.fuel !== undefined) v.state.fuel = Math.min(v.container.fuel, v.spec.tankL);
       v.pose(this.terrain, 1);
@@ -430,6 +502,29 @@ export class VehicleSystem {
     return best;
   }
 
+  /** Wheel contact points of the rear axle (where skid marks are laid). */
+  rearContacts(v: VehicleObject) {
+    const s = v.spec;
+    const c = Math.cos(v.state.yaw);
+    const sn = Math.sin(v.state.yaw);
+    return [1, -1].map((sx) => {
+      const lx = sx * (s.width / 2 - 0.09);
+      const lz = -s.wheelBase / 2;
+      const x = v.state.x + lx * c + lz * sn;
+      const z = v.state.z - lx * sn + lz * c;
+      return { x, z, y: this.terrain.height(x, z) };
+    });
+  }
+
+  /** Where smoke leaves a car: the exhaust at the back, or steam from under the hood. */
+  smokePoint(v: VehicleObject, hood: boolean) {
+    const s = v.spec;
+    const off = hood ? s.length / 2 - 0.7 : -s.length / 2 - 0.1;
+    const x = v.state.x + Math.sin(v.state.yaw) * off + (hood ? 0 : Math.cos(v.state.yaw) * 0.45);
+    const z = v.state.z + Math.cos(v.state.yaw) * off - (hood ? 0 : Math.sin(v.state.yaw) * 0.45);
+    return new THREE.Vector3(x, this.terrain.height(x, z) + (hood ? 1.0 : 0.3), z);
+  }
+
   /** Shadows and visibility by distance, as for zombies. */
   updateDetail(px: number, pz: number) {
     for (const v of this.list) {
@@ -448,7 +543,8 @@ export class VehicleSystem {
  * Push the moving car out of anything solid. Returns the closing speed of the hit (m/s along the
  * contact normal, 0 when nothing was hit) after taking that part of the velocity out.
  */
-export function resolveVehicle(v: VehicleObject, colliders: ColliderWorld, groundY: number): number {
+export function resolveVehicle(v: VehicleObject, colliders: ColliderWorld, groundY: number): { closing: number; side: "front" | "rear" | "side" } {
+  const none = { closing: 0, side: "front" as const };
   let px = 0;
   let pz = 0;
   for (const c of v.hitCircles()) {
@@ -461,7 +557,7 @@ export function resolveVehicle(v: VehicleObject, colliders: ColliderWorld, groun
     }
   }
   const len = Math.hypot(px, pz);
-  if (len < 1e-5) return 0;
+  if (len < 1e-5) return none;
   v.state.x += px;
   v.state.z += pz;
   const nx = px / len;
@@ -471,10 +567,104 @@ export function resolveVehicle(v: VehicleObject, colliders: ColliderWorld, groun
   const vx = fx * v.state.speed;
   const vz = fz * v.state.speed;
   const closing = -(vx * nx + vz * nz);
-  if (closing <= 0) return 0;
+  if (closing <= 0) return none;
   // Lose the speed into the wall, with a small bounce, and keep what slides along it.
   const bx = vx + nx * closing * 1.2;
   const bz = vz + nz * closing * 1.2;
   v.state.speed = bx * fx + bz * fz;
-  return closing;
+  // Which end took it: the push points back along the car for a head-on, forward for a rear hit.
+  const along = nx * fx + nz * fz;
+  const side = along < -0.55 ? "front" : along > 0.55 ? "rear" : "side";
+  return { closing, side };
+}
+
+/** Black rubber laid on the road when tyres lock or slide; the oldest fade first. */
+class SkidMarks {
+  private mesh: THREE.InstancedMesh;
+  private next = 0;
+  private count = 0;
+  private readonly max = 600;
+  private last = new Map<number, { x: number; z: number }>();
+  private m = new THREE.Matrix4();
+  private q = new THREE.Quaternion();
+  private e = new THREE.Euler();
+
+  constructor(scene: THREE.Object3D) {
+    const g = new THREE.PlaneGeometry(0.2, 1);
+    g.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ color: "#0b0b0b", transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    this.mesh = new THREE.InstancedMesh(g, mat, this.max);
+    this.mesh.count = 0;
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 1;
+    scene.add(this.mesh);
+  }
+
+  /** Lay a strip from this wheel's last mark to where it is now (key: which wheel). */
+  lay(key: number, x: number, y: number, z: number) {
+    const prev = this.last.get(key);
+    this.last.set(key, { x, z });
+    if (!prev) return;
+    const dx = x - prev.x;
+    const dz = z - prev.z;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.05 || len > 3) return;
+    this.e.set(0, Math.atan2(dx, dz), 0);
+    this.q.setFromEuler(this.e);
+    this.m.compose(new THREE.Vector3((x + prev.x) / 2, y + 0.03, (z + prev.z) / 2), this.q, new THREE.Vector3(1, 1, len));
+    this.mesh.setMatrixAt(this.next, this.m);
+    this.next = (this.next + 1) % this.max;
+    this.count = Math.min(this.max, this.count + 1);
+    this.mesh.count = this.count;
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /** The wheel lifted off (stopped sliding): the next mark starts fresh. */
+  lift(key: number) {
+    this.last.delete(key);
+  }
+}
+
+/** Grey puffs: exhaust on a cold start, steam and smoke from a hurt engine. They rise, spread and fade. */
+class Smoke {
+  private points: THREE.Points;
+  private readonly max = 160;
+  private pos: Float32Array;
+  private life: Float32Array;
+  private vel: Float32Array;
+  private next = 0;
+
+  constructor(scene: THREE.Object3D) {
+    this.pos = new Float32Array(this.max * 3);
+    this.life = new Float32Array(this.max);
+    this.vel = new Float32Array(this.max * 3);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
+    const mat = new THREE.PointsMaterial({ color: "#8f8f8c", size: 0.9, transparent: true, opacity: 0.35, depthWrite: false, sizeAttenuation: true });
+    this.points = new THREE.Points(g, mat);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+    for (let i = 0; i < this.max; i++) this.pos[i * 3 + 1] = -1000;
+  }
+
+  emit(at: THREE.Vector3, rise = 0.6, spread = 0.25) {
+    const i = this.next;
+    this.next = (this.next + 1) % this.max;
+    this.pos.set([at.x, at.y, at.z], i * 3);
+    this.vel.set([(Math.random() - 0.5) * spread, rise * (0.7 + Math.random() * 0.6), (Math.random() - 0.5) * spread], i * 3);
+    this.life[i] = 2.5;
+  }
+
+  update(dt: number) {
+    for (let i = 0; i < this.max; i++) {
+      if (this.life[i] <= 0) continue;
+      this.life[i] -= dt;
+      if (this.life[i] <= 0) {
+        this.pos[i * 3 + 1] = -1000;
+        continue;
+      }
+      for (let k = 0; k < 3; k++) this.pos[i * 3 + k] += this.vel[i * 3 + k] * dt;
+    }
+    (this.points.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+  }
 }

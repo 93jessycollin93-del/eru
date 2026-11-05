@@ -29,7 +29,33 @@ import {
 } from "../sim/body";
 import { airTemperature } from "../sim/climate";
 import { craft, missingFor, RECIPES } from "../sim/crafting";
-import { HORN_NOISE, HOTWIRE_MINUTES, crash, engineNoise, hitPedestrian, saveVehicle, startEngine, stepVehicle } from "../sim/vehicle";
+import {
+  ALARM_NOISE,
+  ALARM_SECONDS,
+  FLAT,
+  HORN_NOISE,
+  HOTWIRE_MINUTES,
+  JUMP_MINUTES,
+  NO_WHEEL,
+  SIREN_NOISE,
+  TEMP_DAMAGE,
+  WHEELS,
+  ageVehicle,
+  breakIn,
+  claw,
+  crash,
+  doRepair,
+  engineNoise,
+  flats,
+  hitPedestrian,
+  jumpStart,
+  keysFit,
+  keysText,
+  repairOptions,
+  saveVehicle,
+  startEngine,
+  stepVehicle,
+} from "../sim/vehicle";
 import { VehicleSystem, resolveVehicle, type VehicleObject } from "./vehicles";
 import {
   addHeat,
@@ -150,6 +176,17 @@ export class Game {
   private carHitAt = new WeakMap<Zombie, number>();
   private carClawMsgAt = 0;
   private carBeam: THREE.SpotLight;
+  /** The car whose parts the inventory screen shows (opened with Q, or the one you're in). */
+  private inspecting: VehicleObject | null = null;
+  /** Car alarms going off: real seconds left on each. */
+  private alarms = new Map<VehicleObject, number>();
+  private alarmBeep = 0;
+  private vehicleTick = 0;
+  private sirenTick = 0;
+  private smokeTick = 0;
+  private overheatWarned = false;
+  private startedAt = -10;
+  private sirenLight: THREE.PointLight;
   private damageFlash = 0;
   private causeOfDeath = "";
   private menuAngle = 0;
@@ -253,6 +290,9 @@ export class Game {
     // The driven car's headlight beam (the lenses glow on their own; this lights the road).
     this.carBeam = new THREE.SpotLight("#fff1d6", 0, 55, 0.62, 0.45, 1.2);
     this.scene.add(this.carBeam, this.carBeam.target);
+    // One flashing light for the nearest wailing siren.
+    this.sirenLight = new THREE.PointLight("#ff2020", 0, 22, 1.6);
+    this.scene.add(this.sirenLight);
     this.muzzle = new THREE.PointLight("#ffcf7a", 0, 14, 2);
     this.scene.add(this.muzzle);
 
@@ -439,6 +479,8 @@ export class Game {
     this.autosaveTimer = AUTOSAVE_SECONDS;
     if (this.driving) this.exitVehicle(true);
     this.vehicles.reset();
+    this.alarms.clear();
+    this.inspecting = null;
     this.heat = createHeat();
     this.horde = { night: null, spawned: 0, timer: 0 };
     this.hordeZombies.clear();
@@ -485,6 +527,7 @@ export class Game {
   closeUi(gesture = true) {
     this.inventoryOpen = false;
     this.container = null;
+    this.inspecting = null;
     this.computerSpot = null;
     this.reading = null;
     this.cctvOpen = false;
@@ -903,12 +946,18 @@ export class Game {
     if (!v) return;
     if (!force && Math.abs(v.state.speed) > 1.5) return this.message("Slow down first.", "warn");
     const p = this.player;
-    if (v.state.running && !force) this.message("You switch the engine off and get out.", "info");
+    if (v.state.running && !force) this.message(v.state.siren ? "You switch the engine off and leave the siren wailing." : "You switch the engine off and get out.", "info");
     v.state.running = false;
     v.state.speed = 0;
     v.state.steer = 0;
-    v.state.headlights = false;
-    v.setLights(false, false, false);
+    v.state.gear = 0;
+    v.state.rpm = 0;
+    if (force) {
+      v.state.headlights = false;
+      v.state.siren = false;
+    }
+    // Lights left on stay on (and flatten the battery); the beam only follows a car you drive.
+    v.setLights(v.state.headlights, false, false);
     this.carBeam.intensity = 0;
     this.audio.setEngine(0, 0);
     this.vehicles.park(v);
@@ -943,6 +992,100 @@ export class Game {
       this.audio.horn();
       this.noises.push({ pos: this.player.pos.clone(), radius: HORN_NOISE, ttl: 0.6 });
     }
+    if (input.wasPressed("KeyG") && v.spec.kind === "police") {
+      if (!v.state.hasBattery || v.state.battery <= 0) return this.message("The siren switch does nothing. No power.", "warn");
+      v.state.siren = !v.state.siren;
+      this.message(v.state.siren ? "The siren wails. Everything for blocks around just heard it." : "The siren winds down.", v.state.siren ? "warn" : "info");
+    }
+  }
+
+  /** E at a car: in if it's open (or your keys fit), otherwise it's locked. */
+  private tryEnter(v: VehicleObject) {
+    const fits = this.inventory.find((s) => keysFit(s, v.state));
+    if (v.state.locked) {
+      if (!fits) return this.message(`The ${v.spec.name.toLowerCase()} is locked. Smash a window (H), or find its keys.`, "info");
+      v.state.locked = false;
+      this.message("Your keys fit. The locks thunk open.", "good");
+    }
+    if (fits) v.state.keys = true;
+    this.enterVehicle(v);
+  }
+
+  /** Q at a car: search the trunk and look the car over (parts and repairs) in the inventory screen. */
+  private openCar(v: VehicleObject) {
+    if (v.state.locked && !this.inventory.some((s) => keysFit(s, v.state))) return this.message("It's locked.", "info");
+    v.state.locked = false;
+    this.inspecting = v;
+    if (v.container) this.openContainer(v.container);
+    else {
+      this.inventoryOpen = true;
+      this.releaseLock();
+      this.emitHud();
+    }
+  }
+
+  /** Put a side window through: you're in, it's loud, and some cars answer with their alarm. */
+  private smashCarWindow(v: VehicleObject) {
+    const p = this.player;
+    const weapon = this.weaponDef();
+    if (weapon.category !== "melee" && weapon.category !== "firearm") {
+      p.body.health = Math.max(1, p.body.health - 4);
+      this.damageFlash = 0.5;
+      this.message("You wrap your sleeve round your fist and punch through. The glass still bites.", "warn");
+    } else this.message(`You put the ${weapon.name.toLowerCase()} through the side window.`, "info");
+    this.audio.glassBreak(1, 0);
+    this.noises.push({ pos: p.pos.clone(), radius: 35, ttl: 0.5 });
+    if (breakIn(v.state).alarm) {
+      this.alarms.set(v, ALARM_SECONDS);
+      this.message("The alarm goes off. Whooping, wailing, endless. Start it or get away from it.", "danger");
+    }
+  }
+
+  /** Some keys turn up in houses and offices: each fits the one car whose plate is on its tag. */
+  private carKeysIn(c: LootContainer) {
+    const items = c.items!;
+    // The cruiser's keys hang in the station; ordinary keys sit in bedrooms and kitchens (a hash of the container picks which car).
+    if (c.table === "police_locker" && !this.town.containers.some((o) => o !== c && o.table === "police_locker" && o.items?.some((s) => s.id === "car_keys"))) {
+      const cop = this.vehicles.list.find((v) => v.spec.kind === "police");
+      if (cop && !cop.state.keys) items.push(makeStack("car_keys", 1, undefined, { title: "Cruiser keys", text: keysText(cop.state) }));
+      return;
+    }
+    if (c.table !== "bedroom" && c.table !== "kitchen") return;
+    const h = Math.imul(c.id ^ 0x9e3779b9, 2654435761) >>> 0;
+    if (h % 100 >= 18) return;
+    const cands = this.vehicles.list.filter((v) => !v.state.keys && v.spec.kind !== "police");
+    if (!cands.length) return;
+    const car = cands[(h >>> 8) % cands.length];
+    items.push(makeStack("car_keys", 1, undefined, { title: "Car keys", text: keysText(car.state) }));
+  }
+
+  /** Repairs and salvage from the car panel: a timed job, then the parts change hands. */
+  repairVehicle(id: string) {
+    const v = this.inspecting ?? this.driving;
+    if (!v) return;
+    const opt = repairOptions(v.state, this.inventory, Math.abs(v.state.speed) > 0.3).find((o) => o.id === id);
+    if (!opt) return;
+    if (!opt.ok) return this.message(`Can't: ${opt.why}.`, "warn");
+    this.inventoryOpen = false;
+    this.container = null;
+    this.requestLock(false);
+    this.startAction({
+      label: opt.label,
+      dur: opt.minutes / TIME_SCALE,
+      done: () => {
+        try {
+          const r = doRepair(v.state, id, this.inventory);
+          this.inventory = r.inventory;
+          for (const g of r.gained) this.addToInventory(g);
+          if (this.equippedUid !== null && !this.equippedStack()) this.setEquipped(null);
+          v.refresh();
+          this.message(r.message, "good");
+        } catch {
+          this.message("You couldn't finish.", "warn");
+        }
+      },
+    });
+    this.emitHud();
   }
 
   /** R: start the engine, switch it off, or (no keys) hotwire it with a screwdriver. */
@@ -953,6 +1096,18 @@ export class Game {
       s.running = false;
       this.audio.setEngine(0, 0);
       return this.message("You switch the engine off.", "info");
+    }
+    const donor = this.jumpDonor(v);
+    if ((s.keys || s.hotwired) && s.hasBattery && s.battery < 15 && donor && this.inventory.some((it) => it.id === "jumper_cables")) {
+      this.startAction({
+        label: `Jump-starting from the ${donor.spec.name.toLowerCase()}`,
+        dur: JUMP_MINUTES / TIME_SCALE,
+        done: () => {
+          const r = jumpStart(s, donor.state);
+          this.message(r.ok ? `${r.message} Crank it with R.` : r.message, r.ok ? "good" : "warn");
+        },
+      });
+      return;
     }
     if (!s.keys && !s.hotwired) {
       if (!this.inventory.some((it) => it.id === "screwdriver")) {
@@ -973,6 +1128,15 @@ export class Game {
     this.noises.push({ pos: this.player.pos.clone(), radius: 18, ttl: 0.4 });
     const r = startEngine(s, this.rng);
     this.message(r.message, r.ok ? "good" : "warn");
+    if (r.ok) {
+      this.startedAt = performance.now() / 1000;
+      if (this.alarms.delete(v)) this.message("The alarm cuts out.", "good");
+    }
+  }
+
+  /** A car near enough to clamp jumper cables onto, with charge to spare. */
+  private jumpDonor(v: VehicleObject) {
+    return this.vehicles.list.find((o) => o !== v && o.state.hasBattery && (o.state.battery >= 35 || o.state.running) && o.distanceTo(v.state.x, v.state.z) < 3) ?? null;
   }
 
   private updateDriving(dt: number, controlling: boolean) {
@@ -989,16 +1153,37 @@ export class Game {
     const speed0 = v.state.speed;
     const yaw0 = v.state.yaw;
     const groundY = this.terrain.height(v.state.x, v.state.z);
-    const r = stepVehicle(v.state, v.spec, drive, dt, this.onRoad(v.state.x, v.state.z) ? "road" : "grass", TIME_SCALE * 60);
-    if (r.stalled) this.message("The engine sputters and dies. Out of fuel.", "warn");
-    const impact = resolveVehicle(v, this.colliders, groundY);
-    if (impact > 0) this.onCarCrash(v, impact);
+    const r = stepVehicle(v.state, v.spec, drive, dt, this.onRoad(v.state.x, v.state.z) ? "road" : "grass", TIME_SCALE * 60, this.airTemp);
+    if (r.stalled === "fuel") this.message("The engine sputters and dies. Out of fuel.", "warn");
+    if (r.stalled === "heat") this.message("A bang from under the hood, then silence. The engine has seized.", "danger");
+    if (v.state.temp > TEMP_DAMAGE && v.state.running && !this.overheatWarned) {
+      this.overheatWarned = true;
+      this.message("The temperature needle is in the red. Steam curls from the hood.", "danger");
+    } else if (v.state.temp < TEMP_DAMAGE - 10) this.overheatWarned = false;
+    const hit = resolveVehicle(v, this.colliders, groundY);
+    if (hit.closing > 0) this.onCarCrash(v, hit.closing, hit.side);
     this.carHitsZombies(v);
     const accel = (v.state.speed - speed0) / Math.max(dt, 1e-3);
     const lateral = ((v.state.yaw - yaw0) / Math.max(dt, 1e-3)) * v.state.speed;
     v.pose(this.terrain, dt, accel, lateral);
     v.setLights(v.state.headlights, r.braking, drive.reverse > 0 && v.state.speed < -0.2);
     this.vehicles.syncContainer(v);
+    // Rubber on the road when the tyres lock or slide, and the squeal that goes with it.
+    const skidding = (r.sliding || (r.braking && drive.reverse + (drive.handbrake ? 1 : 0) > 0)) && Math.abs(v.state.speed) > 5;
+    this.vehicles.rearContacts(v).forEach((c, i) => {
+      if (skidding) this.vehicles.skids.lay(v.state.id * 2 + i, c.x, c.y, c.z);
+      else this.vehicles.skids.lift(v.state.id * 2 + i);
+    });
+    if (skidding && Math.random() < dt * 6) this.audio.tyreSqueal();
+    // Smoke: a puff of exhaust as it starts, steam from a cooking or hurt engine.
+    this.smokeTick -= dt;
+    if (this.smokeTick <= 0 && v.state.running) {
+      const sinceStart = performance.now() / 1000 - this.startedAt;
+      const hurt = v.state.temp > TEMP_DAMAGE || v.state.engine < 30;
+      if (hurt) this.vehicles.smoke.emit(this.vehicles.smokePoint(v, true), 0.9, 0.4);
+      if (sinceStart < 3 || v.state.engine < 45) this.vehicles.smoke.emit(this.vehicles.smokePoint(v, false), 0.35, 0.2);
+      this.smokeTick = hurt ? 0.08 : 0.25;
+    }
     const fx = Math.sin(v.state.yaw);
     const fz = Math.cos(v.state.yaw);
     const nose = v.spec.length / 2;
@@ -1025,14 +1210,129 @@ export class Game {
     p.yaw = v.state.yaw + this.carLookYaw;
   }
 
+  /**
+   * Every car, driven or not: parked ones age (leaks, flat batteries, cooling engines); alarms whoop;
+   * sirens wail and flash and draw the dead from far away; headlights left on at night draw them too.
+   */
+  private updateVehicles(dt: number) {
+    const p = this.player;
+    const t = performance.now() / 1000;
+    this.vehicles.smoke.update(dt);
+    this.vehicleTick -= dt;
+    const tick = this.vehicleTick <= 0;
+    if (tick) this.vehicleTick = 1;
+    const dark = this.env.daylight(this.minutes % 1440) < 0.35;
+    let nearestSiren: VehicleObject | null = null;
+    let sirenDist = 60;
+    for (const v of this.vehicles.list) {
+      if (v !== this.driving) {
+        if (tick) {
+          ageVehicle(v.state, TIME_SCALE, this.airTemp);
+          v.setLights(v.state.headlights, false, false);
+          if (dark && v.state.headlights) this.noises.push({ pos: new THREE.Vector3(v.state.x, 0, v.state.z), radius: 30, ttl: 0.4, heat: 0.15 });
+          if (v.container) v.container.fuel = v.state.fuel;
+        }
+        v.refresh();
+      }
+      v.updateSiren(t);
+      if (v.state.siren) {
+        const d = Math.hypot(v.state.x - p.pos.x, v.state.z - p.pos.z);
+        if (d < sirenDist) {
+          sirenDist = d;
+          nearestSiren = v;
+        }
+      }
+    }
+    // Sirens: one sound for the nearest, noise from all of them.
+    this.sirenTick -= dt;
+    if (this.sirenTick <= 0) {
+      this.sirenTick = 1.2;
+      for (const v of this.vehicles.list) {
+        if (!v.state.siren) continue;
+        this.noises.push({ pos: new THREE.Vector3(v.state.x, 0, v.state.z), radius: SIREN_NOISE, ttl: 0.5, heat: 0.8 });
+        const d = Math.hypot(v.state.x - p.pos.x, v.state.z - p.pos.z);
+        this.audio.siren(d);
+      }
+    }
+    if (nearestSiren) {
+      const red = Math.floor(t * 6) % 2 === 1;
+      this.sirenLight.color.set(red ? "#ff2020" : "#2050ff");
+      this.sirenLight.intensity = 30;
+      this.sirenLight.position.set(nearestSiren.state.x, this.terrain.height(nearestSiren.state.x, nearestSiren.state.z) + nearestSiren.spec.height + 0.5, nearestSiren.state.z);
+    } else this.sirenLight.intensity = 0;
+    // Alarms whoop until they time out, the battery dies, or someone starts the car.
+    for (const [v, left] of this.alarms) {
+      const now = left - dt;
+      if (now <= 0 || v.state.running || !v.state.hasBattery || v.state.battery <= 0) {
+        this.alarms.delete(v);
+        continue;
+      }
+      this.alarms.set(v, now);
+    }
+    this.alarmBeep -= dt;
+    if (this.alarmBeep <= 0 && this.alarms.size) {
+      this.alarmBeep = 0.55;
+      for (const v of this.alarms.keys()) {
+        const d = Math.hypot(v.state.x - p.pos.x, v.state.z - p.pos.z);
+        this.audio.alarm(d);
+        this.noises.push({ pos: new THREE.Vector3(v.state.x, 0, v.state.z), radius: ALARM_NOISE, ttl: 0.4, heat: 0.5 });
+        v.setLights(Math.floor(t * 2) % 2 === 0, false, false);
+      }
+    }
+  }
+
+  /** What the dashboard warns about, worst first. */
+  private carWarnings(v: VehicleObject): string[] {
+    const s = v.state;
+    const w: string[] = [];
+    if (s.running && s.temp > TEMP_DAMAGE) w.push("Overheating");
+    if (s.tyres.some((t) => t === NO_WHEEL)) w.push("Wheel missing");
+    else if (s.tyres.some((t) => t <= FLAT)) w.push("Flat tyre");
+    if (s.fuel < v.spec.tankL * 0.12) w.push("Low fuel");
+    if (s.tank < 40) w.push("Fuel leak");
+    if (s.radiator < 50 || s.coolant < 30) w.push("Coolant low");
+    if (s.hasBattery && s.battery < 20) w.push("Battery low");
+    if (s.windows <= 0) w.push("No windows");
+    return w;
+  }
+
+  /** The car panel in the inventory screen: every part's state and what you could do about it. */
+  private carPanel() {
+    const v = this.inspecting ?? (this.inventoryOpen ? this.driving : null);
+    if (!v || !this.uiOpen()) return null;
+    if (v !== this.driving && v.distanceTo(this.player.pos.x, this.player.pos.z) > 3) return null;
+    const s = v.state;
+    const pct = (n: number) => Math.round(n);
+    const tyre = (t: number) => (t === NO_WHEEL ? "off" : t <= FLAT ? "flat" : `${pct(t)}%`);
+    return {
+      name: `${v.spec.name} · ${s.plate}`,
+      parts: [
+        { label: "Engine", value: pct(s.engine), text: `${pct(s.engine)}%` },
+        { label: "Battery", value: s.hasBattery ? pct(s.battery) : 0, text: s.hasBattery ? `${pct(s.battery)}% charge` : "removed" },
+        { label: "Fuel", value: (100 * s.fuel) / v.spec.tankL, text: `${s.fuel.toFixed(1)} / ${v.spec.tankL} L` },
+        { label: "Fuel tank", value: pct(s.tank), text: s.tank < 40 ? `${pct(s.tank)}%, leaking` : `${pct(s.tank)}%` },
+        { label: "Radiator", value: pct(s.radiator), text: s.radiator < 50 ? `${pct(s.radiator)}%, leaking` : `${pct(s.radiator)}%` },
+        { label: "Coolant", value: pct(s.coolant), text: `${pct(s.coolant)}% · ${pct(s.temp)} °C` },
+        ...s.tyres.map((t, i) => ({ label: `Tyre, ${WHEELS[i]}`, value: t === NO_WHEEL ? 0 : pct(t), text: tyre(t) })),
+        { label: "Windows", value: pct(s.windows), text: s.boarded ? "boarded up" : s.windows <= 0 ? "smashed" : s.windows < 50 ? "cracked" : "intact" },
+        { label: "Lights", value: pct(s.lights), text: s.lights < 25 ? "broken" : `${pct(s.lights)}%` },
+        { label: "Body", value: pct(s.body), text: `${pct(s.body)}%` },
+      ],
+      keys: s.keys ? "Keys in the ignition" : s.hotwired ? "Hotwired" : s.locked ? "Locked" : "No keys",
+      repairs: repairOptions(s, this.inventory, Math.abs(s.speed) > 0.3).map((o) => ({ id: o.id, label: o.label, minutes: o.minutes, ok: o.ok, why: o.why ?? null })),
+    };
+  }
+
   /** On a road or the highway: tarmac grips, grass doesn't. */
   private onRoad(x: number, z: number) {
     return this.town.roads.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
   }
 
-  private onCarCrash(v: VehicleObject, impact: number) {
+  private onCarCrash(v: VehicleObject, impact: number, side: "front" | "rear" | "side" = "front") {
     const p = this.player;
-    const r = crash(v.state, impact);
+    const flats0 = flats(v.state);
+    const r = crash(v.state, impact, side);
+    if (flats(v.state) > flats0) this.message("A bang and a flapping thud: a tyre's gone.", "warn");
     this.audio.crash(impact / 14);
     this.noises.push({ pos: p.pos.clone(), radius: 20 + impact * 3, ttl: 0.5 });
     if (r.injury > 0) {
@@ -1945,6 +2245,7 @@ export class Game {
     }
     coolHeat(this.heat, gameMinutes);
     this.updateHorde(dt);
+    this.updateVehicles(dt);
     this.noises = this.noises.filter((n) => (n.ttl -= dt) > 0);
 
     // Autosave in quiet moments: never mid-fight, mid-climb, mid-job or with a menu open.
@@ -2091,23 +2392,24 @@ export class Game {
       const target = this.nearestInteractable();
       if (target?.type === "generator") this.openGenerator(target.generator);
       else if (target?.type === "computer") this.useComputer(target.computer);
-      else if (target?.type === "container" && target.container.table === "car") {
-        const car = this.vehicles.byId(target.container.id);
-        if (car) this.enterVehicle(car);
-        else this.openContainer(target.container);
-      } else if (target?.type === "container") this.openContainer(target.container);
+      else if (target?.type === "vehicle") this.tryEnter(target.vehicle);
+      else if (target?.type === "container") this.openContainer(target.container);
       else if (target?.type === "barrier") this.useBarrier(target.id, target.side);
       else if (target?.type === "keypad") this.openKeypad(target.id);
     }
     if (input.wasPressed("KeyQ")) {
       const near = this.nearestInteractable();
-      if (near?.type === "container" && near.container.table === "car") this.openContainer(near.container);
+      if (near?.type === "vehicle") this.openCar(near.vehicle);
       else {
         const t = this.barrierTarget();
         if (t) this.altBarrier(t.id, t.side);
       }
     }
-    if (input.wasPressed("KeyH")) {
+    const nearCar = input.wasPressed("KeyH") ? this.nearestInteractable() : null;
+    if (nearCar?.type === "vehicle") {
+      if (nearCar.vehicle.state.locked) this.smashCarWindow(nearCar.vehicle);
+      else this.message("It isn't locked.", "info");
+    } else if (input.wasPressed("KeyH")) {
       const t = this.barrierTarget();
       if (!t) this.message("There's no door or window here to board up.", "info");
       else if (input.isDown("ShiftLeft") || input.isDown("ShiftRight")) this.startPrying(t.id, t.side);
@@ -2753,14 +3055,16 @@ export class Game {
   private onZombieAttack(z: Zombie) {
     if (this.status !== "playing") return;
     // In a car, they have to get through it first.
-    if (this.driving && this.driving.state.body > 35) {
-      this.driving.state.body = Math.max(0, this.driving.state.body - 2.5);
-      this.audio.doorThud(1.5, 0);
-      if (performance.now() - this.carClawMsgAt > 6000) {
-        this.carClawMsgAt = performance.now();
-        this.message(this.driving.state.body > 55 ? "They're clawing at the windows." : "The glass is cracking.", "danger");
+    if (this.driving) {
+      const c = claw(this.driving.state);
+      if (c !== "through") {
+        this.audio.doorThud(1.5, 0);
+        if (performance.now() - this.carClawMsgAt > 6000) {
+          this.carClawMsgAt = performance.now();
+          this.message(c === "held" ? "They're clawing at the windows." : this.driving.state.boarded ? "The boards are splintering." : "The glass is crazing. It won't hold long.", "danger");
+        }
+        return;
       }
-      return;
     }
     const p = this.player;
     const w = zombieHit(p.body, Math.random);
@@ -2868,6 +3172,7 @@ export class Game {
     let best: LootContainer | null = null;
     let bestScore = Infinity;
     for (const c of this.town.containers) {
+      if (c.table === "car") continue; // reached through the car itself
       const d = this.distanceToContainer(c);
       if (d > INTERACT_RANGE || !this.inReach(c)) continue;
       const to = new THREE.Vector3(c.x - p.pos.x, 0, c.z - p.pos.z).normalize();
@@ -2884,6 +3189,7 @@ export class Game {
   /** The container or computer you'd interact with by pressing E. */
   private nearestInteractable():
     | { type: "container"; container: LootContainer }
+    | { type: "vehicle"; vehicle: VehicleObject }
     | { type: "computer"; computer: ComputerSpot }
     | { type: "generator"; generator: GeneratorObject }
     | { type: "barrier"; id: number; side: Side }
@@ -2916,7 +3222,7 @@ export class Game {
       const t = this.barriers.target(aim.barrier, p.pos, INTERACT_RANGE);
       if (t) return { type: "barrier", id: t.id, side: t.side };
     }
-    if (aim?.container && this.distanceToContainer(aim.container) <= INTERACT_RANGE && this.inReach(aim.container)) {
+    if (aim?.container && aim.container.table !== "car" && this.distanceToContainer(aim.container) <= INTERACT_RANGE && this.inReach(aim.container)) {
       return { type: "container", container: aim.container };
     }
     // Otherwise whatever you face most squarely: distance minus how directly you face it.
@@ -2939,7 +3245,17 @@ export class Game {
       }
     }
     const kp = this.barriers.nearestKeypad(p.pos, p.yaw, 1.3);
-    if (kp && kp.score < bestScore) choice = { type: "keypad", id: kp.id };
+    if (kp && kp.score < bestScore) {
+      choice = { type: "keypad", id: kp.id };
+      bestScore = kp.score;
+    }
+    // Cars are vehicles, not containers: get in, search the trunk, inspect, smash a window.
+    const car = this.vehicles.nearest(p.pos.x, p.pos.z, 1.4);
+    if (car) {
+      const to = new THREE.Vector3(car.state.x - p.pos.x, 0, car.state.z - p.pos.z).normalize();
+      const score = car.distanceTo(p.pos.x, p.pos.z) - to.dot(fwd) * 0.8;
+      if (score < bestScore) choice = { type: "vehicle", vehicle: car };
+    }
     return choice;
   }
 
@@ -3033,6 +3349,7 @@ export class Game {
     if (c.items === null) {
       c.items = [...rollLoot(c.table, Math.random), ...(c.preset ?? []).map((s) => structuredClone(s))];
       this.ageFoundFood(c);
+      this.carKeysIn(c);
     }
     this.container = c;
     this.inventoryOpen = false;
@@ -3170,8 +3487,14 @@ export class Game {
             body: Math.round(this.driving.state.body),
             headlights: this.driving.state.headlights,
             canStart: this.driving.state.keys || this.driving.state.hotwired,
+            gear: !this.driving.state.running ? "Off" : this.driving.state.gear < 0 ? "R" : this.driving.state.gear === 0 ? "P" : `D${this.driving.state.gear}`,
+            temp: Math.round(this.driving.state.temp),
+            police: this.driving.spec.kind === "police",
+            siren: this.driving.state.siren,
+            warnings: this.carWarnings(this.driving),
           }
         : null,
+      carInspect: this.carPanel(),
       canFillTank: this.container?.table === "car" && this.inventory.some((s) => s.id === "jerry_can" && (s.fuel ?? 0) > 0.05),
       horde: hordeLabel(this.minutes),
       heat: Math.round(heatAt(this.heat, p.pos.x, p.pos.z)),
@@ -3200,7 +3523,11 @@ export class Game {
               ? this.barrierPrompt(target.id, target.side).main
               : target.type === "keypad"
                 ? "Use keypad"
-                : `Search ${target.container.name}`,
+                : target.type === "vehicle"
+                  ? target.vehicle.state.locked && !this.inventory.some((s) => keysFit(s, target.vehicle.state))
+                    ? `Try the ${target.vehicle.spec.name.toLowerCase()}'s door`
+                    : `Get in the ${target.vehicle.spec.name.toLowerCase()}`
+                  : `Search ${target.container.name}`,
       altPrompts: this.driving
         ? [
             {
@@ -3210,11 +3537,15 @@ export class Game {
             { key: "E", label: "Get out" },
             { key: "F", label: this.driving.state.headlights ? "Headlights off" : "Headlights" },
             { key: "H", label: "Horn" },
+            ...(this.driving.spec.kind === "police" ? [{ key: "G", label: this.driving.state.siren ? "Siren off" : "Siren" }] : []),
           ]
         : target?.type === "barrier"
           ? this.barrierPrompt(target.id, target.side).alts
-          : target?.type === "container" && target.container.table === "car"
-            ? [{ key: "Q", label: "Search it" }]
+          : target?.type === "vehicle"
+            ? [
+                { key: "Q", label: target.vehicle.container ? "Search and inspect" : "Inspect" },
+                ...(target.vehicle.state.locked ? [{ key: "H", label: "Smash a window" }] : []),
+              ]
             : [],
       barrier: target?.type === "barrier" ? this.barrierView(target.id) : null,
       action: this.action ? { label: this.action.label, progress: Math.min(1, this.action.t / this.action.dur) } : null,

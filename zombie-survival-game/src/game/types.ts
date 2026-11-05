@@ -70,6 +70,20 @@ export interface HudState {
     body: number;
     headlights: boolean;
     canStart: boolean;
+    /** "D3", "R", "P" or "Off". */
+    gear: string;
+    /** Engine temperature, °C. */
+    temp: number;
+    police: boolean;
+    siren: boolean;
+    warnings: string[];
+  } | null;
+  /** The car you're looking over: each part's state, and the repairs and salvage you could do. */
+  carInspect: {
+    name: string;
+    parts: { label: string; value: number; text: string }[];
+    keys: string;
+    repairs: { id: string; label: string; minutes: number; ok: boolean; why: string | null }[];
   } | null;
   /** A car's trunk is open and you carry fuel to pour in. */
   canFillTank: boolean;

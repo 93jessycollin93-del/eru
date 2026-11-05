@@ -102,6 +102,27 @@ export class AudioSystem {
     this.engine.gain.gain.setTargetAtTime(level * (0.05 + rpm * 0.09), t, 0.12);
   }
 
+  /** Tyres scrubbing across tarmac. */
+  tyreSqueal() {
+    this.noise(0.22, 2300, "bandpass", 0.14, 0, 6);
+  }
+
+  /** One rise-and-fall of a police siren, quieter with distance. */
+  siren(dist: number) {
+    const v = this.level(dist, 260, 0.35);
+    if (!v) return;
+    this.tone(700, 1250, 0.55, v, "sawtooth");
+    this.tone(1250, 700, 0.55, v, "sawtooth", 0, 0.6);
+  }
+
+  /** A car alarm's whoop, quieter with distance. */
+  alarm(dist: number) {
+    const v = this.level(dist, 160, 0.3);
+    if (!v) return;
+    this.tone(980, 620, 0.25, v, "square");
+    this.tone(620, 980, 0.25, v * 0.8, "square", 0, 0.27);
+  }
+
   /** The starter motor grinding: a rapid rough buzz. */
   starter() {
     for (let i = 0; i < 5; i++) setTimeout(() => this.noise(0.12, 260, "bandpass", 0.35, 0, 1.2), i * 150);
