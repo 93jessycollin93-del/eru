@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { loadOnlineGroups, isGroupOn } from '@/lib/onlineFeatures';
 
 const WS_URL = 'wss://stream.binance.com:9443/stream?streams=btcusdt@ticker/ethusdt@ticker/solusdt@ticker/bnbusdt@ticker/xrpusdt@ticker/dogeusdt@ticker';
 const WS_SYMBOL_MAP = {
@@ -103,7 +104,12 @@ export function useLiveMarketPrices() {
       };
     };
 
-    connect();
+    // Offline by default: the Binance/CoinGecko feeds only connect when "market" is on.
+    loadOnlineGroups(base44).then((groups) => {
+      if (unmountedRef.current) return;
+      if (isGroupOn(groups, 'market')) connect();
+      else setStatus('error');
+    });
 
     return () => {
       unmountedRef.current = true;

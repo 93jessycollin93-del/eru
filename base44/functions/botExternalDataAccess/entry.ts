@@ -1,5 +1,21 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// Offline by default: this function reaches outside services, so it only runs
+// when the owner turns its group on in the ONLINE_FEATURES secret
+// (comma-separated, e.g. "cloud_ai,email", or "all"). Empty or unset = offline.
+function isOnline(group: string): boolean {
+  const on = (Deno.env.get('ONLINE_FEATURES') || '').split(',').map((g) => g.trim().toLowerCase());
+  return on.includes('all') || on.includes(group);
+}
+function offlineResponse(...groups: string[]): Response | null {
+  const off = groups.find((g) => !isOnline(g));
+  if (!off) return null;
+  return Response.json(
+    { ok: false, error: 'offline_mode', group: off, message: `Offline mode: "${off}" is turned off. The owner can add it to the ONLINE_FEATURES secret.` },
+    { status: 403 },
+  );
+}
+
 const APP_USER_CONNECTOR_IDS = {
   googlesheets: '69d3600598df7cb56812ae75',
   airtable: '69d36163467d4a87fc6fd322',
@@ -127,6 +143,9 @@ async function handleSalesforce(source, accessToken, connectionConfig, action, p
 }
 
 Deno.serve(async (req) => {
+  const offlineBlock = offlineResponse('accounts');
+  if (offlineBlock) return offlineBlock;
+
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();

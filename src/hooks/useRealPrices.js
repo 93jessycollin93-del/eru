@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { logger } from '@/lib/logger';
+import { base44 } from '@/api/base44Client';
+import { loadOnlineGroups, isGroupOn } from '@/lib/onlineFeatures';
 
 // CoinGecko free API - no key required
 const COINGECKO_URL =
@@ -26,6 +28,11 @@ export function useRealPrices() {
   const timerRef = useRef(null);
 
   const fetchPrices = useCallback(async () => {
+    // Offline by default: public price feeds only load when "market" is on.
+    if (!isGroupOn(await loadOnlineGroups(base44), 'market')) {
+      setStatus('error');
+      return;
+    }
     try {
       const res = await fetch(COINGECKO_URL);
       if (!res.ok) throw new Error('API error');

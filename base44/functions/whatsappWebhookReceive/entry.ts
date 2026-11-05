@@ -17,6 +17,22 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// Offline by default: this function reaches outside services, so it only runs
+// when the owner turns its group on in the ONLINE_FEATURES secret
+// (comma-separated, e.g. "cloud_ai,email", or "all"). Empty or unset = offline.
+function isOnline(group: string): boolean {
+  const on = (Deno.env.get('ONLINE_FEATURES') || '').split(',').map((g) => g.trim().toLowerCase());
+  return on.includes('all') || on.includes(group);
+}
+function offlineResponse(...groups: string[]): Response | null {
+  const off = groups.find((g) => !isOnline(g));
+  if (!off) return null;
+  return Response.json(
+    { ok: false, error: 'offline_mode', group: off, message: `Offline mode: "${off}" is turned off. The owner can add it to the ONLINE_FEATURES secret.` },
+    { status: 403 },
+  );
+}
+
 // Constant-time string comparison to avoid leaking signature bytes via timing.
 function timingSafeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
@@ -99,6 +115,9 @@ async function flipToConnected(base44, providerKey) {
 }
 
 Deno.serve(async (req) => {
+  const offlineBlock = offlineResponse('whatsapp');
+  if (offlineBlock) return offlineBlock;
+
   const base44 = createClientFromRequest(req);
   const contentType = req.headers.get('content-type') || '';
   let providerKey = 'whatsapp_meta';
