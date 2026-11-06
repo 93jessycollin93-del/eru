@@ -46,7 +46,7 @@ class ConfigTests(unittest.TestCase):
 
     def test_non_loopback_host_rejected(self):
         with self.assertRaisesRegex(ConfigError, "loopback"):
-            make_cfg({"host": "0.0.0.0"})
+            make_cfg({"host": "0.0.0.0", "mock_hardware": False})
 
     def test_real_miner_needs_real_hardware_and_wallet(self):
         miner = {"kind": "lolminer", "binary_path": "C:/m/lolMiner.exe", "pool_url": "etc.pool:1010",
@@ -65,10 +65,10 @@ class ConfigTests(unittest.TestCase):
 
     def test_load_from_file_resolves_state_dir_next_to_config(self):
         d = Path(tempfile.mkdtemp())
-        (d / "config.json").write_text(json.dumps({"economics": {"tariff_usd_per_kwh": 0.2}}))
+        (d / "config.json").write_text(json.dumps({"economics": {"tariff_per_kwh": 0.2}}))
         cfg = load_config(d / "config.json")
         self.assertEqual(cfg.state_path, d / "state")
-        self.assertEqual(cfg.economics.tariff_usd_per_kwh, 0.2)
+        self.assertEqual(cfg.economics.tariff_per_kwh, 0.2)
         (d / "bad.json").write_text("{nope")
         with self.assertRaisesRegex(ConfigError, "invalid JSON"):
             load_config(d / "bad.json")

@@ -1,0 +1,7 @@
+# Keep secrets and local state out of the image
+config.json
+state/
+**/__pycache__/
+*.pyc
+tests/
+.git

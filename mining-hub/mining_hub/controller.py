@@ -9,7 +9,7 @@ from pathlib import Path
 
 from . import __version__
 from .config import HubConfig
-from .economics import estimate, revenue_known, tariff_at
+from .economics import accept_ratio, estimate, mining_allowed, revenue_known, tariff_at
 from .hardware import HardwareMonitor, Metrics
 from .miners import MinerBase, MinerTelemetry
 from .safety import Decision, Governor, State
@@ -42,7 +42,7 @@ class Hub:
         self._last_tel_at = -1e9
         self._last_store_at = -1e9
         self._samples: deque[tuple[float, float, float]] = deque()
-        self._last_avg: tuple[float, float] | None = None
+        self._last_avg: tuple[float, float, float] | None = None
         self._tick_failures = 0
         self._original_limit: float | None = None
         self._applied_limit: int | None = None
@@ -97,7 +97,8 @@ class Hub:
                 self._samples.popleft()
 
             prev = self.gov.state
-            d = self.gov.tick(m, alive, now, self._projected_net(now, alive))
+            d = self.gov.tick(m, alive, now, self._projected_net(now, alive),
+                              allowed_now=mining_allowed(self.cfg.mining_windows))
             if d.state != prev:
                 self._event("state", f"{prev.value} -> {d.state.value}: {d.reason}")
             self._act(d)
@@ -119,13 +120,17 @@ class Hub:
             if since is None or now - since < e.min_runtime_before_judging_s or not self._samples:
                 return None
             h, p = self._averages()
-            self._last_avg = (h, p)
-            est = estimate(e, h, p, tariff)
+            self._last_avg = (h, p, self._ratio())
+            est = estimate(e, h, p, tariff, self._ratio())
             return est.net_usd_day if est else None
         if self.gov.state == State.PAUSED_UNPROFITABLE and self._last_avg:
-            est = estimate(e, *self._last_avg, tariff)
+            h, p, r = self._last_avg
+            est = estimate(e, h, p, tariff, r)
             return est.net_usd_day if est else None
         return None
+
+    def _ratio(self) -> float:
+        return accept_ratio(self.telemetry.accepted, self.telemetry.rejected)
 
     def _averages(self) -> tuple[float, float]:
         n = len(self._samples)
@@ -208,7 +213,7 @@ class Hub:
         if not revenue_known(e) or not self._samples:
             return None
         h, p = self._averages()
-        return estimate(e, h, p)
+        return estimate(e, h, p, ratio=self._ratio())
 
     # ------------------------------------------------------------------ commands
 
@@ -305,6 +310,8 @@ class Hub:
                 "economics": est.to_dict() if est else None,
                 "revenue_configured": revenue_known(c.economics),
                 "tariff_now": tariff_at(c.economics),
+                "tariff_currency": c.economics.tariff_currency,
+                "mining_hours_now": mining_allowed(c.mining_windows),
                 "warnings": list(self.warnings.values()),
                 "events": self.store.recent_events(25),
                 "miner_log": self.miner.log_tail(15),

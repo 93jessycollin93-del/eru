@@ -7,6 +7,9 @@
   "port": 8080,
   "active_profile": "Desktop",
 
+  "_mining_windows": "Hours mining is allowed at all, e.g. overnight off-peak plus weekends. Empty = any time. Example: [{\"start\": \"23:00\", \"end\": \"07:00\"}, {\"start\": \"00:00\", \"end\": \"24:00\", \"days\": [\"sat\", \"sun\"]}]. A window belongs to the day it STARTS on, so an overnight window that should cover Monday 00:00-07:00 must include \"sun\".",
+  "mining_windows": [],
+
   "_pause_for_processes": "Process names that pause mining while they run (games, video editors).",
   "pause_for_processes": [],
 
@@ -37,8 +40,12 @@
   },
 
   "economics": {
-    "tariff_usd_per_kwh": 0.12,
-    "_time_of_use": "Optional cheaper windows, e.g. [{\"start\": \"22:00\", \"end\": \"07:00\", \"usd_per_kwh\": 0.08}]",
+    "_tariff": "Your ALL-IN price: total bill / total kWh (not the energy-only line).",
+    "tariff_per_kwh": 0.12,
+    "tariff_currency": "USD",
+    "_tariff_to_usd": "USD per 1 unit of tariff_currency, e.g. 0.73 for CAD. Coin revenue is in USD.",
+    "tariff_to_usd": 1.0,
+    "_time_of_use": "Optional price windows; days = the day a window STARTS on (empty = every day). Copy the rates from YOUR bill.",
     "time_of_use": [],
     "psu_efficiency": 0.90,
     "pc_on_anyway": true,

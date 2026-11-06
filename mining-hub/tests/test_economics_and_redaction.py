@@ -15,7 +15,7 @@ class EconomicsTests(unittest.TestCase):
         self.assertIsNone(estimate(self.econ(), 120, 240))
 
     def test_profitable(self):
-        e = self.econ(revenue_usd_per_mh_day=0.01, tariff_usd_per_kwh=0.05, pool_fee=0.01, dev_fee=0.01)
+        e = self.econ(revenue_usd_per_mh_day=0.01, tariff_per_kwh=0.05, pool_fee=0.01, dev_fee=0.01)
         est = estimate(e, 120, 240)
         self.assertAlmostEqual(est.gross_usd_day, 1.20)
         self.assertAlmostEqual(est.fees_usd_day, 0.024)
@@ -23,10 +23,10 @@ class EconomicsTests(unittest.TestCase):
         self.assertAlmostEqual(est.wall_w, wall)
         self.assertAlmostEqual(est.power_usd_day, wall * 24 / 1000 * 0.05)
         self.assertGreater(est.net_usd_day, 0)
-        self.assertAlmostEqual(est.breakeven_usd_per_kwh, 1.176 / (wall * 24 / 1000), places=6)
+        self.assertAlmostEqual(est.breakeven_per_kwh, 1.176 / (wall * 24 / 1000), places=6)
 
     def test_unprofitable_when_pc_runs_only_for_mining(self):
-        e = self.econ(revenue_usd_per_mh_day=0.005, tariff_usd_per_kwh=0.15, pc_on_anyway=False)
+        e = self.econ(revenue_usd_per_mh_day=0.005, tariff_per_kwh=0.15, pc_on_anyway=False)
         est = estimate(e, 120, 240)
         self.assertAlmostEqual(wall_watts(e, 240), (240 + 70) / 0.9)
         self.assertLess(est.net_usd_day, 0)
@@ -35,7 +35,7 @@ class EconomicsTests(unittest.TestCase):
         est = estimate(self.econ(revenue_usd_per_mh_day=0.01), 0, 30)
         self.assertEqual(est.gross_usd_day, 0)
         self.assertEqual(est.power_usd_day, 0)
-        self.assertIsNone(est.breakeven_usd_per_kwh)
+        self.assertIsNone(est.breakeven_per_kwh)
 
     def test_network_formula(self):
         e = self.econ(coin_price_usd=20.0, block_reward=2.0, block_time_s=13.0, network_hashrate_mhs=1.3e8)
@@ -43,8 +43,8 @@ class EconomicsTests(unittest.TestCase):
         self.assertAlmostEqual(gross_usd_day(e, 120), expected)
 
     def test_time_of_use_wraps_midnight(self):
-        e = self.econ(tariff_usd_per_kwh=0.20,
-                      time_of_use=[{"start": "22:00", "end": "07:00", "usd_per_kwh": 0.08}])
+        e = self.econ(tariff_per_kwh=0.20,
+                      time_of_use=[{"start": "22:00", "end": "07:00", "per_kwh": 0.08}])
         self.assertEqual(tariff_at(e, dt.datetime(2026, 1, 1, 23, 30)), 0.08)
         self.assertEqual(tariff_at(e, dt.datetime(2026, 1, 1, 6, 59)), 0.08)
         self.assertEqual(tariff_at(e, dt.datetime(2026, 1, 1, 7, 0)), 0.20)

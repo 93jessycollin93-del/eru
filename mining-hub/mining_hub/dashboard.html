@@ -67,7 +67,7 @@ pre{margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;color:var
   </div>
 
   <div class="grid">
-    <div class="card"><h2>Economics (measured)</h2><div id="econ" class="sub">—</div></div>
+    <div class="card"><h2>Economics (measured, USD)</h2><div id="econ" class="sub">—</div></div>
     <div class="card"><h2>Warnings</h2><ul id="warnings"><li class="sub">None</li></ul></div>
   </div>
   <div class="grid">
@@ -141,15 +141,16 @@ function render(s) {
 
   const e = s.economics, ec = $('econ'); ec.replaceChildren();
   if (!s.revenue_configured) {
-    ec.textContent = `Add your coin's revenue in config.json (economics section) to see profit. Tariff now: $${s.tariff_now.toFixed(3)}/kWh.`;
+    ec.textContent = `Add your coin's revenue in config.json (economics section) to see profit. Tariff now: ${s.tariff_now.toFixed(3)} ${s.tariff_currency}/kWh.`;
   } else if (!e) {
-    ec.textContent = `Waiting for measured hashrate and power. Tariff now: $${s.tariff_now.toFixed(3)}/kWh.`;
+    ec.textContent = `Waiting for measured hashrate and power. Tariff now: ${s.tariff_now.toFixed(3)} ${s.tariff_currency}/kWh.`;
   } else {
     const tb = document.createElement('table');
     const rows = [['Gross / day', money(e.gross_usd_day)], ['Pool + dev fees', money(-e.fees_usd_day)],
-      [`Electricity (${e.wall_w.toFixed(0)} W at wall, $${e.tariff_usd_per_kwh.toFixed(3)}/kWh)`, money(-e.power_usd_day)],
+      [`Electricity (${e.wall_w.toFixed(0)} W at wall, ${e.tariff_per_kwh.toFixed(3)} ${e.tariff_currency}/kWh)`, money(-e.power_usd_day)],
       ['Net / day', money(e.net_usd_day)], ['Net / month (30 d)', money(e.net_usd_day * 30)],
-      ['Break-even tariff', e.breakeven_usd_per_kwh == null ? '—' : '$' + e.breakeven_usd_per_kwh.toFixed(3) + '/kWh']];
+      ['Accepted shares', (e.accept_ratio * 100).toFixed(1) + '%'],
+      ['Break-even tariff', e.breakeven_per_kwh == null ? '—' : e.breakeven_per_kwh.toFixed(3) + ' ' + e.tariff_currency + '/kWh']];
     for (const [k, v] of rows) { const tr = tb.insertRow(); tr.insertCell().textContent = k; const c = tr.insertCell(); c.textContent = v; if (k.startsWith('Net')) { c.style.fontWeight = 700; c.style.color = e.net_usd_day < 0 ? 'var(--bad)' : 'var(--ok)'; } }
     ec.append(tb);
   }

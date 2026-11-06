@@ -96,7 +96,10 @@ def cmd_check(cfg: HubConfig, args) -> int:  # noqa: ARG001
     print(f"Dashboard: http://{c.host}:{c.port}/ (loopback only, token-protected)")
     print("Power caps: " + ("applied by the hub (needs Administrator)" if c.power.manage_power_limit
                             else "not changed by the hub; set them in MSI Afterburner"))
-    print(f"Tariff now: ${tariff_at(c.economics):.3f}/kWh; revenue input "
+    if c.mining_windows:
+        print("Mining hours: " + "; ".join(f"{w.start}-{w.end} {','.join(w.days) or 'every day'}"
+                                           for w in c.mining_windows))
+    print(f"Tariff now: {tariff_at(c.economics):.3f} {c.economics.tariff_currency}/kWh; revenue input "
           f"{'set' if revenue_known(c.economics) else 'NOT set (no profit figures yet)'}")
     return 0
 
@@ -110,14 +113,15 @@ def cmd_estimate(cfg: HubConfig, args) -> int:
         return 2
     est = estimate(e, args.mhs, args.watts, args.tariff)
     assert est is not None
-    print(f"{args.mhs} MH/s at {args.watts} W GPU ({est.wall_w:.0f} W extra at the wall), "
-          f"${est.tariff_usd_per_kwh:.3f}/kWh")
+    extra = "extra " if e.pc_on_anyway else ""
+    print(f"{args.mhs} MH/s at {args.watts} W GPU ({est.wall_w:.0f} W {extra}at the wall), "
+          f"{est.tariff_per_kwh:.3f} {est.tariff_currency}/kWh")
     print(f"  gross   ${est.gross_usd_day:8.3f}/day")
     print(f"  fees    ${-est.fees_usd_day:8.3f}/day")
     print(f"  power   ${-est.power_usd_day:8.3f}/day ({est.kwh_day:.2f} kWh)")
     print(f"  NET     ${est.net_usd_day:8.3f}/day  (${est.net_usd_day * 30:.2f}/month)")
-    if est.breakeven_usd_per_kwh is not None:
-        print(f"  break-even tariff ${est.breakeven_usd_per_kwh:.3f}/kWh")
+    if est.breakeven_per_kwh is not None:
+        print(f"  break-even tariff {est.breakeven_per_kwh:.3f} {est.tariff_currency}/kWh")
     return 0
 
 
@@ -154,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     e = sub.add_parser("estimate", help="profit estimate for a hashrate and power draw")
     e.add_argument("--mhs", type=float, required=True)
     e.add_argument("--watts", type=float, required=True)
-    e.add_argument("--tariff", type=float)
+    e.add_argument("--tariff", type=float, help="per kWh, in economics.tariff_currency")
     e.add_argument("--revenue-per-mh", type=float)
     b = sub.add_parser("benchmark", help="stepped power-cap benchmark under the watchdog")
     b.add_argument("--caps", default="200,230,260,290")

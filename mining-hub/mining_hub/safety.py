@@ -15,7 +15,7 @@ Rules, in priority order:
   7. VRAM / RAM reservation for the desktop -> PAUSED_RESOURCE. The miner's
      own VRAM is learned, so stopping it cannot cause start/stop flapping.
   8. A watched process (a game) is running -> PAUSED_USER_ACTIVITY.
-  9. Profile with power 0 (Gaming) -> PAUSED_PROFILE.
+  9. Profile with power 0 (Gaming) -> PAUSED_PROFILE; outside your mining hours -> PAUSED_SCHEDULE.
  10. Projected net profit below threshold -> PAUSED_UNPROFITABLE.
  11. Miner exited on its own -> restart with backoff; too many -> CRASHED, latched.
 """
@@ -40,6 +40,7 @@ class State(str, Enum):
     PAUSED_RESOURCE = "PAUSED_RESOURCE"
     PAUSED_USER_ACTIVITY = "PAUSED_USER_ACTIVITY"
     PAUSED_PROFILE = "PAUSED_PROFILE"
+    PAUSED_SCHEDULE = "PAUSED_SCHEDULE"
     PAUSED_UNPROFITABLE = "PAUSED_UNPROFITABLE"
     CRASHED = "CRASHED"
     EMERGENCY_STOP = "EMERGENCY_STOP"
@@ -142,7 +143,8 @@ class Governor:
             State.PAUSED_SENSOR: 10.0,
         }.get(state, 0.0)
 
-    def _check(self, m: Metrics | None, alive: bool, now: float, projected_net: float | None) -> _Pause | None:
+    def _check(self, m: Metrics | None, alive: bool, now: float, projected_net: float | None,
+               allowed_now: bool = True) -> _Pause | None:
         c = self.cfg
         t, r = c.thermal, c.reservations
 
@@ -203,6 +205,9 @@ class Governor:
         if cap == 0:
             return _Pause(State.PAUSED_PROFILE, f"{c.active_profile} profile: mining is off")
 
+        if not allowed_now:
+            return _Pause(State.PAUSED_SCHEDULE, "Outside your mining hours (mining_windows)")
+
         if projected_net is not None:
             e = c.economics
             need = e.min_net_usd_day + (e.resume_margin_usd_day if self.state == State.PAUSED_UNPROFITABLE else 0.0)
@@ -212,7 +217,8 @@ class Governor:
                               "threshold at the current tariff")
         return None
 
-    def tick(self, m: Metrics | None, alive: bool, now: float, projected_net: float | None = None) -> Decision:
+    def tick(self, m: Metrics | None, alive: bool, now: float, projected_net: float | None = None,
+             allowed_now: bool = True) -> Decision:
         if self.state == State.EMERGENCY_STOP:
             return Decision(self.state, self.reason, "kill" if alive else "none")
         if not self.armed:
@@ -250,7 +256,7 @@ class Governor:
             self._set(State.STARTING, f"Miner exited unexpectedly; restart {len(self.restarts)}/{limit} "
                       f"in {self.cfg.miner.restart_backoff_s:.0f} s")
 
-        pause = self._check(m, alive, now, projected_net)
+        pause = self._check(m, alive, now, projected_net, allowed_now)
         if pause is not None:
             self.last_pause_seen = now
             if pause.state == State.PAUSED_THERMAL and self.state != State.PAUSED_THERMAL:

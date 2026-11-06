@@ -1,0 +1,9 @@
+{
+  "_comment": "Docker demo: mock GPU and mock miner only. 0.0.0.0 is needed inside the container and is refused by the hub for any real miner. Publish it on localhost only: docker run -p 127.0.0.1:8080:8080 ...",
+  "mock_hardware": true,
+  "host": "0.0.0.0",
+  "port": 8080,
+  "state_dir": "/data",
+  "economics": {"tariff_per_kwh": 0.12, "tariff_currency": "USD", "tariff_to_usd": 1.0},
+  "miner": {"kind": "mock"}
+}

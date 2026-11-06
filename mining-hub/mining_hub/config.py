@@ -16,6 +16,7 @@ HUB_ROOT = Path(__file__).resolve().parent.parent
 MINER_KINDS = ("mock", "lolminer", "trex", "custom")
 API_KINDS = ("", "lolminer", "trex")
 LOOPBACK_HOSTS = ("127.0.0.1",)
+CONTAINER_DEMO_HOST = "0.0.0.0"  # allowed only for the mock-mode Docker demo
 
 
 class ConfigError(ValueError):
@@ -66,16 +67,29 @@ class Profile:
     note: str = ""
 
 
+DAY_NAMES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
 @dataclass
-class TariffWindow:
-    start: str = "00:00"  # local time, HH:MM; windows may wrap past midnight
+class Window:
+    start: str = "00:00"  # local time, HH:MM; may wrap past midnight (e.g. 23:00-07:00); end may be 24:00
     end: str = "00:00"
-    usd_per_kwh: float = 0.0
+    # Days the window STARTS on, e.g. ["mon","tue","wed","thu","fri"]. Empty = every day.
+    days: list[str] = field(default_factory=list)
+
+
+@dataclass
+class TariffWindow(Window):
+    per_kwh: float = 0.0  # in economics.tariff_currency
 
 
 @dataclass
 class Economics:
-    tariff_usd_per_kwh: float = 0.12
+    # Your all-in electricity price (total bill / total kWh), in tariff_currency.
+    tariff_per_kwh: float = 0.12
+    tariff_currency: str = "USD"
+    # USD per 1 unit of tariff_currency (e.g. 0.73 for CAD). Coin revenue is in USD.
+    tariff_to_usd: float = 1.0
     time_of_use: list[TariffWindow] = field(default_factory=list)
     psu_efficiency: float = 0.90
     # If the PC would be on anyway (browsing, YouTube), only the GPU's extra
@@ -141,6 +155,8 @@ class HubConfig:
     # Process names (e.g. "eldenring.exe") that pause mining while running.
     pause_for_processes: list[str] = field(default_factory=list)
     activity_cooldown_s: float = 20.0
+    # Hours when mining is allowed at all (e.g. overnight off-peak). Empty = any time.
+    mining_windows: list[Window] = field(default_factory=list)
     profiles: dict[str, Profile] = field(default_factory=default_profiles)
     thermal: ThermalLimits = field(default_factory=ThermalLimits)
     reservations: Reservations = field(default_factory=Reservations)
@@ -239,9 +255,11 @@ def load_config(path: str | Path | None) -> HubConfig:
 
 # --------------------------------------------------------------------------- validation
 
-def _hhmm(s: str) -> bool:
+def _hhmm(s: str, allow_24: bool = False) -> bool:
     try:
         h, m = s.split(":")
+        if allow_24 and s == "24:00":
+            return True
         return 0 <= int(h) <= 23 and 0 <= int(m) <= 59
     except ValueError:
         return False
@@ -251,8 +269,10 @@ def validate(cfg: HubConfig) -> None:
     errs: list[str] = []
     t, r, pw, e, m = cfg.thermal, cfg.reservations, cfg.power, cfg.economics, cfg.miner
 
-    if cfg.host not in LOOPBACK_HOSTS:
-        errs.append(f"host '{cfg.host}' is not loopback; the dashboard may only listen on 127.0.0.1")
+    demo_only = cfg.mock_hardware and cfg.miner.kind == "mock"
+    if cfg.host not in LOOPBACK_HOSTS and not (cfg.host == CONTAINER_DEMO_HOST and demo_only):
+        errs.append(f"host '{cfg.host}' is not loopback; the dashboard may only listen on 127.0.0.1 "
+                    "(0.0.0.0 is allowed only for the mock-mode Docker demo)")
     if not (1 <= cfg.port <= 65535):
         errs.append("port must be 1-65535")
     if not (0.5 <= cfg.poll_interval_s <= 5.0):
@@ -287,11 +307,19 @@ def validate(cfg: HubConfig) -> None:
     if cfg.active_profile not in cfg.profiles:
         errs.append(f"active_profile '{cfg.active_profile}' is not one of the profiles")
 
-    if e.tariff_usd_per_kwh < 0 or not (0.5 <= e.psu_efficiency <= 1.0):
+    if e.tariff_per_kwh < 0 or not (0.5 <= e.psu_efficiency <= 1.0):
         errs.append("economics: tariff must be >= 0 and psu_efficiency 0.5-1.0")
-    for i, w in enumerate(e.time_of_use):
-        if not (_hhmm(w.start) and _hhmm(w.end)) or w.usd_per_kwh < 0:
-            errs.append(f"economics.time_of_use[{i}]: use HH:MM times and a tariff >= 0")
+    if e.tariff_to_usd <= 0:
+        errs.append("economics.tariff_to_usd must be > 0 (USD per 1 unit of tariff_currency)")
+    for name, windows in (("economics.time_of_use", e.time_of_use), ("mining_windows", cfg.mining_windows)):
+        for i, w in enumerate(windows):
+            if not (_hhmm(w.start) and _hhmm(w.end, allow_24=True)) or w.start == w.end:
+                errs.append(f"{name}[{i}]: use different HH:MM start and end times")
+            bad = [d for d in w.days if d.lower() not in DAY_NAMES]
+            if bad:
+                errs.append(f"{name}[{i}]: unknown day(s) {bad}; use {', '.join(DAY_NAMES)}")
+            if isinstance(w, TariffWindow) and w.per_kwh < 0:
+                errs.append(f"{name}[{i}]: tariff must be >= 0")
     if not (0 <= e.pool_fee < 0.2 and 0 <= e.dev_fee < 0.2):
         errs.append("economics: fees are fractions, e.g. 0.01 for 1%")
 
