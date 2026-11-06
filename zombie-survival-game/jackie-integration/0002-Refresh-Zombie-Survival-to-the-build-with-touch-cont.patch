@@ -1,7 +1,7 @@
-From 1903359e8c47b31339c25ca2d29a06635d068b10 Mon Sep 17 00:00:00 2001
+From 4306aca3336791ee2e2cb020912b45a9d437c2ab Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Wed, 4 Nov 2026 01:00:20 +0000
-Subject: [PATCH 2/2] Refresh Zombie Survival to the build with touch controls
+Subject: [PATCH 2/5] Refresh Zombie Survival to the build with touch controls
 
 The game now plays on phones and tablets: a move stick, drag anywhere to
 look, and buttons for attack, aim, use, jump, crouch, reload, swap, light,

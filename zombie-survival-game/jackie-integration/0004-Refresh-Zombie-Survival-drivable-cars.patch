@@ -1,0 +1,35 @@
+From 3101f4edd417980362c1551d191f4c79c7b40429 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 4 Nov 2026 15:17:49 +0000
+Subject: [PATCH 4/5] Refresh Zombie Survival: drivable cars
+
+Every abandoned car in town can now be driven: real physics, keys or
+hotwiring, batteries and fuel, crashes, headlights, and phone driving
+buttons.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UMWgxx6nuAv1vkwbcenTSG
+---
+ public/zombie-survival/index.html | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/public/zombie-survival/index.html b/public/zombie-survival/index.html
+index fe331e42..daee7e92 100644
+--- a/public/zombie-survival/index.html
++++ b/public/zombie-survival/index.html
+@@ -11,9 +11,9 @@
+     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Big+Shoulders+Stencil+Display:wght@700;900&family=Special+Elite&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+-    <script type="module" crossorigin src="./assets/index-3aIgRpLE.js"></script>
+-    <link rel="modulepreload" crossorigin href="./assets/three-B8ZKvaRL.js">
+-    <link rel="stylesheet" crossorigin href="./assets/index-CVRO773c.css">
++    <script type="module" crossorigin src="./assets/index-B3QiVdDY.js"></script>
++    <link rel="modulepreload" crossorigin href="./assets/three-CTrhRFb8.js">
++    <link rel="stylesheet" crossorigin href="./assets/index-CVFghnG8.css">
+   </head>
+   <body>
+     <div id="root"></div>
+-- 
+2.43.0
+

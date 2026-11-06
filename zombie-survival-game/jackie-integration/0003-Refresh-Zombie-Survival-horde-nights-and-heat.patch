@@ -1,0 +1,34 @@
+From 48c28c1022b01d98dd877c70c0a1f2eb46d1d8ff Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 4 Nov 2026 01:08:51 +0000
+Subject: [PATCH 3/5] Refresh Zombie Survival: horde nights and heat
+
+Every seventh night the dead come in waves wherever the player is, and
+noise heats an area until scouts come to see what it was. The game's
+clock panel counts down to the next horde.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UMWgxx6nuAv1vkwbcenTSG
+---
+ public/zombie-survival/index.html | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/public/zombie-survival/index.html b/public/zombie-survival/index.html
+index 79b26429..fe331e42 100644
+--- a/public/zombie-survival/index.html
++++ b/public/zombie-survival/index.html
+@@ -11,9 +11,9 @@
+     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Big+Shoulders+Stencil+Display:wght@700;900&family=Special+Elite&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+-    <script type="module" crossorigin src="./assets/index-CVskN4v5.js"></script>
++    <script type="module" crossorigin src="./assets/index-3aIgRpLE.js"></script>
+     <link rel="modulepreload" crossorigin href="./assets/three-B8ZKvaRL.js">
+-    <link rel="stylesheet" crossorigin href="./assets/index-CfDOa1jh.css">
++    <link rel="stylesheet" crossorigin href="./assets/index-CVRO773c.css">
+   </head>
+   <body>
+     <div id="root"></div>
+-- 
+2.43.0
+

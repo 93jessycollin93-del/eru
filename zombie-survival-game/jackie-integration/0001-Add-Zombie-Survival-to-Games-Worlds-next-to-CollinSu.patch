@@ -1,7 +1,7 @@
-From 6aa9b0aafd595d93670bfde56408ee05679c4803 Mon Sep 17 00:00:00 2001
+From 6f52d7cc02ff60dfa41c982c337c0df195983a1e Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Wed, 14 Oct 2026 14:51:03 +0000
-Subject: [PATCH 1/2] Add Zombie Survival to Games & Worlds, next to
+Subject: [PATCH 1/5] Add Zombie Survival to Games & Worlds, next to
  CollinSurvivalCraft
 
 The owner asked for their zombie survival game to sit in the left menu's

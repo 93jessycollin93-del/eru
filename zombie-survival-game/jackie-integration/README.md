@@ -1,6 +1,6 @@
 # Zombie Survival in SAS-JACKY
 
-These patches add the game to `yyb84ycgt6-oss/sasjacky777-d1033916` (branch `SAS-JACKY`): a `/zombie-survival` page in Games & Worlds, its test, docs, the nav entry and the service-worker exclusions. They were prepared on SAS-JACKY at `a961440d` and pass that repo's full suite (1,999 tests), typecheck and build.
+These patches add the game to `yyb84ycgt6-oss/sasjacky777-d1033916` (branch `SAS-JACKY`): a `/zombie-survival` page in Games & Worlds, its test, docs, the nav entry and the service-worker exclusions. They were prepared on SAS-JACKY at `8e2d2dca` (rebased 2026-11-06) and pass that repo's full suite (1,999 tests), typecheck and build.
 
 They are kept here because this session cannot push to that repo yet: the GitHub account Claude uses (`93jessycollin93-del`) needs Write access there, and the Claude GitHub App must be installed on it.
 

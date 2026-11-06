@@ -1,0 +1,35 @@
+From 78d27bda40f5d12f9c987d37b630dbb4ed96c85e Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 5 Nov 2026 06:14:46 +0000
+Subject: [PATCH 5/5] Refresh Zombie Survival: vehicles in depth
+
+Cars are now their parts (tyres, battery, engine, radiator, tank, windows),
+with locks, alarms, keys found in houses, hotwiring, jump-starts, repairs,
+salvage and a police cruiser with a siren.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UMWgxx6nuAv1vkwbcenTSG
+---
+ public/zombie-survival/index.html | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/public/zombie-survival/index.html b/public/zombie-survival/index.html
+index daee7e92..57aad7de 100644
+--- a/public/zombie-survival/index.html
++++ b/public/zombie-survival/index.html
+@@ -11,9 +11,9 @@
+     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Big+Shoulders+Stencil+Display:wght@700;900&family=Special+Elite&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+-    <script type="module" crossorigin src="./assets/index-B3QiVdDY.js"></script>
+-    <link rel="modulepreload" crossorigin href="./assets/three-CTrhRFb8.js">
+-    <link rel="stylesheet" crossorigin href="./assets/index-CVFghnG8.css">
++    <script type="module" crossorigin src="./assets/index-C3ry6HLF.js"></script>
++    <link rel="modulepreload" crossorigin href="./assets/three-7cSPlrjg.js">
++    <link rel="stylesheet" crossorigin href="./assets/index-C-a8EaRi.css">
+   </head>
+   <body>
+     <div id="root"></div>
+-- 
+2.43.0
+
