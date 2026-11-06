@@ -41,3 +41,24 @@ jobs:
       - name: i18n lint (non-blocking)
         run: npm run lint:i18n
         continue-on-error: true
+
+  mining-hub:
+    name: Mining hub tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: mining-hub
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v

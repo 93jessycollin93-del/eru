@@ -1,0 +1,62 @@
+{
+  "_comment": "Copy to config.json and edit. Keys starting with _ are comments. Run `python -m mining_hub check` after editing.",
+
+  "mock_hardware": false,
+  "gpu_index": 0,
+  "host": "127.0.0.1",
+  "port": 8080,
+  "active_profile": "Desktop",
+
+  "_pause_for_processes": "Process names that pause mining while they run (games, video editors).",
+  "pause_for_processes": [],
+
+  "thermal": {
+    "max_gpu_core_c": 75,
+    "max_mem_junction_c": 90,
+    "hysteresis_c": 5,
+    "allow_missing_mem_junction": false
+  },
+
+  "reservations": {
+    "min_free_vram_mb": 3072,
+    "min_free_ram_mb": 40960
+  },
+
+  "power": {
+    "max_gpu_power_w": 300,
+    "_manage_power_limit": "true = the hub sets each profile's cap (run the terminal as Administrator). false = set it in MSI Afterburner.",
+    "manage_power_limit": false
+  },
+
+  "profiles": {
+    "Desktop":    {"power_limit_w": 200, "note": "Quiet while you browse and work"},
+    "YouTube":    {"power_limit_w": 220, "note": "Leaves headroom for video decode"},
+    "Efficiency": {"power_limit_w": 240, "note": "Best MH/s per watt on memory-bound algorithms"},
+    "Overnight":  {"power_limit_w": 280, "note": "More throughput while unattended"},
+    "Gaming":     {"power_limit_w": 0,   "note": "Mining off; the whole GPU is yours"}
+  },
+
+  "economics": {
+    "tariff_usd_per_kwh": 0.12,
+    "_time_of_use": "Optional cheaper windows, e.g. [{\"start\": \"22:00\", \"end\": \"07:00\", \"usd_per_kwh\": 0.08}]",
+    "time_of_use": [],
+    "psu_efficiency": 0.90,
+    "pc_on_anyway": true,
+    "_revenue": "From WhatToMine/minerstat for your coin: USD per 1 MH/s per day, BEFORE fees. 0 = unknown.",
+    "revenue_usd_per_mh_day": 0.0,
+    "pool_fee": 0.01,
+    "dev_fee": 0.01,
+    "pause_if_unprofitable": false,
+    "min_net_usd_day": 0.0
+  },
+
+  "miner": {
+    "kind": "lolminer",
+    "binary_path": "C:\\MiningHub\\bin\\lolMiner.exe",
+    "algorithm": "ETCHASH",
+    "pool_url": "stratum+ssl://etc.2miners.com:11010",
+    "wallet": "YOUR_ETC_WALLET_ADDRESS",
+    "worker": "rig3090",
+    "api_port": 4068
+  }
+}

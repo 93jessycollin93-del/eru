@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="hub-token" content="__HUB_TOKEN__">
+<title>Mining Control Hub</title>
+<style>
+:root{--bg:#0f1216;--panel:#171b21;--line:#262c35;--text:#e6e9ee;--muted:#8b95a3;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--accent:#58a6ff;--bar:#2b323c}
+@media (prefers-color-scheme: light){:root{--bg:#f5f6f8;--panel:#fff;--line:#dde1e6;--text:#1b1f24;--muted:#5b6573;--bar:#e6e9ee}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+h1{font-size:18px;margin:0}
+.mock{background:var(--warn);color:#000;padding:8px 12px;border-radius:8px;font-weight:600;margin-bottom:12px;display:none}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:.3px}
+.reason{color:var(--muted);margin:6px 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:8px 14px;border-radius:8px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.sel{outline:2px solid var(--accent)}
+#estop{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:800;padding:12px 22px;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 6px;font-weight:600}
+.big{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.sub{color:var(--muted);font-size:12px}
+.bar{height:6px;background:var(--bar);border-radius:3px;margin-top:8px;overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:var(--ok);transition:width .4s}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td{padding:3px 0}td:last-child{text-align:right}
+.warn{color:var(--warn)}
+ul{margin:0;padding-left:18px}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;color:var(--muted);max-height:220px;overflow:auto}
+.events li{margin-bottom:3px}
+.t{color:var(--muted);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main>
+  <div class="mock" id="mock">MOCK MODE: simulated GPU and miner. Nothing is being mined.</div>
+  <header>
+    <div><h1>Mining Control Hub</h1><span class="sub" id="gpu">—</span></div>
+    <span class="pill" id="state">…</span>
+  </header>
+  <div class="reason" id="reason"></div>
+
+  <div class="row">
+    <button class="primary" id="start">Start mining</button>
+    <button id="stop">Stop</button>
+    <button id="reset" style="display:none">Reset emergency latch</button>
+    <span style="flex:1"></span>
+    <button id="estop">EMERGENCY STOP</button>
+  </div>
+
+  <div class="row" id="profiles"></div>
+
+  <div class="grid">
+    <div class="card"><h2>GPU core</h2><div class="big" id="core">—</div><div class="sub" id="coreSub"></div><div class="bar"><i id="coreBar"></i></div></div>
+    <div class="card"><h2>Memory junction (GDDR6X)</h2><div class="big" id="mem">—</div><div class="sub" id="memSub"></div><div class="bar"><i id="memBar"></i></div></div>
+    <div class="card"><h2>GPU power</h2><div class="big" id="pw">—</div><div class="sub" id="pwSub"></div><div class="bar"><i id="pwBar"></i></div></div>
+    <div class="card"><h2>Hashrate</h2><div class="big" id="hr">—</div><div class="sub" id="hrSub"></div></div>
+    <div class="card"><h2>Free VRAM</h2><div class="big" id="vram">—</div><div class="sub" id="vramSub"></div><div class="bar"><i id="vramBar"></i></div></div>
+    <div class="card"><h2>Free RAM</h2><div class="big" id="ram">—</div><div class="sub" id="ramSub"></div><div class="bar"><i id="ramBar"></i></div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h2>Economics (measured)</h2><div id="econ" class="sub">—</div></div>
+    <div class="card"><h2>Warnings</h2><ul id="warnings"><li class="sub">None</li></ul></div>
+  </div>
+  <div class="grid">
+    <div class="card"><h2>Events</h2><ul class="events" id="events"></ul></div>
+    <div class="card"><h2>Miner output</h2><pre id="log"></pre></div>
+  </div>
+</main>
+<script>
+const TOKEN = document.querySelector('meta[name="hub-token"]').content;
+const $ = id => document.getElementById(id);
+const COLORS = {RUNNING:'var(--ok)', STARTING:'var(--accent)', STOPPED:'var(--muted)', EMERGENCY_STOP:'var(--bad)', CRASHED:'var(--bad)'};
+const fmt = (v, d=0, u='') => v === null || v === undefined ? '—' : Number(v).toFixed(d) + u;
+const money = v => v === null || v === undefined ? '—' : (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2);
+
+async function api(path, body) {
+  const r = await fetch(path, {method: body === undefined ? 'GET' : 'POST',
+    headers: {'X-Hub-Token': TOKEN, 'Content-Type': 'application/json'},
+    body: body === undefined ? undefined : JSON.stringify(body)});
+  return r.json();
+}
+async function act(path, body) { try { await api(path, body || {}); } finally { refresh(); } }
+
+function bar(id, frac, bad) {
+  const el = $(id); const f = Math.max(0, Math.min(1, frac || 0));
+  el.style.width = (f * 100).toFixed(0) + '%';
+  el.style.background = bad ? 'var(--bad)' : f > 0.9 ? 'var(--warn)' : 'var(--ok)';
+}
+function setList(id, items, render) {
+  const ul = $(id); ul.replaceChildren();
+  if (!items.length) { const li = document.createElement('li'); li.className = 'sub'; li.textContent = 'None'; ul.append(li); return; }
+  for (const it of items) ul.append(render(it));
+}
+
+function render(s) {
+  $('mock').style.display = s.mock ? 'block' : 'none';
+  const st = $('state'); st.textContent = s.state.replace(/_/g, ' ');
+  st.style.background = COLORS[s.state] || 'var(--warn)'; st.style.color = '#fff';
+  $('reason').textContent = s.reason;
+  $('reset').style.display = s.state === 'EMERGENCY_STOP' ? '' : 'none';
+  $('start').disabled = s.state === 'EMERGENCY_STOP';
+
+  const pr = $('profiles'); pr.replaceChildren();
+  for (const [name, p] of Object.entries(s.profiles)) {
+    const b = document.createElement('button');
+    b.textContent = p.power_limit_w ? `${name} · ${p.power_limit_w} W` : `${name} · off`;
+    b.title = p.note; if (name === s.profile) b.className = 'sel';
+    b.onclick = () => act('/api/profile', {profile: name});
+    pr.append(b);
+  }
+
+  const m = s.metrics || {}, L = s.limits, t = s.telemetry || {};
+  $('gpu').textContent = m.gpu_name || 'sensors unavailable';
+  $('core').textContent = fmt(m.core_c, 0, ' °C');
+  $('coreSub').textContent = `limit ${L.max_gpu_core_c} °C`;
+  bar('coreBar', (m.core_c || 0) / L.max_gpu_core_c, m.core_c >= L.max_gpu_core_c);
+  $('mem').textContent = fmt(m.mem_junction_c, 0, ' °C');
+  $('memSub').textContent = m.mem_junction_c == null ? `limit ${L.max_mem_junction_c} °C · no reading (miner not running or not reporting)` : `limit ${L.max_mem_junction_c} °C · from ${m.mem_junction_source}`;
+  bar('memBar', (m.mem_junction_c || 0) / L.max_mem_junction_c, m.mem_junction_c >= L.max_mem_junction_c);
+  $('pw').textContent = fmt(m.power_w, 0, ' W');
+  $('pwSub').textContent = `profile cap ${L.profile_power_w ? L.profile_power_w + ' W' : 'off'} · board limit ${fmt(m.power_limit_w, 0, ' W')}`;
+  bar('pwBar', L.profile_power_w ? (m.power_w || 0) / L.profile_power_w : 0, false);
+  $('hr').textContent = t.ok ? fmt(t.hashrate_mhs, 2, ' MH/s') : '—';
+  $('hrSub').textContent = t.ok ? `shares ${t.accepted ?? '—'} accepted · ${t.rejected ?? '—'} rejected` : (t.error || '');
+  const vf = m.vram_free_mb;
+  $('vram').textContent = vf == null ? '—' : (vf / 1024).toFixed(1) + ' GB';
+  $('vramSub').textContent = `reserve ${(L.min_free_vram_mb / 1024).toFixed(1)} GB · miner uses ~${(s.miner_vram_mb / 1024).toFixed(1)} GB${s.miner_vram_learned ? ' (measured)' : ' (estimate)'}`;
+  bar('vramBar', vf == null ? 0 : 1 - vf / (m.vram_total_mb || 1), vf != null && vf < L.min_free_vram_mb);
+  $('ram').textContent = m.ram_free_mb == null ? '—' : (m.ram_free_mb / 1024).toFixed(1) + ' GB';
+  $('ramSub').textContent = `reserve ${(L.min_free_ram_mb / 1024).toFixed(0)} GB`;
+  bar('ramBar', m.ram_free_mb == null ? 0 : 1 - m.ram_free_mb / (m.ram_total_mb || 1), m.ram_free_mb != null && m.ram_free_mb < L.min_free_ram_mb);
+
+  const e = s.economics, ec = $('econ'); ec.replaceChildren();
+  if (!s.revenue_configured) {
+    ec.textContent = `Add your coin's revenue in config.json (economics section) to see profit. Tariff now: $${s.tariff_now.toFixed(3)}/kWh.`;
+  } else if (!e) {
+    ec.textContent = `Waiting for measured hashrate and power. Tariff now: $${s.tariff_now.toFixed(3)}/kWh.`;
+  } else {
+    const tb = document.createElement('table');
+    const rows = [['Gross / day', money(e.gross_usd_day)], ['Pool + dev fees', money(-e.fees_usd_day)],
+      [`Electricity (${e.wall_w.toFixed(0)} W at wall, $${e.tariff_usd_per_kwh.toFixed(3)}/kWh)`, money(-e.power_usd_day)],
+      ['Net / day', money(e.net_usd_day)], ['Net / month (30 d)', money(e.net_usd_day * 30)],
+      ['Break-even tariff', e.breakeven_usd_per_kwh == null ? '—' : '$' + e.breakeven_usd_per_kwh.toFixed(3) + '/kWh']];
+    for (const [k, v] of rows) { const tr = tb.insertRow(); tr.insertCell().textContent = k; const c = tr.insertCell(); c.textContent = v; if (k.startsWith('Net')) { c.style.fontWeight = 700; c.style.color = e.net_usd_day < 0 ? 'var(--bad)' : 'var(--ok)'; } }
+    ec.append(tb);
+  }
+  setList('warnings', s.warnings, w => { const li = document.createElement('li'); li.className = 'warn'; li.textContent = w; return li; });
+  setList('events', s.events, ev => { const li = document.createElement('li'); const t = document.createElement('span'); t.className = 't'; t.textContent = new Date(ev.ts * 1000).toLocaleTimeString() + '  '; li.append(t, document.createTextNode(ev.detail)); return li; });
+  $('log').textContent = (s.miner_log || []).join('\n') || '(no output)';
+}
+
+async function refresh() {
+  try { render(await api('/api/status')); }
+  catch (err) { $('state').textContent = 'HUB OFFLINE'; $('state').style.background = 'var(--bad)'; $('reason').textContent = 'Cannot reach the hub process.'; }
+}
+$('start').onclick = () => act('/api/start');
+$('stop').onclick = () => act('/api/stop');
+$('estop').onclick = () => act('/api/emergency');
+$('reset').onclick = () => { if (confirm('Clear the emergency latch? Mining stays off until you press Start.')) act('/api/reset'); };
+refresh(); setInterval(refresh, 1000);
+</script>
+</body>
+</html>
