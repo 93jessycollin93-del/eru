@@ -97,6 +97,7 @@ import { BarrierSystem } from "./world/barrierSystem";
 import { Environment } from "./world/environment";
 import { PostFX, type Quality } from "./render/postfx";
 import { SkyDome } from "./render/sky";
+import { GrassField } from "./render/grass";
 import { CctvSystem } from "./render/cctv";
 import { Electricity, type GeneratorObject } from "./electricity";
 import { refuel, resetBreaker, startGenerator, waterRunning } from "../sim/power";
@@ -105,7 +106,7 @@ import { blockBox, createNavGrid, findPath, type NavGrid } from "../sim/nav";
 import { TextureLibrary } from "./render/textures";
 import { Terrain } from "./world/terrain";
 import { generateTown, type Building, type ComputerSpot, type LootContainer, type TownData } from "./world/town";
-import { generateVegetation } from "./world/vegetation";
+import { generateVegetation, type Vegetation } from "./world/vegetation";
 import type { ExitVerdict } from "./embedBridge";
 
 const WORLD_SEED = 1987;
@@ -167,6 +168,9 @@ export class Game {
   private scoutTimer = 5;
   private hordeWarnedDay = 0;
   private vehicles!: VehicleSystem;
+  private vegetation!: Vegetation;
+  private fps = 60;
+  private grass!: GrassField;
   /** The car you're driving, if any. */
   private driving: VehicleObject | null = null;
   private carLookYaw = 0;
@@ -282,6 +286,8 @@ export class Game {
     const saved = loadQuality();
     this.qualityChosen = saved !== null;
     this.quality = saved ?? (this.touch ? "low" : "high");
+    this.sky.setDetail(this.quality);
+    this.env.skyLit = this.quality !== "low";
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.quality);
     this.cctv = new CctvSystem(this.renderer, this.scene);
 
@@ -324,7 +330,13 @@ export class Game {
     this.scene.add(this.terrain.mesh);
     this.town = generateTown(rng, this.terrain, this.colliders, this.textures);
     this.scene.add(this.town.group);
-    this.scene.add(generateVegetation(rng, this.terrain, this.colliders, this.town.occupied));
+    this.vegetation = generateVegetation(rng, this.terrain, this.colliders, this.town.occupied);
+    this.vegetation.setQuality(this.quality);
+    this.scene.add(this.vegetation.group);
+    this.grass = new GrassField(this.terrain, this.town.occupied, this.quality);
+    this.scene.add(this.grass.mesh);
+    // Blades are placed in their own shader, which the ambient-occlusion pass doesn't run.
+    this.post.excludeFromAO(this.grass.mesh);
     // Cars park (add their colliders) before the nav grid is built, so paths go round them.
     this.vehicles = new VehicleSystem(this.scene, this.colliders, this.terrain);
     this.vehicles.build(this.town.vehicles, this.town.containers);
@@ -386,11 +398,36 @@ export class Game {
     this.post?.setSize(w, h, this.renderer.getPixelRatio());
   };
 
-  /** Graphics quality: "high" adds ambient occlusion and bloom. */
+  /** Sky, lighting from the sky, then the frame. Everything that draws goes through here. */
+  private renderFrame(dt: number, daylight: number) {
+    const menu = this.status === "menu" || this.status === "loading";
+    const cover = menu ? 0.5 : this.env.cloudCover(this.minutes);
+    this.sky.update(this.env.skyColor, this.env.sunDir, daylight, this.env.dusk, cover, dt, this.camera);
+    this.vegetation?.update(this.camera.position, dt);
+    this.grass?.update(this.camera.position, this.player.pos, dt);
+    // Re-light from the sky when the light has moved on: every 10 game minutes, sooner through dawn and dusk.
+    // On Low the sky is only looked at: sampling it for every surface costs too much on a phone.
+    if (!this.env.skyLit) this.scene.environment = null;
+    else {
+      const step = this.env.dusk > 0.05 ? 4 : 10;
+      const key = menu ? "menu" : `${Math.floor(this.minutes / step)}|${step}|${Math.round(cover * 10)}`;
+      if (this.sky.updateEnvironment(this.renderer, key) || !this.scene.environment) {
+        this.scene.environment = this.sky.environment;
+        this.scene.environmentIntensity = 1.5;
+      }
+    }
+    this.post.render(dt, this.status === "playing" ? bloodPercent(this.player.body) : 100);
+  }
+
+  /** Graphics quality (see Quality in render/postfx.ts for what each level adds). */
   setQuality(q: Quality) {
     this.quality = q;
     this.qualityChosen = true;
     this.post.setQuality(q);
+    this.sky.setDetail(q);
+    this.grass?.setQuality(q);
+    this.vegetation?.setQuality(q);
+    this.env.skyLit = q !== "low";
     try {
       localStorage.setItem(QUALITY_KEY, q);
     } catch {
@@ -2142,14 +2179,17 @@ export class Game {
   // ------------------------------------------------------------ main loop
 
   private loop = () => {
-    const dt = Math.min(this.clock.getDelta(), 1 / 20);
+    const raw = this.clock.getDelta();
+    const dt = Math.min(raw, 1 / 20);
+    // Frames per second, smoothed over about a second, for the pause menu's readout.
+    if (raw > 0 && raw < 1) this.fps += (1 / raw - this.fps) * Math.min(1, raw * 2);
 
     if (this.status === "menu" || this.status === "loading") {
       this.menuAngle += dt * 0.04;
       const r = 70;
       this.camera.position.set(Math.cos(this.menuAngle) * r, 28, Math.sin(this.menuAngle) * r);
       this.camera.lookAt(0, 0, 0);
-      this.env.update(17.6 * 60, new THREE.Vector3(0, 0, 0));
+      this.env.update(17.6 * 60, new THREE.Vector3(0, 0, 0), 0.5);
     } else if (this.status === "playing") {
       this.update(dt);
     } else if (this.status === "dead") {
@@ -2158,8 +2198,7 @@ export class Game {
     }
 
     const day = this.env.daylight(this.status === "menu" || this.status === "loading" ? 17.6 * 60 : this.minutes % 1440);
-    this.sky.update(this.env.skyColor, this.env.sunDir, day, this.camera);
-    this.post.render(dt, this.status === "playing" ? bloodPercent(this.player.body) : 100);
+    this.renderFrame(dt, day);
     this.watchPerformance(dt);
 
     this.hudTimer -= dt;
@@ -2256,7 +2295,7 @@ export class Game {
     }
 
     const daylight = this.env.daylight(this.minutes % 1440);
-    this.env.update(this.minutes % 1440, p.pos);
+    this.env.update(this.minutes % 1440, p.pos, this.env.cloudCover(this.minutes));
     this.updateFlashlight(daylight);
     if (this.driving) this.carCamera(dt);
     else p.updateCamera(this.camera, this.colliders, dt);
@@ -2270,19 +2309,30 @@ export class Game {
     this.messages = this.messages.filter((m) => (m as HudMessage & { until: number }).until > now);
   }
 
-  /** If the first seconds of play run slowly on High, drop to Low once. */
+  /**
+   * Unless you've picked a quality yourself: if play runs slowly, step down one level (High to
+   * Medium, Medium to Low) and watch again, until it runs smoothly or there's nowhere lower to go.
+   */
   private watchPerformance(dt: number) {
     if (this.perfChecked || this.status !== "playing" || this.qualityChosen || this.quality === "low") return;
     this.perfTime += dt;
     this.perfFrames++;
     if (this.perfTime > 8) {
-      this.perfChecked = true;
       const fps = this.perfFrames / this.perfTime;
-      if (fps < 32) {
-        this.quality = "low";
-        this.post.setQuality("low");
-        this.message("Graphics set to Low for smoother play. You can change this in the pause menu.", "info");
+      this.perfTime = 0;
+      this.perfFrames = 0;
+      if (fps >= 32) {
+        this.perfChecked = true;
+        return;
       }
+      const next: Quality = this.quality === "high" ? "medium" : "low";
+      this.quality = next;
+      this.post.setQuality(next);
+      this.sky.setDetail(next);
+      this.grass?.setQuality(next);
+      this.vegetation?.setQuality(next);
+      this.env.skyLit = next !== "low";
+      this.message(`Graphics set to ${next === "medium" ? "Medium" : "Low"} for smoother play. You can change this in the pause menu.`, "info");
     }
   }
 
@@ -3587,6 +3637,7 @@ export class Game {
       gridOn: this.terrain ? this.gridOn() : true,
       townName: `${TOWN}, ${COUNTY}`,
       quality: this.quality,
+      fps: Math.round(this.fps),
       inventory: this.inventory.map((s) => ({ ...s })),
       carryWeight: this.carryWeight(),
       maxWeight: MAX_WEIGHT,
@@ -3617,7 +3668,7 @@ const QUALITY_KEY = "zombie-survival:quality";
 function loadQuality(): Quality | null {
   try {
     const v = localStorage.getItem(QUALITY_KEY);
-    return v === "high" || v === "low" ? v : null;
+    return v === "high" || v === "medium" || v === "low" ? v : null;
   } catch {
     return null;
   }

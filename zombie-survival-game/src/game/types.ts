@@ -141,7 +141,9 @@ export interface HudState {
   location: string | null;
   gridOn: boolean;
   townName: string;
-  quality: "low" | "high";
+  quality: "low" | "medium" | "high";
+  /** Frames drawn per second, smoothed. */
+  fps: number;
   inventory: ItemStack[];
   carryWeight: number;
   maxWeight: number;

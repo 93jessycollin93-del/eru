@@ -7,7 +7,7 @@ interface OverlayProps {
   hud: HudState;
   onStart: () => void;
   onResume: () => void;
-  onQuality: (q: "low" | "high") => void;
+  onQuality: (q: "low" | "medium" | "high") => void;
   onSave: (slot: Slot) => void;
   onLoad: (slot: Slot) => void;
   onDelete: (slot: Slot) => void;
@@ -155,10 +155,10 @@ const SmallButton = ({ onClick, children, quiet }: { onClick: () => void; childr
   </button>
 );
 
-const QualityToggle = ({ value, onChange }: { value: "low" | "high"; onChange: (q: "low" | "high") => void }) => (
-  <div className="mt-6 flex items-center gap-3 text-sm uppercase tracking-[0.15em] text-stone-400">
+const QualityToggle = ({ value, onChange, fps }: { value: "low" | "medium" | "high"; onChange: (q: "low" | "medium" | "high") => void; fps: number }) => (
+  <div className="mt-6 flex flex-wrap items-center gap-3 text-sm uppercase tracking-[0.15em] text-stone-400">
     Graphics
-    {(["high", "low"] as const).map((q) => (
+    {(["high", "medium", "low"] as const).map((q) => (
       <button
         key={q}
         onClick={() => onChange(q)}
@@ -170,6 +170,7 @@ const QualityToggle = ({ value, onChange }: { value: "low" | "high"; onChange: (
         {q}
       </button>
     ))}
+    <span className="tabular-nums normal-case tracking-normal text-stone-500">{fps} frames per second</span>
   </div>
 );
 
@@ -214,7 +215,7 @@ const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }
                 {newest && <Button onClick={() => onLoad(newest.slot)}>Continue</Button>}
                 <Button onClick={onStart}>{newest ? "New game" : "Begin"}</Button>
               </div>
-              <QualityToggle value={hud.quality} onChange={onQuality} />
+              <QualityToggle value={hud.quality} onChange={onQuality} fps={hud.fps} />
               <div className="mt-6">
                 <SaveSlots hud={hud} canSave={false} onSave={onSave} onLoad={onLoad} onDelete={onDelete} />
               </div>
@@ -233,7 +234,7 @@ const Overlay = ({ hud, onStart, onResume, onQuality, onSave, onLoad, onDelete }
               <div className="mt-8">
                 <Button onClick={onResume}>Resume</Button>
               </div>
-              <QualityToggle value={hud.quality} onChange={onQuality} />
+              <QualityToggle value={hud.quality} onChange={onQuality} fps={hud.fps} />
               <div className="mt-6">
                 <SaveSlots hud={hud} canSave onSave={onSave} onLoad={onLoad} onDelete={onDelete} />
               </div>

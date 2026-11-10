@@ -4,9 +4,15 @@ import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
-export type Quality = "low" | "high";
+/**
+ * low: phones and weak graphics. Edges smoothed after the fact, no ambient occlusion or bloom, a thin scatter of grass.
+ * medium: laptops. Adds bloom, finer clouds and a fuller field of grass.
+ * high: a real graphics card. Adds 4× multisampling, ambient occlusion and the densest grass.
+ */
+export type Quality = "low" | "medium" | "high";
 
 /**
  * Tarkov-style grade, applied last in display space: muted colour, cool
@@ -21,7 +27,7 @@ const GradeShader = {
     contrast: { value: 1.08 },
     shadowTint: { value: new THREE.Vector3(0.93, 0.98, 1.04) },
     highlightTint: { value: new THREE.Vector3(1.04, 1.0, 0.93) },
-    vignette: { value: 0.38 },
+    vignette: { value: 0.3 },
     grain: { value: 0.045 },
     aberration: { value: 0.012 },
   },
@@ -58,13 +64,18 @@ export class PostFX {
   private gtao: GTAOPass;
   private bloom: UnrealBloomPass;
   private grade: ShaderPass;
+  private fxaa: ShaderPass;
+  /** Multisampled render targets are only usable where float colour buffers are. */
+  private msaa: boolean;
+  private size = new THREE.Vector3(1, 1, 1);
   private time = 0;
   private noAO: THREE.Object3D[] = [];
   quality: Quality;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, quality: Quality) {
     const size = renderer.getSize(new THREE.Vector2());
-    this.composer = new EffectComposer(renderer);
+    this.msaa = renderer.capabilities.isWebGL2 !== false && (renderer.extensions.has("EXT_color_buffer_float") || renderer.extensions.has("EXT_color_buffer_half_float"));
+    this.composer = new EffectComposer(renderer, this.target(quality));
     this.composer.addPass(new RenderPass(scene, camera));
 
     this.gtao = new GTAOPass(scene, camera, size.x, size.y);
@@ -86,11 +97,22 @@ export class PostFX {
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
+    // Low quality smooths edges after the fact (one cheap pass); high quality multisamples the scene itself.
+    this.fxaa = new ShaderPass(FXAAShader);
+    this.composer.addPass(this.fxaa);
+
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(this.grade);
 
     this.quality = quality;
-    this.setQuality(quality);
+    this.gtao.enabled = quality === "high";
+    this.bloom.enabled = quality !== "low";
+    this.fxaa.enabled = !(quality === "high" && this.msaa);
+  }
+
+  /** The buffers every pass draws into: HDR, and 4× multisampled on high quality. */
+  private target(q: Quality) {
+    return new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: q === "high" && this.msaa ? 4 : 0 });
   }
 
   /** Keep an object out of ambient occlusion (transparent glass). */
@@ -99,14 +121,24 @@ export class PostFX {
   }
 
   setQuality(q: Quality) {
+    if (q === this.quality) return;
+    const wasMultisampled = !this.fxaa.enabled;
     this.quality = q;
     this.gtao.enabled = q === "high";
-    this.bloom.enabled = q === "high";
+    this.bloom.enabled = q !== "low";
+    this.fxaa.enabled = !(q === "high" && this.msaa);
+    // Multisampling is a property of the buffers: swap them when it turns on or off.
+    if (wasMultisampled === this.fxaa.enabled) {
+      this.composer.reset(this.target(q));
+      this.setSize(this.size.x, this.size.y, this.size.z);
+    }
   }
 
   setSize(w: number, h: number, pixelRatio: number) {
+    this.size.set(w, h, pixelRatio);
     this.composer.setPixelRatio(pixelRatio);
     this.composer.setSize(w, h);
+    this.fxaa.material.uniforms.resolution.value.set(1 / (w * pixelRatio), 1 / (h * pixelRatio));
   }
 
   /** bloodPercent 0..100 drains colour as the survivor loses blood. */

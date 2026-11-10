@@ -501,6 +501,59 @@ export function generateTown(rng: () => number, terrain: Terrain, colliders: Col
     // Floor (visual only, the town ground is flat) and roof.
     box(-hw + WALL_T, 0.0, -hd + WALL_T, hw - WALL_T, 0.06, hd - WALL_T, floorMat, false);
     box(-hw - 0.3, WALL_H, -hd - 0.3, hw + 0.3, WALL_H + 0.25, hd + 0.3, roofMat, true, true);
+    // Houses get a pitched roof over the slab: two slopes with eaves, gable ends in the wall's
+    // material, sometimes a chimney. Shaped by the address alone (no random draws), drawn only (the
+    // slab underneath is still what things collide with), so the town and its saves are unchanged.
+    if (type === "house") {
+      let hsh = 2166136261;
+      for (let i = 0; i < address.length; i++) hsh = Math.imul(hsh ^ address.charCodeAt(i), 16777619);
+      hsh >>>= 0;
+      const alongX = w >= d;
+      const half = (alongX ? hd : hw) + 0.3;
+      const len = (alongX ? w : d) + 0.6;
+      const pitch = ([22, 27, 32][hsh % 3] * Math.PI) / 180;
+      const rise = half * Math.tan(pitch);
+      const eave = WALL_H + 0.25;
+      const over = 0.35;
+      const slope = half / Math.cos(pitch) + over;
+      // Turns a shape built with the ridge along X into the building's frame.
+      const lay = (g: THREE.BufferGeometry, mat: string) => {
+        if (!alongX) g.rotateY(Math.PI / 2);
+        g.applyMatrix4(m);
+        mb.add(g, mat);
+      };
+      for (const side of [-1, 1]) {
+        const g = new THREE.BoxGeometry(len + 0.5, 0.12, slope);
+        // Hinge at the ridge: the panel hangs from it down to past the wall.
+        g.translate(0, 0, (side * slope) / 2);
+        g.rotateX(side * pitch);
+        g.translate(0, eave + rise + 0.05, 0);
+        lay(g, roofMat);
+      }
+      for (const end of [-1, 1]) {
+        const tri = new THREE.Shape();
+        tri.moveTo(-half, 0);
+        tri.lineTo(half, 0);
+        tri.lineTo(0, rise);
+        tri.closePath();
+        const g = new THREE.ExtrudeGeometry(tri, { depth: 0.1, bevelEnabled: false });
+        // The shape's x runs across the house (z here); extrude along the ridge.
+        g.rotateY(Math.PI / 2);
+        g.translate(end * (len / 2 - 0.3) - 0.05, eave, 0);
+        lay(g, wallMat);
+      }
+      if ((hsh >>> 4) % 5 < 2) {
+        const cx = (((hsh >>> 8) % 100) / 100 - 0.5) * len * 0.5;
+        const cz = half * 0.35 * ((hsh >>> 16) % 2 ? 1 : -1);
+        const top = eave + rise + 0.55;
+        const g = new THREE.BoxGeometry(0.6, top - eave, 0.6);
+        g.translate(cx, (top + eave) / 2, cz);
+        lay(g, mb.material("#86503f", {}, "brick"));
+        const cap = new THREE.BoxGeometry(0.72, 0.08, 0.72);
+        cap.translate(cx, top + 0.04, cz);
+        lay(cap, sidewalk);
+      }
+    }
     // Light ceiling under the roof so interiors don't read as a black void.
     box(-hw + WALL_T, WALL_H - 0.04, -hd + WALL_T, hw - WALL_T, WALL_H, hd - WALL_T, mb.material("#bdb8aa", {}, "plaster"), false);
     // Door step and frame lintel trim
