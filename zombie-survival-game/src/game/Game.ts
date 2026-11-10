@@ -170,6 +170,7 @@ export class Game {
   private vehicles!: VehicleSystem;
   private vegetation!: Vegetation;
   private fps = 60;
+  private destroyed = false;
   private grass!: GrassField;
   /** The car you're driving, if any. */
   private driving: VehicleObject | null = null;
@@ -314,12 +315,18 @@ export class Game {
     this.emitHud();
 
     // Let the loading screen paint before the (synchronous) world build.
-    setTimeout(() => {
-      this.buildWorld();
-      this.status = "menu";
-      this.emitHud();
-      this.renderer.setAnimationLoop(this.loop);
-    }, 30);
+    // The photo-scanned surfaces load first, so the town is built with them. If they can't be
+    // fetched the world still builds, on generated textures.
+    void this.textures
+      .preload(import.meta.env.BASE_URL)
+      .catch(() => undefined)
+      .then(() => {
+        if (this.destroyed) return;
+        this.buildWorld();
+        this.status = "menu";
+        this.emitHud();
+        this.renderer.setAnimationLoop(this.loop);
+      });
   }
 
   // ---------------------------------------------------------------- setup
@@ -372,6 +379,7 @@ export class Game {
   }
 
   destroy() {
+    this.destroyed = true;
     this.renderer.setAnimationLoop(null);
     this.input.destroy();
     window.removeEventListener("resize", this.resize);

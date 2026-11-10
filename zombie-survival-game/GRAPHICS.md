@@ -2,6 +2,20 @@
 
 Owner's direction (2026-11-10): aim for the highest realism we can reach while staying efficient (good graphics, low latency), and keep improving continuously.
 
+## The owner's rule: never regress
+
+Stated 2026-11-10: "We should never ever have to reduce any features or graphic functionalities. We should always be finding other ways to adapt and enhance and evolve these features instead of regressing them."
+
+So: nothing that exists is removed or made worse to gain speed. When something costs too much, make it cheaper to draw (cull it, batch it, simplify its shader, draw less of it far away) while it looks the same or better. Quality levels may differ in how much of a thing they show; no level may end up with less than it had before a change.
+
+## Real assets
+
+The blocky look came from everything being generated in code out of simple shapes. On 2026-11-10 the owner allowed `api.polyhaven.com` and `dl.polyhaven.org` in the cloud environment, so the project can use [Poly Haven](https://polyhaven.com)'s public-domain (CC0) scans.
+
+- **Surfaces** (done): brick, plaster, concrete, asphalt, wood, roofing and ground are photo-scanned sets (colour, normal, and ambient occlusion with roughness) in `public/textures/`, prepared by `tools/assets/textures.py`; sources are in `public/textures/SOURCES.md`. Brick and asphalt keep the photo's colours. The others give real surface detail under the game's own colour, so houses still come in eight colours. Metal and fabric are still generated. They load before the world is built; if they can't be fetched, the generated textures are used.
+- **Trees** (next): Poly Haven's tree models are film-grade (7 to 17 million polygons, up to 1 GB each) and can't be used as they are. Their bark, needle-twig and leaf scans can: bark on trunks, and twigs and leaves on alpha-tested cards in place of solid cones and clumps.
+- **Props** (later): boulders, shrubs, furniture and debris models are small enough to use after reducing them.
+
 ## How improvement works here
 
 Every rendering change goes through the same loop:
@@ -53,8 +67,8 @@ Medium now costs about what High used to. On the software renderer, grass is abo
 ## Backlog, most valuable first
 
 1. **Real frame rates from the owner's phone and computer**, to set the level defaults and blade counts on evidence.
-2. **Materials:** higher-resolution procedural textures with roughness variation; wet roads after rain; dirt and wear on walls; decals (cracks, stains, road markings).
-3. **Pine needles and leaves as alpha-tested cards** on the near model, instead of solid cones and clumps.
+2. **Trees from scans:** real bark on trunks; needle twigs and leaves from the scans on alpha-tested cards, instead of solid cones and clumps.
+3. **Materials:** scanned metal, fabric, siding and interior floors; wet roads after rain; dirt and wear on walls; decals (cracks, stains, road markings).
 4. **Characters:** better skin and cloth shading, smoother animation blending, cloth detail.
 5. **Fog with depth:** thicker in hollows, tinted toward the sun, light shafts through trees.
 6. **Cascaded shadows** for sharp near shadows and far coverage; contact shadows under grass and cars.

@@ -8,6 +8,8 @@ import type { Surface, TextureLibrary } from "../render/textures";
  * coordinates are projected in world space (box mapping), so surfaces keep a
  * real-world scale no matter how big each box is.
  */
+const WHITE = new THREE.Color("#ffffff");
+
 export class MeshBuilder {
   private buckets = new Map<string, THREE.BufferGeometry[]>();
   private materials = new Map<string, THREE.MeshStandardMaterial>();
@@ -25,7 +27,13 @@ export class MeshBuilder {
         mat.map = maps.map;
         mat.normalMap = maps.normalMap;
         mat.roughnessMap = maps.roughnessMap;
-        mat.normalScale.set(0.8, 0.8);
+        mat.normalScale.set(maps.photo ? 1 : 0.8, maps.photo ? 1 : 0.8);
+        if (maps.photo) {
+          // The scan's own roughness, undimmed; its occlusion darkens mortar lines and gaps between boards.
+          mat.roughness = 1;
+          if (maps.aoMap) mat.aoMap = maps.aoMap;
+          if (maps.wash > 0) mat.color.lerp(WHITE, maps.wash);
+        }
         this.tiles.set(key, maps.tile);
       }
       this.materials.set(key, mat);

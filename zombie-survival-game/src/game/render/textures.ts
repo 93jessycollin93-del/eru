@@ -13,9 +13,32 @@ export interface SurfaceMaps {
   map: THREE.Texture;
   normalMap: THREE.Texture;
   roughnessMap: THREE.Texture;
+  /** Photo sets pack ambient occlusion into the roughness texture's red channel. */
+  aoMap?: THREE.Texture;
   /** World metres covered by one repeat of the texture. */
   tile: number;
+  /**
+   * How far a material's own colour should be washed toward white, 0–1: a photo that carries its
+   * own colour (brick, asphalt) only wants a light tint from the game's colour, not to be multiplied by it.
+   */
+  wash: number;
+  /** Photographed surfaces have real relief: their normal map can be used at full strength. */
+  photo: boolean;
 }
+
+/**
+ * Surfaces with a photo-scanned set in public/textures (see tools/assets/textures.py and
+ * public/textures/SOURCES.md). The rest are generated in code.
+ */
+const PHOTO: Partial<Record<Surface, { tile: number; wash: number }>> = {
+  brick: { tile: 1.0, wash: 0.82 },
+  plaster: { tile: 2.0, wash: 0 },
+  concrete: { tile: 3.0, wash: 0 },
+  asphalt: { tile: 3.0, wash: 0.8 },
+  wood: { tile: 1.7, wash: 0 },
+  roof: { tile: 8.0, wash: 0 },
+  ground: { tile: 2.0, wash: 0 },
+};
 
 const SIZE = 256;
 
@@ -34,6 +57,36 @@ export class TextureLibrary {
     this.n1 = createNoise4D(rng);
     this.n2 = createNoise4D(rng);
     this.maxAniso = renderer.capabilities.getMaxAnisotropy();
+  }
+
+  /**
+   * Load the photo-scanned sets. Call (and wait) before building the world: `get` then hands out
+   * the photos. A set that fails to load is skipped, and that surface falls back to the generated one.
+   */
+  async preload(base: string): Promise<void> {
+    const loader = new THREE.TextureLoader();
+    const load = async (url: string, srgb: boolean) => {
+      const t = await loader.loadAsync(url);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.anisotropy = Math.min(8, this.maxAniso);
+      t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      return t;
+    };
+    await Promise.all(
+      (Object.keys(PHOTO) as Surface[]).map(async (surface) => {
+        const p = PHOTO[surface]!;
+        try {
+          const [map, normalMap, arm] = await Promise.all([
+            load(`${base}textures/${surface}_color.jpg`, true),
+            load(`${base}textures/${surface}_normal.jpg`, false),
+            load(`${base}textures/${surface}_arm.jpg`, false),
+          ]);
+          this.cache.set(surface, { map, normalMap, roughnessMap: arm, aoMap: arm, tile: p.tile, wash: p.wash, photo: true });
+        } catch {
+          // Offline, or the files weren't deployed: the generated texture will do.
+        }
+      }),
+    );
   }
 
   get(surface: Surface): SurfaceMaps {
@@ -229,6 +282,6 @@ export class TextureLibrary {
       t.needsUpdate = true;
       return t;
     };
-    return { map: tex(albedo, true), normalMap: tex(normal, false), roughnessMap: tex(rough, false), tile };
+    return { map: tex(albedo, true), normalMap: tex(normal, false), roughnessMap: tex(rough, false), tile, wash: 0, photo: false };
   }
 }
