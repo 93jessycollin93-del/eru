@@ -44,6 +44,12 @@ Phones start on Low and desktops on High. Unless the player has picked a level, 
 
 Medium now costs about what High used to. On the software renderer, grass is about 40% of a High frame and multisampling about 35%; a graphics card handles both far more cheaply, which is why they sit on High. Triangles in the forest view: 1.07 million before, 1.31 million on High, 0.58 million on Medium, 0.43 million on Low.
 
+## Known flaws
+
+- On High, ambient occlusion shows as dark specks on distant, fogged trees (it was there before this pass too). It should fade out with distance.
+- Trees change model at the detail range with a visible pop when you look for it; a cross-fade would hide it.
+- Tree shadows don't sway with the trees.
+
 ## Backlog, most valuable first
 
 1. **Real frame rates from the owner's phone and computer**, to set the level defaults and blade counts on evidence.
