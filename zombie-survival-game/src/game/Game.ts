@@ -337,9 +337,11 @@ export class Game {
     this.scene.add(this.terrain.mesh);
     this.town = generateTown(rng, this.terrain, this.colliders, this.textures);
     this.scene.add(this.town.group);
-    this.vegetation = generateVegetation(rng, this.terrain, this.colliders, this.town.occupied);
+    this.vegetation = generateVegetation(rng, this.terrain, this.colliders, this.town.occupied, this.textures.trees);
     this.vegetation.setQuality(this.quality);
     this.scene.add(this.vegetation.group);
+    // Leaf cards are see-through: the ambient-occlusion pass would shade them as solid squares.
+    for (const c of this.vegetation.cards) this.post.excludeFromAO(c);
     this.grass = new GrassField(this.terrain, this.town.occupied, this.quality);
     this.scene.add(this.grass.mesh);
     // Blades are placed in their own shader, which the ambient-occlusion pass doesn't run.

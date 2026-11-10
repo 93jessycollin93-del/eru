@@ -51,6 +51,8 @@ export class TextureLibrary {
   private n1: Noise4;
   private n2: Noise4;
   private maxAniso: number;
+  /** Scanned bark, a pine bough and a leaf spray for the trees; null until loaded (or if they couldn't be). */
+  trees: { bark: { map: THREE.Texture; normalMap: THREE.Texture; arm: THREE.Texture }; needles: THREE.Texture; leaves: THREE.Texture } | null = null;
 
   constructor(renderer: THREE.WebGLRenderer) {
     const rng = mulberry32(4242);
@@ -72,8 +74,25 @@ export class TextureLibrary {
       t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
       return t;
     };
-    await Promise.all(
-      (Object.keys(PHOTO) as Surface[]).map(async (surface) => {
+    const trees = (async () => {
+      try {
+        const [map, normalMap, arm, needles, leaves] = await Promise.all([
+          load(`${base}textures/bark_color.jpg`, true),
+          load(`${base}textures/bark_normal.jpg`, false),
+          load(`${base}textures/bark_arm.jpg`, false),
+          load(`${base}textures/needles.png`, true),
+          load(`${base}textures/leaves.png`, true),
+        ]);
+        // Cards hold one branch each: no tiling, or the tip would bleed into the base.
+        for (const t of [needles, leaves]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+        this.trees = { bark: { map, normalMap, arm }, needles, leaves };
+      } catch {
+        // The trees fall back to their modelled shapes.
+      }
+    })();
+    await Promise.all([
+      trees,
+      ...(Object.keys(PHOTO) as Surface[]).map(async (surface) => {
         const p = PHOTO[surface]!;
         try {
           const [map, normalMap, arm] = await Promise.all([
@@ -86,7 +105,7 @@ export class TextureLibrary {
           // Offline, or the files weren't deployed: the generated texture will do.
         }
       }),
-    );
+    ]);
   }
 
   get(surface: Surface): SurfaceMaps {

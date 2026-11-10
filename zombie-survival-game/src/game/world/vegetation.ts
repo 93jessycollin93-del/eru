@@ -185,6 +185,172 @@ function bushGeometry(): THREE.BufferGeometry {
   return mergeGeometries(parts, false)!;
 }
 
+/** Scanned tree textures (see tools/assets/foliage.py). */
+export interface TreeTextures {
+  bark: { map: THREE.Texture; normalMap: THREE.Texture; arm: THREE.Texture };
+  /** A pine bough on a transparent card: base at the bottom of the image, tip at the top. */
+  needles: THREE.Texture;
+  /** A spray of leaves on a transparent card, the same way up. */
+  leaves: THREE.Texture;
+}
+
+/** Collects quads (cards carrying a scanned branch) into one geometry. */
+class Cards {
+  private positions: number[] = [];
+  private normals: number[] = [];
+  private uvs: number[] = [];
+  private colors: number[] = [];
+  private sways: number[] = [];
+  private side = new THREE.Vector3();
+
+  /**
+   * One card: the branch image runs from `base` along `dir` for `length`, `width` wide across
+   * `across`. `normal` is the soft normal both faces are lit with; shade and sway run base to tip.
+   */
+  add(base: THREE.Vector3, dir: THREE.Vector3, across: THREE.Vector3, length: number, width: number, normal: (p: THREE.Vector3) => THREE.Vector3, shade: [number, number], sway: [number, number]) {
+    this.side.copy(across).normalize().multiplyScalar(width / 2);
+    const tip = base.clone().addScaledVector(dir, length);
+    const corners = [base.clone().sub(this.side), base.clone().add(this.side), tip.clone().add(this.side), tip.clone().sub(this.side)];
+    const uv = [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+    ];
+    for (const i of [0, 1, 2, 0, 2, 3]) {
+      const c = corners[i];
+      const n = normal(c);
+      const t = uv[i][1];
+      this.positions.push(c.x, c.y, c.z);
+      this.normals.push(n.x, n.y, n.z);
+      this.uvs.push(uv[i][0], uv[i][1]);
+      const s = shade[0] + (shade[1] - shade[0]) * t;
+      this.colors.push(s, s, s);
+      this.sways.push(sway[0] + (sway[1] - sway[0]) * t);
+    }
+  }
+
+  build(): THREE.BufferGeometry {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(this.positions, 3));
+    g.setAttribute("normal", new THREE.Float32BufferAttribute(this.normals, 3));
+    g.setAttribute("uv", new THREE.Float32BufferAttribute(this.uvs, 2));
+    g.setAttribute("color", new THREE.Float32BufferAttribute(this.colors, 3));
+    g.setAttribute("sway", new THREE.Float32BufferAttribute(this.sways, 1));
+    return g;
+  }
+}
+
+/** A trunk or limb that takes the bark texture: UVs wrap twice round and repeat every 1.5 m up. */
+function barkCylinder(radiusTop: number, radiusBottom: number, height: number, sides: number, swayAt: (y: number) => number) {
+  const g = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, sides, 3, true).translate(0, height / 2, 0);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  const colors = new Float32Array(pos.count * 3).fill(1);
+  const sways = new Float32Array(pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    uv.setXY(i, uv.getX(i) * 2, (pos.getY(i) / 1.5));
+    sways[i] = swayAt(pos.getY(i));
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  g.setAttribute("sway", new THREE.BufferAttribute(sways, 1));
+  return g;
+}
+
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** A pine from scans: a bark trunk, and whorls of boughs each drawn on two crossed cards. */
+function scannedPine(): { trunk: THREE.BufferGeometry; cards: THREE.BufferGeometry } {
+  const rng = mulberry32(821);
+  const cards = new Cards();
+  const dir = new THREE.Vector3();
+  const tangent = new THREE.Vector3();
+  const lift = new THREE.Vector3();
+  const whorls = 11;
+  for (let i = 0; i < whorls; i++) {
+    const t = i / (whorls - 1);
+    const y = 1.5 + t * 7.4;
+    const length = 2.7 - t * 2.0;
+    const boughs = t > 0.75 ? 4 : 5;
+    const turn = rng() * Math.PI * 2;
+    for (let b = 0; b < boughs; b++) {
+      const a = turn + (b / boughs) * Math.PI * 2 + (rng() - 0.5) * 0.5;
+      // Low boughs hang; high ones reach up toward the light.
+      const droop = 0.42 - t * 0.75 + (rng() - 0.5) * 0.15;
+      dir.set(Math.cos(a), -droop, Math.sin(a)).normalize();
+      tangent.set(-Math.sin(a), 0, Math.cos(a));
+      lift.copy(dir).cross(tangent).normalize();
+      const base = new THREE.Vector3(Math.cos(a) * 0.08, y + (rng() - 0.5) * 0.25, Math.sin(a) * 0.08);
+      const len = length * (0.85 + rng() * 0.3);
+      const out = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+      // Lit as if the tree were a soft cone: outward and up, never a hard flat plane.
+      const normal = () => out.clone().multiplyScalar(0.55).add(UP.clone().multiplyScalar(0.85)).normalize();
+      const shade: [number, number] = [0.55 + t * 0.15, 0.95 + rng() * 0.15];
+      cards.add(base, dir, tangent, len, len * 0.78, normal, shade, [0.25 + t * 0.3, 0.9 + t * 0.4]);
+      cards.add(base, dir, lift, len, len * 0.5, normal, shade, [0.25 + t * 0.3, 0.9 + t * 0.4]);
+    }
+  }
+  // The leader: two crossed cards standing on the tip.
+  for (const a of [0, Math.PI / 2]) {
+    cards.add(new THREE.Vector3(0, 8.5, 0), UP, new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), 1.5, 1.1, () => UP.clone(), [0.8, 1.1], [1.1, 1.5]);
+  }
+  return { trunk: barkCylinder(0.05, 0.25, 9.4, 8, (y) => Math.pow(y / 10, 2) * 0.5), cards: cards.build() };
+}
+
+/** Sprays of leaves radiating from a point, each on two crossed cards, lit as part of one round crown. */
+function sprays(cards: Cards, centre: THREE.Vector3, radius: number, count: number, crown: THREE.Vector3, rng: () => number, swayBase: number) {
+  const dir = new THREE.Vector3();
+  const across = new THREE.Vector3();
+  const other = new THREE.Vector3();
+  for (let i = 0; i < count; i++) {
+    // Evenly round the sphere (a spiral), pushed up a little: leaves grow toward the sky.
+    const k = (i + 0.5) / count;
+    const polar = Math.acos(1 - 1.7 * k);
+    const az = i * 2.399963 + rng() * 0.5;
+    dir.set(Math.sin(polar) * Math.cos(az), Math.cos(polar) * 0.85 + 0.15, Math.sin(polar) * Math.sin(az)).normalize();
+    across.set(rng() - 0.5, rng() - 0.5, rng() - 0.5).cross(dir).normalize();
+    other.copy(dir).cross(across).normalize();
+    const base = centre.clone().addScaledVector(dir, radius * 0.1);
+    const len = radius * (1.05 + rng() * 0.35);
+    const normal = (p: THREE.Vector3) => p.clone().sub(crown).normalize();
+    const shade: [number, number] = [0.5, 0.85 + Math.max(0, dir.y) * 0.3 + rng() * 0.1];
+    cards.add(base, dir, across, len, len * 0.95, normal, shade, [swayBase, swayBase + 0.5]);
+    cards.add(base, dir, other, len, len * 0.95, normal, shade, [swayBase, swayBase + 0.5]);
+  }
+}
+
+/** A broadleaf tree from scans: bark trunk and limbs, a crown of leaf sprays in clumps. */
+function scannedLeafy(): { trunk: THREE.BufferGeometry; cards: THREE.BufferGeometry } {
+  const rng = mulberry32(921);
+  const wood: THREE.BufferGeometry[] = [barkCylinder(0.14, 0.3, 3.8, 8, (y) => Math.pow(y / 8, 2) * 0.5)];
+  for (const [ax, az, len] of [
+    [0.55, 0.25, 2.6],
+    [-0.45, -0.5, 2.4],
+    [0.1, 0.6, 2.2],
+  ]) {
+    const limb = barkCylinder(0.05, 0.13, len, 6, (y) => 0.3 + y * 0.05);
+    limb.rotateZ(-ax).rotateX(az).translate(0, 2.8, 0);
+    wood.push(limb);
+  }
+  const cards = new Cards();
+  const crown = new THREE.Vector3(0, 4.6, 0);
+  sprays(cards, new THREE.Vector3(0, 4.7, 0), 1.5, 9, crown, rng, 0.5);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + rng() * 0.6;
+    const d = 1.25 + rng() * 0.5;
+    sprays(cards, new THREE.Vector3(Math.cos(a) * d, 4.0 + rng() * 1.5, Math.sin(a) * d), 1.05 + rng() * 0.3, 6, crown, rng, 0.65);
+  }
+  sprays(cards, new THREE.Vector3(0.2, 6.0, -0.1), 1.0, 6, crown, rng, 0.85);
+  return { trunk: mergeGeometries(wood.map(flat), false)!, cards: cards.build() };
+}
+
+function scannedBush(): THREE.BufferGeometry {
+  const rng = mulberry32(1021);
+  const cards = new Cards();
+  sprays(cards, new THREE.Vector3(0, 0.15, 0), 0.62, 9, new THREE.Vector3(0, 0.1, 0), rng, 0.5);
+  return cards.build();
+}
+
 interface Chunk {
   cx: number;
   cz: number;
@@ -202,10 +368,14 @@ export class Vegetation {
   private lodAt = new THREE.Vector3(1e9, 0, 0);
   private near: number = NEAR.high;
 
-  constructor(placed: Record<Kind, THREE.Matrix4[]>) {
+  /** Leaf and needle cards: see-through, so they stay out of the ambient-occlusion pass. */
+  readonly cards: THREE.Object3D[] = [];
+  private cardMaterials: THREE.MeshStandardMaterial[] = [];
+
+  constructor(placed: Record<Kind, THREE.Matrix4[]>, trees: TreeTextures | null = null) {
     // One material for everything that grows: colour comes from the vertices, movement from the wind.
     const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
-    material.onBeforeCompile = (shader) => {
+    const windy = (shader: THREE.WebGLProgramParametersWithUniforms) => {
       shader.uniforms.uTime = this.wind.uTime;
       shader.uniforms.uWind = this.wind.uWind;
       shader.vertexShader = shader.vertexShader
@@ -225,6 +395,33 @@ export class Vegetation {
           transformed.z += (lean * 0.6 - shiver) * sway * uWind;`,
         );
     };
+    material.onBeforeCompile = windy;
+
+    // Scanned trees: bark on the wood, and one card material per branch image.
+    let barkMaterial: THREE.MeshStandardMaterial | null = null;
+    const cardMaterial = (map: THREE.Texture) => {
+      const m = new THREE.MeshStandardMaterial({ map, alphaTest: 0.35, side: THREE.DoubleSide, vertexColors: true, roughness: 0.8, metalness: 0 });
+      m.onBeforeCompile = (shader) => {
+        windy(shader);
+        // Both faces of a card take its soft normal: a leaf seen from below isn't black.
+        shader.fragmentShader = shader.fragmentShader.replace("#include <normal_fragment_begin>", "#include <normal_fragment_begin>\nnormal = normalize(vNormal);\nnonPerturbedNormal = normal;");
+      };
+      // Shadows take the shape of the leaves, not of the cards.
+      const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map, alphaTest: 0.35, side: THREE.DoubleSide });
+      this.cardMaterials.push(m);
+      return { m, depth };
+    };
+    const scanned = trees
+      ? {
+          pine: { ...scannedPine(), card: cardMaterial(trees.needles) },
+          leafy: { ...scannedLeafy(), card: cardMaterial(trees.leaves) },
+          bush: scannedBush(),
+        }
+      : null;
+    if (trees) {
+      barkMaterial = new THREE.MeshStandardMaterial({ map: trees.bark.map, normalMap: trees.bark.normalMap, roughnessMap: trees.bark.arm, aoMap: trees.bark.arm, vertexColors: true, roughness: 1, metalness: 0 });
+      barkMaterial.onBeforeCompile = windy;
+    }
 
     const geometry = {
       pine: { near: pineGeometry(true), far: pineGeometry(false) },
@@ -247,13 +444,15 @@ export class Vegetation {
 
     const tintRng = mulberry32(77);
     const tint = new THREE.Color();
-    const instanced = (geo: THREE.BufferGeometry, list: THREE.Matrix4[], shadows: boolean) => {
-      const mesh = new THREE.InstancedMesh(geo, material, list.length);
+    const instanced = (geo: THREE.BufferGeometry, list: THREE.Matrix4[], shadows: boolean, mat: THREE.Material = material, tinted = true) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, list.length);
       list.forEach((m, i) => {
         mesh.setMatrixAt(i, m);
         // No two trees quite the same green.
         const v = 0.82 + tintRng() * 0.36;
-        mesh.setColorAt(i, tint.setRGB(v * (0.94 + tintRng() * 0.12), v, v * (0.9 + tintRng() * 0.15)));
+        tint.setRGB(v * (0.94 + tintRng() * 0.12), v, v * (0.9 + tintRng() * 0.15));
+        // Bark keeps its own colour; the draws still happen, so foliage tints don't depend on it.
+        if (tinted) mesh.setColorAt(i, tint);
       });
       mesh.castShadow = shadows;
       mesh.receiveShadow = true;
@@ -267,11 +466,25 @@ export class Vegetation {
       const chunk: Chunk = { cx: (ix + 0.5) * CHUNK, cz: (iz + 0.5) * CHUNK, near: [], far: [], bushes: [] };
       for (const kind of ["pine", "leafy"] as const) {
         if (!cell[kind].length) continue;
-        chunk.near.push(instanced(geometry[kind].near, cell[kind], true));
+        if (scanned && barkMaterial) {
+          const s = scanned[kind];
+          chunk.near.push(instanced(s.trunk, cell[kind], true, barkMaterial, false));
+          const leaves = instanced(s.cards, cell[kind], true, s.card.m);
+          leaves.customDepthMaterial = s.card.depth;
+          this.cards.push(leaves);
+          chunk.near.push(leaves);
+        } else chunk.near.push(instanced(geometry[kind].near, cell[kind], true));
         // Distant trees are beyond the shadow map: no need to draw them into it.
         chunk.far.push(instanced(geometry[kind].far, cell[kind], false));
       }
-      if (cell.bush.length) chunk.bushes.push(instanced(geometry.bush, cell.bush, true));
+      if (cell.bush.length) {
+        if (scanned) {
+          const bush = instanced(scanned.bush, cell.bush, true, scanned.leafy.card.m);
+          bush.customDepthMaterial = scanned.leafy.card.depth;
+          this.cards.push(bush);
+          chunk.bushes.push(bush);
+        } else chunk.bushes.push(instanced(geometry.bush, cell.bush, true));
+      }
       this.chunks.push(chunk);
     }
     this.update(new THREE.Vector3(0, 0, 0), 0, true);
@@ -298,6 +511,13 @@ export class Vegetation {
   setQuality(quality: keyof typeof NEAR) {
     this.near = NEAR[quality];
     this.lodAt.set(1e9, 0, 0);
+    // With multisampling (High), card edges are blended by coverage instead of cut hard.
+    for (const m of this.cardMaterials) {
+      if (m.alphaToCoverage !== (quality === "high")) {
+        m.alphaToCoverage = quality === "high";
+        m.needsUpdate = true;
+      }
+    }
   }
 
   /** 0 is still air, 1 a steady breeze, 2 a gale. */
@@ -312,6 +532,7 @@ export function generateVegetation(
   terrain: Terrain,
   colliders: ColliderWorld,
   occupied: Rect[],
+  trees: TreeTextures | null = null,
 ): Vegetation {
   const density = createNoise2D(rng);
   const pines: THREE.Matrix4[] = [];
@@ -356,5 +577,5 @@ export function generateVegetation(
     place(bushes, x, z, range(rng, 0.6, 1.3), 0);
   }
 
-  return new Vegetation({ pine: pines, leafy, bush: bushes });
+  return new Vegetation({ pine: pines, leafy, bush: bushes }, trees);
 }

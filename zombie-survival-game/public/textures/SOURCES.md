@@ -11,3 +11,13 @@ All from [Poly Haven](https://polyhaven.com), licence CC0 (public domain). Prepa
 | wood | [wood_floor](https://polyhaven.com/a/wood_floor) | detail under the game colour | 512 px | 1.7 m |
 | roof | [grey_roof_01](https://polyhaven.com/a/grey_roof_01) | detail under the game colour | 1024 px | 8.0 m |
 | ground | [forrest_ground_01](https://polyhaven.com/a/forrest_ground_01) | detail under the game colour | 1024 px | 2.0 m |
+
+## Trees
+
+Prepared by `tools/assets/foliage.py` from the texture sheets of Poly Haven tree models (CC0); the models themselves aren't used.
+
+| File | From | What |
+|---|---|---|
+| bark_*.jpg | [fir_tree_01](https://polyhaven.com/a/fir_tree_01) | bark for trunks |
+| needles.png | [pine_tree_01](https://polyhaven.com/a/pine_tree_01) | one scanned twig arranged into a bough |
+| leaves.png | [island_tree_02](https://polyhaven.com/a/island_tree_02) | eight scanned leaves arranged into a spray, tinted greener |
